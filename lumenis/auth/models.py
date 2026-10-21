@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS v4_login_attempts (
     username TEXT,
     ip TEXT,
     success INTEGER,
+    attempt_kind TEXT NOT NULL DEFAULT 'legacy',
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 
@@ -84,8 +85,9 @@ def init_auth_db():
     try:
         conn.executescript(V4_TABLES_SQL)
         conn.commit()
-        from account.models import ensure_auth_user_columns
+        from account.models import ensure_auth_user_columns, ensure_login_attempt_kind_column
         ensure_auth_user_columns(conn)
+        ensure_login_attempt_kind_column(conn)
         conn.commit()
         # Compatibility caller uses the canonical account bootstrap policy.
         _ensure_owner_account(conn)

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
 import subprocess
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -54,8 +55,11 @@ _SOURCE_EXTS = {
 }
 _CRED_DATA_EXTS = {
     ".db", ".sqlite", ".sqlite3", ".db-wal", ".db-shm", ".db-journal",
-    ".pem", ".key", ".p12", ".pfx", ".keystore", ".jks", ".crt", ".cer",
+    ".pem", ".key", ".p12", ".pfx", ".keystore", ".jks",
 }
+# Public certificate formats: not private credentials, so the narrow
+# docs/tests/fixture whitelist may admit them; elsewhere they stay blocked.
+_PUBLIC_CERT_EXTS = {".crt", ".cer"}
 _DATA_TEXT_EXTS = {".json", ".txt", ".dat", ".bin", ".log", ".csv"}
 _CRED_WORD = re.compile(r"cookie|token|secret|credential|session|passwd|password|profile|login[_-]?state", re.I)
 
@@ -83,14 +87,23 @@ def _is_credential_path(rel_path: str) -> bool:
     处理凭证的源码允许入库；路径层只拦截真正的凭证/数据载体。
     """
     p = rel_path.replace("\\", "/").lower()
-    for wl in _CRED_PATH_WHITELIST:
-        if re.search(wl, p):
-            return False
     base = os.path.basename(p)
     _, ext = os.path.splitext(base)
+
+    # The generic sample/test/document exemptions must never override a known
+    # credential container. Keep the one intentional env template exception
+    # exact, then reject credential suffixes before consulting broader names.
+    if base == ".env.example":
+        return False
     if base == ".env" or re.match(r"\.env\.[\w-]+$", base):
         return True
     if ext in _CRED_DATA_EXTS:
+        return True
+
+    for wl in _CRED_PATH_WHITELIST:
+        if re.search(wl, p):
+            return False
+    if ext in _PUBLIC_CERT_EXTS:
         return True
     if ext in _SOURCE_EXTS:
         return False
@@ -167,12 +180,120 @@ def current_db_zone():
     return info
 
 
+_PRESENCE_KEY = re.compile(
+    r"^(?:has|is)_|_(?:present|configured|available|exists)$"
+)
+
+
+def _is_presence_metadata_key(key):
+    """has_cookie / has_auth_cookie / cookie_present: boolean status, not a value."""
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+    normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
+    return bool(_PRESENCE_KEY.search(normalized))
+
+
+# Read field names using the same normalization as mapping sanitization.  A
+# structural boundary prevents protecting a suffix inside a larger key. An
+# assignment delimiter may precede a nested field: its marker remains ordinary
+# token text, so the enclosing credential rule can still consume the whole pair.
+_TEXT_FIELD = re.compile(
+    r"""(?<![A-Za-z0-9_:/+.\-])(?:"(?P<double>[^"\\\n\r]+)"|'(?P<single>[^'\\\n\r]+)'|(?P<bare>[A-Za-z_][A-Za-z0-9_.-]*))\s*[:=]\s*"""
+)
+
+_TEXT_BOOLEAN = re.compile(r"(?:true|false|True|False)(?=[\s,;}\])]|$)")
+
+def _text_value_end(text, start):
+    """Consume one scalar/container in a single pass; malformed containers fail closed.
+
+    No evaluation or recursive parsing: quoted delimiters and escaped quotes are
+    data. An unterminated quote/container or mismatched bracket consumes the
+    remainder so later members cannot escape redaction.
+    """
+    stack = []
+    quote = None
+    escaped = False
+    pairs = {"[": "]", "{": "}", "(": ")"}
+    pos = start
+    while pos < len(text):
+        char = text[pos]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+        elif char in ("'", '"'):
+            quote = char
+        elif char in pairs:
+            stack.append(pairs[char])
+        elif stack and char in "]})":
+            if char != stack.pop():
+                return len(text)
+        elif not stack and (char.isspace() or char in ",;}])"):
+            break
+        pos += 1
+    return pos
+
+
+def _sanitize_presence_fields(text, hold):
+    chunks = []
+    cursor = 0
+    search = 0
+    while match := _TEXT_FIELD.search(text, search):
+        search = match.end()
+        key = match.group("double") or match.group("single") or match.group("bare")
+        if not _is_presence_metadata_key(key):
+            continue
+        sensitive = _is_sensitive_presence_key(key)
+        # Non-credential metadata only needs a bounded literal check. Do not
+        # repeatedly scan nested, non-sensitive containers before their fields.
+        if not sensitive:
+            boolean = _TEXT_BOOLEAN.match(text, match.end())
+            if not boolean:
+                continue
+            end = boolean.end()
+        else:
+            end = _text_value_end(text, match.end())
+        value = text[match.end():end]
+        if value in ("true", "false", "True", "False"):
+            replacement = hold(text[match.start():end])
+        elif sensitive:
+            replacement = hold(match.group(0) + '"[REDACTED]"')
+        else:
+            continue
+        chunks.append(text[cursor:match.start()])
+        chunks.append(replacement)
+        cursor = search = end
+    chunks.append(text[cursor:])
+    return "".join(chunks)
+
+
+def _redact_cookie(match):
+    prefix = match.group(1)
+    value = match.group(0)[len(prefix):]
+    if value == "null":
+        return match.group(0)
+    if re.fullmatch(r"true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value):
+        return f'{prefix}"[REDACTED]"'
+    if len(value) >= 2 and value[0] in ("'", '"') and value[-1] == value[0]:
+        quote = value[0]
+        return f"{prefix}{quote}[REDACTED]{quote}"
+    return f"{prefix}[REDACTED]"
+
+
 _SAN_RULES = [
     (
         re.compile(r"(authorization\s*[:=]\s*)(bearer|basic|token)?\s*[A-Za-z0-9._\-/+=]{6,}", re.I),
         r"\1\2 [REDACTED]",
     ),
-    (re.compile(r"(cookie\s*[:=]\s*)[^;\n\r]{0,4096}", re.I), r"\1[REDACTED]"),
+    (
+        re.compile(
+            r'''(\b[A-Za-z0-9_-]*?cookie["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|(?:null|true|false|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(?=\s*[,}\]])|[^\n\r]*)''',
+            re.I,
+        ),
+        _redact_cookie,
+    ),
     (
         re.compile(
             r"([\"']?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|session[_-]?secret|xsec[_-]?token|token|secret|password|passwd|pwd|private[_-]?key)[\"']?\s*[:=]\s*[\"']?)[^\s\"',;}&]{3,}[\"']?",
@@ -186,21 +307,115 @@ _SAN_RULES = [
     ),
 ]
 
+_SENSITIVE_MAPPING_KEYS = frozenset({
+    "authorization", "cookie", "cookies", "set_cookie", "api_key",
+    "access_token", "refresh_token", "session_secret", "session_token",
+    "session_cookie", "xsec_token", "token", "secret", "password",
+    "passwd", "pwd", "private_key", "credential", "credentials",
+})
+_SENSITIVE_MAPPING_SUFFIXES = (
+    "_authorization", "_cookie", "_cookies", "_api_key", "_token",
+    "_secret", "_password", "_passwd", "_pwd", "_private_key",
+    "_credential", "_credentials",
+)
+
+
+_SENSITIVE_VALUE_DESCRIPTORS = (
+    "header", "headers", "value", "values", "string", "str", "raw", "data",
+    "line", "text", "jar",
+)
+
+
+_COMPACT_SENSITIVE_KEYS = frozenset(k.replace("_", "") for k in _SENSITIVE_MAPPING_KEYS)
+_COMPACT_SENSITIVE_SUFFIXES = tuple(
+    sfx.replace("_", "") for sfx in _SENSITIVE_MAPPING_SUFFIXES
+)
+
+
+def _is_sensitive_mapping_key(key):
+    # Split camelCase boundaries first (accessToken -> access_token).
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+    normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
+    if normalized in _SENSITIVE_MAPPING_KEYS or normalized.endswith(_SENSITIVE_MAPPING_SUFFIXES):
+        return True
+    # Separator-free forms (apikey, accesstoken, SESSIONCOOKIE) compare on a
+    # compact canonical form; metadata such as tokencount still has no match.
+    compact = normalized.replace("_", "")
+    if compact in _COMPACT_SENSITIVE_KEYS or compact.endswith(_COMPACT_SENSITIVE_SUFFIXES):
+        return True
+    # Credential field followed by a value/container descriptor
+    # (cookie_header, authorization_header, token_value). Metadata such as
+    # token_count or cookie_present is not a descriptor and stays visible.
+    parts = normalized.split("_")
+    while len(parts) > 1 and parts[-1] in _SENSITIVE_VALUE_DESCRIPTORS:
+        parts.pop()
+        stem = "_".join(parts)
+        if stem in _SENSITIVE_MAPPING_KEYS or stem.endswith(_SENSITIVE_MAPPING_SUFFIXES):
+            return True
+    return False
+
+
+def _is_sensitive_presence_key(key):
+    # Retain every credential class accepted by the previous text rule, including
+    # API/private keys, authorization and pwd, which _CRED_WORD does not cover.
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+    normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
+    return bool(
+        _CRED_WORD.search(key) or _is_sensitive_mapping_key(key)
+        or re.search(r"api_?key|private_?key|authorization|pwd", normalized)
+    )
+
 
 def sanitize_text(text):
     """把待写入日志/Evidence/Attestation 的文本中的凭证打码。非字符串原样返回。"""
     if not isinstance(text, str):
         return text
-    out = text
+    # Hold exact boolean and redacted presence pairs behind a per-call marker.
+    # The marker is ordinary token text, so an enclosing credential rule
+    # (token=..., Authorization: ...) still consumes and redacts it; only
+    # markers that survive every rule intact are restored.
+    nonce = secrets.token_hex(8)
+    while nonce in text:
+        nonce = secrets.token_hex(8)
+    kept = []
+
+    def _hold(pair):
+        kept.append(pair)
+        return f"zzpresence{nonce}n{len(kept) - 1}zz"
+
+    out = _sanitize_presence_fields(text, _hold)
     for rule, repl in _SAN_RULES:
         out = rule.sub(repl, out)
-    return out
+    return re.sub(
+        rf"zzpresence{nonce}n(\d+)zz", lambda m: kept[int(m.group(1))], out
+    )
 
 
 def sanitize_mapping(obj):
-    """递归脱敏 dict/list 内的字符串值。"""
+    """递归脱敏 mapping 中的敏感键值及所有字符串内容。"""
     if isinstance(obj, dict):
-        return {k: sanitize_mapping(v) for k, v in obj.items()}
+        sanitized = {}
+        for key, value in obj.items():
+            safe_key = sanitize_text(key) if isinstance(key, str) else key
+            if isinstance(key, str) and _is_presence_metadata_key(key) and (
+                _is_sensitive_presence_key(key)
+            ):
+                # Credential presence status: only an exact boolean is shown.
+                safe_value = value if isinstance(value, bool) else "[REDACTED]"
+            elif isinstance(key, str) and _is_sensitive_mapping_key(key):
+                safe_value = "[REDACTED]"
+            else:
+                safe_value = sanitize_mapping(value)
+            # Redacting a secret embedded in a key can make two keys equal.
+            # Preserve both entries without retaining any part of that secret.
+            if safe_key in sanitized:
+                base_key = safe_key
+                suffix = 2
+                while safe_key in sanitized:
+                    safe_key = f"{base_key} [{suffix}]"
+                    suffix += 1
+            sanitized[safe_key] = safe_value
+        return sanitized
     if isinstance(obj, (list, tuple)):
         return [sanitize_mapping(v) for v in obj]
     if isinstance(obj, str):

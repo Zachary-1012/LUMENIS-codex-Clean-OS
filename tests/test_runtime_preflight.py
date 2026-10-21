@@ -34,6 +34,31 @@ def test_sanitize_authorization_and_cookie():
     assert "[REDACTED]" in out
 
 
+def test_sanitize_entire_cookie_session_and_quoted_header():
+    session = "session_" + "synthetic_value_91"
+    refresh = "refresh_" + "synthetic_value_27"
+    line = f"Cookie: sid={session}; refresh={refresh}; Path=/; SameSite=None; tail=visible"
+    out = dbm.sanitize_text(line)
+    assert session not in out and refresh not in out
+    assert "Path=/" not in out and "tail=visible" not in out
+
+    encoded = f'{{"Cookie": "sid={session}; refresh={refresh}", "safe": "visible"}}'
+    out = dbm.sanitize_text(encoded)
+    assert session not in out and refresh not in out
+    assert '"safe": "visible"' in out
+
+
+def test_sanitize_prefixed_cookie_fields():
+    session = "session_" + "synthetic_value_33"
+    xhs_cookie = "xhs_" + "synthetic_cookie_84"
+    out = dbm.sanitize_text(
+        f"session_cookie={session}; trailing metadata\nxhs_cookie: {xhs_cookie}"
+    )
+    assert session not in out
+    assert xhs_cookie not in out
+    assert "[REDACTED]" in out
+
+
 def test_sanitize_kv_and_pem():
     # 样本在源码层分段拼接，避免连续“疑似密钥”字面量触发仓库自身静态安全门禁
     _sk = "sk-" + "abcdef1234567890abcdef"
@@ -53,6 +78,52 @@ def test_sanitize_mapping_nested():
     flat = json.dumps(out, ensure_ascii=False)
     assert "abcd1234efgh5678" not in flat
     assert out["a"]["b"][1] == "clean" and out["a"]["c"] == 1
+
+
+def test_sanitize_mapping_sensitive_keys_values_and_key_contents():
+    session = "session_" + "synthetic_value_72"
+    api_value = "api_" + "synthetic_value_38"
+    embedded = "token=" + "synthetic_value_64"
+    payload = {
+        "Cookie": f"sid={session}; csrf=synthetic_csrf",
+        "api_key": api_value,
+        embedded: "opaque diagnostic label",
+        "safe": {"note": "visible"},
+    }
+
+    out = dbm.sanitize_mapping(payload)
+    flat = json.dumps(out, ensure_ascii=False)
+    assert session not in flat and api_value not in flat and embedded not in flat
+    assert out["Cookie"] == "[REDACTED]"
+    assert out["api_key"] == "[REDACTED]"
+    assert out["safe"]["note"] == "visible"
+
+
+def test_sanitize_credential_keys_without_redacting_metadata_fields():
+    opaque = "synthetic_" + "credential_value_482"
+    cookie = "synthetic_" + "cookie_value_713"
+    payload = {
+        "credential": opaque,
+        "credentials": [opaque],
+        "browser_session_cookie": cookie,
+        "token_count": 18,
+        "token_budget": "budget-v4",
+        "authorization_status": "verified",
+        "secret_scan_result": "clean",
+        "credential_status": "configured",
+    }
+
+    out = dbm.sanitize_mapping(payload)
+    flat = json.dumps(out, ensure_ascii=False)
+    assert opaque not in flat and cookie not in flat
+    assert out["credential"] == "[REDACTED]"
+    assert out["credentials"] == "[REDACTED]"
+    assert out["browser_session_cookie"] == "[REDACTED]"
+    assert out["token_count"] == 18
+    assert out["token_budget"] == "budget-v4"
+    assert out["authorization_status"] == "verified"
+    assert out["secret_scan_result"] == "clean"
+    assert out["credential_status"] == "configured"
 
 
 # ------------------------------------------------------------------ 2) 路径分层
@@ -76,6 +147,9 @@ def test_sanitize_mapping_nested():
     ("app/android/app/src/profile/AndroidManifest.xml", False),
     ("app/macos/Runner/DebugProfile.entitlements", False),
     (".env.example", False),
+    ("examples/credential-example.pem", True),
+    ("samples/session-example.key", True),
+    ("tests/fixtures/access-token-example.p12", True),
     ("docs/CAPABILITY_BASELINE.md", False),
 ])
 def test_credential_path_classification(path, expected):
@@ -138,11 +212,12 @@ def test_non_enforce_never_raises(monkeypatch):
 
 
 # ------------------------------------------------------------------ 6) Attestation
-def test_attestation_written_and_redacted():
+def test_attestation_written_and_redacted(tmp_path, monkeypatch):
+    monkeypatch.setattr(rp, "get_data_dir", lambda: str(tmp_path))
     rep = rp.run_preflight(write_attestation=True)
     att = rep.get("attestation", {})
     assert att.get("written") is True
-    latest = os.path.join(ROOT, att["latest"].replace("/", os.sep))
+    latest = tmp_path / att["latest"]
     assert os.path.exists(latest)
     raw = io.open(latest, "r", encoding="utf-8").read()
     data = json.loads(raw)
@@ -155,3 +230,188 @@ def test_attestation_written_and_redacted():
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
+
+
+def test_camelcase_credential_keys_are_redacted():
+    import data_boundary
+    out = data_boundary.sanitize_mapping({
+        "accessToken": "opaque-a", "sessionCookie": "opaque-b",
+        "apiKey": "opaque-c", "privateKey": "opaque-d", "safe": "visible",
+    })
+    assert out["safe"] == "visible"
+    assert all(out[k] == "[REDACTED]" for k in ("accessToken", "sessionCookie", "apiKey", "privateKey"))
+
+
+def test_public_certificates_allowed_only_in_exempt_paths():
+    import data_boundary
+    assert data_boundary._is_credential_path("docs/vendor.cer") is False
+    assert data_boundary._is_credential_path("tests/fixtures/root-ca.crt") is False
+    assert data_boundary._is_credential_path("certs/server.crt") is True
+    assert data_boundary._is_credential_path("tests/fixtures/server.pem") is True
+
+
+def test_json_cookie_literal_keeps_following_fields():
+    import json
+    import data_boundary
+    for raw in ('{"Cookie": null, "safe": "visible"}', '{"Cookie": 12345, "safe": "visible"}'):
+        out = data_boundary.sanitize_text(raw)
+        parsed = json.loads(out)
+        assert parsed["safe"] == "visible"
+        assert "12345" not in out
+
+
+def test_sanitize_text_redacts_camelcase_cookie_labels():
+    from data_boundary import sanitize_text
+    for raw in ("sessionCookie=abc123secretvalue", "xhsCookie: abc123secretvalue"):
+        out = sanitize_text(raw)
+        assert "abc123secretvalue" not in out
+        assert "[REDACTED]" in out
+
+
+def test_sanitize_mapping_redacts_credential_keys_with_descriptors():
+    from data_boundary import sanitize_mapping
+    out = sanitize_mapping({
+        "cookie_header": "opaqueA1B2C3",
+        "authorization_header": "opaqueD4E5F6",
+        "token_count": 3,
+        "authorization_status": "missing",
+    })
+    assert out["cookie_header"] == "[REDACTED]"
+    assert out["authorization_header"] == "[REDACTED]"
+    assert out["token_count"] == 3
+    assert out["authorization_status"] == "missing"
+
+
+def test_sanitize_text_redacts_lowercase_separatorless_cookie_labels():
+    from data_boundary import sanitize_text
+    for raw in ("sessioncookie=abc123secretvalue", "xhscookie: abc123secretvalue"):
+        out = sanitize_text(raw)
+        assert "abc123secretvalue" not in out
+    assert sanitize_text("cookie_count=3") == "cookie_count=3"
+
+
+def test_sanitize_mapping_redacts_separatorless_credential_keys():
+    from data_boundary import sanitize_mapping
+    out = sanitize_mapping({
+        "apikey": "opaqueA1", "accesstoken": "opaqueB2",
+        "sessioncookie": "opaqueC3", "APIKEY": "opaqueD4",
+        "tokencount": 3, "token_budget": 9,
+    })
+    for key in ("apikey", "accesstoken", "sessioncookie", "APIKEY"):
+        assert out[key] == "[REDACTED]"
+    assert out["tokencount"] == 3
+    assert out["token_budget"] == 9
+
+
+def test_cookie_presence_metadata_stays_visible_but_values_redacted():
+    import data_boundary as d
+    out = d.sanitize_mapping({
+        "has_auth_cookie": True, "has_cookie": False, "cookie_present": True,
+        "has_cookie_value": "secret-abc", "cookie": True, "session_cookie": "s3cr3t",
+    })
+    assert out["has_auth_cookie"] is True
+    assert out["has_cookie"] is False
+    assert out["cookie_present"] is True
+    assert out["cookie"] == "[REDACTED]"
+    assert out["session_cookie"] == "[REDACTED]"
+    assert "secret-abc" not in str(out)
+    text = d.sanitize_text('{"has_auth_cookie": true, "has_cookie": "leak-me", "cookie": "abc"}')
+    assert '"has_auth_cookie": true' in text
+    assert "leak-me" not in text and "abc" not in text
+
+
+def test_presence_metadata_handles_python_repr_suffix_and_all_credential_classes():
+    import data_boundary as d
+    out = d.sanitize_mapping({
+        "cookie_present": "credential-material", "token_configured": "tok-xyz",
+        "has_token": True, "has_api_key": False, "is_password_set": "pw-123",
+    })
+    assert out["cookie_present"] == "[REDACTED]"
+    assert out["token_configured"] == "[REDACTED]"
+    assert out["has_token"] is True and out["has_api_key"] is False
+    assert out["is_password_set"] == "[REDACTED]"
+    text = d.sanitize_text(
+        "{'has_auth_cookie': True, 'has_token': False} "
+        '{"has_token": true, "cookie_present": false, "token": "tok-abcdef", '
+        '"cookie_present": "cookie-leak"}'
+    )
+    assert "'has_auth_cookie': True" in text and "'has_token': False" in text
+    assert '"has_token": true' in text and '"cookie_present": false' in text
+    assert "tok-abcdef" not in text and "cookie-leak" not in text
+
+
+def test_presence_exception_never_exposes_credentials_or_breaks_on_marker_text():
+    import data_boundary as d
+    assert "secret-material" not in d.sanitize_text("has_token=true-secret-material")
+    assert "tRuE" not in d.sanitize_text("has_token=tRuE")
+    assert d.sanitize_text("token=has_flag=true") == "token=[REDACTED]"
+    assert "has_password" not in d.sanitize_text("Authorization: Basic has_password=false")
+    marker = 'x \x00PRESENCE0\x00 zzpresence0zz {"has_token": true}'
+    assert d.sanitize_text(marker) == marker
+
+
+def test_presence_exception_only_starts_at_a_field_boundary():
+    import data_boundary as d
+    for text in ("refresh_has_token=true", "x_has_token=True", '"session_has_cookie": false'):
+        out = d.sanitize_text(text)
+        assert "[REDACTED]" in out, out
+    assert d.sanitize_mapping({"refresh_has_token": True})["refresh_has_token"] == "[REDACTED]"
+
+
+@pytest.mark.parametrize('key', ['is_password_set', 'has_credential', 'has_token', 'tokenPresent', 'token-present'])
+def test_presence_text_nonboolean_matches_mapping(key):
+    value = 'synthetic-presence-material'
+    assert dbm.sanitize_mapping({key: value})[key] == '[REDACTED]'
+    assert value not in dbm.sanitize_text(f'{key}="{value}"')
+
+
+@pytest.mark.parametrize('value', [
+    '["synthetic-first", "synthetic-second"]',
+    '{"first": ["synthetic-first", {"second": "synthetic-second"}]}',
+    '("synthetic-first", "synthetic-second")',
+    '["synthetic-first", "synthetic-second"',
+    '["synthetic-first", {"second": "synthetic-second"]',
+])
+def test_presence_text_consumes_complete_container(value):
+    out = dbm.sanitize_text(f'token_present={value}')
+    assert 'synthetic-first' not in out and 'synthetic-second' not in out
+
+
+@pytest.mark.parametrize('key', ['hasToken', 'is-password-set', 'tokenPresent', 'token-present'])
+@pytest.mark.parametrize('value', ['true', 'false', 'True', 'False'])
+def test_presence_text_normalized_booleans_stay_visible(key, value):
+    raw = f'{{"{key}": {value}, "token_count": 3}}'
+    assert dbm.sanitize_text(raw) == raw
+
+
+def test_presence_text_preserves_following_diagnostics_and_escaped_containers():
+    raw = 'tokenPresent=["synthetic-\\\"],x", {"v": "synthetic-second"}], count=7; has_flag=true'
+    out = dbm.sanitize_text(raw)
+    assert 'synthetic-' not in out
+    assert 'count=7; has_flag=true' in out
+    for raw in ('has_items=[1, 2], token_count=3', 'is_ready=False; count=0', 'token_budget=9'):
+        assert dbm.sanitize_text(raw) == raw
+    assert 'synthetic-' not in dbm.sanitize_text('has_items={"has_token": "synthetic-hidden"}')
+
+
+@pytest.mark.parametrize('value', ['true-secret-material', 'tRuE', '1', 'null', '"true"'])
+def test_presence_text_normalized_keys_reject_nonboolean_literals(value):
+    for key in ('hasCredential', 'is-password-set', 'tokenPresent'):
+        assert dbm.sanitize_text(f'{key}={value}') == f'{key}="[REDACTED]"'
+
+
+@pytest.mark.parametrize('key', ['api_key_present', 'apiKeyPresent', 'hasApiKey', 'pwd_available', 'authorization_exists', 'private-key-configured'])
+def test_presence_text_retains_all_credential_classes(key):
+    assert dbm.sanitize_text(f'{key}="synthetic-extra-class"') == f'{key}="[REDACTED]"'
+    assert dbm.sanitize_mapping({key: 'synthetic-extra-class'})[key] == '[REDACTED]'
+    assert dbm.sanitize_text(f'{key}=False') == f'{key}=False'
+    assert dbm.sanitize_mapping({key: False})[key] is False
+
+
+def test_presence_text_redacted_pairs_keep_valid_json_and_diagnostic_format():
+    raw = '{"has_token": [true, false], "has_secret": true, "count": 7}'
+    assert json.loads(dbm.sanitize_text(raw)) == {
+        'has_token': '[REDACTED]', 'has_secret': True, 'count': 7,
+    }
+    assert dbm.sanitize_text('has_token=[true,false], has_secret=True') == 'has_token="[REDACTED]", has_secret=True'
+    assert dbm.sanitize_text('token=has_token=["synthetic-value"]') == 'token=[REDACTED]'

@@ -546,3 +546,167 @@ def test_pr_publication_uses_full_branch_history_not_last_commit(monkeypatch):
     rules = "\n## 1. Online reader's current-state snapshot\nImplementation publication state: " + marker + "RULES_ONLY_PUBLICATION" + marker + "\nRuntime load state: " + marker + "NOT_LOADED_OR_NOT_VERIFIED" + marker + "\n### Approved D1"
     with pytest.raises(AssertionError, match="governance/documentation paths only"):
         gate._assert_current_publication_truth(rules, changed_paths=observed)
+
+
+def test_recovered_archive_is_finite_evidence_not_product_behavior():
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    inventory = gate._recovered_evidence_inventory()
+    assert len(inventory) == 275
+    gate._assert_recovered_evidence_integrity()
+    for path in inventory:
+        assert gate._is_rules_only_publication_path(path), path
+        assert not gate._is_product_behavior_source(path), path
+    assert gate._is_rules_only_publication_path(gate.RECOVERED_EVIDENCE_RECEIPT)
+    assert gate._is_rules_only_publication_path(gate.RECOVERED_EVIDENCE_REPORT)
+    for path in (
+        'research/arbitrary.py', 'research/arbitrary.json',
+        'app/lib/recovered.dart', 'lumenis/runtime/recovered.py',
+        gate.RECOVERED_EVIDENCE_REPORT + '.py',
+        next(iter(inventory)) + '.unlisted.py',
+    ):
+        assert not gate._is_rules_only_publication_path(path), path
+    import pytest
+    current = """
+## 1. Online reader's current-state snapshot
+Implementation publication state: `RULES_ONLY_PUBLICATION`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+### Approved D1
+"""
+    changes = set(inventory) | {
+        '00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md',
+        gate.RECOVERED_EVIDENCE_RECEIPT, gate.RECOVERED_EVIDENCE_REPORT,
+    }
+    gate._assert_current_publication_truth(current, changed_paths=changes)
+    with pytest.raises(AssertionError, match='same-commit product behavior source'):
+        gate._assert_current_publication_truth(
+            current.replace('RULES_ONLY_PUBLICATION', 'PUBLISHED_SOURCE_VERIFIED'),
+            changed_paths=changes,
+        )
+    code_path = next(path for path in inventory if path.endswith('.py'))
+    assert not gate._is_rules_only_publication_path(code_path.replace('/', '\\'))
+    assert not gate._is_rules_only_publication_path(code_path.replace('/reports/', '/reports/../reports/'))
+    assert gate._is_product_behavior_source('research/arbitrary.py')
+
+
+def test_recovery_receipt_cannot_self_authorize_paths(tmp_path, monkeypatch):
+    import copy
+    import json
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    original = json.loads((gate.ROOT / gate.RECOVERED_EVIDENCE_RECEIPT).read_text())
+    receipt = tmp_path / gate.RECOVERED_EVIDENCE_RECEIPT
+    receipt.parent.mkdir(parents=True)
+    monkeypatch.setattr(gate, 'ROOT', tmp_path)
+    mutations = []
+    extra = copy.deepcopy(original)
+    extra['files'].append(copy.deepcopy(extra['files'][0]))
+    mutations.append(extra)
+    duplicate = copy.deepcopy(original)
+    duplicate['files'][0] = copy.deepcopy(duplicate['files'][1])
+    mutations.append(duplicate)
+    for replacement in ('research/arbitrary.py', 'app/lib/runtime.dart',
+                        '../outside.py', '/absolute.py', 'research/../outside.py',
+                        'research\\outside.py', 'research//outside.py'):
+        changed = copy.deepcopy(original)
+        changed['files'][0]['repository_relative_path'] = replacement
+        mutations.append(changed)
+    for bad in (None, [], {}, {'files': {}}, *mutations):
+        receipt.write_text(json.dumps(bad))
+        assert not gate._is_rules_only_publication_path(gate.RECOVERED_EVIDENCE_RECEIPT)
+        assert not gate._is_rules_only_publication_path(original['files'][0]['repository_relative_path'])
+    receipt.write_text('{broken')
+    assert not gate._is_rules_only_publication_path(gate.RECOVERED_EVIDENCE_RECEIPT)
+    receipt.unlink()
+    assert not gate._is_rules_only_publication_path(gate.RECOVERED_EVIDENCE_RECEIPT)
+
+
+def test_recovered_archive_requires_actual_bytes_not_receipt_claim(tmp_path, monkeypatch):
+    import json
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    original_root = gate.ROOT
+    original = json.loads((original_root / gate.RECOVERED_EVIDENCE_RECEIPT).read_text())
+    entry = next(item for item in original['files'] if item['repository_relative_path'].endswith('.py'))
+    path = entry['repository_relative_path']
+    content = (original_root / path).read_bytes()
+    receipt = tmp_path / gate.RECOVERED_EVIDENCE_RECEIPT
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text(json.dumps(original))
+    target = tmp_path / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(gate, 'ROOT', tmp_path)
+    assert not gate._is_rules_only_publication_path(path)
+    target.write_bytes(content)
+    assert gate._is_rules_only_publication_path(path)
+    target.write_bytes(content + b'\n')
+    assert not gate._is_rules_only_publication_path(path)
+    target.write_bytes(bytes([content[0] ^ 1]) + content[1:])
+    assert not gate._is_rules_only_publication_path(path)
+    target.unlink()
+    outside = tmp_path / 'outside.py'
+    outside.write_bytes(content)
+    target.symlink_to(outside)
+    assert not gate._is_rules_only_publication_path(path)
+
+
+def test_receipt_only_publication_checks_unchanged_archive_members(tmp_path, monkeypatch):
+    import pytest
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    receipt_content = (gate.ROOT / gate.RECOVERED_EVIDENCE_RECEIPT).read_bytes()
+    receipt = tmp_path / gate.RECOVERED_EVIDENCE_RECEIPT
+    receipt.parent.mkdir(parents=True)
+    receipt.write_bytes(receipt_content)
+    # Receipt is intact but its unchanged members are absent from this checkout.
+    monkeypatch.setattr(gate, 'ROOT', tmp_path)
+    current_path = '00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md'
+    monkeypatch.setitem(gate.PATHS, 'takeover', tmp_path / current_path)
+    current = """
+## 1. Online reader's current-state snapshot
+Implementation publication state: `RULES_ONLY_PUBLICATION`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+### Approved D1
+"""
+    with pytest.raises(FileNotFoundError):
+        gate._assert_current_publication_truth(current, changed_paths={
+            current_path, gate.RECOVERED_EVIDENCE_RECEIPT,
+        })
+
+
+def test_governance_production_cli_smoke():
+    import subprocess
+    import sys
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    result = subprocess.run(
+        [sys.executable, str(Path(gate.__file__))], cwd=gate.ROOT,
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'CODEX TAKEOVER GOVERNANCE OK' in result.stdout
+
+
+def test_governance_validate_staged_reads_index_snapshot(monkeypatch):
+    import subprocess
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    run = gate.subprocess.run
+    current_path = '00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md'
+    staged_current = """
+## 1. Online reader's current-state snapshot
+Implementation publication state: `RULES_ONLY_PUBLICATION`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+### Approved D1
+"""
+    calls = []
+
+    def staged_run(command, **kwargs):
+        if command == ['git', 'show', ':' + current_path]:
+            calls.append('index-current')
+            return subprocess.CompletedProcess(command, 0, staged_current, '')
+        return run(command, **kwargs)
+
+    def changed_paths(*, staged=False):
+        assert staged
+        calls.append('index-paths')
+        return {current_path, 'AGENTS.md'}
+
+    monkeypatch.setattr(gate.subprocess, 'run', staged_run)
+    monkeypatch.setattr(gate, '_publication_changed_paths', changed_paths)
+    gate.validate(staged=True)
+    assert calls == ['index-current', 'index-paths']

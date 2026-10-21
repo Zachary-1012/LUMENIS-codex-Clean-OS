@@ -124,7 +124,7 @@ def test_classification_retains_unknown_and_legacy_weighted_threshold(kos):
 
 
 def test_signature_rejection_prevents_false_complete_classification(kos):
-    _,ws,a,_,_,_=kos
+    client,ws,a,_,h,_=kos
     source(ws,a,'valid','known',likes=600)
     eid=source(ws,a,'invalid','other',likes=900)
     ws['repo'].execute("UPDATE app_evidence_records SET outputs_json='{}' WHERE id=?",(eid,))
@@ -133,6 +133,22 @@ def test_signature_rejection_prevents_false_complete_classification(kos):
     row=result['profiles'][0]
     assert row['lifecycle_stage'] is None and row['is_potential'] is None
     assert row['classification_reasons']['lifecycle_stage']=='SOURCE_READ_INCOMPLETE'
+
+    detail = client.get('/api/kos/detail?author_id=known',headers=h)
+    assert detail.status_code == 200
+    projection = detail.get_json()['data']
+    assert projection['source_read_complete'] is False
+    assert projection['coverage'] == 'NOT_VERIFIED'
+    assert projection['truncated'] is False
+    assert projection['source_count'] == 1
+    assert projection['rejected_count'] == 1
+    assert projection['classification_coverage'] == 'PARTIAL'
+    assert projection['lifecycle_stage'] is None
+    assert projection['classification_reasons']['lifecycle_stage'] == 'SOURCE_READ_INCOMPLETE'
+
+    missing = client.get('/api/kos/detail?author_id=not-returned',headers=h)
+    assert missing.status_code == 503
+    assert missing.get_json()['code'] == 'AUTHOR_SEARCH_INCOMPLETE'
 
 
 def test_real_loopback_http_refresh_scope_revoke_and_recover(kos):

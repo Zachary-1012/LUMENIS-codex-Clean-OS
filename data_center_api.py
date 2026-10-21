@@ -7,7 +7,9 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
@@ -72,6 +74,56 @@ def _get_db() -> sqlite3.Connection:
     return get_repository().connect()
 
 
+def _parse_date_bound(value: str) -> tuple[datetime, bool]:
+    """Parse an ISO date/time bound and reject invalid calendar values."""
+    date_only = re.fullmatch(r"\d{4}-\d{2}-\d{2}", value) is not None
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed, date_only
+
+
+from lumenis.shared.database.instants import (  # noqa: E402
+    DAY_US as _DAY_US,
+    register_instant_function as _register_instant_function,
+    utc_microseconds as _utc_microseconds,
+)
+
+
+def _bound_microseconds(value: str, *, end: bool) -> tuple[str, int]:
+    """Validated ISO bound -> (operator, inclusive/exclusive UTC microseconds)."""
+    parsed, date_only = _parse_date_bound(value)
+    instant = _utc_microseconds(parsed)
+    if date_only and end:
+        # Include the whole requested end date, including fractional seconds.
+        return "<", instant + _DAY_US
+    return ("<=" if end else ">="), instant
+
+
+def _text_date_filter(value: str, *, end: bool) -> tuple[str, int]:
+    """Bound for text columns, compared through lumenis_utc_us()."""
+    return _bound_microseconds(value, end=end)
+
+
+def _unix_date_filter(
+    value: str, *, end: bool, timestamp_multiplier: float = 1,
+    integer_column: bool = False,
+) -> tuple[str, float]:
+    """Convert an ISO bound to a source-native Unix timestamp comparison.
+
+    Integer columns get exact integer source units with operator-aware
+    rounding (>=, < round up; <= rounds down) so no float collapse merges
+    distinct bounds. REAL columns keep fractional units.
+    """
+    operator, instant = _bound_microseconds(value, end=end)
+    unit_us = 1000 if timestamp_multiplier == 1000 else int(1_000_000 // timestamp_multiplier)
+    if integer_column:
+        if operator == "<=":
+            return operator, instant // unit_us
+        return operator, -((-instant) // unit_us)
+    return operator, instant / unit_us
+
+
 @data_center_bp.route("/platforms", methods=["GET"])
 def list_platforms():
     """获取前端可见的平台列表（ui_visible=true）。"""
@@ -130,8 +182,10 @@ def get_platform_detail(platform_id: str):
                     try:
                         cnt = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
                         table_stats.append({"table": t, "count": cnt})
-                    except Exception:
-                        table_stats.append({"table": t, "count": 0, "error": "query_failed"})
+                    except sqlite3.Error:
+                        # Preserve the existing error field without presenting an
+                        # unavailable count as a real empty table.
+                        table_stats.append({"table": t, "count": None, "error": "query_failed"})
         p["table_stats"] = table_stats
         return jsonify({"ok": True, "platform": p})
     finally:
@@ -149,7 +203,7 @@ def query_table(table_name: str):
       content_type: 内容类型筛选
       sentiment: 情绪筛选
       risk_level: 风险筛选
-      start_date / end_date: 时间范围（published_at/created_at/time/create_time）
+      start_date / end_date: 来源发布时间范围（publish_date/published_at及平台原生发布时间字段）
       sort_by: 排序字段
       sort_order: asc/desc
       page: 页码（默认1）
@@ -202,21 +256,95 @@ def query_table(table_name: str):
                 where_clauses.append("content_type = ?")
                 params.append(content_type)
 
-        # 时间范围
-        time_col = None
-        for tc in ("published_at", "created_at", "time", "create_time", "pubdate", "created_utc", "taken_at"):
-            if tc in columns:
-                time_col = tc
-                break
+        # 情感与风险筛选只在对应数据字段真实存在时执行，不能静默忽略。
+        for filter_name in ("sentiment", "risk_level"):
+            filter_value = request.args.get(filter_name, "").strip()
+            if filter_value:
+                if filter_name not in columns:
+                    return jsonify({
+                        "ok": False,
+                        "error": f"{filter_name} filter unavailable for table {table_name}",
+                    }), 400
+                where_clauses.append(f"{filter_name} = ?")
+                params.append(filter_value)
+
+        # 仅用来源发布字段筛选。publish_date 优先于通用原生字段；绝不把
+        # collected_at/captured_at 等采集时间作为发布时间。
+        time_col = next((
+            candidate for candidate in (
+                "publish_date", "publish_datetime", "published_at", "time",
+                "create_time", "pubdate", "created_utc", "taken_at",
+                "created_time", "created_at",
+            )
+            if candidate in columns
+        ), None)
+        time_expr = time_col
+        time_col_type = next(
+            (str(c["type"] or "").upper() for c in cols_info if c["name"] == time_col),
+            "",
+        )
+        if time_col == "publish_date" and "publish_datetime" in columns:
+            # Some imported rows have only the more precise source datetime.
+            # Use it only when this row has no date value; do not substitute
+            # capture/collection time or override a declared publish_date.
+            time_expr = (
+                "COALESCE(NULLIF(TRIM(publish_date), ''), "
+                "NULLIF(TRIM(publish_datetime), ''))"
+            )
+            time_col_type = ""
+        numeric_time_col = any(kind in time_col_type for kind in ("INT", "REAL", "NUM", "FLOAT", "DOUBLE"))
+        timestamp_multiplier = (
+            1000 if time_col == "time" and table_name in {"xhs_notes", "xhs_note_comments"}
+            else 1
+        )
         start_date = request.args.get("start_date", "").strip()
         end_date = request.args.get("end_date", "").strip()
+        if (start_date or end_date) and time_col is None:
+            return jsonify({
+                "ok": False,
+                "error": f"publication date filter unavailable for table {table_name}",
+            }), 400
         if time_col:
             if start_date:
-                where_clauses.append(f"{time_col} >= ?")
-                params.append(start_date)
+                try:
+                    if numeric_time_col:
+                        operator, value = _unix_date_filter(
+                            start_date, end=False,
+                            timestamp_multiplier=timestamp_multiplier,
+                            integer_column="INT" in time_col_type,
+                        )
+                    else:
+                        operator, value = _text_date_filter(start_date, end=False)
+                except ValueError:
+                    return jsonify({"ok": False, "error": "invalid start_date"}), 400
+                if not numeric_time_col:
+                    # Compare exact UTC instants (microseconds), not strings:
+                    # declared offsets (Z/+08:00), 'T' or space are applied.
+                    _register_instant_function(conn)
+                    where_clauses.append(f"lumenis_utc_us({time_expr}) {operator} ?")
+                else:
+                    where_clauses.append(f"{time_expr} {operator} ?")
+                params.append(value)
             if end_date:
-                where_clauses.append(f"{time_col} <= ?")
-                params.append(end_date)
+                try:
+                    if numeric_time_col:
+                        operator, value = _unix_date_filter(
+                            end_date, end=True,
+                            timestamp_multiplier=timestamp_multiplier,
+                            integer_column="INT" in time_col_type,
+                        )
+                    else:
+                        operator, value = _text_date_filter(end_date, end=True)
+                except ValueError:
+                    return jsonify({"ok": False, "error": "invalid end_date"}), 400
+                if not numeric_time_col:
+                    # Compare exact UTC instants (microseconds), not strings:
+                    # declared offsets (Z/+08:00), 'T' or space are applied.
+                    _register_instant_function(conn)
+                    where_clauses.append(f"lumenis_utc_us({time_expr}) {operator} ?")
+                else:
+                    where_clauses.append(f"{time_expr} {operator} ?")
+                params.append(value)
 
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
 
@@ -229,7 +357,7 @@ def query_table(table_name: str):
         if sort_by and sort_by in columns:
             order_sql = f" ORDER BY {sort_by} {'ASC' if sort_order == 'asc' else 'DESC'}"
         elif time_col:
-            order_sql = f" ORDER BY {time_col} DESC"
+            order_sql = f" ORDER BY {time_expr} DESC"
         else:
             order_sql = ""
 
@@ -283,24 +411,51 @@ def get_overview_stats():
         ).fetchall()
         stats = []
         total_records = 0
+        errors = []
         for p in platforms:
             raw_tables = []
             if p["raw_tables"]:
                 try:
                     raw_tables = json.loads(p["raw_tables"])
                 except (json.JSONDecodeError, TypeError):
-                    pass
+                    raw_tables = None
             table_counts = {}
+            table_errors = {}
             platform_total = 0
-            for t in raw_tables:
-                if t in ALLOWED_TABLES:
-                    try:
-                        cnt = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
-                        table_counts[t] = cnt
-                        platform_total += cnt
-                    except Exception:
-                        table_counts[t] = 0
-            total_records += platform_total
+            countable_tables = [
+                table for table in raw_tables if isinstance(table, str) and table in ALLOWED_TABLES
+            ] if isinstance(raw_tables, list) else []
+            catalog_available = (
+                isinstance(raw_tables, list)
+                and bool(raw_tables)
+                and len(countable_tables) == len(raw_tables)
+            )
+            if not catalog_available:
+                table_errors["_catalog"] = "raw_tables_unavailable"
+                errors.append({
+                    "platform_id": p["platform_id"],
+                    "table": None,
+                    "error": "raw_tables_unavailable",
+                })
+            for t in countable_tables:
+                try:
+                    row = conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()
+                    if row is None or row[0] is None:
+                        raise sqlite3.DatabaseError("COUNT query returned no value")
+                    cnt = row[0]
+                    table_counts[t] = cnt
+                    platform_total += cnt
+                except sqlite3.Error:
+                    table_counts[t] = None
+                    table_errors[t] = "query_failed"
+                    errors.append({
+                        "platform_id": p["platform_id"],
+                        "table": t,
+                        "error": "query_failed",
+                    })
+            total_records_available = catalog_available and not table_errors
+            if total_records_available:
+                total_records += platform_total
             stats.append({
                 "platform_id": p["platform_id"],
                 "display_name": p["display_name"],
@@ -308,13 +463,15 @@ def get_overview_stats():
                 "ui_visible": bool(p["ui_visible"]),
                 "color": PLATFORM_COLORS.get(p["platform_id"], "#666"),
                 "table_counts": table_counts,
-                "total_records": platform_total,
+                "table_errors": table_errors,
+                "total_records": platform_total if total_records_available else None,
             })
         return jsonify({
-            "ok": True,
+            "ok": not errors,
             "total_platforms": len(stats),
             "ui_visible_count": sum(1 for s in stats if s["ui_visible"]),
-            "total_records": total_records,
+            "total_records": total_records if not errors else None,
+            "errors": errors,
             "platforms": stats,
         })
     finally:

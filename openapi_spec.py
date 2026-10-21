@@ -97,7 +97,7 @@ def build_spec(app: Any, title: str = "LUMENIS API", version: str = "1.0.0") -> 
 
         if len(candidates) == 1:
             candidate = candidates[0]
-            op["operationId"] = candidate["endpoint"]
+            op["x-flask-endpoint"] = candidate["endpoint"]
             op["x-flask-rule"] = candidate["rule"]
             summary = summaries[(path, method, candidate["endpoint"], candidate["rule"])]
             if summary:
@@ -110,6 +110,28 @@ def build_spec(app: Any, title: str = "LUMENIS API", version: str = "1.0.0") -> 
                 "candidates": candidates,
             })
         paths.setdefault(path, {})[method.lower()] = op
+
+    # OpenAPI 3.0.3 requires operationId to be unique across all operations.
+    # An endpoint serving several methods/rules keeps its bare name only when
+    # it is used once; otherwise a stable method (and rule) discriminator is
+    # added. The Flask endpoint itself stays recorded as x-flask-endpoint.
+    usage: Dict[str, int] = {}
+    for operations in paths.values():
+        for op in operations.values():
+            if "x-flask-endpoint" in op:
+                usage[op["x-flask-endpoint"]] = usage.get(op["x-flask-endpoint"], 0) + 1
+    seen: set = set()
+    for path in sorted(paths):
+        for method in sorted(paths[path]):
+            op = paths[path][method]
+            endpoint = op.get("x-flask-endpoint")
+            if endpoint is None:
+                continue
+            op_id = endpoint if usage[endpoint] == 1 else f"{endpoint}__{method}"
+            if op_id in seen:
+                op_id = f"{op_id}__" + re.sub(r"[^A-Za-z0-9]+", "_", op["x-flask-rule"]).strip("_")
+            seen.add(op_id)
+            op["operationId"] = op_id
 
     return {
         "openapi": "3.0.3",
@@ -154,7 +176,7 @@ def build_matrix_md(spec: dict) -> str:
             else:
                 auth = "basic/v4"
             candidates = op.get("x-route-candidates") or [{
-                "endpoint": op.get("operationId", ""),
+                "endpoint": op.get("x-flask-endpoint", ""),
                 "rule": op.get("x-flask-rule", ""),
             }]
             for candidate in candidates:

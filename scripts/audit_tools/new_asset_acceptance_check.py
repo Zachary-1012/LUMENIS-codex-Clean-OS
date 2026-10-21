@@ -8,7 +8,7 @@ P1 复杂度治理 — 对8类新增资产统一做：
 8类资产：
   1. 963笔记 subject 重判
   2. 711智能资产 (intelligence_assets)
-  3. 双域账户 TOTP (v4_totp_secrets)
+  3. (TOTP 已删除)
   4. 八平台 Cookie (cookie_vault)
   5. 微信 Adapter (wechat_notifier/sogou_wechat)
   6. KOS 配置化 (kos_attribution/kos_metrics)
@@ -177,72 +177,6 @@ def check_intelligence_assets() -> Dict:
             result["status"] = "WARN"
             result["details"].append(
                 f"缺失字段: source_origin={missing_source}, evidence_level={missing_evidence}"
-            )
-    finally:
-        conn.close()
-    return result
-
-
-# ============================================================
-# 3. 双域账户 TOTP
-# ============================================================
-def check_totp() -> Dict:
-    result = {
-        "name": "双域账户 TOTP (v4_totp_secrets)",
-        "status": "PASS",
-        "data_consistency": {},
-        "source_traceability": "",
-        "rollback_mechanism": "",
-        "regression_tests": 0,
-        "details": [],
-    }
-    conn = get_db()
-    try:
-        if not table_exists(conn, "v4_totp_secrets"):
-            result["status"] = "FAIL"
-            result["details"].append("v4_totp_secrets 表不存在")
-            return result
-
-        total = conn.execute("SELECT COUNT(*) FROM v4_totp_secrets").fetchone()[0]
-        secrets = conn.execute(
-            "SELECT id, user_id, LENGTH(secret) as secret_len, enabled, created_at FROM v4_totp_secrets"
-        ).fetchall()
-
-        # 检查种子是否明文存储（TOTP base32 种子通常 16-32 字符，加密后会更长）
-        plaintext_seeds = 0
-        for s in secrets:
-            length = s["secret_len"] or 0
-            # 明文 base32 种子通常 16-64 字符；加密后通常 > 64 或有特殊编码
-            if 16 <= length <= 64:
-                # 进一步检查是否全是 base32 字符
-                plaintext_seeds += 1
-
-        result["data_consistency"] = {
-            "total_secrets": total,
-            "enabled_count": sum(1 for s in secrets if s["enabled"]),
-            "avg_secret_length": sum(s["secret_len"] or 0 for s in secrets) / max(total, 1),
-            "potential_plaintext_seeds": plaintext_seeds,
-        }
-        result["source_traceability"] = (
-            "TOTP 种子由用户启用时生成，关联 user_id；"
-            "last_used_at 追踪使用时间，created_at 追踪启用时间"
-        )
-        result["rollback_mechanism"] = (
-            "DELETE FROM v4_totp_secrets WHERE user_id=? 可关闭 TOTP；"
-            "session 8h 过期由 v4_sessions 表控制"
-        )
-        # 检查 session 过期配置
-        if table_exists(conn, "v4_sessions"):
-            session_count = conn.execute("SELECT COUNT(*) FROM v4_sessions").fetchone()[0]
-            result["data_consistency"]["active_sessions"] = session_count
-
-        test_files = list(PROJECT_ROOT.rglob("test*totp*.py")) + list(PROJECT_ROOT.rglob("test*auth*.py"))
-        result["regression_tests"] = len(test_files)
-
-        if plaintext_seeds > 0:
-            result["status"] = "WARN"
-            result["details"].append(
-                f"检测到 {plaintext_seeds} 个可能为明文的 TOTP 种子（长度16-64），建议确认是否已加密"
             )
     finally:
         conn.close()
@@ -579,7 +513,6 @@ def run_all() -> List[Dict]:
     checks = [
         check_notes_subject,
         check_intelligence_assets,
-        check_totp,
         check_cookie_vault,
         check_wechat_adapter,
         check_kos_config,

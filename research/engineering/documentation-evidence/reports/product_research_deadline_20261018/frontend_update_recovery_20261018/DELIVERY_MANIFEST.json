@@ -26,8 +26,15 @@
   },
   {
     "path": "22_COMPETITOR_TASK_BENCHMARK_ADOPTION.md",
-    "bytes": 4039,
-    "sha256": "aaef28a2e146fb0bda55435eafc9213ef745a446de9dbd13751aa4ac1480ab61"
+    "bytes": 4134,
+    "sha256": "9e09880c8a68c835024797f3cf364c44d9edc2a7883126bcb8c4e2fdae84c6f8",
+    "source_delivery_bytes": 4039,
+    "source_delivery_sha256": "aaef28a2e146fb0bda55435eafc9213ef745a446de9dbd13751aa4ac1480ab61",
+    "integrity_correction": {
+      "date_utc": "2026-10-21",
+      "reason": "Refresh restored repository bytes after canonical source-reference corrections; preserve original delivery values above.",
+      "scope": "Current restored file integrity only; not product acceptance or full historical source completeness."
+    }
   },
   {
     "path": "23_NEW_REQUIREMENTS_TRACEABILITY.md",
@@ -74,7 +81,8 @@
   {
     "path": "SOURCE_FREEZE_MANIFEST.json",
     "bytes": 4310,
-    "sha256": "10d5e343936ab1b53567583715b564e407ed731cd2bc8b495366d3f56613bc8c"
+    "sha256": "10d5e343936ab1b53567583715b564e407ed731cd2bc8b495366d3f56613bc8c",
+    "embedded_manifest_scope": "Historical source snapshot retained unchanged. Embedded source paths and hashes are not a current restored-tree completeness assertion; repository_path mappings, when present, identify reused canonical assets. This delivery entry verifies the manifest file itself."
   },
   {
     "path": "source_freeze/00_HOW_TO_REVIEW.md",
@@ -123,8 +131,15 @@
   },
   {
     "path": "source_freeze/09_SPATIAL_REVIEW_PLATES.md",
-    "bytes": 3267,
-    "sha256": "1ffd31460dbc25f37250700973fd1edd253d1575934374946e5122c46552393f"
+    "bytes": 3675,
+    "sha256": "b8857e56a6a7ab65acbce99c045b349018054843bde89092c017526b6bf2e4c4",
+    "source_delivery_bytes": 3267,
+    "source_delivery_sha256": "1ffd31460dbc25f37250700973fd1edd253d1575934374946e5122c46552393f",
+    "integrity_correction": {
+      "date_utc": "2026-10-21",
+      "reason": "Refresh restored repository bytes after canonical source-reference corrections; preserve original delivery values above.",
+      "scope": "Current restored file integrity only; not product acceptance or full historical source completeness."
+    }
   },
   {
     "path": "source_freeze/10_RESEARCH_DECISIONS_AND_OPEN_ITEMS.md",
@@ -168,18 +183,34 @@
   },
   {
     "path": "source_freeze/CONTENT_MANIFEST.json",
-    "bytes": 9222,
-    "sha256": "4ac66929a3f5941585626a04c82ee595f20d981926471cd81f957d3dca339125"
+    "bytes": 10953,
+    "sha256": "c59a3b94daed6c197f50369c54ac6ed666abda92b2cb7acaafc867ed79222c1a",
+    "source_delivery_bytes": 9222,
+    "source_delivery_sha256": "4ac66929a3f5941585626a04c82ee595f20d981926471cd81f957d3dca339125",
+    "integrity_correction": {
+      "date_utc": "2026-10-21",
+      "reason": "Refresh restored repository bytes after canonical source-reference corrections; preserve original delivery values above.",
+      "scope": "Current restored file integrity only; not product acceptance or full historical source completeness."
+    },
+    "embedded_manifest_scope": "Historical source snapshot retained unchanged. Embedded source paths and hashes are not a current restored-tree completeness assertion; repository_path mappings, when present, identify reused canonical assets. This delivery entry verifies the manifest file itself."
   },
   {
     "path": "source_freeze/CONTENT_STRUCTURE_CHECK.json",
-    "bytes": 544,
-    "sha256": "f58515627767109c0fd5d60fdf2e98f47658f56f97e8a13c48462d34f7c5de7c"
+    "bytes": 958,
+    "sha256": "21845a5ec81972ef787267baaf1f20e2cf0441d950005eaa7c573c1b873cc364",
+    "source_delivery_bytes": 544,
+    "source_delivery_sha256": "f58515627767109c0fd5d60fdf2e98f47658f56f97e8a13c48462d34f7c5de7c",
+    "integrity_correction": {
+      "date_utc": "2026-10-21",
+      "reason": "Refresh restored repository bytes after canonical source-reference corrections; preserve original delivery values above.",
+      "scope": "Current restored file integrity only; not product acceptance or full historical source completeness."
+    }
   },
   {
     "path": "source_freeze/CURRENT_SOURCE_MANIFEST.json",
     "bytes": 2166,
-    "sha256": "c41662d3dd671a146f08760cb18e2b5eb8ea501f50487179af9e9ad45d6d505e"
+    "sha256": "c41662d3dd671a146f08760cb18e2b5eb8ea501f50487179af9e9ad45d6d505e",
+    "embedded_manifest_scope": "Historical source snapshot retained unchanged. Embedded source paths and hashes are not a current restored-tree completeness assertion; repository_path mappings, when present, identify reused canonical assets. This delivery entry verifies the manifest file itself."
   },
   {
     "path": "source_freeze/DELIVERY_STRUCTURE.md",

@@ -331,14 +331,16 @@ def get_cross_platform_roi_normalization(platforms: List[str],
         Currency.HKD: 0.93,
         Currency.JPY: 0.048,
     }
+    base_rate = exchange_rates.get(base_currency)
+    if base_rate is None or base_rate <= 0:
+        raise ValueError(f"Unsupported base currency: {base_currency}")
+
     result = {}
     for plat in platforms:
         profile = get_platform_profile(plat)
         if profile:
-            rate = exchange_rates.get(profile.currency, 1.0)
-            if base_currency == Currency.USD:
-                rate = 1.0 / rate if rate != 0 else 1.0
-            result[plat] = rate
+            source_rate = exchange_rates[profile.currency]
+            result[plat] = source_rate / base_rate
     return result
 
 

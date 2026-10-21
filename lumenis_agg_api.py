@@ -18,6 +18,7 @@ import sys
 import sqlite3
 import subprocess
 import platform
+import urllib.parse
 from pathlib import Path
 from lumenis.shared.database import DatabaseRepository, main_db_path
 from datetime import datetime
@@ -74,27 +75,166 @@ def _osai_module(name):
 
 
 def _git_info(repo_path: Path):
-    """只读读取 git HEAD SHA / branch / 工作区状态。"""
+    """只读读取 Git 状态；命令失败保持未知，并脱敏远端凭据。"""
+    unknown = {
+        "available": False,
+        "status": "UNAVAILABLE",
+        "head_sha": "UNKNOWN",
+        "branch": "UNKNOWN",
+        "remote": "",
+        "dirty_files": None,
+        "clean": None,
+    }
     if not repo_path or not repo_path.exists():
-        return {"available": False, "status": "UNAVAILABLE"}
+        return unknown
+
     def _run(args):
         try:
-            out = subprocess.run(["git"] + args, cwd=str(repo_path),
-                                 capture_output=True, text=True, timeout=8)
-            return out.stdout.strip() if out.returncode == 0 else ""
-        except Exception:
-            return ""
+            result = subprocess.run(
+                ["git"] + args,
+                cwd=str(repo_path),
+                capture_output=True,
+                text=True,
+                timeout=8,
+            )
+        except Exception as exc:
+            return {"ok": False, "value": "", "returncode": None, "error": type(exc).__name__}
+        if result.returncode != 0:
+            return {
+                "ok": False,
+                "value": "",
+                "returncode": result.returncode,
+                "error": "GIT_COMMAND_FAILED",
+            }
+        return {"ok": True, "value": result.stdout.strip(), "returncode": 0, "error": ""}
+
+    def _sanitize_remote(value, depth=0):
+        if depth > 8:
+            return None
+        try:
+            parsed = urllib.parse.urlsplit(value)
+            # Git remote-helper syntax is <transport>::<address>. Its nested
+            # address can itself be a URL, SCP remote, or local path. Sanitize
+            # only recognized address shapes; opaque helper commands stay
+            # unknown so credentials cannot leak from an arbitrary string.
+            helper_separator = value.find("::")
+            if helper_separator > 0:
+                transport = value[:helper_separator]
+                address = value[helper_separator + 2:]
+                valid_transport = (
+                    bool(transport) and transport[0].isalpha()
+                    and all(char.isalnum() or char in "-_.+" for char in transport)
+                )
+                if valid_transport:
+                    address_parts = urllib.parse.urlsplit(address)
+                    username, separator, destination = address.partition("@")
+                    host, colon, remote_path = destination.partition(":")
+                    is_scp = (
+                        separator and username and host and colon and remote_path
+                        and "/" not in host and "\\" not in host
+                    )
+                    if not (address_parts.scheme or address.startswith(("/", "./", "../")) or is_scp):
+                        return None
+                    sanitized_address = _sanitize_remote(address, depth + 1)
+                    if sanitized_address is None:
+                        return None
+                    return f"{transport}::{sanitized_address}"
+                if parsed.scheme.lower() not in {"http", "https", "ssh", "git", "file"}:
+                    return None
+            # Windows drive-letter local paths (C:/repo.git, C:\\repo) parse
+            # as a one-letter scheme; they are local paths, not URLs.
+            if (isinstance(value, str) and len(value) > 2 and value[0].isascii()
+                    and value[0].isalpha() and value[1] == ":" and value[2] in "/\\"
+                    and not parsed.netloc):
+                return value
+            # Git SCP-like syntax "[user@]host:path" applies only when no slash
+            # precedes the first colon and the value is not a URL ("://").
+            # Known URL schemes keep the URL rules below. A path still holding
+            # "@" after the colon is credential-shaped: fail closed.
+            if isinstance(value, str) and "://" not in value and not value.startswith(("/", "./", "../")):
+                head, colon, scp_path = value.partition(":")
+                if (colon and head and scp_path and "/" not in head and "\\" not in head
+                        and head.lower() not in {"http", "https", "ssh", "git", "file"}):
+                    # Query/fragment-like suffixes can carry signed tokens and
+                    # are not part of an SCP path: drop them (as the URL path does).
+                    scp_path = scp_path.split("?", 1)[0].split("#", 1)[0]
+                    if "@" in scp_path or not scp_path:
+                        return None
+                    host = head.rsplit("@", 1)[-1]
+                    return f"{host}:{scp_path}" if host else None
+            if parsed.scheme or parsed.netloc:
+                # Only hierarchical URLs whose authority can be sanitized are
+                # accepted. Opaque/malformed forms (https:user:pw@host/repo)
+                # keep credential-shaped data in the path: fail closed.
+                if parsed.scheme and not parsed.netloc:
+                    if parsed.scheme.lower() == "file" and "@" not in parsed.path:
+                        return urllib.parse.urlunsplit((parsed.scheme, "", parsed.path, "", ""))
+                    return None
+                if "://" in parsed.path:
+                    return None
+                # Remove all query/fragment data: a denylist cannot recognize
+                # every signed-URL credential parameter (for example code/key).
+                authority = parsed.netloc.rsplit("@", 1)[-1]
+                return urllib.parse.urlunsplit((
+                    parsed.scheme, authority, parsed.path, "", "",
+                ))
+
+            # Preserve local paths (including file-like relative paths) that
+            # happen to contain @. Strip credentials only from the actual
+            # user@host:path form used by scp-style SSH remotes.
+            if value.startswith(("/", "./", "../")):
+                return value
+            username, separator, destination = value.partition("@")
+            host, colon, path = destination.partition(":")
+            if (separator and username and host and colon and path
+                    and "/" not in host and "\\" not in host):
+                return f"{host}:{path}"
+            return value
+        except (TypeError, ValueError):
+            return None
+
     sha = _run(["rev-parse", "--short", "HEAD"])
     branch = _run(["rev-parse", "--abbrev-ref", "HEAD"])
-    status = _run(["status", "--porcelain"])
+    worktree = _run(["status", "--porcelain"])
     remote = _run(["config", "--get", "remote.origin.url"])
+
+    # A missing origin is a valid local repository state (git config exits 1);
+    # other remote-inspection failures make the aggregate diagnostic incomplete.
+    remote_missing = remote["returncode"] == 1 and not remote["value"]
+    failed = []
+    if not sha["ok"] or not sha["value"]:
+        failed.append("head_sha")
+    if not branch["ok"] or not branch["value"]:
+        failed.append("branch")
+    # Empty porcelain output is the authoritative representation of a clean
+    # worktree, so only command failure makes this diagnostic unknown.
+    if not worktree["ok"]:
+        failed.append("worktree_status")
+    if not remote["ok"] and not remote_missing:
+        failed.append("remote")
+    if remote["ok"] and not remote["value"]:
+        failed.append("remote")
+    sanitized_remote = _sanitize_remote(remote["value"]) if remote["ok"] else None
+    if remote["ok"] and sanitized_remote is None:
+        failed.append("remote_sanitize")
+
+    complete = not failed
     return {
-        "available": bool(sha),
-        "head_sha": sha or "UNKNOWN",
-        "branch": branch or "UNKNOWN",
-        "remote": remote or "",
-        "dirty_files": len([l for l in status.splitlines() if l.strip()]) if status else 0,
-        "clean": not bool(status),
+        "available": complete,
+        "status": "READY" if complete else "ERROR",
+        "head_sha": sha["value"] if sha["ok"] and sha["value"] else "UNKNOWN",
+        "branch": branch["value"] if branch["ok"] and branch["value"] else "UNKNOWN",
+        "remote": (
+            sanitized_remote
+            if remote["ok"] and sanitized_remote is not None
+            else ("UNKNOWN" if not remote_missing else "")
+        ),
+        "dirty_files": (
+            len([line for line in worktree["value"].splitlines() if line.strip()])
+            if worktree["ok"] else None
+        ),
+        "clean": (not bool(worktree["value"])) if worktree["ok"] else None,
+        **({"error": "GIT_INFO_COMMAND_FAILED", "failed_commands": failed} if failed else {}),
     }
 
 

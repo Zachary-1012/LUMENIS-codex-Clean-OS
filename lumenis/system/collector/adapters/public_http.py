@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from io import StringIO
 import json
 import re
 import threading
@@ -8,15 +9,20 @@ from datetime import datetime
 from typing import Any, Callable
 from urllib.parse import urljoin, urlsplit
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment, NavigableString
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
-from .public_source import PublicResponse, PublicSourceError, fetch_public_url, public_source_provenance
+from .public_source import (
+    PublicResponse, PublicSourceError, fetch_public_url,
+    public_source_error_metadata, public_source_provenance,
+)
 from .registry import register_adapter
 from ..guard.rate_limiter import AdaptiveRateLimiter
 
 
 MAX_PUBLIC_BODY_CHARS = 16_000
+MAX_PUBLIC_LOCATOR_CHARS = 512
+MAX_PUBLIC_LOCATOR_TOTAL_CHARS = 16_384
 _CONTENT_SELECTORS = (
     'article, [itemprop="articleBody"], .zw, [class*="-body-"], '
     '.float100, .content_article, .block-text-only .container-sm, main, [role="main"]'
@@ -24,37 +30,231 @@ _CONTENT_SELECTORS = (
 _CHROME_MARKERS = ("header", "footer", "menu", "navigation", "breadcrumb")
 
 
-def _substantive_body(soup: BeautifulSoup) -> str:
-    """Select article content without mistaking a site menu/footer for the article."""
-    candidates: list[tuple[int, int, str]] = []
-    for node in soup.select(_CONTENT_SELECTORS):
-        if node.name in {"script", "style", "nav", "header", "footer", "aside"}:
+def _node_locator(node) -> str:
+    """Return a stable tag/id/class path for one selected source block."""
+    segments = []
+    segment_chars = 0
+    truncated = False
+    current = node
+    while getattr(current, "name", None) not in {None, "[document]"}:
+        segment = str(current.name)
+        element_id = str(current.get("id") or "")
+        if element_id and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", element_id):
+            segment += f"#{_locator_token(element_id)}"
+        else:
+            classes = [
+                str(value) for value in (current.get("class") or [])[:8]
+                if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", str(value))
+            ]
+            if classes:
+                segment += "." + ".".join(sorted(_locator_token(value) for value in classes))
+                if len(current.get("class") or []) > len(classes):
+                    segment += ".more"
+        parent = getattr(current, "parent", None)
+        if parent is not None:
+            siblings = parent.find_all(current.name, recursive=False)
+            if len(siblings) > 1:
+                sibling_index = next(
+                    index for index, sibling in enumerate(siblings, start=1)
+                    if sibling is current
+                )
+                segment += f":nth-of-type({sibling_index})"
+        if len(segment) > 128:
+            suffix = "~" + hashlib.sha256(segment.encode("utf-8")).hexdigest()[:12]
+            segment = segment[:128 - len(suffix)] + suffix
+        addition = len(segment) + (3 if segments else 0)
+        path_budget = MAX_PUBLIC_LOCATOR_CHARS - len("… > ")
+        if segment_chars + addition > path_budget:
+            truncated = True
+            break
+        segments.append(segment)
+        segment_chars += addition
+        current = parent
+    locator = " > ".join(reversed(segments))
+    if truncated:
+        prefix = "… > "
+        locator = prefix + locator
+    return locator
+
+
+def _locator_token(value: str) -> str:
+    if len(value) <= 80:
+        return value
+    suffix = "~" + hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+    return value[:80 - len(suffix)] + suffix
+
+
+def _bounded_node_locators(nodes) -> tuple[list[str], bool]:
+    locators: list[str] = []
+    retained_chars = 0
+    truncated = False
+    for node in nodes:
+        locator = _node_locator(node)
+        separator_chars = 1 if locators else 0
+        remaining = MAX_PUBLIC_LOCATOR_TOTAL_CHARS - retained_chars - separator_chars
+        if remaining <= 0:
+            truncated = True
+            break
+        if len(locator) > remaining:
+            if remaining > 13:
+                suffix = "~" + hashlib.sha256(locator.encode("utf-8")).hexdigest()[:12]
+                locator = locator[:remaining - len(suffix)] + suffix
+                locators.append(locator)
+                retained_chars += separator_chars + len(locator)
+            truncated = True
+            break
+        locators.append(locator)
+        retained_chars += separator_chars + len(locator)
+    if len(locators) < len(nodes):
+        truncated = True
+    return locators, truncated
+
+
+def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
+    """Yield normalized text pieces without copying the selected DOM subtree."""
+    excluded_tags = {"script", "style", "noscript", "nav", "header", "footer", "aside", "form"}
+    never_content_tags = {"script", "style", "noscript", "template"}
+    if getattr(node, "name", None) in never_content_tags:
+        return
+    first = True
+    for text_node in node.descendants:
+        if not isinstance(text_node, NavigableString) or isinstance(text_node, Comment):
             continue
+        parent = getattr(text_node, "parent", None)
+        excluded = False
+        while parent is not None and parent is not node:
+            parent_name = getattr(parent, "name", None)
+            if parent_name in never_content_tags:
+                excluded = True
+                break
+            if not include_chrome and (
+                parent_name in excluded_tags
+                or _has_navigation_role(parent)
+            ):
+                excluded = True
+                break
+            parent = getattr(parent, "parent", None)
+        if excluded:
+            continue
+        text = str(text_node).strip()
+        if not text:
+            continue
+        if not first:
+            yield " "
+        yield text
+        first = False
+
+
+def _has_navigation_role(element: Any) -> bool:
+    """ARIA role is a space-separated token list (e.g. "navigation presentation")."""
+    get = getattr(element, "get", None)
+    if get is None:
+        return False
+    return "navigation" in str(get("role") or "").lower().split()
+
+
+def _node_text_length(node: Any) -> int:
+    return sum(len(part) for part in _iter_node_text_parts(node))
+
+
+def _selected_substantive_nodes(soup: BeautifulSoup) -> list[Any]:
+    """Select independent article roots before producing or retaining their text."""
+    candidates: list[tuple[int, Any]] = []
+    candidate_priority: dict[int, int] = {}
+    for node in soup.select(_CONTENT_SELECTORS):
+        if node.name in {"script", "style", "nav", "header", "footer", "aside", "form"}:
+            continue
+        # Apply the same chrome exclusions to the root itself as to its
+        # descendants: forms and ARIA navigation regions are never content.
+        if _has_navigation_role(node):
+            continue
+        # A page-level <form> wrapper is common in server-rendered pages; only
+        # form roots are rejected, not semantic articles inside a form.
         if node.find_parent(("nav", "header", "footer", "aside")):
+            continue
+        if any(_has_navigation_role(parent) for parent in node.parents):
             continue
         labels = " ".join(str(value) for value in (
             node.get("id") or "", *(node.get("class") or []),
         )).lower()
         if any(marker in labels for marker in _CHROME_MARKERS):
             continue
-        cleaned = BeautifulSoup(str(node), "html.parser")
-        for chrome in cleaned.select(
-            "script, style, noscript, nav, header, footer, aside, form, [role=navigation]"
-        ):
-            chrome.decompose()
-        body = cleaned.get_text(" ", strip=True)
         semantic = node.name in {"article", "main"} or node.get("itemprop") == "articleBody" or node.get("role") == "main"
-        if not body or len(body) > 100_000 or (not semantic and len(body) < 500):
-            continue
         priority = (
             0 if node.name == "article" or node.get("itemprop") == "articleBody"
             else 1 if "content_article" in labels or node.find_parent(class_="block-text-only")
             else 2 if node.name != "main" else 3
         )
-        candidates.append((priority, len(body), body))
-    if candidates:
-        return min(candidates, key=lambda item: (item[0], item[1]))[2]
-    return ""
+        # Deduplicate nested roots before measuring: an accepted ancestor of
+        # equal or better priority always wins final selection, so measuring
+        # this subtree again would only repeat work (quadratic on nesting).
+        if any(
+            candidate_priority.get(id(parent), 99) <= priority
+            for parent in node.parents
+        ):
+            continue
+        text_length = _node_text_length(node)
+        if not text_length or text_length > 2 * 1024 * 1024 or (not semantic and text_length < 500):
+            continue
+        candidates.append((priority, node))
+        candidate_priority[id(node)] = priority
+    if not candidates:
+        return []
+
+    best_priority = min(candidate[0] for candidate in candidates)
+    preferred = [node for priority, node in candidates if priority == best_priority]
+    selected: list[Any] = []
+    selected_ids: set[int] = set()
+    for node in preferred:
+        # An enclosing semantic element already contains this block. Keep the
+        # enclosing source once; sibling articles remain separate selections.
+        if any(id(parent) in selected_ids for parent in node.parents):
+            continue
+        selected.append(node)
+        selected_ids.add(id(node))
+    return selected
+
+
+def _substantive_blocks(soup: BeautifulSoup) -> list[dict[str, str]]:
+    """Compatibility projection of selected blocks, after nested-root removal."""
+    return [
+        {"text": "".join(_iter_node_text_parts(node)), "locator": _node_locator(node)}
+        for node in _selected_substantive_nodes(soup)
+    ]
+
+
+def _substantive_body(soup: BeautifulSoup) -> str:
+    """Compatibility projection of the selected article blocks."""
+    return "\n\n".join(block["text"] for block in _substantive_blocks(soup))
+
+
+def _capture_bounded_text(parts, max_chars: int) -> tuple[str, str, int]:
+    """Hash/count the full normalized text while retaining only its bounded preview."""
+    digest = hashlib.sha256()
+    preview = StringIO()
+    preview_length = 0
+    full_length = 0
+    for part in parts:
+        if not part:
+            continue
+        digest.update(part.encode("utf-8"))
+        full_length += len(part)
+        remaining = max_chars - preview_length
+        if remaining > 0:
+            kept = part[:remaining]
+            preview.write(kept)
+            preview_length += len(kept)
+    text = preview.getvalue()
+    if full_length > max_chars:
+        text = text.rstrip() + "…"
+    return text, digest.hexdigest(), full_length
+
+
+def _joined_node_text(nodes):
+    for index, node in enumerate(nodes):
+        if index:
+            yield "\n\n"
+        yield from _iter_node_text_parts(node)
 
 
 def _publication_signals(soup: BeautifulSoup) -> tuple[str, str, str]:
@@ -187,16 +387,44 @@ class PublicHttpAdapter(BasePlatformAdapter):
         description = soup.find("meta", attrs={"name": re.compile("^description$", re.I)})
         # Semantic main/article content remains authoritative even when short;
         # a site-wide description must not replace a directory or address.
-        article_text = _substantive_body(soup)
-        text = article_text or (soup.body.get_text(" ", strip=True) if soup.body else "")
-        if len(text) > MAX_PUBLIC_BODY_CHARS:
-            text = text[:MAX_PUBLIC_BODY_CHARS].rstrip() + "…"
+        selected_nodes = _selected_substantive_nodes(soup)
+        if selected_nodes:
+            selection = "semantic_blocks"
+            locators, locators_truncated = _bounded_node_locators(selected_nodes)
+            text, source_text_sha256, source_text_char_length = _capture_bounded_text(
+                _joined_node_text(selected_nodes), MAX_PUBLIC_BODY_CHARS,
+            )
+        elif description and str(description.get("content") or "").strip():
+            description_text = str(description.get("content") or "").strip()
+            selection = "meta_description"
+            locators = ["meta[name=description][content]"]
+            locators_truncated = False
+            text, source_text_sha256, source_text_char_length = _capture_bounded_text(
+                (description_text,), MAX_PUBLIC_BODY_CHARS,
+            )
+        else:
+            text_parts = _iter_node_text_parts(soup.body, include_chrome=True) if soup.body else ()
+            text, source_text_sha256, source_text_char_length = _capture_bounded_text(
+                text_parts, MAX_PUBLIC_BODY_CHARS,
+            )
+            selection = "document_body" if source_text_char_length else "none"
+            locators = ["body"] if source_text_char_length else []
+            locators_truncated = False
+        truncated = source_text_char_length > MAX_PUBLIC_BODY_CHARS
+        if selection == "semantic_blocks":
+            completeness = "TRUNCATED_SEMANTIC_PREVIEW" if truncated else "COMPLETE_SEMANTIC_TEXT"
+        elif selection == "meta_description":
+            completeness = "TRUNCATED_DESCRIPTION" if truncated else "DESCRIPTION_EXCERPT"
+        elif selection == "document_body":
+            completeness = "TRUNCATED_DOCUMENT_BODY" if truncated else "DOCUMENT_BODY_TEXT"
+        else:
+            completeness = "EMPTY"
         published, date_source, date_state = _publication_signals(soup)
         item_id = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()[:32]
         return {
             "platform_content_id": f"public-http:{item_id}",
             "title": title,
-            "content": str(text if article_text or not description else description.get("content")),
+            "content": str(text),
             "author_id": None,
             "author_nickname": None,
             "publish_datetime": published,
@@ -210,6 +438,20 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 "content_type": "text/html", "canonical_url": canonical_url,
                 "publication_date_source": date_source,
                 "publication_date_state": date_state,
+                "content_observation": {
+                    "selection": selection,
+                    "selected_locators": locators,
+                    "selected_locator_count": len(locators),
+                    "selected_locators_truncated": locators_truncated,
+                    "selected_block_count": len(selected_nodes),
+                    "source_text_sha256": source_text_sha256,
+                    "source_text_char_length": source_text_char_length,
+                    "returned_text_char_length": len(text),
+                    "truncated": truncated,
+                    "completeness": completeness,
+                    "document_sha256": hashlib.sha256(response.content).hexdigest(),
+                    "document_byte_length": len(response.content),
+                },
             },
         }
 
@@ -257,7 +499,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=self.platform,
                 message="当前公开页面暂时无法读取，请稍后重试",
-                metadata={"provider": "public_http", "error_type": type(exc).__name__},
+                metadata={"provider": "public_http", **public_source_error_metadata(exc)},
             )
         except Exception as exc:
             return CollectionResult(

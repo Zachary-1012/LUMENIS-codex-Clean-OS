@@ -22,6 +22,7 @@ import sqlite3
 import re
 from datetime import datetime
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from flask import Blueprint, jsonify, request
 
@@ -42,6 +43,105 @@ SUBJECT_TYPES: Dict[str, str] = {
 }
 
 TABLE_NAME = "lumenis_subject_registry"
+OFFICIAL_NAME_SOURCE_FEATURE_ID = "SUBJECT_OFFICIAL_NAME_SOURCE"
+_SENSITIVE_SOURCE_QUERY_TERMS = {
+    "auth", "authorization", "bearer", "cookie", "credential", "credentials",
+    "key", "password", "passwd", "pwd", "secret", "session", "sign",
+    "signature", "sig", "token",
+}
+_SENSITIVE_SOURCE_QUERY_KEYS = {
+    "access_key", "access_token", "api_key", "apikey", "appkey", "aws_access_key",
+    "aws_secret_key", "client_id", "client_secret", "oauth_token", "private_key",
+    "refresh_token", "secret_key", "session_id",
+}
+
+
+def _validate_official_source_url(source_url: Any) -> str:
+    """Validate a declared official URL without reading or mutating the DB."""
+    url = _text(source_url, field="source_url", max_len=500)
+    if not url.lower().startswith(("https://", "http://")):
+        raise SubjectValidationError("source_url 必须是品牌官网 http(s) 地址")
+    try:
+        parts = urlsplit(url)
+        hostname = parts.hostname
+        username = parts.username
+        password = parts.password
+    except ValueError as exc:
+        raise SubjectValidationError("source_url 格式无效") from exc
+    if (parts.scheme.lower() not in {"http", "https"} or not hostname
+            or username is not None or password is not None):
+        raise SubjectValidationError("source_url 不得包含凭证或无效主机名")
+
+    def normalized_query_key(key: str) -> str:
+        # Separate camelCase before casefolding (clientSecret -> client_secret),
+        # then canonicalize punctuation so equivalent credential names match.
+        separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+        return re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
+
+    def contains_sensitive_assignment(query: str, *, depth: int = 0, seen=frozenset()) -> bool:
+        """Inspect direct and bounded nested query values before persisting a URL.
+
+        `parse_qsl` decodes one level of a value but does not expose credentials
+        hidden inside redirect URLs or semicolon-delimited query assignments.
+        The URL itself is capped at 500 characters; this additional depth bound
+        keeps nested inspection small even for deliberately recursive values.
+        """
+        if not query or depth > 4 or query in seen:
+            return False
+        seen = seen | {query}
+        for key, value in parse_qsl(query.replace(";", "&"), keep_blank_values=True):
+            normalized_key = normalized_query_key(key)
+            if (normalized_key in _SENSITIVE_SOURCE_QUERY_KEYS
+                    or set(normalized_key.split("_")) & _SENSITIVE_SOURCE_QUERY_TERMS):
+                return True
+            if depth >= 4 or not value:
+                continue
+
+            nested_queries = []
+            # Both the query-decoded and once-more-decoded forms are useful
+            # when a redirect value was percent-encoded twice.
+            # Bounded iterative decoding: a redirect may be percent-encoded
+            # several times; inspect every layer until it stops changing.
+            layers = [value]
+            for _ in range(6):
+                decoded = unquote(layers[-1])
+                if decoded == layers[-1]:
+                    break
+                layers.append(decoded)
+            else:
+                if unquote(layers[-1]) != layers[-1]:
+                    # Still encoded after the bound: it cannot be inspected,
+                    # so treat it as credential-bearing (fail closed).
+                    return True
+            for candidate in dict.fromkeys(layers):
+                try:
+                    nested_parts = urlsplit(candidate)
+                    nested_query = nested_parts.query
+                    # A nested redirect authority can carry userinfo even
+                    # when it has no query of its own.
+                    if nested_parts.netloc and "@" in nested_parts.netloc:
+                        return True
+                    # The outer URL may not carry a fragment; an encoded
+                    # nested fragment (#access_token=...) is held to the same
+                    # rule: fail closed rather than persist it as Evidence.
+                    if nested_parts.fragment:
+                        return True
+                except ValueError:
+                    nested_query = ""
+                if nested_query:
+                    nested_queries.append(nested_query)
+                elif re.search(r"(?:^|[?&;])[^?&;=]+=", candidate):
+                    nested_queries.append(candidate)
+            for nested in dict.fromkeys(nested_queries):
+                if contains_sensitive_assignment(nested, depth=depth + 1, seen=seen):
+                    return True
+        return False
+
+    if contains_sensitive_assignment(parts.query):
+        raise SubjectValidationError("source_url 不得包含凭证查询参数")
+    if parts.fragment:
+        raise SubjectValidationError("source_url 不得包含片段数据")
+    return url
 
 
 class SubjectValidationError(ValueError):
@@ -137,6 +237,25 @@ def _schema_version(conn):
         except (TypeError, ValueError):
             continue
     return max(versions) if versions else 0
+
+
+def _ensure_legacy_evidence_schema() -> None:
+    """Initialize canonical Evidence only for the supported unversioned DB."""
+    with _db_ready() as conn:
+        _require_registry_schema(conn)
+        unversioned = _schema_version(conn) is None
+    if not unversioned:
+        return
+
+    # Use the Shared Evidence owner's initializer so its additive contract,
+    # chain, and integrity columns stay in sync. Versioned databases remain
+    # exclusively owned by the Shared Database migrator.
+    import db_paths
+    from lumenis.shared.evidence.store import ensure_evidence_schema, init_evidence_store
+
+    init_evidence_store(db_paths.main_db_path())
+    with _db_ready() as conn:
+        ensure_evidence_schema(conn)
 
 
 def _require_registry_schema(conn) -> None:
@@ -373,23 +492,35 @@ def record_official_name(
     name_zh: Optional[str] = None,
     name_en: Optional[str] = None,
     keywords: Iterable[str] = (),
+    permission_audit_id: Optional[str] = None,
+    permission_caller: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Record a brand's own official name/aliases, with official-site evidence.
+    """Record a brand's own official name/aliases with a source declaration.
 
     LUMENIS does not rename brands: callers pass only names shown on the
     brand's official site, and ``source_url`` (http/https) is required.
     The stable subject_id is unchanged; aliases are appended to keywords.
-    Returns {"before", "after", "changed", "source_url"}.
+    The declared URL and name transition are stored in scoped Shared Evidence
+    in the same transaction as the registry update. An HTTP(S) prefix is only
+    syntax validation: it does not verify the site or the entity's identity.
+    Returns {"before", "after", "changed", "source_url", "source_provenance"}.
     """
     normalized = normalize_domain(domain_id)
-    url = _text(source_url, field="source_url", max_len=500)
-    if not url.lower().startswith(("https://", "http://")):
-        raise SubjectValidationError("source_url 必须是品牌官网 http(s) 地址")
+    url = _validate_official_source_url(source_url)
     new_zh = _text(name_zh, field="name_zh") if name_zh else None
     new_en = _text(name_en, field="name_en") if name_en else None
     extra = _keywords(list(keywords or ()))
     if not (new_zh or new_en or extra):
         raise SubjectValidationError("没有可记录的官方名称")
+    if permission_audit_id is not None:
+        permission_audit_id = _text(
+            permission_audit_id, field="permission_audit_id", max_len=200
+        )
+    if permission_caller is not None:
+        permission_caller = _text(
+            permission_caller, field="permission_caller", max_len=200
+        )
+    _ensure_legacy_evidence_schema()
     with _db_ready() as conn:
         _require_registry_schema(conn)
         cols = ("subject_id, brand_focus_id, domain_id, subject_type, name_en, name_zh, industry, "
@@ -420,7 +551,80 @@ def record_official_name(
                 raise SubjectValidationError("官方名称与另一已登记主体重复") from exc
         after = _row_to_dict(conn.execute(
             f"SELECT {cols} FROM {TABLE_NAME} WHERE subject_id=?", (subject_id,)).fetchone())
-    return {"before": before, "after": after, "changed": changed, "source_url": url}
+
+        # This operation records an assertion supplied to the registry. Do not
+        # turn a syntactically valid URL into site-origin or identity proof.
+        from lumenis.shared.evidence.store import record_evidence
+
+        evidence_scope = {"subject_id": subject_id} if normalized == "CTH" else {
+            "brand_focus_id": before.get("brand_focus_id"),
+        }
+        if normalized == "BMP" and not evidence_scope["brand_focus_id"]:
+            raise SubjectRegistryUnavailableError(
+                "canonical BrandFocus identity is unavailable for source Evidence"
+            )
+        evidence_id = record_evidence(
+            connection=conn,
+            source="subject_registry",
+            project="LUMENIS",
+            product=normalized,
+            domain_id=normalized.lower(),
+            **evidence_scope,
+            feature_id=OFFICIAL_NAME_SOURCE_FEATURE_ID,
+            level="L4",
+            test_name="official_name_source_declaration",
+            capture_mode="manual_declaration",
+            result="GAP",
+            status="pending",
+            subject_scope=(subject_id if normalized == "CTH" else before["brand_focus_id"]),
+            inputs={
+                "subject_id": subject_id,
+                "source_url": url,
+                "source_claim": "official_site",
+                "name_before": {"name_en": before["name_en"], "name_zh": before["name_zh"]},
+                "name_after": {"name_en": after["name_en"], "name_zh": after["name_zh"]},
+                "keywords_before": list(before["keywords"]),
+                "keywords_requested": list(extra),
+                "permission_audit_id": permission_audit_id,
+                "permission_caller": permission_caller,
+            },
+            outputs={
+                "subject_id": subject_id,
+                "keywords_after": list(after["keywords"]),
+                "source_url": url,
+                "origin_verification": "NOT_INDEPENDENTLY_VERIFIED",
+                "identity_verification": "NOT_VERIFIED",
+                "authenticity_score_state": "NOT_ASSESSED",
+                "url_scheme_is_identity_proof": False,
+                "network_fetch": "NOT_PERFORMED",
+            },
+            expected="Official source origin and identity require independent verification.",
+            actual="URL was declared; no network request or identity verification was performed.",
+            # No independent source or identity check was performed, so keep
+            # the canonical numeric score unknown instead of encoding 0.0.
+            authenticity_score=None,
+            notes=(
+                "HTTP(S) scheme validation records syntax only. The existing "
+                "numeric authenticity score remains unassessed."
+            ),
+        )
+        if type(evidence_id) is not int or evidence_id <= 0:
+            raise SubjectRegistryUnavailableError(
+                "official name source Evidence was not durably recorded"
+            )
+    source_provenance = {
+        "source_url": url,
+        "evidence_ref": f"app_evidence_records:{evidence_id}",
+        "origin_verification": "NOT_INDEPENDENTLY_VERIFIED",
+        "identity_verification": "NOT_VERIFIED",
+    }
+    return {
+        "before": before,
+        "after": after,
+        "changed": changed,
+        "source_url": url,
+        "source_provenance": source_provenance,
+    }
 
 
 def _country_subject_projection(domain_id, country_iso, relation_type):

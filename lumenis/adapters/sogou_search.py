@@ -32,9 +32,15 @@ from .base import BaseAdapter, AdapterResult
 # 命中即视为搜狗反爬/人机校验，需按 BLOCKED 处理而非“无结果”
 _BLOCK_PATTERNS = [
     "antispider", "anti.min.css", "verify.css", "imgcode",
-    "请输入验证码", "访问过于频繁", "用户您好", "网络不给力",
-    "验证码", "unusual traffic", "请您输入验证码",
+    "访问过于频繁", "用户您好", "网络不给力", "unusual traffic",
 ]
+_MANUAL_VERIFICATION_PATTERNS = (
+    "anti.min.css", "verify.css", "imgcode",
+)
+_RATE_LIMIT_PATTERNS = ("访问过于频繁", "unusual traffic")
+_MANUAL_VERIFICATION_PROMPTS = ("请输入验证码", "请您输入验证码")
+# BaseAdapter recognizes NEED_VERIFY as terminal and bypasses cached fallback.
+_MANUAL_VERIFICATION_PREFIX = "NEED_VERIFY: NEED_HUMAN_VERIFICATION:"
 # 发布时间：2026年6月7日 / 2025-03-2 / 2025/03/02
 _DATE_CN = re.compile(r"(20\d{2})\s*[年/\-\.]\s*(\d{1,2})\s*[月/\-\.]\s*(\d{1,2})")
 # 用于从来源文本里整体抹掉日期（含年/月/日/号汉字与分隔符）
@@ -47,7 +53,7 @@ _REL_DAY = re.compile(r"(\d+)\s*天前")
 _URL_YEAR = re.compile(r"/(20\d{2})[/\-_.]")
 # JS / meta 跳转里的真实地址
 _JS_LOCATION = re.compile(
-    r"(?:location\.replace|location\.href|URL=|url=)\s*[\"']?(https?://[^\"'\)\s>]+)",
+    r'''(?:(?:window\.)?location\.replace\s*\(\s*|(?:window\.)?location\.href\s*=\s*|URL\s*=\s*)\s*(?:"(?P<double>[^"]+)"|'(?P<single>[^']+)'|(?P<bare>[^"'\s)>;]+))''',
     re.IGNORECASE)
 
 
@@ -114,6 +120,12 @@ class SogouSearchAdapter(BaseAdapter):
             page, err = self._fetch_channel(session, tmpl.format(q=urllib.parse.quote(keyword)), referer)
             if err:
                 blocked.append(f"{channel}:{err}")
+                if err.startswith(_MANUAL_VERIFICATION_PREFIX):
+                    # A provider challenge is terminal for this explicit search:
+                    # do not try another channel or resolve links after it.
+                    return AdapterResult(
+                        success=False, notes=collected, error="；".join(blocked),
+                    )
                 continue
             collected.extend(self._parse_channel(page, channel))
 
@@ -122,7 +134,9 @@ class SogouSearchAdapter(BaseAdapter):
             return AdapterResult(success=False, error="；".join(blocked))
 
         # 还原 /link 中转真实地址（并发，温和限流）
-        self._resolve_links(session, collected, workers=6)
+        resolve_error = self._resolve_links(session, collected, workers=6)
+        if resolve_error:
+            return AdapterResult(success=False, error=resolve_error)
 
         # 按真实 URL 去重（新闻优先保留），再截断
         deduped, seen = [], set()
@@ -155,10 +169,10 @@ class SogouSearchAdapter(BaseAdapter):
         }
 
     def _fetch_channel(self, session, url: str, referer: str):
-        """抓取单个频道结果页；命中风控时退避后最多重试一次。
+        """抓取单个频道页；验证挑战立即停止，其他短暂空壳最多重试一次。
 
         返回 (html, error)：成功 error 为 None；被拦/网络异常返回 (None, 原因)。
-        不做多次硬撞，符合“被拦即退避、不硬刚风控”的原则。
+        验证挑战不自动重试，要求用户完成验证后显式重新发起搜索。
         """
         for attempt in range(2):
             try:
@@ -168,11 +182,18 @@ class SogouSearchAdapter(BaseAdapter):
                 text = resp.text
             except Exception as e:
                 return None, f"网络异常 {e}"
+            if self._is_manual_verification_response(resp):
+                return None, (
+                    f"{_MANUAL_VERIFICATION_PREFIX} 搜狗返回验证码/反爬挑战；"
+                    "已停止自动请求，请完成人工验证后重新发起搜索"
+                )
             if not self._is_blocked(text):
                 return text, None
             if attempt == 0:
                 time.sleep(random.uniform(4.0, 6.0))  # 首次被拦，冷却后仅再试一次
                 continue
+            if self._is_rate_limited(text):
+                return None, "RATE_LIMITED: 搜狗频控，已完成一次退避重试"
             return None, "命中搜狗反爬验证页(已退避重试仍受限)"
         return None, "命中搜狗反爬验证页"
 
@@ -183,6 +204,61 @@ class SogouSearchAdapter(BaseAdapter):
             return True  # 异常空壳页同样视为被拦，避免“假成功 0 条”
         low = text.lower()
         return any(p.lower() in low for p in _BLOCK_PATTERNS)
+
+    @staticmethod
+    def _is_rate_limited(text: str) -> bool:
+        low = (text or "").lower()
+        return any(marker.lower() in low for marker in _RATE_LIMIT_PATTERNS)
+
+    @staticmethod
+    def _has_manual_verification(text: str) -> bool:
+        """Detect challenge-page evidence without matching ordinary article wording."""
+        if not text:
+            return False
+        low = text.lower()
+        challenge_assets = re.findall(r"<(?:link|script|img|input)\b[^>]*>", low)
+        if any(
+            pattern in tag
+            for tag in challenge_assets
+            for pattern in _MANUAL_VERIFICATION_PATTERNS
+        ):
+            return True
+        form_tags = re.findall(r"<form\b[^>]*>", low)
+        if any(
+            any(
+                segment.lower() in {"antispider", "verify", "captcha"}
+                for value in re.findall(
+                    r"(?:action|id|class)\s*=\s*['\"]([^'\"]*)['\"]",
+                    tag,
+                )
+                for segment in re.split(r"[/\s?#]+", value)
+            )
+            for tag in form_tags
+        ):
+            return True
+
+        visible_text = html.unescape(re.sub(r"<[^>]*>", " ", text))
+        visible_text = re.sub(r"\s+", "", visible_text)
+        visible_text = visible_text.strip("：:，,。.!！?？；;")
+        prompt_texts = {
+            re.sub(r"\s+", "", prompt) for prompt in _MANUAL_VERIFICATION_PROMPTS
+        }
+        if visible_text in prompt_texts or any(
+            visible_text == prompt + "antispider" for prompt in prompt_texts
+        ):
+            return True
+
+        for prompt in _MANUAL_VERIFICATION_PROMPTS:
+            start = low.find(prompt)
+            while start >= 0:
+                end = start + len(prompt)
+                context = low[max(0, start - 500):end + 500]
+                if re.search(
+                    r"<(?:input|img)\b[^>]*(?:captcha|verify|code|imgcode)", context
+                ):
+                    return True
+                start = low.find(prompt, end)
+        return False
 
     def _parse_channel(self, page_html: str, channel: str) -> list:
         """解析单个频道结果页为标准化笔记列表。"""
@@ -360,35 +436,113 @@ class SogouSearchAdapter(BaseAdapter):
 
     # ---------- 中链还原 ----------
     def _resolve_links(self, session, notes, workers: int = 6):
-        """并发把搜狗 /link 中转地址还原为真实 URL；失败保留原中转链。"""
+        """并发还原 /link 地址；命中挑战时停止发起后续链接请求。"""
         pending = {i: n.url for i, n in enumerate(notes)
                    if n.url.startswith("https://www.sogou.com/link")}
         if not pending:
-            return
+            return None
         headers = self._headers("https://www.sogou.com/")
 
         def resolve(url):
             try:
                 r = session.get(url, headers=headers, timeout=8, allow_redirects=True)
-                m = _JS_LOCATION.search(r.text[:4000])
+                if self._is_manual_verification_response(r):
+                    return None, (
+                        f"{_MANUAL_VERIFICATION_PREFIX} 搜狗 /link 跳转返回验证码/反爬挑战；"
+                        "已停止后续链接请求，请完成人工验证后重新发起搜索"
+                    )
+                m = _JS_LOCATION.search(r.text or "")
                 if m:
-                    return html.unescape(m.group(1))
+                    candidate = next((value for value in m.groups() if value), "")
+                    target = self._resolve_http_target(candidate, getattr(r, "url", "") or url)
+                    if target:
+                        if self._is_manual_verification_url(target):
+                            return None, (
+                                f"{_MANUAL_VERIFICATION_PREFIX} 搜狗 /link 的 JS 目标为验证码验证页；"
+                                "已停止后续链接请求，请完成人工验证后重新发起搜索"
+                            )
+                        return target, None
                 if r.url and "sogou.com/link" not in r.url:
-                    return r.url  # 极少数走 HTTP 302
+                    target = self._resolve_http_target(r.url, url)
+                    if target:
+                        return target, None  # 极少数走 HTTP 302
             except Exception:
-                return None
-            return None
+                return None, None
+            return None, None
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(resolve, u): i for i, u in pending.items()}
-            for fut in concurrent.futures.as_completed(futures):
-                i = futures[fut]
-                real = fut.result()
-                if real:
-                    notes[i].url = real
-                    notes[i].raw_data["link_redirect"] = False
-                    if notes[i].author in ("搜狗搜索", "搜狗新闻", "搜狗网页", "sogou"):
-                        real_src = self._domain_source(real)
-                        if real_src and real_src != "sogou":
-                            notes[i].author = real_src
-                # 还原失败：保留原中转链，raw_data 标记保持 True
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+            entries = list(pending.items())
+            for offset in range(0, len(entries), max(1, workers)):
+                batch = entries[offset:offset + max(1, workers)]
+                futures = {pool.submit(resolve, url): index for index, url in batch}
+                for future in concurrent.futures.as_completed(futures):
+                    index = futures[future]
+                    real, challenge_error = future.result()
+                    if challenge_error:
+                        # Requests already running in this bounded batch may finish,
+                        # but queued futures are cancelled and no later batch starts.
+                        for other in futures:
+                            if other is not future:
+                                other.cancel()
+                        return challenge_error
+                    if real:
+                        notes[index].url = real
+                        notes[index].raw_data["link_redirect"] = False
+                        if notes[index].author in ("搜狗搜索", "搜狗新闻", "搜狗网页", "sogou"):
+                            real_src = self._domain_source(real)
+                            if real_src and real_src != "sogou":
+                                notes[index].author = real_src
+                    # 还原失败：保留原中转链，raw_data 标记保持 True
+        return None
+
+    @classmethod
+    def _is_manual_verification_response(cls, response) -> bool:
+        """识别响应正文挑战或搜狗 anti-spider 最终跳转地址。"""
+        if cls._has_manual_verification(getattr(response, "text", "") or ""):
+            return True
+        return cls._is_manual_verification_url(getattr(response, "url", "") or "")
+
+    @staticmethod
+    def _resolve_http_target(value: str, base_url: str) -> str | None:
+        """Resolve a literal redirect URL without executing JavaScript."""
+        try:
+            base = urllib.parse.urlsplit(str(base_url or ""))
+            if (
+                base.scheme.lower() not in {"http", "https"}
+                or not base.hostname
+                or base.username
+                or base.password
+            ):
+                return None
+            candidate = html.unescape(str(value or "").strip())
+            if not candidate:
+                return None
+            target = urllib.parse.urljoin(base_url, candidate)
+            parsed = urllib.parse.urlsplit(target)
+        except (TypeError, ValueError):
+            return None
+        if (
+            parsed.scheme.lower() not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+        ):
+            return None
+        return target
+
+    @staticmethod
+    def _is_manual_verification_url(url: str) -> bool:
+        """只将搜狗域名下明确的验证路径作为验证目的地。"""
+        if not isinstance(url, str):
+            return False
+        try:
+            parsed = urllib.parse.urlparse(url)
+            host = (parsed.hostname or "").lower()
+            path = urllib.parse.unquote(parsed.path).lower()
+        except (TypeError, ValueError):
+            return False
+        is_sogou_host = host == "sogou.com" or host.endswith(".sogou.com")
+        segments = [segment for segment in path.split("/") if segment]
+        return is_sogou_host and bool(
+            any(segment in {"antispider", "verify", "captcha"} for segment in segments)
+        )

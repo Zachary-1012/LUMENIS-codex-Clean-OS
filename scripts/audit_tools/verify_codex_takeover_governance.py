@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -197,12 +198,91 @@ def _publication_changed_paths(*, staged: bool = False) -> set[str]:
     return {line.strip() for line in proc.stdout.splitlines() if line.strip()}
 
 
+
+# This is an immutable path admission boundary, not a license or execution grant.
+# Digest encoding: UTF-8 of sorted repository-relative paths, each ending in LF.
+RECOVERED_EVIDENCE_RECEIPT = (
+    "research/engineering/documentation-evidence/reports/"
+    "original_research_gap_closure_20261018/LIBRARY_RECOVERY_RECEIPT_20261020.json"
+)
+RECOVERED_EVIDENCE_REPORT = RECOVERED_EVIDENCE_RECEIPT.rsplit("/", 1)[0] + "/REPORT.md"
+RECOVERED_EVIDENCE_PATHS_SHA256 = "cb525a0903b80673d4b24c6e9799f01d256ac31757ec4a65a4d917155d5ab101"
+
+
+def _canonical_recovery_path(path: object) -> bool:
+    return (
+        isinstance(path, str) and bool(path) and "\\" not in path
+        and not any(ord(char) < 32 for char in path)
+        and all(part not in {"", ".", ".."} for part in path.split("/"))
+    )
+
+
+def _recovered_evidence_file(path: str) -> Path:
+    assert _canonical_recovery_path(path), "noncanonical recovered evidence path"
+    target = ROOT / path
+    # Do not admit symlink aliases, including symlinked ancestor directories.
+    assert target.resolve(strict=True) == ROOT.resolve() / path, "recovered evidence symlink"
+    assert target.is_file(), "recovered evidence must be a regular file"
+    return target
+
+
+def _recovered_evidence_inventory() -> dict[str, dict]:
+    receipt = json.loads(_recovered_evidence_file(RECOVERED_EVIDENCE_RECEIPT).read_text(encoding="utf-8"))
+    assert isinstance(receipt, dict), "malformed recovery receipt"
+    entries = receipt.get("files")
+    assert isinstance(entries, list) and len(entries) == 275, "recovery inventory must contain exactly 275 files"
+    inventory = {}
+    for entry in entries:
+        assert isinstance(entry, dict), "malformed recovery entry"
+        path = entry.get("repository_relative_path")
+        assert _canonical_recovery_path(path), "noncanonical recovered evidence path"
+        assert path not in inventory, "duplicate recovery inventory path"
+        assert type(entry.get("repository_bytes")) is int and entry["repository_bytes"] >= 0, "invalid recovery size"
+        assert isinstance(entry.get("repository_sha256"), str) and re.fullmatch(r"[0-9a-f]{64}", entry["repository_sha256"]), "invalid recovery SHA256"
+        inventory[path] = entry
+    digest = hashlib.sha256(("\n".join(sorted(inventory)) + "\n").encode("utf-8")).hexdigest()
+    assert digest == RECOVERED_EVIDENCE_PATHS_SHA256, "recovery path inventory differs from approved finite set"
+    return inventory
+
+
+def _assert_recovered_file_integrity(path: str, entry: dict) -> None:
+    content = _recovered_evidence_file(path).read_bytes()
+    assert len(content) == entry["repository_bytes"], f"recovered evidence size mismatch: {path}"
+    assert hashlib.sha256(content).hexdigest() == entry["repository_sha256"], f"recovered evidence SHA256 mismatch: {path}"
+
+
+def _assert_recovered_evidence_integrity() -> None:
+    """Verify bytes only; this does not establish rights, integration or acceptance."""
+    for path, entry in _recovered_evidence_inventory().items():
+        _assert_recovered_file_integrity(path, entry)
+
+
+def _is_recovered_evidence_path(path: str) -> bool:
+    if not _canonical_recovery_path(path) or not path.startswith("research/"):
+        return False
+    try:
+        inventory = _recovered_evidence_inventory()
+        if path in inventory:
+            _assert_recovered_file_integrity(path, inventory[path])
+            return True
+        if path in {RECOVERED_EVIDENCE_RECEIPT, RECOVERED_EVIDENCE_REPORT}:
+            _recovered_evidence_file(path)
+            return True
+    except (AssertionError, OSError, ValueError, TypeError):
+        # Missing, corrupt or expanded receipts must never open an allowlist.
+        return False
+    return False
+
+
 def _is_product_behavior_source(path: str) -> bool:
+    if _is_recovered_evidence_path(path):
+        return False  # Independent archived review code is not product implementation.
     # Engineering-policy entrypoints, not LUMENIS user/runtime behavior.
     if path in {
         ".codex/hooks/lumenis_hooks.py", ".codex/engineering.py",
         ".codex/local_workflow.py", ".codex/mcp/server.mjs",
         ".codex/tests/test_engineering.py",  # Same engineering owner regression.
+        "lumenis/bmp/README.md",  # Exact owner documentation path; not product behavior.
         "scripts/production_baseline_check.py", "scripts/lean_footprint.py",
     }:
         return False
@@ -215,6 +295,8 @@ def _is_product_behavior_source(path: str) -> bool:
 
 
 def _is_rules_only_publication_path(path: str) -> bool:
+    if _is_recovered_evidence_path(path):
+        return True
     path = path.replace("\\", "/")
     if path in {
         "AGENTS.md",
@@ -222,6 +304,7 @@ def _is_rules_only_publication_path(path: str) -> bool:
         "app/README.md",
         "website/README.md",
         "contracts/experience/README.md",
+        "lumenis/bmp/README.md",  # Existing BMP scope/navigation owner document, not runtime behavior.
         ".agents/skills/lumenis-flutter-experience/SKILL.md",
         ".agents/skills/lumenis-progressive-context/SKILL.md",
         "scripts/audit_tools/verify_codex_takeover_governance.py",
@@ -313,6 +396,10 @@ def _assert_current_publication_truth(
 
     paths = _publication_changed_paths() if changed_paths is None else set(changed_paths)
     current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
+    if any(_is_recovered_evidence_path(path) for path in paths):
+        # A receipt-only publication must not conceal corruption in unchanged
+        # archive members. Check the entire pinned set, never execute its code.
+        _assert_recovered_evidence_integrity()
 
     if state == "RULES_ONLY_PUBLICATION":
         if runtime.group(1) != "NOT_LOADED_OR_NOT_VERIFIED":

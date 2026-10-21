@@ -64,9 +64,21 @@ class TestIC021EMV:
     def test_emv_no_data_not_available(self):
         """无互动数据 → NOT_AVAILABLE，禁止估 0。"""
         import emv
-        r = emv.calculate_emv(likes=0, comments=0, collects=0, shares=0)
+        r = emv.calculate_emv()
         assert r["status"] == "NOT_AVAILABLE"
         assert r["emv_yuan"] is None
+
+    def test_emv_observed_zero_is_distinct_from_missing(self):
+        """FIX-046：真实全零可用；缺失互动不能冒充为零。"""
+        import emv
+        observed_zero = emv.calculate_emv(likes=0, comments=0, collects=0, shares=0)
+        missing = emv.calculate_emv()
+        assert observed_zero["status"] == "OK"
+        assert observed_zero["emv_yuan"] == 0
+        assert observed_zero["input_coverage"] == 1.0
+        assert missing["status"] == "NOT_AVAILABLE"
+        assert missing["emv_yuan"] is None
+        assert missing["input_coverage"] == 0.0
 
     def test_emv_aggregate_coverage(self):
         """汇总：返回 EMV 总额 + 覆盖度；部分无数据不阻塞。"""
@@ -74,12 +86,12 @@ class TestIC021EMV:
         notes = [
             {"note_id": "A", "title": "t1", "likes": 100, "comments": 5,
              "collects": 2, "shares": 1, "sentiment": "pos"},
-            {"note_id": "B", "title": "t2", "likes": 0, "comments": 0,
-             "collects": 0, "shares": 0, "sentiment": "neu"},
+            {"note_id": "B", "title": "t2", "sentiment": "neu"},
         ]
         r = emv.aggregate_emv(notes)
-        assert r["status"] == "OK"
+        assert r["status"] == "PARTIAL"
         assert r["available_count"] == 1
+        assert r["unavailable_count"] == 1
         assert r["coverage"] == 0.5
         assert r["is_estimate"] is True
 
@@ -89,6 +101,58 @@ class TestIC021EMV:
         r = emv.calculate_emv(likes=100, comments=10, collects=5, shares=2, cpm=5.0)
         assert r["cpm"] == 5.0
         assert "自定义" in r["cpm_source"]
+        assert "假设" in r["cpm_source"]
+        assert r["disclaimer"]
+
+    @pytest.mark.parametrize("bad", [-1, float("nan"), float("inf"), -float("inf")])
+    def test_emv_rejects_invalid_cpm_and_exposure_ratio(self, bad):
+        """FIX-045：负数和非有限 CPM / 曝光比必须明确拒绝。"""
+        import emv
+        for kwargs in ({"cpm": bad}, {"exposure_ratio": bad}):
+            result = emv.calculate_emv(1, 1, 1, 1, **kwargs)
+            assert result["status"] == "INVALID_INPUT"
+            assert result["emv_yuan"] is None
+            assert result["invalid_inputs"]
+
+    @pytest.mark.parametrize("bad", [-1, float("nan"), float("inf"), -float("inf")])
+    def test_emv_rejects_invalid_interactions_and_recovers(self, bad):
+        """FIX-045：互动输入拒绝后，后续独立计算仍按有效数据恢复。"""
+        import emv
+        rejected = emv.calculate_emv(likes=bad, comments=0, collects=0, shares=0)
+        recovered = emv.calculate_emv(likes=1, comments=0, collects=0, shares=0)
+        assert rejected["status"] == "INVALID_INPUT"
+        assert rejected["emv_yuan"] is None
+        assert "likes" in rejected["invalid_inputs"]
+        assert recovered["status"] == "OK"
+        assert recovered["emv_yuan"] > 0
+
+    def test_emv_partial_and_empty_aggregate_are_not_complete(self):
+        """FIX-046：部分字段有显式缺失状态，空汇总不生成零金额。"""
+        import emv
+        partial = emv.calculate_emv(likes=2)
+        empty = emv.aggregate_emv([])
+        all_missing = emv.aggregate_emv([{}])
+        assert partial["status"] == "PARTIAL"
+        assert partial["emv_yuan"] is not None
+        assert partial["missing_inputs"] == ["comments", "collects", "shares"]
+        assert empty["status"] == "NOT_AVAILABLE"
+        assert empty["emv_total_yuan"] is None
+        assert all_missing["status"] == "NOT_AVAILABLE"
+        assert all_missing["emv_total_yuan"] is None
+
+    def test_emv_aggregate_with_invalid_item_does_not_publish_total(self):
+        """FIX-045：含无效行的汇总保留明细，但不发布看似完整的总金额。"""
+        import emv
+        result = emv.aggregate_emv([
+            {"note_id": "valid", "likes": 1, "comments": 0, "collects": 0, "shares": 0},
+            {"note_id": "invalid", "likes": -1, "comments": 0, "collects": 0, "shares": 0},
+        ])
+        assert result["status"] == "INVALID_INPUT"
+        assert result["invalid_count"] == 1
+        assert result["items"][0]["emv_yuan"] > 0
+        assert result["items"][1]["emv_yuan"] is None
+        assert result["emv_total_yuan"] is None
+        assert result["exposure_total"] is None
 
 
 # ===================== IC-039 本地化守卫 =====================

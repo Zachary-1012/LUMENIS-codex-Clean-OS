@@ -5,17 +5,18 @@
 
 v5.9.9 增量增强：
 - 新增 RateLimiter 令牌桶限流
-- 新增 Fallback 降级机制（采集失败返回缓存/空结果，不抛异常）
+- 新增 Fallback 降级机制（有完整调用身份时复用匹配缓存，否则如实失败）
 - 新增 AdapterMetrics 运行指标统计
 - 新增 safe_collect() 永不抛异常入口
 - 保留原有 search()/collect() 接口完全不变，20个适配器零改动
 """
+import copy
 import time
 import logging
 from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass, field
-from typing import List, Optional, Callable
+from typing import List, Optional, Callable, Tuple
 from ..config import ADAPTER_CONFIG
 
 logger = logging.getLogger(__name__)
@@ -59,6 +60,34 @@ class AdapterResult:
     raw_count: int = 0
     duration_seconds: float = 0
     diagnostics: dict = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AdapterCacheContext:
+    """Identity required before a prior adapter result can be reused.
+
+    The adapter instances are shared across requests, so a query string alone
+    is not enough to establish that cached notes belong to the current caller.
+    Keep this value object beside the cache owner rather than introducing a
+    second cache or request-context owner.
+    """
+    actor_id: str
+    scope: str
+    task_id: str
+    source_version: str
+
+    def cache_key(self, keyword: str, max_results: int) -> Optional[Tuple[str, ...]]:
+        identity = (self.actor_id, self.scope, self.task_id, self.source_version)
+        if any(not isinstance(value, str) or not value.strip() for value in identity):
+            return None
+        if not isinstance(keyword, str) or not keyword.strip():
+            return None
+        if not isinstance(max_results, int) or isinstance(max_results, bool):
+            return None
+        if max_results <= 0:
+            return None
+        result_limit = max_results
+        return (*identity, keyword, str(result_limit))
 
 
 class CircuitBreaker:
@@ -204,7 +233,14 @@ class BaseAdapter(ABC):
         self.metrics = AdapterMetrics() if enable_metrics else None
         self.fallback_handler = fallback_handler  # 降级回调：(keyword, error) -> List[CollectedNote]
         self.config = ADAPTER_CONFIG
-        self._last_result: Optional[AdapterResult] = None  # 最近一次成功结果，用于降级缓存
+        self._last_result: Optional[AdapterResult] = None
+        # Preserve the latest provider outcome so an open-circuit shortcut can
+        # retain terminal verification/risk state instead of inventing a plain
+        # "breaker open" error that would make cached fallback look safe.
+        self._breaker_last_failure_error = ""
+        # Store result and identity in one assignment. Adapter instances are
+        # shared across threads, so separate result/key writes can cross-bind.
+        self._last_result_cache_entry = None
 
     @abstractmethod
     def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
@@ -212,13 +248,18 @@ class BaseAdapter(ABC):
         pass
 
     def collect(self, keyword: str, max_results: int = 20, *,
-                allow_fallback: bool = True) -> AdapterResult:
+                allow_fallback: bool = True,
+                cache_context: Optional[AdapterCacheContext] = None) -> AdapterResult:
         """
         采集入口（带熔断器+重试+限流）
         外部调用此方法，不要直接调search
-        v5.9.9：增加限流检查，限流时等待令牌
+        v5.9.9：增加限流检查，限流时等待令牌。缓存降级需要完整 cache_context。
         """
         start = time.time()
+        cache_key = (
+            cache_context.cache_key(keyword, max_results)
+            if isinstance(cache_context, AdapterCacheContext) else None
+        )
 
         # 限流检查
         if not self.rate_limiter.try_acquire():
@@ -226,25 +267,56 @@ class BaseAdapter(ABC):
                 self.metrics.record_call(False, 0, rate_limited=True)
             logger.info(f"[{self.platform_name}] 限流中，等待令牌...")
             if not self.rate_limiter.acquire(timeout=10.0):
-                return self._fallback_or_fail(keyword, "限流超时", start, allow_fallback=allow_fallback)
+                return self._fallback_or_fail(
+                    keyword, "限流超时", start, allow_fallback=allow_fallback,
+                    cache_key=cache_key,
+                )
 
         # 熔断检查
         if not self.breaker.allow():
             if self.metrics:
                 self.metrics.record_call(False, time.time() - start, circuit_open=True)
+            breaker_error = f"熔断器开启，平台{self.platform_name}暂不可用"
+            if self._is_terminal_provider_state(self._breaker_last_failure_error):
+                # Keep the provider's terminal cause visible and bypass both
+                # custom and cached fallback while this breaker remains open.
+                return AdapterResult(
+                    success=False,
+                    error=f"{breaker_error}; 最近终态 provider 响应: {self._breaker_last_failure_error}",
+                    duration_seconds=time.time() - start,
+                )
             return self._fallback_or_fail(
-                keyword, f"熔断器开启，平台{self.platform_name}暂不可用", start,
+                keyword, breaker_error, start,
                 allow_fallback=allow_fallback,
+                cache_key=cache_key,
             )
 
+        # A permitted provider attempt is the only evidence that can replace a
+        # prior terminal outcome. Re-record its result below if it fails.
+        self._breaker_last_failure_error = ""
         last_error = ""
         for attempt in range(self.config["max_retries"]):
             try:
                 result = self.search(keyword, max_results)
                 if result.success:
                     self.breaker.record_success()
+                    self._breaker_last_failure_error = ""
                     result.duration_seconds = time.time() - start
                     self._last_result = result
+                    # An unscoped success invalidates the previous cache
+                    # identity; it must not leave an older scoped result live.
+                    # Keep the fallback snapshot detached from the live result
+                    # returned to the caller, including nested raw_data values.
+                    cache_entry = None
+                    if cache_key is not None:
+                        try:
+                            cache_entry = (copy.deepcopy(result), cache_key)
+                        except Exception as e:
+                            logger.warning(
+                                "[%s] cache snapshot unavailable (%s)",
+                                self.platform_name, type(e).__name__,
+                            )
+                    self._last_result_cache_entry = cache_entry
                     if self.metrics:
                         self.metrics.record_call(True, result.duration_seconds)
                     return result
@@ -262,12 +334,14 @@ class BaseAdapter(ABC):
             time.sleep(self.config["retry_delay"] * (attempt + 1))
 
         self.breaker.record_failure()
+        self._breaker_last_failure_error = last_error
         duration = time.time() - start
         if self.metrics:
             self.metrics.record_call(False, duration, last_error)
         return self._fallback_or_fail(
             keyword, f"{self.platform_display}采集失败: {last_error}", start,
             allow_fallback=allow_fallback,
+            cache_key=cache_key,
         )
 
     @staticmethod
@@ -282,13 +356,17 @@ class BaseAdapter(ABC):
         return any(marker in text for marker in markers)
 
     def safe_collect(self, keyword: str, max_results: int = 20, *,
-                     allow_fallback: bool = True) -> AdapterResult:
+                     allow_fallback: bool = True,
+                     cache_context: Optional[AdapterCacheContext] = None) -> AdapterResult:
         """
-        安全采集入口：永不抛异常，失败时返回空结果而非异常
+        安全采集入口：永不抛异常，失败时返回失败结果而非异常
         适用于批量采集场景，单个适配器失败不影响整体
         """
         try:
-            return self.collect(keyword, max_results, allow_fallback=allow_fallback)
+            return self.collect(
+                keyword, max_results, allow_fallback=allow_fallback,
+                cache_context=cache_context,
+            )
         except Exception as e:
             logger.error("[%s] safe_collect error_type=%s", self.platform_name, type(e).__name__)
             if self.metrics:
@@ -296,10 +374,18 @@ class BaseAdapter(ABC):
             return AdapterResult(success=False, error=f"{self.platform_name}异常: {e}")
 
     def _fallback_or_fail(self, keyword: str, error: str, start: float, *,
-                          allow_fallback: bool = True) -> AdapterResult:
+                          allow_fallback: bool = True,
+                          cache_key: Optional[Tuple[str, ...]] = None) -> AdapterResult:
         """降级处理：优先用fallback_handler，其次用最近成功结果缓存，最后返回失败"""
         duration = time.time() - start
-        if not allow_fallback:
+        if (not allow_fallback or self._is_terminal_provider_state(error)
+                or self._is_terminal_provider_state(self._breaker_last_failure_error)):
+            if (self._is_terminal_provider_state(self._breaker_last_failure_error)
+                    and not self._is_terminal_provider_state(error)):
+                error = (
+                    f"{error}; 最近终态 provider 响应: "
+                    f"{self._breaker_last_failure_error}"
+                )
             return AdapterResult(success=False, error=error, duration_seconds=duration)
         # 1. 用户自定义降级
         if self.fallback_handler:
@@ -312,13 +398,24 @@ class BaseAdapter(ABC):
             except Exception as e:
                 logger.warning(f"[{self.platform_name}] 降级回调异常: {e}")
         # 2. 最近成功结果缓存
-        if self._last_result and self._last_result.success:
-            if self.metrics:
-                self.metrics.record_call(True, duration, fallback=True)
-            return AdapterResult(
-                success=True, notes=self._last_result.notes,
-                error=f"缓存降级: {error}", duration_seconds=duration
-            )
+        cache_entry = self._last_result_cache_entry
+        if (cache_key is not None and cache_entry is not None
+                and cache_key == cache_entry[1]
+                and cache_entry[0].success):
+            try:
+                cached_notes = copy.deepcopy(cache_entry[0].notes)
+            except Exception as e:
+                logger.warning(
+                    "[%s] cache fallback copy unavailable (%s)",
+                    self.platform_name, type(e).__name__,
+                )
+            else:
+                if self.metrics:
+                    self.metrics.record_call(True, duration, fallback=True)
+                return AdapterResult(
+                    success=True, notes=cached_notes,
+                    error=f"缓存降级: {error}", duration_seconds=duration
+                )
         # 3. 返回失败
         return AdapterResult(success=False, error=error, duration_seconds=duration)
 

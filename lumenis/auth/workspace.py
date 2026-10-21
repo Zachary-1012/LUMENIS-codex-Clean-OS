@@ -87,14 +87,22 @@ def issue_workspace_key(workspace, label="", created_by=None, expires_days=None,
         conn.close()
 
 
-def verify_workspace_key(workspace, key):
-    """校验明文密钥是否为该工作区的有效(active/未过期)密钥；命中回写 last_used_at，返回记录 dict，否则 None。"""
+def verify_workspace_key(workspace, key, conn=None):
+    """校验明文密钥是否为该工作区的有效(active/未过期)密钥；命中回写 last_used_at，返回记录 dict，否则 None。
+
+    With a caller-owned ``conn`` the lookup and last_used_at write join the
+    caller's transaction (no commit/close here), so attempt limiting can be
+    serialized with verification.
+    """
     workspace = (workspace or "").strip().upper()
     if not workspace or not key:
         return None
-    conn = get_db()
+    owns_connection = conn is None
+    if owns_connection:
+        conn = get_db()
     try:
-        ensure_workspace_tables(conn)
+        if owns_connection:
+            ensure_workspace_tables(conn)
         rows = conn.execute(
             "SELECT * FROM v4_workspace_keys WHERE workspace=? AND status='active'",
             (workspace,),
@@ -106,11 +114,13 @@ def verify_workspace_key(workspace, key):
             if verify_password(key.strip(), r["key_hash"]):
                 conn.execute("UPDATE v4_workspace_keys SET last_used_at=datetime('now','localtime') WHERE id=?",
                              (r["id"],))
-                conn.commit()
+                if owns_connection:
+                    conn.commit()
                 return dict(r)
         return None
     finally:
-        conn.close()
+        if owns_connection:
+            conn.close()
 
 
 def list_workspace_keys(workspace=None):
@@ -176,29 +186,5 @@ def session_can_access(session_token, workspace):
             (session_token, workspace, _now()),
         ).fetchone()
         return row is not None
-    finally:
-        conn.close()
-
-
-def open_owner_session(ip="", user_agent=""):
-    """无现有会话、但密钥有效时：以 owner 身份建立一个 v4 会话（本地单机工作区门票即登录态）。"""
-    from ..config import AUTH_CONFIG
-    conn = get_db()
-    try:
-        row = conn.execute("SELECT * FROM v4_users WHERE role='owner' AND status='active' ORDER BY id LIMIT 1").fetchone()
-        if not row:
-            return None
-        token = generate_token(row["id"])
-        expires_at = time.strftime("%Y-%m-%d %H:%M:%S",
-                                   time.localtime(time.time() + AUTH_CONFIG["token_expire_hours"] * 3600))
-        conn.execute(
-            "INSERT INTO v4_sessions(user_id,token,ip,user_agent,expires_at) VALUES(?,?,?,?,?)",
-            (row["id"], token, ip, user_agent, expires_at),
-        )
-        conn.execute("UPDATE v4_users SET last_login_at=datetime('now','localtime'),last_login_ip=? WHERE id=?",
-                     (ip, row["id"]))
-        conn.commit()
-        return {"token": token, "user_id": row["id"], "username": row["username"],
-                "role": row["role"], "display_name": row["display_name"], "expires_at": expires_at}
     finally:
         conn.close()

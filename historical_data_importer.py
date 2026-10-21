@@ -128,6 +128,21 @@ def resolve_product_id(product_id=""):
     return pid
 
 
+def _optional_text(raw, field):
+    value = raw.get(field)
+    if value is None:
+        return None
+    text = str(value)
+    return text if text.strip() else None
+
+
+def _optional_int(raw, field):
+    value = raw.get(field)
+    if value is None or (isinstance(value, str) and not value.strip()):
+        return None
+    return int(value)
+
+
 def apply_subject_filter(title="", body="", content="", source_keyword="", matched_keywords=""):
     try:
         from subject_rules import subject_hit, subject_reason
@@ -204,7 +219,6 @@ def log_import(conn, batch_id, source_table, source_id, target_table, target_id=
          rule_version, product_id, subject_hit_result, subject_reason, publish_datetime,
          captured_at, source_platform, import_status, dedup_hit, dedup_of,
          datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "historical_importer", notes))
-    conn.commit()
     return cur.lastrowid
 
 
@@ -216,8 +230,36 @@ def import_historical_note(raw, conn=None, batch_id="", product_id=DEFAULT_PRODU
     result = {
         "status": "", "note_id": "", "content_hash": "", "subject_hit": False,
         "subject_reason": "", "dedup": False, "dedup_type": "", "warnings": [],
-        "inserted_id": None, "log_id": None,
+        "inserted_id": None, "log_id": None, "persistence_state": "NOT_WRITTEN",
     }
+    savepoint_open = False
+    write_scope_started = False
+    transaction_started_here = False
+
+    def _begin_write_scope():
+        nonlocal savepoint_open, write_scope_started, transaction_started_here
+        if savepoint_open:
+            return
+        # A caller-owned connection must retain control of COMMIT/ROLLBACK.
+        # BEGIN first so releasing the outermost SAVEPOINT cannot auto-commit.
+        if not conn.in_transaction:
+            conn.execute("BEGIN")
+            transaction_started_here = True
+        conn.execute("SAVEPOINT historical_import_note")
+        savepoint_open = True
+        write_scope_started = True
+
+    def _finish_write_scope():
+        nonlocal savepoint_open
+        if savepoint_open:
+            conn.execute("RELEASE SAVEPOINT historical_import_note")
+            savepoint_open = False
+        if own_conn and write_scope_started:
+            conn.commit()
+            result["persistence_state"] = "COMMITTED"
+        elif write_scope_started:
+            result["persistence_state"] = "PENDING_CALLER_COMMIT"
+
     try:
         note_id = str(raw.get("note_id") or raw.get("source_id") or "").strip()
         title = str(raw.get("title") or "")
@@ -244,12 +286,16 @@ def import_historical_note(raw, conn=None, batch_id="", product_id=DEFAULT_PRODU
             result["dedup_type"] = dedup["dedup_type"]
             result["warnings"].append(f"duplicate of {dedup['existing_id']} via {dedup['dedup_type']}")
             if not dry_run:
+                _begin_write_scope()
                 log_import(conn, batch_id, source_table, source_id, "notes",
                     target_id=dedup["existing_id"], content_hash=content_hash,
                     rule_version=rule_version or HISTORICAL_RULE_VERSION,
                     product_id=product_id, import_status=IMPORT_STATUS_DEDUP_SKIPPED,
                     dedup_hit=1, dedup_of=dedup["existing_id"],
                     notes="; ".join(result["warnings"]))
+                _finish_write_scope()
+            else:
+                result["persistence_state"] = "NOT_WRITTEN"
             return result
         subj = apply_subject_filter(
             title=title, body=body, content=content,
@@ -264,6 +310,7 @@ def import_historical_note(raw, conn=None, batch_id="", product_id=DEFAULT_PRODU
         rv = rule_version or get_current_rule_version(conn)
         if not dry_run:
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            _begin_write_scope()
             cur = conn.execute(
                 """INSERT INTO notes
                    (note_id, title, content, body, url, source_platform, publish_date,
@@ -281,15 +328,14 @@ def import_historical_note(raw, conn=None, batch_id="", product_id=DEFAULT_PRODU
                  str(raw.get("subject_type") or ""), str(raw.get("content_type") or "ugc"),
                  "active", ts["captured_at"] or now, now,
                  str(raw.get("source_keyword") or ""), str(raw.get("matched_keywords") or ""),
-                 int(raw.get("likes", 0) or 0), int(raw.get("comments", 0) or 0),
-                 int(raw.get("collects", 0) or 0), int(raw.get("shares", 0) or 0),
-                 str(raw.get("sentiment") or "neutral"),
-                 str(raw.get("risk_level") or "low"), int(raw.get("risk_score", 0) or 0),
+                 _optional_int(raw, "likes"), _optional_int(raw, "comments"),
+                 _optional_int(raw, "collects"), _optional_int(raw, "shares"),
+                 _optional_text(raw, "sentiment"),
+                 _optional_text(raw, "risk_level"), _optional_int(raw, "risk_score"),
                  str(raw.get("summary") or ""), str(raw.get("topics") or "[]"),
                  str(raw.get("author_id") or ""), str(raw.get("author_nickname") or ""),
                  str(raw.get("author_avatar") or ""), str(raw.get("note_type") or "normal")))
             result["inserted_id"] = cur.lastrowid
-            conn.commit()
             result["log_id"] = log_import(
                 conn, batch_id, source_table, source_id, "notes",
                 target_id=str(cur.lastrowid), content_hash=content_hash,
@@ -299,13 +345,38 @@ def import_historical_note(raw, conn=None, batch_id="", product_id=DEFAULT_PRODU
                 publish_datetime=ts["publish_datetime"], captured_at=ts["captured_at"],
                 source_platform=source_platform, import_status=IMPORT_STATUS_INSERTED,
                 notes="; ".join(result["warnings"]))
+            _finish_write_scope()
+        else:
+            result["persistence_state"] = "NOT_WRITTEN"
         result["status"] = IMPORT_STATUS_INSERTED
         return result
     except Exception as e:
         result["status"] = IMPORT_STATUS_ERROR
         result["warnings"].append(f"import error: {e}")
-        if own_conn:
-            conn.rollback()
+        if write_scope_started or transaction_started_here:
+            try:
+                if savepoint_open and conn.in_transaction:
+                    conn.execute("ROLLBACK TO SAVEPOINT historical_import_note")
+                    conn.execute("RELEASE SAVEPOINT historical_import_note")
+                    savepoint_open = False
+                if own_conn or transaction_started_here:
+                    conn.rollback()
+                    result["persistence_state"] = "ROLLED_BACK"
+                elif not conn.in_transaction:
+                    # SQLite RAISE(ROLLBACK) may invalidate the savepoint and
+                    # abort the whole caller transaction before control returns.
+                    result["persistence_state"] = "ROLLED_BACK"
+                else:
+                    result["persistence_state"] = "ROLLED_BACK_TO_SAVEPOINT"
+                result["inserted_id"] = None
+                result["log_id"] = None
+            except Exception:
+                result["persistence_state"] = "UNKNOWN"
+                result["warnings"].append(
+                    "write rollback could not be confirmed; persistence state is unknown"
+                )
+        else:
+            result["persistence_state"] = "NOT_WRITTEN"
         return result
     finally:
         if own_conn:
@@ -320,7 +391,8 @@ def import_historical_batch(records, db_path=None, product_id=DEFAULT_PRODUCT_ID
         ensure_baseline_rule_version(conn)
     stats = {"batch_id": batch_id, "total": len(records), "inserted": 0,
              "dedup_skipped": 0, "subject_rejected": 0, "errors": 0, "details": []}
-    for raw in records:
+    batch_rolled_back = False
+    for index, raw in enumerate(records):
         r = import_historical_note(raw, conn=conn, batch_id=batch_id,
                                    product_id=product_id, rule_version=rule_version,
                                    dry_run=dry_run)
@@ -333,7 +405,78 @@ def import_historical_batch(records, db_path=None, product_id=DEFAULT_PRODUCT_ID
             stats["subject_rejected"] += 1
         elif r["status"] == IMPORT_STATUS_ERROR:
             stats["errors"] += 1
-    conn.close()
+        prior_pending_writes = any(
+            detail.get("persistence_state") == "PENDING_CALLER_COMMIT"
+            for detail in stats["details"][:-1]
+        )
+        if (r["status"] == IMPORT_STATUS_ERROR
+                and r.get("persistence_state") == "ROLLED_BACK"
+                and not conn.in_transaction
+                and prior_pending_writes):
+            # A transaction-wide rollback invalidates every earlier pending
+            # result. Stop so later rows cannot make this batch look partially
+            # committed after its shared write scope was aborted.
+            batch_rolled_back = True
+            for detail in stats["details"][:-1]:
+                if detail.get("persistence_state") == "PENDING_CALLER_COMMIT":
+                    detail["persistence_state"] = "ROLLED_BACK"
+                    # Both IDs referred to rows removed by the rollback.
+                    detail["inserted_id"] = None
+                    detail["log_id"] = None
+                    prior_status = detail.get("status")
+                    if prior_status == IMPORT_STATUS_DEDUP_SKIPPED:
+                        # Keep the dedup hit when its target was committed
+                        # before this batch and survived the rollback; only
+                        # its pending import-log row was removed.
+                        still = check_duplicate(
+                            conn, detail.get("content_hash", ""), detail.get("note_id", ""))
+                        if still["is_duplicate"]:
+                            detail["warnings"].append(
+                                "import log rolled back; duplicate target still committed")
+                            continue
+                    if prior_status in (IMPORT_STATUS_INSERTED, IMPORT_STATUS_DEDUP_SKIPPED):
+                        # A rolled-back dedup skip may point at a same-batch
+                        # insert that no longer exists; reclassify as an error
+                        # so error-only retry cannot lose the record.
+                        detail["status"] = IMPORT_STATUS_ERROR
+                        detail["warnings"].append(
+                            "batch transaction rolled back after a later write failure"
+                        )
+                        if prior_status == IMPORT_STATUS_INSERTED:
+                            stats["inserted"] -= 1
+                        else:
+                            stats["dedup_skipped"] -= 1
+                        stats["errors"] += 1
+            for pending in records[index + 1:]:
+                pending_id = (
+                    str(pending.get("note_id") or pending.get("source_id") or "")
+                    if isinstance(pending, dict) else ""
+                )
+                stats["details"].append({
+                    "status": IMPORT_STATUS_ERROR,
+                    "note_id": pending_id,
+                    "content_hash": "", "subject_hit": False, "subject_reason": "",
+                    "dedup": False, "dedup_type": "",
+                    "warnings": [
+                        "batch stopped after transaction-wide rollback; record not processed"
+                    ],
+                    "inserted_id": None, "log_id": None,
+                    "persistence_state": "NOT_WRITTEN",
+                })
+                stats["errors"] += 1
+            break
+    try:
+        if not dry_run:
+            if batch_rolled_back:
+                if conn.in_transaction:
+                    conn.rollback()
+            else:
+                conn.commit()
+                for detail in stats["details"]:
+                    if detail.get("persistence_state") == "PENDING_CALLER_COMMIT":
+                        detail["persistence_state"] = "COMMITTED"
+    finally:
+        conn.close()
     return stats
 
 
