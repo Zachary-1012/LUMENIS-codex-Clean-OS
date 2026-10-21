@@ -75,3 +75,98 @@ def test_reject_generic_or_unmapped_functional_intent(key, field):
     rows = json.loads(READ(target)); rows[0].pop(field)
     with patch.object(Path, 'read_text', lambda p, *a, **kw: json.dumps(rows) if p == target else READ(p, *a, **kw)):
         with pytest.raises(AssertionError): validate_local_adoption(ROOT)
+
+
+@pytest.mark.parametrize('ref,owners', [
+    ('original-G:G160', ['C3/Case/Decision + F']),
+    ('original-G:G164', ['C3/Case/Decision + F']),
+    ('original-G:G143', ['C3', 'F']),
+    ('original-G:G163', ['C4', 'F']),
+    ('original-G:G181', ['C4', 'C3', 'F']),
+    ('adopted-capability:D14', ['C4', 'C3', 'F']),
+    ('adopted-capability:C09', ['C4', 'F']),
+    ('adopted-capability:R11', ['C5', 'C2', 'F']),
+    ('adopted-capability:L07', ['C4', 'F']),
+    ('original-RJU:U18', ['C2', 'F']),
+])
+def test_handoff_rejects_journey_owner_replacing_actual_source(ref, owners):
+    from scripts.audit_tools.verify_source_adoption import HANDOFF, validate_owner_handoff_routing
+    data = json.loads(READ(ROOT / HANDOFF))
+    row = next(row for row in data['coverage'] if row['coverage_ref'] == ref)
+    row['source_owners'] = owners
+    with patch.object(Path, 'read_text', lambda p, *a, **kw: json.dumps(data) if p == ROOT / HANDOFF else READ(p, *a, **kw)):
+        with pytest.raises(AssertionError):
+            validate_owner_handoff_routing(ROOT)
+
+
+@pytest.mark.parametrize('mutation', ['drop_item', 'duplicate_item', 'replace_executors',
+                                    'drop_resolution', 'drop_consumers', 'dispatch'])
+def test_handoff_keeps_scope_consumers_and_dispatch_boundary(mutation):
+    from scripts.audit_tools.verify_source_adoption import HANDOFF, validate_owner_handoff_routing
+    data = json.loads(READ(ROOT / HANDOFF))
+    row = next(row for row in data['coverage'] if row['coverage_ref'] == 'original-G:G160')
+    if mutation == 'drop_item':
+        data['coverage'].pop()
+    elif mutation == 'duplicate_item':
+        data['coverage'][-1] = data['coverage'][0]
+    elif mutation == 'replace_executors':
+        row['eligible_executors'] = ['Codex']
+    elif mutation == 'drop_resolution':
+        row['source_owner_resolution']['reason'] = ''
+    elif mutation == 'drop_consumers':
+        row['outcome_participants'] = []
+    elif mutation == 'dispatch':
+        row['source_owner_resolution']['assignment'] = 'RUNNING'
+    with patch.object(Path, 'read_text', lambda p, *a, **kw: json.dumps(data) if p == ROOT / HANDOFF else READ(p, *a, **kw)):
+        with pytest.raises(AssertionError):
+            validate_owner_handoff_routing(ROOT)
+
+
+def test_handoff_preserves_math_source_and_distinct_consumer_contracts():
+    from scripts.audit_tools.verify_source_adoption import HANDOFF, validate_owner_handoff_routing
+    validate_owner_handoff_routing(ROOT)
+    data = json.loads(READ(ROOT / HANDOFF))
+    for identifier in ('G160', 'G164'):
+        row = next(row for row in data['coverage'] if row['coverage_ref'] == 'original-G:' + identifier)
+        assert row['source_owners'] == ['C2', 'C5']
+        assert row['outcomes'] == ['J11']
+        assert 'C3/Case/Decision + F' in row['outcome_participants']
+        assert row['specific_changes']['item_requirement_text']
+        assert row['acceptance']['exact_item_criteria']
+        assert row['current_status']['complete_product_outcome'] == 'OPEN_UNTIL_ITEM_EVIDENCE'
+
+
+@pytest.mark.parametrize('ref', ['original-G:G17', 'original-G:G88',
+                                  'adopted-capability:D14', 'convenience:CV06'])
+def test_handoff_cannot_delete_reconciliation_then_restore_journey_owners(ref):
+    from scripts.audit_tools.verify_source_adoption import HANDOFF, validate_owner_handoff_routing
+    data = json.loads(READ(ROOT / HANDOFF))
+    row = next(row for row in data['coverage'] if row['coverage_ref'] == ref)
+    data['source_routing_contract']['changed_coverage_refs'].remove(ref)
+    row['source_owners'] = row.pop('outcome_participants')
+    row.pop('source_owner_resolution')
+    with patch.object(Path, 'read_text', lambda p, *a, **kw: json.dumps(data) if p == ROOT / HANDOFF else READ(p, *a, **kw)):
+        with pytest.raises(AssertionError):
+            validate_owner_handoff_routing(ROOT)
+
+
+@pytest.mark.parametrize('ref', ['original-G:G17', 'original-G:G88',
+                                  'adopted-capability:D14', 'adopted-capability:L07'])
+def test_handoff_cannot_satisfy_source_ownership_by_adding_every_owner(ref):
+    from scripts.audit_tools.verify_source_adoption import HANDOFF, validate_owner_handoff_routing
+    data = json.loads(READ(ROOT / HANDOFF))
+    row = next(row for row in data['coverage'] if row['coverage_ref'] == ref)
+    row['source_owners'] = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'F', 'M']
+    with patch.object(Path, 'read_text', lambda p, *a, **kw: json.dumps(data) if p == ROOT / HANDOFF else READ(p, *a, **kw)):
+        with pytest.raises(AssertionError):
+            validate_owner_handoff_routing(ROOT)
+
+
+def test_all_reconciled_owner_routes_have_independent_exact_expectations():
+    from scripts.audit_tools.verify_source_adoption import HANDOFF, RECONCILED_SOURCE_OWNERS
+    data = json.loads(READ(ROOT / HANDOFF))
+    rows = {row['coverage_ref']: row for row in data['coverage']}
+    assert len(RECONCILED_SOURCE_OWNERS) == 181
+    assert set(data['source_routing_contract']['changed_coverage_refs']) == RECONCILED_SOURCE_OWNERS.keys()
+    for ref, expected in RECONCILED_SOURCE_OWNERS.items():
+        assert set(rows[ref]['source_owners']) == expected
