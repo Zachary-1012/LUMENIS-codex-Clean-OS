@@ -437,3 +437,189 @@ def test_real_scoped_list_filters_before_labels_and_repeat_reads_preserve_databa
     assert data['relations'] == original['relations']
     assert data['events'][0]['topic_label_provenance']['claim_type'] == 'derived'
     assert other_scope not in str(data['events']) and invalid not in str(data['events'])
+
+
+@pytest.mark.parametrize('failure', [None, 'executescript', 'commit'])
+def test_graph_init_closes_connection_without_gc_and_propagates_failures(tmp_path, monkeypatch, failure):
+    import sqlite3
+    import event_graph as graph
+    from lumenis.shared.database import DatabaseRepository
+
+    path = tmp_path / 'init-lifecycle.sqlite3'
+    repository = DatabaseRepository(str(path))
+    monkeypatch.setattr(graph, 'get_repository', lambda: repository)
+    opened, events = [], []
+    original = sqlite3.connect
+
+    class ObservedConnection(sqlite3.Connection):
+        def executescript(self, script):
+            events.append('executescript')
+            if failure == 'executescript':
+                raise sqlite3.OperationalError('synthetic executescript failure')
+            return super().executescript(script)
+
+        def commit(self):
+            events.append('commit')
+            if failure == 'commit':
+                raise sqlite3.OperationalError('synthetic commit failure')
+            return super().commit()
+
+        def rollback(self):
+            events.append('rollback')
+            return super().rollback()
+
+        def close(self):
+            events.append('close')
+            return super().close()
+
+    def connect(*args, **kwargs):
+        con = original(*args, factory=ObservedConnection, **kwargs)
+        opened.append(con)
+        return con
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(sqlite3, 'connect', connect)
+        if failure is None:
+            graph.init_db()
+        else:
+            with pytest.raises(sqlite3.OperationalError, match=f'synthetic {failure} failure'):
+                graph.init_db()
+    assert len(opened) == 1
+    expected = ['executescript']
+    if failure != 'executescript':
+        expected.append('commit')
+    if failure is not None:
+        expected.append('rollback')
+    assert events == expected + ['close']
+    with pytest.raises(sqlite3.ProgrammingError, match='closed database'):
+        sqlite3.Connection.execute(opened[0], 'SELECT 1')
+    # executescript retains SQLite's existing implicit-commit semantics; this
+    # regression asserts lifecycle/propagation, not full-script DDL atomicity.
+    if failure is None:
+        con = original(path.as_uri() + '?mode=ro', uri=True)
+        try:
+            names = {row[0] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            assert {'event_graph_events', 'event_graph_relations'} <= names
+        finally:
+            con.close()
+
+
+@pytest.mark.parametrize('operation', ['load', 'import', 'infer', 'delete'])
+@pytest.mark.parametrize('failure', [None, 'execute', 'commit'])
+def test_graph_consumers_close_connections_on_success_and_failure(tmp_path, monkeypatch, operation, failure):
+    import inspect
+    import sqlite3
+    from types import SimpleNamespace
+    import event_graph as graph
+    from lumenis.shared.database import DatabaseRepository
+
+    path = tmp_path / 'consumer-lifecycle.sqlite3'
+    monkeypatch.setenv('ZBC_DB_PATH', str(path))
+    repository = DatabaseRepository(str(path))
+    monkeypatch.setattr(graph, 'get_repository', lambda: repository)
+    graph.init_db()
+    with repository.transaction() as con:
+        con.execute('CREATE TABLE events(id INTEGER, title TEXT, summary TEXT, event_date TEXT, '
+                    'first_seen TEXT, last_seen TEXT, risk_level TEXT, risk_score REAL, '
+                    'negative_confirmed INTEGER, status TEXT, mention_count INTEGER, '
+                    'source_count INTEGER, fact_status TEXT)')
+        con.execute("INSERT INTO event_graph_events(event_id,event_type,title,created_at,updated_at) "
+                    "VALUES('synthetic-event','marketing_event','Synthetic','fixture','fixture')")
+    owner = object.__new__(graph.EventGraph)
+    owner.events, owner.relations = {}, []
+    if operation == 'delete':
+        import app as app_module
+        monkeypatch.setattr(app_module, 'get_repository', lambda: repository)
+        target = SimpleNamespace(event_id='synthetic-event')
+        other = SimpleNamespace(event_id='other-event')
+        removed = SimpleNamespace(source_event=target, target_event=other)
+        retained = SimpleNamespace(source_event=other, target_event=other)
+        graph_state = SimpleNamespace(events={'synthetic-event': target, 'other-event': other},
+                                      relations=[removed, retained])
+        memory_before = (dict(graph_state.events), list(graph_state.relations))
+        monkeypatch.setattr(graph, 'get_event_graph', lambda: graph_state)
+        with repository.transaction() as con:
+            con.execute("INSERT INTO event_graph_events(event_id,event_type,title,created_at,updated_at) "
+                        "VALUES('other-event','marketing_event','Other','fixture','fixture')")
+            con.execute("INSERT INTO event_graph_relations(source_event_id,target_event_id,relation_type,created_at) "
+                        "VALUES('synthetic-event','other-event','follow','fixture')")
+            con.execute("INSERT INTO event_graph_relations(source_event_id,target_event_id,relation_type,created_at) "
+                        "VALUES('other-event','other-event','follow','fixture')")
+    opened, events = [], []
+    original = sqlite3.connect
+
+    class ObservedConnection(sqlite3.Connection):
+        def execute(self, statement, *args, **kwargs):
+            if not statement.lstrip().upper().startswith('PRAGMA'):
+                events.append('execute')
+                if failure == 'execute' and (operation != 'delete' or 'DELETE FROM event_graph_relations' in statement):
+                    raise sqlite3.OperationalError('synthetic execute failure')
+            return super().execute(statement, *args, **kwargs)
+
+        def commit(self):
+            events.append('commit')
+            if failure == 'commit':
+                raise sqlite3.OperationalError('synthetic commit failure')
+            return super().commit()
+
+        def rollback(self):
+            events.append('rollback')
+            return super().rollback()
+
+        def close(self):
+            events.append('close')
+            return super().close()
+
+    def connect(*args, **kwargs):
+        con = original(*args, factory=ObservedConnection, **kwargs)
+        opened.append(con)
+        return con
+
+    def invoke():
+        if operation == 'load':
+            return owner.load_from_db()
+        if operation == 'import':
+            return owner.import_from_existing_events()
+        if operation == 'infer':
+            return owner.infer_and_link_relations()
+        # Unit-test the existing handler lifecycle, not its permission wrapper.
+        # No external HTTP request or production account is used.
+        with app_module.app.test_request_context('/api/event-graph/events/synthetic-event', method='DELETE'):
+            return inspect.unwrap(app_module.event_graph_delete_event)('synthetic-event')
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(sqlite3, 'connect', connect)
+        caught_by_owner = operation == 'delete' or (operation == 'import' and failure == 'execute')
+        if failure and not caught_by_owner:
+            with pytest.raises(sqlite3.OperationalError, match=f'synthetic {failure} failure'):
+                invoke()
+        else:
+            result = invoke()
+            if operation == 'import':
+                assert result == 0
+            if operation == 'delete':
+                assert (result[1] if isinstance(result, tuple) else result.status_code) == (500 if failure else 200)
+    assert len(opened) == 1
+    assert events.count('close') == 1 and events[-1] == 'close'
+    if failure and not (operation == 'import' and failure == 'execute'):
+        assert 'rollback' in events
+    with pytest.raises(sqlite3.ProgrammingError, match='closed database'):
+        sqlite3.Connection.execute(opened[0], 'SELECT 1')
+
+    if operation == 'delete':
+        con = original(path.as_uri() + '?mode=ro', uri=True)
+        try:
+            saved_ids = {row[0] for row in con.execute('SELECT event_id FROM event_graph_events')}
+            saved_relations = set(con.execute('SELECT source_event_id,target_event_id FROM event_graph_relations'))
+        finally:
+            con.close()
+        if failure:
+            assert graph_state.events == memory_before[0]
+            assert graph_state.relations == memory_before[1]
+            assert saved_ids == {'synthetic-event', 'other-event'}
+            assert saved_relations == {('synthetic-event', 'other-event'), ('other-event', 'other-event')}
+        else:
+            assert graph_state.events == {'other-event': other}
+            assert graph_state.relations == [retained]
+            assert saved_ids == {'other-event'}
+            assert saved_relations == {('other-event', 'other-event')}

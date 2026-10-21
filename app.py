@@ -1455,14 +1455,13 @@ def event_graph_delete_event(event_id):
         graph = get_event_graph()
         if event_id not in graph.events:
             return jsonify({'ok': False, 'error': '事件不存在'}), 404
+        _dbp = db.main_db_path()  # P0-DBISO-01 统一隔离
+        with get_repository().transaction() as conn:
+            conn.execute("DELETE FROM event_graph_events WHERE event_id=?", (event_id,))
+            conn.execute("DELETE FROM event_graph_relations WHERE source_event_id=? OR target_event_id=?", (event_id, event_id))
         del graph.events[event_id]
         graph.relations = [r for r in graph.relations
                           if r.source_event.event_id != event_id and r.target_event.event_id != event_id]
-        _dbp = db.main_db_path()  # P0-DBISO-01 统一隔离
-        with get_repository().connect() as conn:
-            conn.execute("DELETE FROM event_graph_events WHERE event_id=?", (event_id,))
-            conn.execute("DELETE FROM event_graph_relations WHERE source_event_id=? OR target_event_id=?", (event_id, event_id))
-            conn.commit()
         return jsonify({'ok': True, 'message': '事件已删除'})
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500

@@ -118,7 +118,7 @@ def _parse_dt(value: str):
 
 def init_db() -> None:
     """初始化数据库表"""
-    with _get_db() as conn:
+    with get_repository().transaction() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS event_graph_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -152,7 +152,6 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_event_graph_relations_target ON event_graph_relations(target_event_id);
             CREATE INDEX IF NOT EXISTS idx_event_graph_relations_type ON event_graph_relations(relation_type);
         """)
-        conn.commit()
 
 
 class BrandEvent:
@@ -337,7 +336,7 @@ class EventGraph:
         self.events.clear()
         self.relations.clear()
 
-        with _get_db() as conn:
+        with get_repository().transaction() as conn:
             # 加载事件
             rows = conn.execute("SELECT * FROM event_graph_events ORDER BY id").fetchall()
             for row in rows:
@@ -470,7 +469,7 @@ class EventGraph:
 
         只导入最近的 N 条，返回导入数量
         """
-        with _get_db() as conn:
+        with get_repository().transaction() as conn:
             try:
                 rows = conn.execute("""
                     SELECT id, title, summary, event_date, first_seen, last_seen,
@@ -532,7 +531,6 @@ class EventGraph:
                 self.events[event.event_id] = event
                 imported += 1
 
-            conn.commit()
             return imported
 
     @staticmethod
@@ -561,12 +559,11 @@ class EventGraph:
                               if not str(r.evidence or '').startswith(AUTO_REL_PREFIX)]
             dropped = before - len(self.relations)
             if persist:
-                with _get_db() as conn:
+                with get_repository().transaction() as conn:
                     cur = conn.execute(
                         "DELETE FROM event_graph_relations WHERE evidence LIKE ?",
                         (AUTO_REL_PREFIX + '%',))
                     dropped = max(dropped, cur.rowcount or 0)
-                    conn.commit()
 
         items = []
         for e in self.events.values():
