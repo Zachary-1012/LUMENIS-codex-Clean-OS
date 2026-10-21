@@ -90,7 +90,7 @@ void main() {
         // getViewById call when the same source is mounted again.
         final platformView = media.parentElement!;
         web.document.body!.appendChild(platformView);
-        addTearDown(platformView.remove);
+        addTearDown(() => platformView.remove());
       }
       return media;
     }
@@ -232,7 +232,7 @@ void main() {
     // exercise focusin and browser ownership without mocking the focus bridge.
     final platformView = media.parentElement!;
     web.document.body!.appendChild(platformView);
-    addTearDown(platformView.remove);
+    addTearDown(() => platformView.remove());
     triggerFocus.requestFocus();
     await tester.pump();
     expectNoFrameworkException('trigger button focus');
