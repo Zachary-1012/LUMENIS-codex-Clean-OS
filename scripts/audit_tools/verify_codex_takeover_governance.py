@@ -297,7 +297,19 @@ def _assert_clearance_evidence_integrity() -> None:
     """Read the complete finite approved artifact set; never import archive code."""
     directory = ROOT / CLEARANCE_EVIDENCE_DIRECTORY
     assert directory.resolve(strict=True) == ROOT.resolve() / CLEARANCE_EVIDENCE_DIRECTORY, "clearance evidence symlink"
-    actual = {CLEARANCE_EVIDENCE_DIRECTORY + "/" + item.name for item in directory.iterdir()}
+    actual = set()
+    for item in directory.iterdir():
+        if item.name == "__pycache__":
+            # CI compiles tracked Python without executing it. These generated
+            # bytes are not archived evidence and are never publication-admitted.
+            assert not item.is_symlink() and item.is_dir(), "clearance cache must be a real directory"
+            for compiled in item.iterdir():
+                assert (
+                    not compiled.is_symlink() and compiled.is_file()
+                    and re.fullmatch(r"oevira_test_offline_guard\.cpython-[0-9]+(?:\.opt-[0-9]+)?\.pyc", compiled.name)
+                ), "unknown or unsafe clearance cache member"
+            continue
+        actual.add(CLEARANCE_EVIDENCE_DIRECTORY + "/" + item.name)
     assert actual == set(CLEARANCE_EVIDENCE_SHA256), "clearance evidence missing or unknown member"
     for path, digest in CLEARANCE_EVIDENCE_SHA256.items():
         content = _recovered_evidence_file(path).read_bytes()

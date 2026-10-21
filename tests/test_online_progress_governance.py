@@ -777,3 +777,45 @@ def test_clearance_archive_all_members_checked_for_single_changed_receipt(tmp_pa
     directory.symlink_to(moved, target_is_directory=True)
     with pytest.raises(AssertionError, match='symlink'):
         gate._assert_current_publication_truth(current, changed_paths=changed)
+
+
+def test_clearance_archive_allows_only_generated_guard_bytecode(tmp_path, monkeypatch):
+    import py_compile
+    import pytest
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    for path in gate.CLEARANCE_EVIDENCE_SHA256:
+        destination = tmp_path / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((gate.ROOT / path).read_bytes())
+    monkeypatch.setattr(gate, 'ROOT', tmp_path)
+    directory = tmp_path / gate.CLEARANCE_EVIDENCE_DIRECTORY
+    # Compilation produces bytecode only; the archived guard is never imported.
+    compiled = Path(py_compile.compile(str(directory / 'oevira_test_offline_guard.py'), doraise=True))
+    py_compile.compile(str(directory / 'oevira_test_offline_guard.py'), doraise=True, optimize=1)
+    gate._assert_clearance_evidence_integrity()
+    assert not gate._is_rules_only_publication_path(str(compiled.relative_to(tmp_path)))
+    for name in ('other.cpython-312.pyc', 'oevira_test_offline_guard.py', 'oevira_test_offline_guard.cpython-x.pyc'):
+        extra = compiled.parent / name
+        extra.write_bytes(b'not admitted')
+        with pytest.raises(AssertionError, match='cache member'):
+            gate._assert_clearance_evidence_integrity()
+        extra.unlink()
+    original = compiled.read_bytes()
+    compiled.unlink()
+    outside = tmp_path / 'outside.pyc'
+    outside.write_bytes(original)
+    compiled.symlink_to(outside)
+    with pytest.raises(AssertionError, match='cache member'):
+        gate._assert_clearance_evidence_integrity()
+    compiled.unlink()
+    compiled.mkdir()
+    with pytest.raises(AssertionError, match='cache member'):
+        gate._assert_clearance_evidence_integrity()
+    compiled.rmdir()
+    compiled.write_bytes(original)
+    cache = compiled.parent
+    moved = tmp_path / 'moved-cache'
+    cache.rename(moved)
+    cache.symlink_to(moved, target_is_directory=True)
+    with pytest.raises(AssertionError, match='real directory'):
+        gate._assert_clearance_evidence_integrity()
