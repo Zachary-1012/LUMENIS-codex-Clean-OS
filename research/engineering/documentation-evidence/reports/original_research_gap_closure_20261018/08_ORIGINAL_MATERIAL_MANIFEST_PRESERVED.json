@@ -11703,7 +11703,7 @@
         "primary_owner": "C4",
         "disposition": "PUBLIC_SOURCE_READBACK_RECORDED_WITH_LIMITS",
         "interpretation": "保留原官方作品/奖项/访谈/技术来源，不把其它案例替代该来源；公开文字、实际看片、权益及产品采用分别记录。",
-        "remaining_evidence": "原视频身份、可读媒体/字幕和逐时段阅读全缺。",
+        "remaining_evidence": "Original research text is now recovered and can support bounded method adoption. Current original video/audio and independent verification are not obtained; do not erase historical observations because current URL is unavailable.",
         "product_implementation_status": "NOT_INFERRED",
         "source_owner_paths_from_original_manifest": [
           "lumenis/shared/content_creation/internal_pitch.py",
@@ -11736,7 +11736,21 @@
           "implementation_acceptance": "NOT_INFERRED; no product, database or environment changes."
         },
         "prior_disposition_before_public_readback": "SPECIFIC_PUBLIC_RESEARCH_SOURCE_NOT_CERTIFIED",
-        "readback_status": "OPEN_READ_FAILED_LOCATOR_CONTAMINATED"
+        "readback_status": "OPEN_READ_FAILED_LOCATOR_CONTAMINATED",
+        "recovered_original_research_20261021": {
+          "case": "A07 Longlegs Dirty",
+          "source_url": "https://player.vimeo.com/video/939299541",
+          "duration_seconds": 57.25,
+          "historical_media_sha256": "769aa097f07e807d072be91455db974bcbdce1f082ce95760707d81184dc7eea",
+          "reading_claim": "Historical time-segment visual observations in recovered user-supplied research text; not current independent playback.",
+          "source_member": "dot-av-methods-v2-adaptation-20261003/USER-SOURCE.native.txt",
+          "source_text_sha256": "52036b68f8f63dbc07089a994854f53dbaef96a5ad8bcbf4fb0a34d6fa7e40b3",
+          "adaptation_record_sha256": "0cfd06ea11bd287bcfb4c572f09f56b5d68d644f6e20b6c7d31b165061100fc2",
+          "verification": "Independent Drive object bytes matched the official fullbrief member manifest. Private file identifiers are not published.",
+          "audio_listened": false,
+          "current_media_recovered": false,
+          "status": "ORIGINAL_RESEARCH_TEXT_RECOVERED; historical observation claims and current independent media verification remain separate."
+        }
       },
       {
         "ordinal": 148,
@@ -11808,7 +11822,7 @@
         "primary_owner": "C4",
         "disposition": "PUBLIC_SOURCE_READBACK_RECORDED_WITH_LIMITS",
         "interpretation": "保留原官方作品/奖项/访谈/技术来源，不把其它案例替代该来源；公开文字、实际看片、权益及产品采用分别记录。",
-        "remaining_evidence": "媒体文件未获得、未听看、当前读取不可用；正式ID已有历史证据，不能称身份全无证据。",
+        "remaining_evidence": "Original research text is now recovered and can support bounded method adoption. Current original video/audio and independent verification are not obtained; do not erase historical observations because current URL is unavailable.",
         "product_implementation_status": "NOT_INFERRED",
         "source_owner_paths_from_original_manifest": [
           "lumenis/shared/content_creation/internal_pitch.py",
@@ -11854,7 +11868,21 @@
           }
         },
         "prior_disposition_before_public_readback": "SPECIFIC_PUBLIC_RESEARCH_SOURCE_NOT_CERTIFIED",
-        "readback_status": "HISTORICAL_IDENTITY_RECEIPT_CURRENT_MEDIA_BLOCKED"
+        "readback_status": "HISTORICAL_IDENTITY_RECEIPT_CURRENT_MEDIA_BLOCKED",
+        "recovered_original_research_20261021": {
+          "case": "A08 Kneecap",
+          "source_url": "https://player.vimeo.com/video/1031920437",
+          "duration_seconds": 100,
+          "historical_media_sha256": "b5267a0cf1f4c51f872441be0470904889e42209b76875a17c4cf8974a87754b",
+          "reading_claim": "Recovered research identifies 1031920437, not 958331811; historical segmented visual observations, not current playback.",
+          "source_member": "dot-av-methods-v2-adaptation-20261003/USER-SOURCE.native.txt",
+          "source_text_sha256": "52036b68f8f63dbc07089a994854f53dbaef96a5ad8bcbf4fb0a34d6fa7e40b3",
+          "adaptation_record_sha256": "0cfd06ea11bd287bcfb4c572f09f56b5d68d644f6e20b6c7d31b165061100fc2",
+          "verification": "Independent Drive object bytes matched the official fullbrief member manifest. Private file identifiers are not published.",
+          "audio_listened": false,
+          "current_media_recovered": false,
+          "status": "ORIGINAL_RESEARCH_TEXT_RECOVERED; historical observation claims and current independent media verification remain separate."
+        }
       },
       {
         "ordinal": 151,
@@ -12208,7 +12236,7 @@
         "primary_owner": "C4",
         "disposition": "PUBLIC_SOURCE_READBACK_RECORDED_WITH_LIMITS",
         "interpretation": "保原分享链接/帖子身份；只在具体参考/采集任务使用，不把单帖当平台或大众结论。",
-        "remaining_evidence": "需合法可读原页/字幕/视频副本；无个人电脑、未登录、未下载。",
+        "remaining_evidence": "Original research text is now recovered and can support bounded method adoption. Current original video/audio and independent verification are not obtained; do not erase historical observations because current URL is unavailable.",
         "product_implementation_status": "NOT_INFERRED",
         "source_owner_paths_from_original_manifest": [
           "lumenis/shared/content_creation/internal_pitch.py",
@@ -12242,7 +12270,19 @@
           "implementation_acceptance": "NOT_INFERRED; no product, database or environment changes."
         },
         "prior_disposition_before_public_readback": "SPECIFIC_PUBLIC_SAMPLE_SOURCE_NOT_CERTIFIED",
-        "readback_status": "OPEN_READ_FAILED"
+        "readback_status": "OPEN_READ_FAILED",
+        "recovered_original_research_20261021": {
+          "case": "Bilibili tutorial",
+          "source_url": "https://www.bilibili.com/video/BV1sLVm6yEv8/",
+          "reading_claim": "51 tutorial actions in original research; 43:36 player segmented observation and continuous 40:52–41:25 observation. Independent video download failed; audio/export reopen not validated.",
+          "source_member": "dot-av-methods-v2-adaptation-20261003/USER-SOURCE.native.txt",
+          "source_text_sha256": "52036b68f8f63dbc07089a994854f53dbaef96a5ad8bcbf4fb0a34d6fa7e40b3",
+          "adaptation_record_sha256": "0cfd06ea11bd287bcfb4c572f09f56b5d68d644f6e20b6c7d31b165061100fc2",
+          "verification": "Independent Drive object bytes matched the official fullbrief member manifest. Private file identifiers are not published.",
+          "audio_listened": false,
+          "current_media_recovered": false,
+          "status": "ORIGINAL_RESEARCH_TEXT_RECOVERED; historical observation claims and current independent media verification remain separate."
+        }
       },
       {
         "ordinal": 160,
@@ -13281,6 +13321,44 @@
       "current_body_unavailable": 17,
       "unavailable_breakdown": "13 original Xiaohongshu bodies; AV Squad root, two Vimeo players and one Bilibili item. Clio media also requires login; accessible award text does not certify media viewing.",
       "zero_omission_certified": false
+    },
+    "codex_upload_readback_20261021": {
+      "official_revisions_unchanged": true,
+      "archives": [
+        "full-brief-feedback-v1.zip",
+        "TASK-CARD.zip",
+        "m-controller-lumenis.zip"
+      ],
+      "body_objects_downloaded_and_sha256_verified": 188,
+      "decoded_contents": {
+        "docx": 23,
+        "pdf": 12,
+        "html": 1,
+        "other_text": 152
+      },
+      "historical_research_records_recovered": [
+        "MAT-2ef9f258a8d7518d65b8",
+        "MAT-2e1b99b06d2f0fba285b",
+        "MAT-25c63425b9befb9bb6cc"
+      ],
+      "unread_uploaded_members": "8 private-temp DOCX plus 2 JSON (9 unique hashes) have no readable independent-object route; two HTML materializations failed size checks. Uploaded does not mean currently readable; do not call them unuploaded.",
+      "large_archive_read_limit": "Official fullbrief complete download rejected before execution due to connector size limit; independent official smaller objects were used, not unapproved chunking.",
+      "remaining_identity_bridge_count": 66,
+      "zero_omission_certified": false
+    },
+    "latest_po_development_scope": {
+      "date_utc": "2026-10-21T04:39:47Z",
+      "decision": "Use the existing online repository and available materials to complete the single development mainline; do not wait for every historical original or listening session.",
+      "historical_reading_and_identity_statuses_preserved": true,
+      "unavailable_originals_are_universal_development_blocker": false,
+      "remaining_gate": "Actual requirement/plan/rule/contract/work-item omissions must be resolved; dependent real execution still requires source identity, rights and Permission.",
+      "not_authorized_or_inferred": [
+        "unperformed audio/video review",
+        "all-history source certification",
+        "product runtime acceptance",
+        "external model calls or training",
+        "restart of stopped backup/report automations"
+      ]
     }
   }
 }
