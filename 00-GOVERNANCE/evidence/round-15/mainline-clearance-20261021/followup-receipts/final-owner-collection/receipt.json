@@ -1,0 +1,38 @@
+{
+  "head": "57d79f88c6418eef68d40241b22f9bb8d059ff35",
+  "tree": "896d64594742e48b44f6361facd7ab333a8f95a5",
+  "start_utc": "2026-10-21T10:59:31.611992+00:00",
+  "end_utc": "2026-10-21T10:59:41.713904+00:00",
+  "argv": [
+    "/tmp/oevira-pr-repair-venv/bin/python",
+    "-m",
+    "pytest",
+    "tests",
+    "--collect-only",
+    "-o",
+    "addopts=",
+    "-q"
+  ],
+  "environment": {
+    "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin:/opt/codex/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "HOME": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/final-owner-collection/home",
+    "PYTHONPATH": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/frozen-remaining/guard",
+    "ORT_DISABLE_TELEMETRY": "1",
+    "ZBC_ALLOW_NETWORK": "0",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "LUMENIS_TEST_SEED_DB": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/frozen-remaining/synthetic-seed.sqlite3",
+    "LUMENIS_ESPEAK_BINARY": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/bin/espeak-ng",
+    "LD_LIBRARY_PATH": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/lib/x86_64-linux-gnu",
+    "ESPEAK_DATA_PATH": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/lib/x86_64-linux-gnu/espeak-ng-data",
+    "LUMENIS_FFMPEG_PATH": "/usr/bin/ffmpeg",
+    "LUMENIS_FFPROBE_PATH": "/usr/bin/ffprobe"
+  },
+  "exit_code": 0,
+  "node_count": 12808,
+  "unique_nodes": 12808,
+  "log_sha256": "d136fa8a6c6f70a2656b8bf3644bccaed20187cc3b9ff69e81f67f2f4b636867",
+  "status": "COLLECTED_NOT_EXECUTED"
+}

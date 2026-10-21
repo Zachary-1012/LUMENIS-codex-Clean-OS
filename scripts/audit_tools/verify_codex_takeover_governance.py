@@ -290,7 +290,7 @@ CLEARANCE_EVIDENCE_SHA256 = {
 
 # Exact reviewed extension; changing members requires a reviewed new manifest pin.
 CLEARANCE_FOLLOWUP_MANIFEST = CLEARANCE_EVIDENCE_DIRECTORY + "/OEVIRA_FOLLOWUP_ARTIFACT_MANIFEST.json"
-CLEARANCE_FOLLOWUP_MANIFEST_SHA256 = "234e2181cf59eaf11bc8ae6403dd3343cf50a4364a67593dbbdaf65f0345e3fa"
+CLEARANCE_FOLLOWUP_MANIFEST_SHA256 = "e8525bffa7d13fbb211f3f2fe8f8337e304d6e4e35b7d9d3035518a5a10ad911"
 
 
 def _clearance_evidence_inventory() -> dict[str, str]:

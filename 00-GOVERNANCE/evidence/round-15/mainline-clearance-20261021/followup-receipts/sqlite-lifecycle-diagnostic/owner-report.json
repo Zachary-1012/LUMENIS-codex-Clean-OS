@@ -1,0 +1,22 @@
+{
+  "source_file": "/workspace/scratch/8d04d68e28f4/mainline_clearance_20261021/event_graph.py",
+  "source_sha256": "2602bc193cf215fb9621952c27144fe8ffc5074a1d5eb82a53a617c7e8fa4afd",
+  "sqlite_version": "3.53.1",
+  "connections": [
+    {
+      "open_after_init_return": true,
+      "in_transaction": false,
+      "schema_rows": 11
+    }
+  ],
+  "before_explicit_close": {
+    "": "0ab48b25cba617ed3a4acca0161813b314c095ef63544bb4af60769eb1012977",
+    "-wal": "aa1604baf80129507715e00dc55347f576e1f53c1dc460e3af7f836ace230df7",
+    "-shm": "c66b5f7eb52b10e8088d77469793df7f593fa16dc2dd61b579a1aca6227f064e"
+  },
+  "after_explicit_close": {
+    "": "83692ff2659d6236de4bb01065b8fe4bcbf6f04e76610b60cdd5b83cca2afdc4"
+  },
+  "close_changes_persistent_bytes": true,
+  "scope": "unchanged init_db with explicit isolated synthetic DatabaseRepository only"
+}

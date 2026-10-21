@@ -485,6 +485,201 @@
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/V02_PROVENANCE_FINDINGS.md",
       "bytes": 4917,
       "sha256": "80a08a1271d6affb0286b9cbd346a2f9251a511f8fca8abca59b794fa3d90d92"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-impact/results.xml",
+      "bytes": 1905076,
+      "sha256": "3d7b70713be8d7ddf9b17a81366c6f47f854af66867fc2b3d43a0eaa0b149ecd"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-impact/receipt.json",
+      "bytes": 2162647,
+      "sha256": "3fb4fafa10738b7021479400d5cc5032af6166e1d052dff50b10930893b06f7d"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-impact/pip-freeze.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-impact/pip-freeze-after.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-governance-consumers/results.xml",
+      "bytes": 14018,
+      "sha256": "9b90cf5074d3f39ea1bb5fb1345d7d673e636e9ceaf25d88767290830bf44221"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-governance-consumers/receipt.json",
+      "bytes": 2161616,
+      "sha256": "e723c5b6a48fa3f2abb61dacf805eba67ab9e7dbddf342d1907028afab7fe46f"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-governance-consumers/pip-freeze.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-governance-consumers/pip-freeze-after.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-manual/receipt.json",
+      "bytes": 4219,
+      "sha256": "e291542cae21a1ac8620f732c2e41ee8c4505111b38f5a5352ed8a2d5a1100f3"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-manual/test_guard_wiring.log",
+      "bytes": 272,
+      "sha256": "9666ca54120bf7f462cdc327085579efebf025b73c0a1c1d29daa0ffe39337f5"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-manual/test_t2_resilience.log",
+      "bytes": 3182,
+      "sha256": "713c4274dcc793a96c9759a7afa6e8926aade52a3d357fe3f8cc958270c8e649"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-collection/collection.log",
+      "bytes": 5097761,
+      "sha256": "be31285383ccdc2bc9633f9ed9d94bce8ee393692b0d72ae0b9d61e9fcb0f9fb"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-collection/nodeids.txt",
+      "bytes": 5097431,
+      "sha256": "b51db1a6ed69a5337b42ae6c5338642cce5085e8e1989cc1242b8d235dafbb3d"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-collection/receipt.json",
+      "bytes": 1926,
+      "sha256": "1f3e9b12b143340974434815a4914fda79fd41c54cb00750f45d0fab72f933aa"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/sqlite-lifecycle-diagnostic/owner-report.json",
+      "bytes": 851,
+      "sha256": "37be4f7bb5138091cedf2938735ee325327208b5377337b41666795682436129"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/sqlite-lifecycle-diagnostic/report.json",
+      "bytes": 870,
+      "sha256": "9831370c1a588acab284e768916f2f78f2705fd640b0c15096ac6a8e2da8c47e"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-1/receipt.json",
+      "bytes": 2161695,
+      "sha256": "98af0aa4141e979ddda04bb42282aab3fca78506f940def8b4557585c576a1d2"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-1/results.xml",
+      "bytes": 13715,
+      "sha256": "2934bd5da94729aa047d4be8aefc295b3c999322a015297dc4daa29e34548128"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-1/output.log",
+      "bytes": 9131,
+      "sha256": "6f9015c3c1a98af9021518085bae0f214cb5d88a17130abbd67dcfe6aa177e1a"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-2/receipt.json",
+      "bytes": 2161944,
+      "sha256": "84224ca3be4fedeaa76f26387198ed6ef721eb96017c3dea359d8bc4b5888b83"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-2/results.xml",
+      "bytes": 28075,
+      "sha256": "b61eb121ba767361fac5af2fecc278d2913d9b9e1490061784eec898eac95ac6"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-2/output.log",
+      "bytes": 23351,
+      "sha256": "6faae0c6847ae8a21687d5e75480a18205836d9d26e21c033649ef5190abda23"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-3/receipt.json",
+      "bytes": 2161940,
+      "sha256": "e2c2d20b9726622800510a6aaf85aada2194d6f46d4c88a7229bf4609152d25f"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-3/results.xml",
+      "bytes": 5794,
+      "sha256": "794c53ca9095abaed4a1489f1b21407918a1e5589e73c4c442cefc7708707adb"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/graph-lifecycle-staging/run-3/output.log",
+      "bytes": 397,
+      "sha256": "88c52c6241e8d3f42821678035688aa259b72060c0b72a183b9c6db4569da1e3"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-impact/results.xml",
+      "bytes": 1943179,
+      "sha256": "99909775f128927fac1fe7dd86f81718526ae5f448e08c05476f640e6b8c611d"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-impact/receipt.json",
+      "bytes": 2163259,
+      "sha256": "df56b9e32a885fce54fe7c8f50f0fccbb973eadeec16b27565825b48d0f010bf"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-impact/pip-freeze.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-impact/pip-freeze-after.txt",
+      "bytes": 2210,
+      "sha256": "315ebf029e3a5408bfee4c7c84a57e8076195daa49413fe0c7aa9e813ceecb85"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/FINAL_BOUND_NODE_LEDGER.json",
+      "bytes": 13383051,
+      "sha256": "4ea148291bf1567776511db8da174e90b607551c48386e66ecd0d52985221108"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/FINAL_SOURCE_INHERITANCE_BRIDGE.json",
+      "bytes": 37802,
+      "sha256": "22fd0b702b18130bf1e50881b8c98c503ca51ca6ce5d896ef42c0815ee5dda74"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/FINAL_FUNCTION_INHERITANCE_BRIDGE.json",
+      "bytes": 405550,
+      "sha256": "079ca87f792bd8f6025e1c94ee6982d5bf044f489e2b00e0173b90dba8c42c9b"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-manual/receipt.json",
+      "bytes": 4243,
+      "sha256": "34da864b947020b25bbfb344b64fd6e1c32517f03bd2e47a23ce64b85b674195"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-manual/test_guard_wiring.log",
+      "bytes": 272,
+      "sha256": "9666ca54120bf7f462cdc327085579efebf025b73c0a1c1d29daa0ffe39337f5"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-manual/test_t2_resilience.log",
+      "bytes": 3182,
+      "sha256": "713c4274dcc793a96c9759a7afa6e8926aade52a3d357fe3f8cc958270c8e649"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-collection/receipt.json",
+      "bytes": 1932,
+      "sha256": "63564e6c864a6fbb091374fed307c3ee40e4dad47cddef73ef7d5263c483f75e"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-collection/collection.log",
+      "bytes": 5099433,
+      "sha256": "d136fa8a6c6f70a2656b8bf3644bccaed20187cc3b9ff69e81f67f2f4b636867"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/followup-receipts/final-owner-collection/nodeids.txt",
+      "bytes": 5099103,
+      "sha256": "6cdc2388859e1f394389bb018d755e937ef35c630d89048dae6ad68dbc8a29bb"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_CLEARANCE_FOLLOWUP.md",
+      "bytes": 11361,
+      "sha256": "918d24ced0f64f3e67b4c3788ec0f55d1c8f621045bdba2916f644b1207e7784"
     }
   ]
 }
