@@ -829,9 +829,9 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 
-This source-changing PR publishes reviewed source and isolated regression evidence, not a running product. Main promotion requires one coherent delivery: all applicable clearance failures resolved, substantive review, exact-head required checks, normal PR merge and independent remote readback. Existing published research/plan and prior repair evidence remain unchanged; the exact GitHub PR/check/readback receipts, not this label alone, establish publication completion.
+This evidence-archival PR changes governance/documentation only; the publication label describes this change, not a rollback of the product source already merged by PR #116. That source and its isolated engineering validation remain pinned to the verified main/tree and exact CI/readback above. Archival requires its own normal required checks and merge/readback; it does not load a running product or repeat full product acceptance.
 
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
