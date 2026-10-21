@@ -192,12 +192,81 @@ def _is_presence_metadata_key(key):
     return bool(_PRESENCE_KEY.search(normalized))
 
 
-# Boolean presence pairs in free text: "has_auth_cookie": true, 'has_token': True,
-# cookie_present=False. Only the exact boolean literal is protected; any other
-# value under the same key still goes through every redaction rule.
-_PRESENCE_TEXT_PAIR = re.compile(
-    r"""(?<![A-Za-z0-9_=:/+.\-])["']?(?i:(?:has|is)_[A-Za-z0-9_]+|[A-Za-z0-9_]+_(?:present|configured|available|exists))["']?\s*[:=]\s*(?:true|false|True|False)(?=[\s,;}\])]|$)"""
+# Read field names using the same normalization as mapping sanitization.  A
+# structural boundary prevents protecting a suffix inside a larger key. An
+# assignment delimiter may precede a nested field: its marker remains ordinary
+# token text, so the enclosing credential rule can still consume the whole pair.
+_TEXT_FIELD = re.compile(
+    r"""(?<![A-Za-z0-9_:/+.\-])(?:"(?P<double>[^"\\\n\r]+)"|'(?P<single>[^'\\\n\r]+)'|(?P<bare>[A-Za-z_][A-Za-z0-9_.-]*))\s*[:=]\s*"""
 )
+
+_TEXT_BOOLEAN = re.compile(r"(?:true|false|True|False)(?=[\s,;}\])]|$)")
+
+def _text_value_end(text, start):
+    """Consume one scalar/container in a single pass; malformed containers fail closed.
+
+    No evaluation or recursive parsing: quoted delimiters and escaped quotes are
+    data. An unterminated quote/container or mismatched bracket consumes the
+    remainder so later members cannot escape redaction.
+    """
+    stack = []
+    quote = None
+    escaped = False
+    pairs = {"[": "]", "{": "}", "(": ")"}
+    pos = start
+    while pos < len(text):
+        char = text[pos]
+        if quote:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+        elif char in ("'", '"'):
+            quote = char
+        elif char in pairs:
+            stack.append(pairs[char])
+        elif stack and char in "]})":
+            if char != stack.pop():
+                return len(text)
+        elif not stack and (char.isspace() or char in ",;}])"):
+            break
+        pos += 1
+    return pos
+
+
+def _sanitize_presence_fields(text, hold):
+    chunks = []
+    cursor = 0
+    search = 0
+    while match := _TEXT_FIELD.search(text, search):
+        search = match.end()
+        key = match.group("double") or match.group("single") or match.group("bare")
+        if not _is_presence_metadata_key(key):
+            continue
+        sensitive = _is_sensitive_presence_key(key)
+        # Non-credential metadata only needs a bounded literal check. Do not
+        # repeatedly scan nested, non-sensitive containers before their fields.
+        if not sensitive:
+            boolean = _TEXT_BOOLEAN.match(text, match.end())
+            if not boolean:
+                continue
+            end = boolean.end()
+        else:
+            end = _text_value_end(text, match.end())
+        value = text[match.end():end]
+        if value in ("true", "false", "True", "False"):
+            replacement = hold(text[match.start():end])
+        elif sensitive:
+            replacement = hold(match.group(0) + '"[REDACTED]"')
+        else:
+            continue
+        chunks.append(text[cursor:match.start()])
+        chunks.append(replacement)
+        cursor = search = end
+    chunks.append(text[cursor:])
+    return "".join(chunks)
 
 
 def _redact_cookie(match):
@@ -214,15 +283,6 @@ def _redact_cookie(match):
 
 
 _SAN_RULES = [
-    (
-        # Credential presence fields with a non-boolean value (booleans were
-        # already held aside): the value is treated as credential material.
-        re.compile(
-            r"""(["']?[A-Za-z0-9_]*(?:cookie|token|secret|password|passwd|pwd|credential|api_?key|session|authorization)[A-Za-z0-9_]*_(?:present|configured|available|exists)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\\n\r])*"|'(?:\\.|[^'\\\n\r])*'|[^\s,;}\]]+)""",
-            re.I,
-        ),
-        r'\1"[REDACTED]"',
-    ),
     (
         re.compile(r"(authorization\s*[:=]\s*)(bearer|basic|token)?\s*[A-Za-z0-9._\-/+=]{6,}", re.I),
         r"\1\2 [REDACTED]",
@@ -295,11 +355,22 @@ def _is_sensitive_mapping_key(key):
     return False
 
 
+def _is_sensitive_presence_key(key):
+    # Retain every credential class accepted by the previous text rule, including
+    # API/private keys, authorization and pwd, which _CRED_WORD does not cover.
+    separated = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
+    normalized = re.sub(r"[^a-z0-9]+", "_", separated.casefold()).strip("_")
+    return bool(
+        _CRED_WORD.search(key) or _is_sensitive_mapping_key(key)
+        or re.search(r"api_?key|private_?key|authorization|pwd", normalized)
+    )
+
+
 def sanitize_text(text):
     """把待写入日志/Evidence/Attestation 的文本中的凭证打码。非字符串原样返回。"""
     if not isinstance(text, str):
         return text
-    # Hold exact boolean presence pairs behind a per-call alphanumeric marker.
+    # Hold exact boolean and redacted presence pairs behind a per-call marker.
     # The marker is ordinary token text, so an enclosing credential rule
     # (token=..., Authorization: ...) still consumes and redacts it; only
     # markers that survive every rule intact are restored.
@@ -308,11 +379,11 @@ def sanitize_text(text):
         nonce = secrets.token_hex(8)
     kept = []
 
-    def _hold(match):
-        kept.append(match.group(0))
+    def _hold(pair):
+        kept.append(pair)
         return f"zzpresence{nonce}n{len(kept) - 1}zz"
 
-    out = _PRESENCE_TEXT_PAIR.sub(_hold, text)
+    out = _sanitize_presence_fields(text, _hold)
     for rule, repl in _SAN_RULES:
         out = rule.sub(repl, out)
     return re.sub(
@@ -327,7 +398,7 @@ def sanitize_mapping(obj):
         for key, value in obj.items():
             safe_key = sanitize_text(key) if isinstance(key, str) else key
             if isinstance(key, str) and _is_presence_metadata_key(key) and (
-                _CRED_WORD.search(key) or _is_sensitive_mapping_key(key)
+                _is_sensitive_presence_key(key)
             ):
                 # Credential presence status: only an exact boolean is shown.
                 safe_value = value if isinstance(value, bool) else "[REDACTED]"

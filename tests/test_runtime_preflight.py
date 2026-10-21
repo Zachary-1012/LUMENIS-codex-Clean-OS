@@ -356,3 +356,62 @@ def test_presence_exception_only_starts_at_a_field_boundary():
         out = d.sanitize_text(text)
         assert "[REDACTED]" in out, out
     assert d.sanitize_mapping({"refresh_has_token": True})["refresh_has_token"] == "[REDACTED]"
+
+
+@pytest.mark.parametrize('key', ['is_password_set', 'has_credential', 'has_token', 'tokenPresent', 'token-present'])
+def test_presence_text_nonboolean_matches_mapping(key):
+    value = 'synthetic-presence-material'
+    assert dbm.sanitize_mapping({key: value})[key] == '[REDACTED]'
+    assert value not in dbm.sanitize_text(f'{key}="{value}"')
+
+
+@pytest.mark.parametrize('value', [
+    '["synthetic-first", "synthetic-second"]',
+    '{"first": ["synthetic-first", {"second": "synthetic-second"}]}',
+    '("synthetic-first", "synthetic-second")',
+    '["synthetic-first", "synthetic-second"',
+    '["synthetic-first", {"second": "synthetic-second"]',
+])
+def test_presence_text_consumes_complete_container(value):
+    out = dbm.sanitize_text(f'token_present={value}')
+    assert 'synthetic-first' not in out and 'synthetic-second' not in out
+
+
+@pytest.mark.parametrize('key', ['hasToken', 'is-password-set', 'tokenPresent', 'token-present'])
+@pytest.mark.parametrize('value', ['true', 'false', 'True', 'False'])
+def test_presence_text_normalized_booleans_stay_visible(key, value):
+    raw = f'{{"{key}": {value}, "token_count": 3}}'
+    assert dbm.sanitize_text(raw) == raw
+
+
+def test_presence_text_preserves_following_diagnostics_and_escaped_containers():
+    raw = 'tokenPresent=["synthetic-\\\"],x", {"v": "synthetic-second"}], count=7; has_flag=true'
+    out = dbm.sanitize_text(raw)
+    assert 'synthetic-' not in out
+    assert 'count=7; has_flag=true' in out
+    for raw in ('has_items=[1, 2], token_count=3', 'is_ready=False; count=0', 'token_budget=9'):
+        assert dbm.sanitize_text(raw) == raw
+    assert 'synthetic-' not in dbm.sanitize_text('has_items={"has_token": "synthetic-hidden"}')
+
+
+@pytest.mark.parametrize('value', ['true-secret-material', 'tRuE', '1', 'null', '"true"'])
+def test_presence_text_normalized_keys_reject_nonboolean_literals(value):
+    for key in ('hasCredential', 'is-password-set', 'tokenPresent'):
+        assert dbm.sanitize_text(f'{key}={value}') == f'{key}="[REDACTED]"'
+
+
+@pytest.mark.parametrize('key', ['api_key_present', 'apiKeyPresent', 'hasApiKey', 'pwd_available', 'authorization_exists', 'private-key-configured'])
+def test_presence_text_retains_all_credential_classes(key):
+    assert dbm.sanitize_text(f'{key}="synthetic-extra-class"') == f'{key}="[REDACTED]"'
+    assert dbm.sanitize_mapping({key: 'synthetic-extra-class'})[key] == '[REDACTED]'
+    assert dbm.sanitize_text(f'{key}=False') == f'{key}=False'
+    assert dbm.sanitize_mapping({key: False})[key] is False
+
+
+def test_presence_text_redacted_pairs_keep_valid_json_and_diagnostic_format():
+    raw = '{"has_token": [true, false], "has_secret": true, "count": 7}'
+    assert json.loads(dbm.sanitize_text(raw)) == {
+        'has_token': '[REDACTED]', 'has_secret': True, 'count': 7,
+    }
+    assert dbm.sanitize_text('has_token=[true,false], has_secret=True') == 'has_token="[REDACTED]", has_secret=True'
+    assert dbm.sanitize_text('token=has_token=["synthetic-value"]') == 'token=[REDACTED]'
