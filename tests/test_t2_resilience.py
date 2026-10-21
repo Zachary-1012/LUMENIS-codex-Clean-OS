@@ -114,10 +114,23 @@ check("冷却截止时间已设置", rl.cooldown_until > time.time())
 # 冷却中 can_run 应为 False
 check("冷却中 can_run=False", rl.can_run() is False)
 
-# 成功恢复（模拟 half-open 探测成功）
+# An unrelated success must not erase an active local/server cooldown.
+active_deadline = rl.cooldown_until
 rl.on_success()
-check("成功后恢复 HEALTHY", rl.state == CollectState.HEALTHY)
-check("冷却清除", rl.cooldown_until == 0.0)
+check("未到期成功不解除 COOLDOWN", rl.state == CollectState.COOLDOWN)
+check("未到期成功不清除截止时间", rl.cooldown_until == active_deadline)
+check("未到期成功后仍禁止请求", rl.can_run() is False)
+
+# Advance both wall and monotonic clocks; only an expired half-open probe may recover.
+from unittest.mock import patch
+future_wall = time.time() + 61
+future_monotonic = time.monotonic() + 61
+with patch("lumenis.system.collector.guard.rate_limiter.time.time", return_value=future_wall), \
+        patch("lumenis.system.collector.guard.rate_limiter.time.monotonic", return_value=future_monotonic):
+    check("冷却到期允许 half-open", rl.can_run() is True)
+    rl.on_success()
+    check("成功后恢复 HEALTHY", rl.state == CollectState.HEALTHY)
+    check("冷却清除", rl.cooldown_until == 0.0)
 
 # force_pause（外部 Auth/验证码触发）
 rl.force_pause(state=CollectState.AUTH_REQUIRED, cooldown_seconds=120)

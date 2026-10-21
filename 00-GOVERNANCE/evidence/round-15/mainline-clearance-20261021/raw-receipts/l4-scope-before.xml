@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="9" skipped="0" tests="20" time="1.530" timestamp="2026-10-21T01:28:13.932736-07:00" hostname="ac98a2bb4923"><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_01_start" time="0.196" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_02_config" time="0.007" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_03_db_init" time="0.054" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_04_collect_mock" time="0.005" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_05_process" time="0.007"><failure message="Failed: PROCESS failed: 存在未命中主体的数据&#10;assert False&#10; +  where False = all(&lt;generator object TestL4FullChain.test_step_05_process.&lt;locals&gt;.&lt;genexpr&gt; at 0x7f0ff20a0520&gt;)">self = &lt;tests.test_l4_full_chain.TestL4FullChain object at 0x7f0ff259bc50&gt;
+chain_state = {'notes': [{'note_id': 'l4_test_001', 'title': '广州太古汇15周年庆典活动现场打卡', 'content': '今天去了广州太古汇，15周年活动布置得太漂亮了！很多品牌都有优惠活动，人超级...理层投诉也没有得到妥善处理。太失望了！', 'source_platform': 'xhs', ...}], 'canonical_records': [], 'risk_results': [], 'evidence_ids': []}
+
+    def test_step_05_process(self, chain_state):
+        """STEP 5: PROCESS - 数据清洗与主题识别"""
+        try:
+            import subject_rules as sr
+            processed = []
+            for note in chain_state["notes"]:
+                # 主题识别
+                is_subject = sr.subject_hit(
+                    title=note.get("title", ""),
+                    body=note.get("content", ""),
+                    matched_keywords=note.get("matched_keywords", ""),
+                    source_keyword=note.get("source_keyword", "")
+                )
+                note["_subject_verified"] = is_subject
+                processed.append(note)
+            # 所有 mock 数据都应命中主体
+&gt;           assert all(n["_subject_verified"] for n in processed), "存在未命中主体的数据"
+E           AssertionError: 存在未命中主体的数据
+E           assert False
+E            +  where False = all(&lt;generator object TestL4FullChain.test_step_05_process.&lt;locals&gt;.&lt;genexpr&gt; at 0x7f0ff20a0520&gt;)
+
+tests/test_l4_full_chain.py:316: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = &lt;tests.test_l4_full_chain.TestL4FullChain object at 0x7f0ff259bc50&gt;
+chain_state = {'notes': [{'note_id': 'l4_test_001', 'title': '广州太古汇15周年庆典活动现场打卡', 'content': '今天去了广州太古汇，15周年活动布置得太漂亮了！很多品牌都有优惠活动，人超级...理层投诉也没有得到妥善处理。太失望了！', 'source_platform': 'xhs', ...}], 'canonical_records': [], 'risk_results': [], 'evidence_ids': []}
+
+    def test_step_05_process(self, chain_state):
+        """STEP 5: PROCESS - 数据清洗与主题识别"""
+        try:
+            import subject_rules as sr
+            processed = []
+            for note in chain_state["notes"]:
+                # 主题识别
+                is_subject = sr.subject_hit(
+                    title=note.get("title", ""),
+                    body=note.get("content", ""),
+                    matched_keywords=note.get("matched_keywords", ""),
+                    source_keyword=note.get("source_keyword", "")
+                )
+                note["_subject_verified"] = is_subject
+                processed.append(note)
+            # 所有 mock 数据都应命中主体
+            assert all(n["_subject_verified"] for n in processed), "存在未命中主体的数据"
+            chain_state["notes"] = processed
+            _record_step("PROCESS", True, f"清洗+主题识别完成，{len(processed)} 条全部命中主体")
+        except Exception as e:
+            _record_step("PROCESS", False, error=e)
+&gt;           pytest.fail(f"PROCESS failed: {e}")
+E           Failed: PROCESS failed: 存在未命中主体的数据
+E           assert False
+E            +  where False = all(&lt;generator object TestL4FullChain.test_step_05_process.&lt;locals&gt;.&lt;genexpr&gt; at 0x7f0ff20a0520&gt;)
+
+tests/test_l4_full_chain.py:321: Failed</failure></testcase><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_06_store" time="0.076" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_07_ai_mock" time="0.008" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_08_risk" time="0.010" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_09_evidence" time="0.016" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_10_report" time="0.005"><failure message="Failed: REPORT failed: REPORT_SCOPE_OR_DATE_INVALID">date_str = '2026-10-21', scope = None
+
+    def generate_today_summary(date_str=None, *, scope=None):
+        """
+        生成今日舆情摘要
+        返回结构化数据：
+        {
+            'date': '2026-08-26',
+            'total_found': 56,      # 今日发现（原始采集）
+            'effective_count': 23,   # 有效关联（通过AI过滤层）
+            'positive_count': 14,    # 正向
+            'neutral_count': 6,      # 中性
+            'risk_count': 3,         # 风险（中+高风险）
+            'risk_index': 72.5,      # 风险指数
+            'brand_health_score': 68.0,  # 品牌健康度
+        }
+        """
+        if date_str is None:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+        try:
+            parsed_date = date.fromisoformat(str(date_str))
+            if parsed_date.isoformat() != str(date_str):
+                raise ValueError('REPORT_DATE_INVALID')
+&gt;           exact = db._normalize_event_scope(scope, allow_global=True)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+lumenis/shared/reporting/daily.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+scope = None, allow_global = True
+
+    def _normalize_event_scope(scope, *, allow_global=False):
+        if not isinstance(scope, dict):
+&gt;           raise ValueError("SCOPE_REQUIRED")
+E           ValueError: SCOPE_REQUIRED
+
+database.py:1220: ValueError
+
+The above exception was the direct cause of the following exception:
+
+self = &lt;tests.test_l4_full_chain.TestL4FullChain object at 0x7f0ff23b12b0&gt;
+chain_state = {'notes': [{'note_id': 'l4_test_001', 'title': '广州太古汇15周年庆典活动现场打卡', 'content': '今天去了广州太古汇，15周年活动布置得太漂亮了！很多品牌都有优惠活动，人超级... 1120.0, 'severity': 0.5, ...}], 'evidence_ids': ['ev_4fcffeb4e1a34452', 'ev_7b3205333a624693', 'ev_87316bcc31c24f12']}
+
+    def test_step_10_report(self, chain_state):
+        """STEP 10: REPORT - 报告生成"""
+        try:
+            from lumenis.shared.reporting import daily as daily_report
+            # 生成今日摘要
+&gt;           summary = daily_report.generate_today_summary()
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_l4_full_chain.py:478: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+date_str = '2026-10-21', scope = None
+
+    def generate_today_summary(date_str=None, *, scope=None):
+        """
+        生成今日舆情摘要
+        返回结构化数据：
+        {
+            'date': '2026-08-26',
+            'total_found': 56,      # 今日发现（原始采集）
+            'effective_count': 23,   # 有效关联（通过AI过滤层）
+            'positive_count': 14,    # 正向
+            'neutral_count': 6,      # 中性
+            'risk_count': 3,         # 风险（中+高风险）
+            'risk_index': 72.5,      # 风险指数
+            'brand_health_score': 68.0,  # 品牌健康度
+        }
+        """
+        if date_str is None:
+            date_str = datetime.now().strftime('%Y-%m-%d')
+        try:
+            parsed_date = date.fromisoformat(str(date_str))
+            if parsed_date.isoformat() != str(date_str):
+                raise ValueError('REPORT_DATE_INVALID')
+            exact = db._normalize_event_scope(scope, allow_global=True)
+        except (TypeError, ValueError) as exc:
+&gt;           raise ValueError('REPORT_SCOPE_OR_DATE_INVALID') from exc
+E           ValueError: REPORT_SCOPE_OR_DATE_INVALID
+
+lumenis/shared/reporting/daily.py:204: ValueError
+
+During handling of the above exception, another exception occurred:
+
+self = &lt;tests.test_l4_full_chain.TestL4FullChain object at 0x7f0ff23b12b0&gt;
+chain_state = {'notes': [{'note_id': 'l4_test_001', 'title': '广州太古汇15周年庆典活动现场打卡', 'content': '今天去了广州太古汇，15周年活动布置得太漂亮了！很多品牌都有优惠活动，人超级... 1120.0, 'severity': 0.5, ...}], 'evidence_ids': ['ev_4fcffeb4e1a34452', 'ev_7b3205333a624693', 'ev_87316bcc31c24f12']}
+
+    def test_step_10_report(self, chain_state):
+        """STEP 10: REPORT - 报告生成"""
+        try:
+            from lumenis.shared.reporting import daily as daily_report
+            # 生成今日摘要
+            summary = daily_report.generate_today_summary()
+            assert summary is not None, "报告摘要为空"
+            assert isinstance(summary, dict), "报告摘要不是 dict"
+            # 验证报告包含关键字段
+            assert "total_notes" in summary or "date" in summary or "summary" in summary, \
+                f"报告缺少关键字段: {list(summary.keys())[:5]}"
+            # 生成完整日报
+            digest = daily_report.generate_daily_digest()
+            assert digest is not None, "日报为空"
+            _record_step("REPORT", True,
+                         f"报告生成成功，摘要字段: {list(summary.keys())[:5]}")
+        except Exception as e:
+            _record_step("REPORT", False, error=e)
+&gt;           pytest.fail(f"REPORT failed: {e}")
+E           Failed: REPORT failed: REPORT_SCOPE_OR_DATE_INVALID
+
+tests/test_l4_full_chain.py:491: Failed</failure></testcase><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_11_api" time="0.716" /><testcase classname="tests.test_l4_full_chain.TestL4FullChain" name="test_step_12_chain_complete" time="0.007"><failure message="Failed: CHAIN_COMPLETE failed: 主题识别失败&#10;assert False&#10; +  where False = all(&lt;generator object TestL4FullChain.test_step_12_chain_complete.&lt;locals&gt;.&lt;genexpr&gt; at 0x7f0ff1cef440&gt;)">self = &lt;tests.test_l4_full_chain.TestL4FullChain object at 0x7f0ff23b1b50&gt;
+chain_state = {'notes': [{'note_id': 'l4_test_001', 'title': '广州太古汇15周年庆典活动现场打卡', 'content': '今天去了广州太古汇，15周年活动布置得太漂亮了！很多品牌都有优惠活动，人超级... 1120.0, 'severity': 0.5, ...}], 'evidence_ids': ['ev_4fcffeb4e1a34452', 'ev_7b3205333a624693', 'ev_87316bcc31c24f12']}
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f0ff21e9970&gt;
+
+    def test_step_12_chain_complete(self, chain_state, monkeypatch):
+        """STEP 12: 验证完整链路闭环"""
+        try:
+            # 验证所有环节都有产出
+            assert len(chain_state["notes"]) == 3, "采集数据丢失"
+&gt;           assert all(n.get("_subject_verified") for n in chain_state["notes"]), "主题识别失败"
+E           AssertionError: 主题识别失败
+E           assert False
+E            +  where False = all(&lt;generator object TestL4FullChain.test_step_12_chain_complete.&lt;locals&gt;.&lt;genexpr&gt; at 0x7f0ff1cef440&gt;)
+
+tests/test_l4_full_chain.py:535: AssertionError
+
+During handling of the above exception, another exception occurred:
+
+self = &lt;tests.test_l4_full_chain.TestL4FullChain object at 0x7f0ff23b1b50&gt;
+chain_state = {'notes': [{'note_id': 'l4_test_001', 'title': '广州太古汇15周年庆典活动现场打卡', 'content': '今天去了广州太古汇，15周年活动布置得太漂亮了！很多品牌都有优惠活动，人超级... 1120.0, 'severity': 0.5, ...}], 'evidence_ids': ['ev_4fcffeb4e1a34452', 'ev_7b3205333a624693', 'ev_87316bcc31c24f12']}
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f0ff21e9970&gt;
+
+    def test_step_12_chain_complete(self, chain_state, monkeypatch):
+        """STEP 12: 验证完整链路闭环"""
+        try:
+            # 验证所有环节都有产出
+            assert len(chain_state["notes"]) == 3, "采集数据丢失"
+            assert all(n.get("_subject_verified") for n in chain_state["notes"]), "主题识别失败"
+            assert all(n.get("_sentiment") for n in chain_state["notes"]), "AI 分析失败"
+            assert all(n.get("_risk") for n in chain_state["notes"]), "风险评估失败"
+            assert len(chain_state["evidence_ids"]) == 3, "证据链不完整"
+            assert len(chain_state["canonical_records"]) == 3, "Canonical 绑定不完整"
+    
+            # 验证数据可通过 API 查询
+            api_app = _load_app_for_api_test(monkeypatch)
+            api_app.config['TESTING'] = True
+            client = _authorized_chain_client(api_app)
+            resp = client.get('/api/note/l4_test_001', headers=_cth_request_headers())
+            assert resp.status_code == 200, f"当前笔记详情端点返回 {resp.status_code}"
+            result = resp.get_json()
+            assert result.get("ok") is True
+            assert result.get("note", {}).get("note_id") == "l4_test_001"
+    
+            _record_step("CHAIN_COMPLETE", True,
+                         "完整链路闭环验证通过：采集→清洗→入库→AI→风险→证据→报告→API")
+        except Exception as e:
+            _record_step("CHAIN_COMPLETE", False, error=e)
+&gt;           pytest.fail(f"CHAIN_COMPLETE failed: {e}")
+E           Failed: CHAIN_COMPLETE failed: 主题识别失败
+E           assert False
+E            +  where False = all(&lt;generator object TestL4FullChain.test_step_12_chain_complete.&lt;locals&gt;.&lt;genexpr&gt; at 0x7f0ff1cef440&gt;)
+
+tests/test_l4_full_chain.py:555: Failed</failure></testcase><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_unselected_context_has_no_reference_subject" time="0.007" /><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_get_active_brand_returns_cth_default" time="0.002"><failure message="AssertionError: assert '' == 'guangzhou_taikoo_hui'&#10;  &#10;  - guangzhou_taikoo_hui">self = &lt;tests.test_subject_context_isolation.TestSubjectContextIsolation object at 0x7f0ff259b050&gt;
+
+    def test_get_active_brand_returns_cth_default(self):
+        """subject_rules.get_active_brand() must return CTH by default."""
+        from subject_context import clear_thread_context
+        from subject_rules import get_active_brand
+        clear_thread_context()
+        old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
+        try:
+&gt;           assert get_active_brand() == "guangzhou_taikoo_hui"
+E           AssertionError: assert '' == 'guangzhou_taikoo_hui'
+E             
+E             - guangzhou_taikoo_hui
+
+tests/test_subject_context_isolation.py:44: AssertionError</failure></testcase><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_brand_scope_switches_and_restores" time="0.002"><failure message="AssertionError: assert '' == 'guangzhou_taikoo_hui'&#10;  &#10;  - guangzhou_taikoo_hui">self = &lt;tests.test_subject_context_isolation.TestSubjectContextIsolation object at 0x7f0ff23b1490&gt;
+
+    def test_brand_scope_switches_and_restores(self):
+        """brand_scope must switch brand locally and restore after exit."""
+        from subject_context import clear_thread_context, get_thread_context, brand_scope
+        from subject_rules import get_active_brand
+        clear_thread_context()
+        old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
+        try:
+&gt;           assert get_active_brand() == "guangzhou_taikoo_hui"
+E           AssertionError: assert '' == 'guangzhou_taikoo_hui'
+E             
+E             - guangzhou_taikoo_hui
+
+tests/test_subject_context_isolation.py:56: AssertionError</failure></testcase><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_brand_scope_nested" time="0.002"><failure message="AssertionError: assert '' == 'guangzhou_taikoo_hui'&#10;  &#10;  - guangzhou_taikoo_hui">self = &lt;tests.test_subject_context_isolation.TestSubjectContextIsolation object at 0x7f0ff23b0b00&gt;
+
+    def test_brand_scope_nested(self):
+        """Nested brand_scope must restore correctly."""
+        from subject_context import clear_thread_context, brand_scope
+        from subject_rules import get_active_brand
+        clear_thread_context()
+        old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
+        try:
+            with brand_scope("hainan_cdf", product_id="ZBMP"):
+                assert get_active_brand() == "hainan_cdf"
+                with brand_scope("tokyo_dfs", product_id="ZBMP"):
+                    assert get_active_brand() == "tokyo_dfs"
+                assert get_active_brand() == "hainan_cdf"
+&gt;           assert get_active_brand() == "guangzhou_taikoo_hui"
+E           AssertionError: assert '' == 'guangzhou_taikoo_hui'
+E             
+E             - guangzhou_taikoo_hui
+
+tests/test_subject_context_isolation.py:81: AssertionError</failure></testcase><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_thread_isolation" time="0.003"><failure message="AssertionError: assert '' == 'guangzhou_taikoo_hui'&#10;  &#10;  - guangzhou_taikoo_hui">self = &lt;tests.test_subject_context_isolation.TestSubjectContextIsolation object at 0x7f0ff23b25d0&gt;
+
+    def test_thread_isolation(self):
+        """Brand context must be thread-local (no cross-thread leakage)."""
+        from subject_context import clear_thread_context, brand_scope, get_thread_context
+        from subject_rules import get_active_brand
+        clear_thread_context()
+        old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
+        results = {}
+    
+        def worker(brand, key):
+            try:
+                with brand_scope(brand, product_id="ZBMP"):
+                    results[key] = get_active_brand()
+            except Exception as e:
+                results[key] = f"ERROR: {e}"
+    
+        try:
+            t1 = threading.Thread(target=worker, args=("hainan_cdf", "t1"))
+            t2 = threading.Thread(target=worker, args=("tokyo_dfs", "t2"))
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+            assert results.get("t1") == "hainan_cdf"
+            assert results.get("t2") == "tokyo_dfs"
+            # Main thread unaffected
+&gt;           assert get_active_brand() == "guangzhou_taikoo_hui"
+E           AssertionError: assert '' == 'guangzhou_taikoo_hui'
+E             
+E             - guangzhou_taikoo_hui
+
+tests/test_subject_context_isolation.py:111: AssertionError</failure></testcase><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_machine_env_does_not_override_explicit_bmp" time="0.001" /><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_subject_hit_brand_isolation" time="0.002"><failure message="AssertionError: assert False is True&#10; +  where False = &lt;function subject_hit at 0x7f0ff2365800&gt;(title='广州太古汇周末活动')">self = &lt;tests.test_subject_context_isolation.TestSubjectContextIsolation object at 0x7f0ff23b2e10&gt;
+
+    def test_subject_hit_brand_isolation(self):
+        """subject_hit() must respect brand scope: Guangzhou vs Chengdu."""
+        from subject_context import clear_thread_context, brand_scope
+        from subject_rules import subject_hit
+        clear_thread_context()
+        old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
+        try:
+            # Default CTH: Guangzhou Taikoo Hui should hit
+&gt;           assert subject_hit(title="广州太古汇周末活动") is True
+E           AssertionError: assert False is True
+E            +  where False = &lt;function subject_hit at 0x7f0ff2365800&gt;(title='广州太古汇周末活动')
+
+tests/test_subject_context_isolation.py:147: AssertionError</failure></testcase><testcase classname="tests.test_subject_context_isolation.TestSubjectContextIsolation" name="test_subject_policy_info_brand_scoped" time="0.002"><failure message="AssertionError: assert '' == 'guangzhou_taikoo_hui'&#10;  &#10;  - guangzhou_taikoo_hui">self = &lt;tests.test_subject_context_isolation.TestSubjectContextIsolation object at 0x7f0ff23b3230&gt;
+
+    def test_subject_policy_info_brand_scoped(self):
+        """subject_policy_info() must return brand-scoped metadata."""
+        from subject_context import clear_thread_context, brand_scope
+        from subject_rules import subject_policy_info
+        clear_thread_context()
+        old = os.environ.pop("ZBC_ACTIVE_BRAND", None)
+        try:
+            info = subject_policy_info()
+&gt;           assert info["active_brand"] == "guangzhou_taikoo_hui"
+E           AssertionError: assert '' == 'guangzhou_taikoo_hui'
+E             
+E             - guangzhou_taikoo_hui
+
+tests/test_subject_context_isolation.py:166: AssertionError</failure></testcase></testsuite></testsuites>

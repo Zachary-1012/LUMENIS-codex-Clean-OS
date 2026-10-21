@@ -1,0 +1,38 @@
+{
+  "utc": "2026-10-21T10:40:39.797062+00:00",
+  "sqlite_version": "3.53.1",
+  "input": "one synthetic row, no product database",
+  "rows": [
+    [
+      "synthetic"
+    ]
+  ],
+  "paths": {
+    "synthetic.sqlite3-shm": {
+      "same": false,
+      "before_sha256": "17d94c49c21a43bad4b117b05af0a90b98fdbc33973f366f9106a9595caac22a",
+      "after_sha256": "2dc0422128c690d59cf9cf9197825fcca4167bc916fc1c41a3e95f78d0a6a978",
+      "changed_offsets": [
+        8,
+        40,
+        44,
+        56,
+        88,
+        92,
+        128
+      ]
+    },
+    "synthetic.sqlite3-wal": {
+      "same": true,
+      "before_sha256": "0ef84127cbc16d160c4c13f19dcbad9ce8b68dd3fc8e88ed79e4fe0962a15586",
+      "after_sha256": "0ef84127cbc16d160c4c13f19dcbad9ce8b68dd3fc8e88ed79e4fe0962a15586",
+      "changed_offsets": []
+    },
+    "synthetic.sqlite3": {
+      "same": true,
+      "before_sha256": "0ab48b25cba617ed3a4acca0161813b314c095ef63544bb4af60769eb1012977",
+      "after_sha256": "0ab48b25cba617ed3a4acca0161813b314c095ef63544bb4af60769eb1012977",
+      "changed_offsets": []
+    }
+  }
+}

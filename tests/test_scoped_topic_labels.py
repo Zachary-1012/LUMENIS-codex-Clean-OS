@@ -163,6 +163,206 @@ def test_authorization_denial_never_calls_enrichment(graph_list, monkeypatch):
 
 from tests.test_saved_document_workflow import workspace
 
+# SQLite's WAL-index is shared coordination/cache state, not persistent rows.
+# See https://sqlite.org/walformat.html sections 1.3, 1.4 and 2.1. In particular,
+# reopening a quiescent WAL can rebuild iChange/checksums/read marks without a
+# data write. Do not suppress all sidecars: DB/WAL/journal stay byte-exact and
+# the SHM payload, WAL binding and checkpoint progress remain checked below.
+def _read_snapshot(path, copy_dir):
+    import sqlite3
+    copy_dir.mkdir()
+    files = {}
+    for suffix in ('', '-wal', '-shm', '-journal'):
+        source = path.with_name(path.name + suffix)
+        if source.exists():
+            raw = source.read_bytes()
+            files[suffix] = raw
+            (copy_dir / source.name).write_bytes(raw)
+    # Inspect an independent copy, not another connection to the measured DB.
+    con = sqlite3.connect((copy_dir / path.name).as_uri() + '?mode=ro', uri=True)
+    try:
+        schema = con.execute('SELECT type,name,tbl_name,sql FROM sqlite_master ORDER BY type,name').fetchall()
+        rows = {}
+        for kind, name, _, _ in schema:
+            if kind == 'table':
+                quoted = '"' + name.replace('"', '""') + '"'
+                rows[name] = sorted(con.execute('SELECT * FROM ' + quoted).fetchall(), key=repr)
+    finally:
+        con.close()
+    return {'files': files, 'schema': schema, 'rows': rows}
+
+
+def _check_shm_binding(shm, wal):
+    import struct
+    assert len(shm) >= 32768 and len(shm) % 32768 == 0
+    assert shm[:48] == shm[48:96], 'SHM header copies disagree'
+    u32 = lambda offset: struct.unpack_from('=I', shm, offset)[0]
+    assert u32(0) == 3007000 and u32(4) == 0 and shm[12] == 1
+    page_size = struct.unpack_from('>I', wal, 8)[0]
+    assert struct.unpack_from('=H', shm, 14)[0] == (1 if page_size == 65536 else page_size)
+    mx_frame = u32(16)
+    assert mx_frame > 0 and 32 + mx_frame * (24 + page_size) <= len(wal)
+    frame = 32 + (mx_frame - 1) * (24 + page_size)
+    assert u32(20) == struct.unpack_from('>I', wal, frame + 4)[0]
+    assert tuple(struct.unpack_from('=2I', shm, 24)) == tuple(struct.unpack_from('>2I', wal, frame + 16))
+    assert shm[32:40] == wal[16:24], 'SHM points to a different WAL generation'
+    s1 = s2 = 0
+    words = struct.unpack_from('=10I', shm)
+    for i in range(0, len(words), 2):
+        s1 = (s1 + words[i] + s2) & 0xffffffff
+        s2 = (s2 + words[i + 1] + s1) & 0xffffffff
+    assert (s1, s2) == struct.unpack_from('=2I', shm, 40), 'Invalid SHM header checksum'
+    assert u32(96) <= u32(128) <= mx_frame
+    assert all(mark == 0xffffffff or mark <= mx_frame for mark in struct.unpack_from('=5I', shm, 100))
+
+
+def _assert_read_snapshot_unchanged(before, after):
+    persistent = lambda snapshot: {k: v for k, v in snapshot['files'].items() if k != '-shm'}
+    assert persistent(before) == persistent(after), 'Persistent DB/WAL/journal bytes changed'
+    assert before['schema'] == after['schema'], 'Schema changed during a read'
+    assert before['rows'] == after['rows'], 'Logical rows changed during a read'
+    left, right = before['files'].get('-shm'), after['files'].get('-shm')
+    if left == right:
+        return
+    assert left is not None and right is not None, 'Unexpected SHM creation/removal'
+    assert len(left) == len(right), 'Unexpected SHM resize'
+    wal = before['files']['-wal']
+    _check_shm_binding(left, wal)
+    _check_shm_binding(right, wal)
+    # iChange and its two header checksums, read marks and recovery's
+    # nBackfillAttempted may change. nBackfill (96..99), mxFrame, WAL identity,
+    # hash tables and all other bytes must remain unchanged. No checkpoint is
+    # allowed to advance merely because a graph list was requested.
+    allowed = set()
+    for start, stop in ((8, 12), (40, 48), (56, 60), (88, 96), (100, 120), (128, 132)):
+        allowed.update(range(start, stop))
+    changed = {i for i, (a, b) in enumerate(zip(left, right)) if a != b}
+    assert changed <= allowed, f'Unexpected SHM mutation at offsets {sorted(changed - allowed)}'
+
+
+def _observe_readonly_connections(monkeypatch, path):
+    import sqlite3
+    from pathlib import Path
+    from urllib.parse import parse_qs, urlsplit
+    from urllib.request import url2pathname
+    original = sqlite3.connect
+    observed = []
+
+    def connect(database, *args, **kwargs):
+        target = str(database)
+        parts = urlsplit(target)
+        actual_path = Path(url2pathname(parts.path) if target.startswith('file:') else target).resolve()
+        con = original(database, *args, **kwargs)
+        if actual_path != path.resolve():
+            return con
+        try:
+            assert kwargs.get('uri') is True and parse_qs(parts.query).get('mode') == ['ro']
+            # Prove native read-only mode before attaching the SQL write guard;
+            # a SQL authorizer denial alone would not prove a read-only handle.
+            with pytest.raises(sqlite3.OperationalError) as denied:
+                con.execute('CREATE TABLE forbidden_readonly_probe(value TEXT)')
+            assert denied.value.sqlite_errorcode == sqlite3.SQLITE_READONLY
+            assert con.total_changes == 0 and not con.in_transaction
+            record = {'target': target, 'sql': [], 'denied': []}
+            observed.append(record)
+            con.set_trace_callback(record['sql'].append)
+
+            def authorizer(action, arg1, arg2, database, trigger):
+                allowed = action in (sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION)
+                if action == sqlite3.SQLITE_PRAGMA:
+                    pragma = str(arg1).lower()
+                    allowed = (pragma in {'busy_timeout', 'foreign_keys'}
+                               or (pragma in {'database_list', 'read_uncommitted'} and arg2 is None))
+                if not allowed:
+                    record['denied'].append((action, arg1, arg2))
+                    return sqlite3.SQLITE_DENY
+                return sqlite3.SQLITE_OK
+
+            con.set_authorizer(authorizer)
+        except BaseException:
+            con.close()
+            raise
+        return con
+
+    monkeypatch.setattr(sqlite3, 'connect', connect)
+    return observed
+
+
+def _synthetic_quiescent_wal(path):
+    import sqlite3
+    writer = sqlite3.connect(path)
+    reader = None
+    try:
+        assert writer.execute('PRAGMA journal_mode=WAL').fetchone()[0] == 'wal'
+        writer.execute('CREATE TABLE business_rows(id INTEGER PRIMARY KEY, value TEXT NOT NULL)')
+        writer.commit()
+        for i in range(13):
+            writer.execute('INSERT INTO business_rows(value) VALUES(?)', (f'synthetic-{i}',))
+            writer.commit()
+        reader = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)
+        reader.execute('BEGIN')
+        assert len(reader.execute('SELECT * FROM business_rows').fetchall()) == 13
+        writer.close()
+    finally:
+        writer.close()
+        if reader is not None:
+            reader.close()
+
+
+def test_readonly_quiescent_wal_preserves_persistent_state(tmp_path, monkeypatch):
+    import sqlite3
+    path = tmp_path / 'rebuild.sqlite3'
+    _synthetic_quiescent_wal(path)
+    before = _read_snapshot(path, tmp_path / 'before')
+    with monkeypatch.context() as scoped:
+        observed = _observe_readonly_connections(scoped, path)
+        con = sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)
+        try:
+            rows = con.execute('SELECT * FROM business_rows ORDER BY id').fetchall()
+            assert con.total_changes == 0 and not con.in_transaction
+        finally:
+            con.close()
+    after = _read_snapshot(path, tmp_path / 'after')
+    assert len(rows) == 13 and observed and not any(r['denied'] for r in observed)
+    # SQLite 3.53.1 on the recorded Linux host rebuilds iChange 14 -> 0 here.
+    # A different supported VFS may retain its cache; change is not required.
+    _assert_read_snapshot_unchanged(before, after)
+
+
+@pytest.mark.parametrize('effect', ['wal_write', 'checkpoint'])
+def test_read_snapshot_guard_rejects_real_write_or_checkpoint(tmp_path, effect):
+    import sqlite3
+    path = tmp_path / 'negative.sqlite3'
+    _synthetic_quiescent_wal(path)
+    before = _read_snapshot(path, tmp_path / 'before')
+    con = sqlite3.connect(path)
+    try:
+        if effect == 'wal_write':
+            con.execute('INSERT INTO business_rows(value) VALUES(?)', ('must-be-detected',))
+            con.commit()
+        else:
+            result = con.execute('PRAGMA wal_checkpoint(FULL)').fetchone()
+            assert result[0] == 0 and result[1] == result[2]
+        after = _read_snapshot(path, tmp_path / 'after')
+        changed_file = '-wal' if effect == 'wal_write' else ''
+        assert before['files'][changed_file] != after['files'][changed_file]
+        with pytest.raises(AssertionError, match='Persistent DB/WAL/journal bytes changed'):
+            _assert_read_snapshot_unchanged(before, after)
+    finally:
+        con.close()
+
+
+@pytest.mark.parametrize('offset', [16, 96, 136, 20000])
+def test_read_snapshot_guard_does_not_ignore_other_shm_mutations(tmp_path, offset):
+    path = tmp_path / 'negative-shm.sqlite3'
+    _synthetic_quiescent_wal(path)
+    before = _read_snapshot(path, tmp_path / 'before')
+    mutated = bytearray(before['files']['-shm'])
+    mutated[offset] ^= 1
+    after = {**before, 'files': {**before['files'], '-shm': bytes(mutated)}}
+    with pytest.raises(AssertionError):
+        _assert_read_snapshot_unchanged(before, after)
+
 
 def test_real_scoped_list_filters_before_labels_and_repeat_reads_preserve_database(workspace, monkeypatch):
     """Real signed graph rows, real authorization/filtering, and byte-for-byte reads."""
@@ -213,20 +413,21 @@ def test_real_scoped_list_filters_before_labels_and_repeat_reads_preserve_databa
     # read_scoped_graph perform their actual context/integrity checks.
     monkeypatch.setattr(runtime, '_shared_work_actor_scope', lambda action: (actor, scope))
 
-    def snapshot():
-        return {p.name: p.read_bytes() for p in ws['root'].iterdir()
-                if p.is_file() and (p.name.endswith('.sqlite3') or
-                                   '.sqlite3-' in p.name)}
-
-    before = snapshot()
-    assert 'isolated.sqlite3' in before
+    path = ws['root'] / 'isolated.sqlite3'
+    before = _read_snapshot(path, ws['root'] / 'read-snapshot-before')
     responses = []
-    for _ in range(2):
-        with ws['app'].test_request_context('/api/event-graph/events?type=marketing_event', headers={'Host':'localhost'}, environ_overrides={'REMOTE_ADDR':'127.0.0.1'}):
-            response = graph.graph_http('list')
-            assert response.status_code == 200
-            responses.append(response.get_json())
-        assert snapshot() == before
+    for index in range(2):
+        with monkeypatch.context() as scoped:
+            observed = _observe_readonly_connections(scoped, path)
+            with ws['app'].test_request_context('/api/event-graph/events?type=marketing_event', headers={'Host':'localhost'}, environ_overrides={'REMOTE_ADDR':'127.0.0.1'}):
+                response = graph.graph_http('list')
+                assert response.status_code == 200
+                responses.append(response.get_json())
+            assert observed and not any(record['denied'] for record in observed)
+            assert all(any(sql.lstrip().upper().startswith('SELECT') for sql in record['sql'])
+                       for record in observed)
+        after = _read_snapshot(path, ws['root'] / f'read-snapshot-after-{index}')
+        _assert_read_snapshot_unchanged(before, after)
     assert responses[0] == responses[1]
     data = responses[0]
     assert data['count'] == 1 and data['events'][0]['event_id'] == allowed

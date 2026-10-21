@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="18" time="2.529" timestamp="2026-10-21T01:23:03.815366-07:00" hostname="ac98a2bb4923"><testcase classname="tests.test_admitted_document_capture_receipts" name="test_generic_saved_work_cannot_impersonate_capture" time="0.218" /><testcase classname="tests.test_admitted_document_capture_receipts" name="test_generic_run_cannot_return_captured_without_fetch" time="0.127" /><testcase classname="tests.test_admitted_document_capture_receipts" name="test_resigned_wrong_receipt_producer_rejected[source-generic_saved_work]" time="0.232"><failure message="ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试">file_path = '/tmp/lumenis-macro-validate-63uhx016/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+&gt;           from markitdown import MarkItDown
+
+lumenis/importer/parser.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/__init__.py:6: in &lt;module&gt;
+    from ._markitdown import (
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/_markitdown.py:17: in &lt;module&gt;
+    import magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/__init__.py:23: in &lt;module&gt;
+    from magika.magika import Magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/magika.py:31: in &lt;module&gt;
+    import onnxruntime as rt
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+event = 'import'
+args = ('onnxruntime', None, ['/workspace/scratch/8d04d68e28f4/mainline_clearance_20261021', '/workspace/scratch/8d04d68e28f4...[&lt;class 'zipimport.zipimporter'&gt;, &lt;function FileFinder.path_hook.&lt;locals&gt;.path_hook_for_FileFinder at 0x7f5d5ba3c5e0&gt;])
+
+    def _audit(event, args):
+        if event in ('socket.getaddrinfo', 'socket.gethostbyname', 'socket.gethostbyaddr'):
+            if not _loopback(args[0]):
+                raise PermissionError('SYNTHETIC_TEST_DNS_DENIED')
+        elif event in ('socket.connect', 'socket.bind'):
+            _deny_address(args[1])
+        elif event == 'socket.sendto':
+            _deny_address(args[-1])
+        elif event == 'import' and args[0].split('.')[0] == 'onnxruntime':
+            # Native C telemetry is not covered by CPython socket audit events.
+            # Do not claim Python-only network guards contain that runtime.
+&gt;           raise ImportError('SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED')
+E           ImportError: SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED
+
+/tmp/clearance-regression/offline-guard/sitecustomize.py:34: ImportError
+
+The above exception was the direct cause of the following exception:
+
+macro_collection_workspace = {'root': PosixPath('/tmp/pytest-of-agent/pytest-119/test_resigned_wrong_receipt_pr0'), 'repo': &lt;lumenis.shared.databas...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f5d5a142420&gt;
+column = 'source', value = 'generic_saved_work'
+
+    @pytest.mark.parametrize('column,value',[('source','generic_saved_work'),('provider','generic_writer'),('version','admitted-document-receipt/999')])
+    def test_resigned_wrong_receipt_producer_rejected(macro_collection_workspace,monkeypatch,column,value):
+        from lumenis.shared.evidence import store
+        w=macro_collection_workspace
+&gt;       args,tid,collected=_real_capture(w,monkeypatch)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_admitted_document_capture_receipts.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_admitted_document_capture_receipts.py:63: in _real_capture
+    return args,tid,macro.collect_macro_target(tid,request_id='real-receipt-run',**args)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/macro.py:367: in collect_macro_target
+    return documents._collect_admitted_document(target_artifact_id,actor=actor,scope=scope,request_id=request_id,
+lumenis/importer/documents.py:988: in _collect_admitted_document
+    validate_response(response.content, target)
+lumenis/importer/macro.py:354: in _validate_macro_response
+    parsed=parse_macro_release(parse_file(str(path)).text,source_url=target['url'])
+                               ^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/parser.py:53: in parse_file
+    result = parse_markitdown(file_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+file_path = '/tmp/lumenis-macro-validate-63uhx016/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+            from markitdown import MarkItDown
+        except ImportError as exc:
+&gt;           raise ImportError(
+                "PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试"
+            ) from exc
+E           ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试
+
+lumenis/importer/parser.py:95: ImportError</failure></testcase><testcase classname="tests.test_admitted_document_capture_receipts" name="test_resigned_wrong_receipt_producer_rejected[provider-generic_writer]" time="0.157"><failure message="ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试">file_path = '/tmp/lumenis-macro-validate-fveq0wkh/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+&gt;           from markitdown import MarkItDown
+
+lumenis/importer/parser.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/__init__.py:6: in &lt;module&gt;
+    from ._markitdown import (
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/_markitdown.py:17: in &lt;module&gt;
+    import magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/__init__.py:23: in &lt;module&gt;
+    from magika.magika import Magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/magika.py:31: in &lt;module&gt;
+    import onnxruntime as rt
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+event = 'import'
+args = ('onnxruntime', None, ['/workspace/scratch/8d04d68e28f4/mainline_clearance_20261021', '/workspace/scratch/8d04d68e28f4...[&lt;class 'zipimport.zipimporter'&gt;, &lt;function FileFinder.path_hook.&lt;locals&gt;.path_hook_for_FileFinder at 0x7f5d5ba3c5e0&gt;])
+
+    def _audit(event, args):
+        if event in ('socket.getaddrinfo', 'socket.gethostbyname', 'socket.gethostbyaddr'):
+            if not _loopback(args[0]):
+                raise PermissionError('SYNTHETIC_TEST_DNS_DENIED')
+        elif event in ('socket.connect', 'socket.bind'):
+            _deny_address(args[1])
+        elif event == 'socket.sendto':
+            _deny_address(args[-1])
+        elif event == 'import' and args[0].split('.')[0] == 'onnxruntime':
+            # Native C telemetry is not covered by CPython socket audit events.
+            # Do not claim Python-only network guards contain that runtime.
+&gt;           raise ImportError('SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED')
+E           ImportError: SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED
+
+/tmp/clearance-regression/offline-guard/sitecustomize.py:34: ImportError
+
+The above exception was the direct cause of the following exception:
+
+macro_collection_workspace = {'root': PosixPath('/tmp/pytest-of-agent/pytest-119/test_resigned_wrong_receipt_pr1'), 'repo': &lt;lumenis.shared.databas...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f5d5a141b20&gt;
+column = 'provider', value = 'generic_writer'
+
+    @pytest.mark.parametrize('column,value',[('source','generic_saved_work'),('provider','generic_writer'),('version','admitted-document-receipt/999')])
+    def test_resigned_wrong_receipt_producer_rejected(macro_collection_workspace,monkeypatch,column,value):
+        from lumenis.shared.evidence import store
+        w=macro_collection_workspace
+&gt;       args,tid,collected=_real_capture(w,monkeypatch)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_admitted_document_capture_receipts.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_admitted_document_capture_receipts.py:63: in _real_capture
+    return args,tid,macro.collect_macro_target(tid,request_id='real-receipt-run',**args)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/macro.py:367: in collect_macro_target
+    return documents._collect_admitted_document(target_artifact_id,actor=actor,scope=scope,request_id=request_id,
+lumenis/importer/documents.py:988: in _collect_admitted_document
+    validate_response(response.content, target)
+lumenis/importer/macro.py:354: in _validate_macro_response
+    parsed=parse_macro_release(parse_file(str(path)).text,source_url=target['url'])
+                               ^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/parser.py:53: in parse_file
+    result = parse_markitdown(file_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+file_path = '/tmp/lumenis-macro-validate-fveq0wkh/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+            from markitdown import MarkItDown
+        except ImportError as exc:
+&gt;           raise ImportError(
+                "PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试"
+            ) from exc
+E           ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试
+
+lumenis/importer/parser.py:95: ImportError</failure></testcase><testcase classname="tests.test_admitted_document_capture_receipts" name="test_resigned_wrong_receipt_producer_rejected[version-admitted-document-receipt/999]" time="0.164"><failure message="ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试">file_path = '/tmp/lumenis-macro-validate-0a69osed/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+&gt;           from markitdown import MarkItDown
+
+lumenis/importer/parser.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/__init__.py:6: in &lt;module&gt;
+    from ._markitdown import (
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/_markitdown.py:17: in &lt;module&gt;
+    import magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/__init__.py:23: in &lt;module&gt;
+    from magika.magika import Magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/magika.py:31: in &lt;module&gt;
+    import onnxruntime as rt
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+event = 'import'
+args = ('onnxruntime', None, ['/workspace/scratch/8d04d68e28f4/mainline_clearance_20261021', '/workspace/scratch/8d04d68e28f4...[&lt;class 'zipimport.zipimporter'&gt;, &lt;function FileFinder.path_hook.&lt;locals&gt;.path_hook_for_FileFinder at 0x7f5d5ba3c5e0&gt;])
+
+    def _audit(event, args):
+        if event in ('socket.getaddrinfo', 'socket.gethostbyname', 'socket.gethostbyaddr'):
+            if not _loopback(args[0]):
+                raise PermissionError('SYNTHETIC_TEST_DNS_DENIED')
+        elif event in ('socket.connect', 'socket.bind'):
+            _deny_address(args[1])
+        elif event == 'socket.sendto':
+            _deny_address(args[-1])
+        elif event == 'import' and args[0].split('.')[0] == 'onnxruntime':
+            # Native C telemetry is not covered by CPython socket audit events.
+            # Do not claim Python-only network guards contain that runtime.
+&gt;           raise ImportError('SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED')
+E           ImportError: SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED
+
+/tmp/clearance-regression/offline-guard/sitecustomize.py:34: ImportError
+
+The above exception was the direct cause of the following exception:
+
+macro_collection_workspace = {'root': PosixPath('/tmp/pytest-of-agent/pytest-119/test_resigned_wrong_receipt_pr2'), 'repo': &lt;lumenis.shared.databas...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f5d59225ac0&gt;
+column = 'version', value = 'admitted-document-receipt/999'
+
+    @pytest.mark.parametrize('column,value',[('source','generic_saved_work'),('provider','generic_writer'),('version','admitted-document-receipt/999')])
+    def test_resigned_wrong_receipt_producer_rejected(macro_collection_workspace,monkeypatch,column,value):
+        from lumenis.shared.evidence import store
+        w=macro_collection_workspace
+&gt;       args,tid,collected=_real_capture(w,monkeypatch)
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_admitted_document_capture_receipts.py:70: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_admitted_document_capture_receipts.py:63: in _real_capture
+    return args,tid,macro.collect_macro_target(tid,request_id='real-receipt-run',**args)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/macro.py:367: in collect_macro_target
+    return documents._collect_admitted_document(target_artifact_id,actor=actor,scope=scope,request_id=request_id,
+lumenis/importer/documents.py:988: in _collect_admitted_document
+    validate_response(response.content, target)
+lumenis/importer/macro.py:354: in _validate_macro_response
+    parsed=parse_macro_release(parse_file(str(path)).text,source_url=target['url'])
+                               ^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/parser.py:53: in parse_file
+    result = parse_markitdown(file_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+file_path = '/tmp/lumenis-macro-validate-0a69osed/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+            from markitdown import MarkItDown
+        except ImportError as exc:
+&gt;           raise ImportError(
+                "PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试"
+            ) from exc
+E           ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试
+
+lumenis/importer/parser.py:95: ImportError</failure></testcase><testcase classname="tests.test_admitted_document_capture_receipts" name="test_receipt_failure_rolls_back_capture" time="0.148"><failure message="ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试">file_path = '/tmp/lumenis-macro-validate-abeyb8hu/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+&gt;           from markitdown import MarkItDown
+
+lumenis/importer/parser.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/__init__.py:6: in &lt;module&gt;
+    from ._markitdown import (
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/markitdown/_markitdown.py:17: in &lt;module&gt;
+    import magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/__init__.py:23: in &lt;module&gt;
+    from magika.magika import Magika
+/tmp/oevira-pr-repair-venv/lib/python3.12/site-packages/magika/magika.py:31: in &lt;module&gt;
+    import onnxruntime as rt
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+event = 'import'
+args = ('onnxruntime', None, ['/workspace/scratch/8d04d68e28f4/mainline_clearance_20261021', '/workspace/scratch/8d04d68e28f4...[&lt;class 'zipimport.zipimporter'&gt;, &lt;function FileFinder.path_hook.&lt;locals&gt;.path_hook_for_FileFinder at 0x7f5d5ba3c5e0&gt;])
+
+    def _audit(event, args):
+        if event in ('socket.getaddrinfo', 'socket.gethostbyname', 'socket.gethostbyaddr'):
+            if not _loopback(args[0]):
+                raise PermissionError('SYNTHETIC_TEST_DNS_DENIED')
+        elif event in ('socket.connect', 'socket.bind'):
+            _deny_address(args[1])
+        elif event == 'socket.sendto':
+            _deny_address(args[-1])
+        elif event == 'import' and args[0].split('.')[0] == 'onnxruntime':
+            # Native C telemetry is not covered by CPython socket audit events.
+            # Do not claim Python-only network guards contain that runtime.
+&gt;           raise ImportError('SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED')
+E           ImportError: SYNTHETIC_TEST_NATIVE_ONNX_RUNTIME_NOT_ADMITTED
+
+/tmp/clearance-regression/offline-guard/sitecustomize.py:34: ImportError
+
+The above exception was the direct cause of the following exception:
+
+macro_collection_workspace = {'root': PosixPath('/tmp/pytest-of-agent/pytest-119/test_receipt_failure_rolls_bac0'), 'repo': &lt;lumenis.shared.databas...actor': LocalWorkspacePrincipal(principal_kind='local_workspace', principal_ref='workspace:local', actor_id=None), ...}
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f5d401f6cf0&gt;
+
+    def test_receipt_failure_rolls_back_capture(macro_collection_workspace,monkeypatch):
+        from lumenis.importer import documents
+        w=macro_collection_workspace
+        def fail(*args,**kwargs):
+            raise RuntimeError('test signer unavailable')
+        monkeypatch.setattr(documents,'_write_admitted_document_receipt',fail)
+        with pytest.raises(RuntimeError,match='signer unavailable'):
+&gt;           _real_capture(w,monkeypatch)
+
+tests/test_admitted_document_capture_receipts.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_admitted_document_capture_receipts.py:63: in _real_capture
+    return args,tid,macro.collect_macro_target(tid,request_id='real-receipt-run',**args)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/macro.py:367: in collect_macro_target
+    return documents._collect_admitted_document(target_artifact_id,actor=actor,scope=scope,request_id=request_id,
+lumenis/importer/documents.py:988: in _collect_admitted_document
+    validate_response(response.content, target)
+lumenis/importer/macro.py:354: in _validate_macro_response
+    parsed=parse_macro_release(parse_file(str(path)).text,source_url=target['url'])
+                               ^^^^^^^^^^^^^^^^^^^^^
+lumenis/importer/parser.py:53: in parse_file
+    result = parse_markitdown(file_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+file_path = '/tmp/lumenis-macro-validate-abeyb8hu/release.html'
+
+    def parse_markitdown(file_path: str) -&gt; ParseResult:
+        """Convert one bounded local document through optional MarkItDown.
+    
+        MarkItDown is an importer implementation, not a source, Evidence or
+        Canonical owner.  It is deliberately lazy and local-only: a missing
+        optional dependency is reported honestly and remote URI inputs are never
+        handed to a third-party converter.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("文档路径为空")
+        local_path = os.path.abspath(file_path)
+        if not os.path.isfile(local_path):
+            raise FileNotFoundError(local_path)
+        if os.path.getsize(local_path) &gt; IMPORTER_CONFIG["max_file_size_mb"] * 1024 * 1024:
+            raise ValueError(f"文件超过{IMPORTER_CONFIG['max_file_size_mb']}MB")
+    
+        try:
+            from markitdown import MarkItDown
+        except ImportError as exc:
+&gt;           raise ImportError(
+                "PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试"
+            ) from exc
+E           ImportError: PPTX/HTML 解析需要可选依赖 markitdown；请按 requirements.txt 安装后重试
+
+lumenis/importer/parser.py:95: ImportError</failure></testcase><testcase classname="tests.test_api.TestDashboardAPI" name="test_dashboard_all" time="0.625"><failure message="assert 409 == 200&#10; +  where 409 = &lt;WrapperTestResponse streamed [409 CONFLICT]&gt;.status_code">self = &lt;tests.test_api.TestDashboardAPI object at 0x7f5d5a11ac90&gt;
+client = &lt;FlaskClient &lt;Flask 'app'&gt;&gt;
+auth_headers = {'Authorization': 'Basic WmFjaGFyeTp0ZXN0LW9ubHktcGFzcw=='}
+
+    def test_dashboard_all(self, client, auth_headers):
+        """测试仪表盘汇总API"""
+        response = client.get('/api/dashboard/all', headers=auth_headers)
+&gt;       assert response.status_code == 200
+E       assert 409 == 200
+E        +  where 409 = &lt;WrapperTestResponse streamed [409 CONFLICT]&gt;.status_code
+
+tests/test_api.py:23: AssertionError</failure></testcase><testcase classname="tests.test_api.TestDashboardAPI" name="test_stats_api" time="0.003" /><testcase classname="tests.test_api.TestDashboardAPI" name="test_overview_api" time="0.003" /><testcase classname="tests.test_api.TestNotesAPI" name="test_notes_list" time="0.003" /><testcase classname="tests.test_api.TestNotesAPI" name="test_notes_detail" time="0.002" /><testcase classname="tests.test_api.TestEventsAPI" name="test_events_list" time="0.002" /><testcase classname="tests.test_api.TestAIAPI" name="test_ai_status" time="0.008" /><testcase classname="tests.test_api.TestAIAPI" name="test_ark_status" time="0.002" /><testcase classname="tests.test_api.TestSystemAPI" name="test_system_health" time="0.005" /><testcase classname="tests.test_api.TestSystemAPI" name="test_system_status" time="0.004" /><testcase classname="tests.test_api.TestAuthAPI" name="test_without_auth" time="0.002" /><testcase classname="tests.test_api.TestAuthAPI" name="test_with_wrong_auth" time="0.002" /></testsuite></testsuites>

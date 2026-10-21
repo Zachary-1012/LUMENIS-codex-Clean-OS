@@ -135,7 +135,7 @@ jobs:
           socket.socket.connect_ex = denied
           socket.create_connection = denied
           import pytest
-          raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
+          raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
               'tests/test_rectification_truth_chain_20261010.py',
               'tests/test_governance_machine_contract.py', 'tests/test_online_progress_governance.py', '.codex/tests/test_engineering.py',
               'tests/test_ai_task_engine.py', 'tests/test_content_generation_parent_evidence.py',
@@ -149,6 +149,7 @@ jobs:
               'tests/test_safety_boundary_backup_contract.py', 'tests/test_instagram_partial_collection.py',
               'tests/test_instagram_main_adapter.py', 'tests/test_ai_gateway_result_status.py',
               'tests/test_root_owner_auth_composition.py',
+              'tests/test_scoped_topic_labels.py',
               # CPython 3.11 worker-entry matrix: real local processes only,
               # no network/model/training. Full affected recovery runs are
               # separately recorded on the frozen source with synthetic DBs.
