@@ -150,6 +150,8 @@ jobs:
               'tests/test_instagram_main_adapter.py', 'tests/test_ai_gateway_result_status.py',
               'tests/test_root_owner_auth_composition.py',
               'tests/test_scoped_topic_labels.py',
+              'tests/test_ai.py', 'tests/test_intelligence_boundary_audit.py',
+              'tests/test_csv_dialect_real_inputs.py',
               # CPython 3.11 worker-entry matrix: real local processes only,
               # no network/model/training. Full affected recovery runs are
               # separately recorded on the frozen source with synthetic DBs.
@@ -159,6 +161,107 @@ jobs:
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_invalid_interpreter_before_spawn',
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_identity_or_entry_change_and_reaps']))
           PY
+
+      - name: Test owned loopback HTTP consistency (BLOCKING)
+        timeout-minutes: 3
+        shell: bash
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python - <<'PY'
+          import os, pathlib, socket, tempfile
+          root = pathlib.Path(tempfile.mkdtemp(prefix='oevira-loopback-regression-'))
+          for key in list(os.environ):
+              if key.startswith(('ZBC_', 'TAIKOO_', 'XHS_', 'LUMENIS_', 'AI_', 'OPENAI_', 'ANTHROPIC_', 'ZHIPU_')):
+                  os.environ.pop(key, None)
+          os.environ.update(ZBC_DB_PATH=str(root/'seed.sqlite3'), ZBC_DATA_DIR=str(root),
+              LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
+              XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
+          original_connect = socket.socket.connect
+          original_connect_ex = socket.socket.connect_ex
+          original_bind = socket.socket.bind
+          original_getaddrinfo = socket.getaddrinfo
+          def no_other_network(*args, **kwargs):
+              raise RuntimeError('LOOPBACK_FIXTURE_OTHER_NETWORK_FORBIDDEN')
+          def local_address(host, port, *args, **kwargs):
+              if host != '127.0.0.1' or port != 8201:
+                  return no_other_network()
+              return original_getaddrinfo(host, port, *args, **kwargs)
+          socket.getaddrinfo = local_address
+          socket.gethostbyname = lambda host: '127.0.0.1' if host == '127.0.0.1' else no_other_network()
+          socket.gethostbyaddr = lambda host: ('localhost', [], ['127.0.0.1']) if host == '127.0.0.1' else no_other_network()
+          socket.socket.sendto = no_other_network
+          def checked(original, sock, address):
+              if not isinstance(address, tuple) or address[:2] != ('127.0.0.1', 8201):
+                  raise RuntimeError('LOOPBACK_FIXTURE_OTHER_NETWORK_FORBIDDEN')
+              return original(sock, address)
+          socket.socket.connect = lambda sock, address: checked(original_connect, sock, address)
+          socket.socket.connect_ex = lambda sock, address: checked(original_connect_ex, sock, address)
+          socket.socket.bind = lambda sock, address: checked(original_bind, sock, address)
+          import pytest
+          raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
+              '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-http.xml'),
+              'tests/test_cross_surface_consistency.py', 'tests/test_refscan_consistency.py']))
+          PY
+
+      - name: Prepare official Chromium fixture runtime (EXECUTION-LAYER)
+        timeout-minutes: 4
+        shell: bash
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/oevira-playwright
+        run: |
+          python -m playwright install chromium
+          python -c "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); print(p.chromium.executable_path); p.stop()"
+
+      - name: Test real Chromium in offline namespace (BLOCKING)
+        timeout-minutes: 3
+        shell: bash
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/oevira-playwright
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          # New network namespace has no external interfaces. Drop back to the
+          # runner user; do not change host network/security settings or permit
+          # a fallback to online execution when namespace creation fails.
+          sudo unshare --net -- runuser -u "$(id -un)" -- env \
+            PATH="$PATH" PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_BROWSERS_PATH" RUNNER_TEMP="$RUNNER_TEMP" \
+            PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 PYTHONDONTWRITEBYTECODE=1 \
+            "$(command -v python)" - <<'PY'
+          import os, pathlib, tempfile, subprocess, sys, importlib.metadata
+          from playwright.sync_api import sync_playwright
+          root = pathlib.Path(tempfile.mkdtemp(prefix='oevira-chromium-regression-'))
+          for key in list(os.environ):
+              if key.startswith(('ZBC_', 'TAIKOO_', 'XHS_', 'LUMENIS_', 'AI_', 'OPENAI_', 'ANTHROPIC_', 'ZHIPU_')):
+                  os.environ.pop(key, None)
+          with sync_playwright() as pw:
+              executable = pw.chromium.executable_path
+          print('PYTHON:', sys.version)
+          print('PLAYWRIGHT:', importlib.metadata.version('playwright'))
+          print('CHROMIUM:', subprocess.check_output([executable, '--version'], text=True).strip())
+          print('SOURCE_HEAD:', subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip())
+          print('SOURCE_TREE:', subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip())
+          os.environ.update(ZBC_DB_PATH=str(root/'seed.sqlite3'), ZBC_DATA_DIR=str(root),
+              LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
+              LUMENIS_TEST_REAL_BROWSER='1', LUMENIS_TEST_CHROMIUM_EXECUTABLE=executable,
+              XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
+          import pytest
+          raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
+              '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-browser.xml'),
+              'tests/test_browser_extract.py::test_real_chromium_visible_capture_without_network']))
+          PY
+
+      - name: Preserve real fixture XML receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: oevira-real-fixture-receipts-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/oevira-http.xml
+            ${{ runner.temp }}/oevira-browser.xml
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Record gate scope (INFORMATIONAL)
         if: ${{ always() }}

@@ -159,19 +159,34 @@ def test_api_failures():
 @pytest.mark.skipif(__import__('os').environ.get('LUMENIS_TEST_REAL_BROWSER') != '1', reason='Opt-in real-browser fixture; requires a socket-capable isolated test host')
 def test_real_chromium_visible_capture_without_network():
     """Real CDP/DOM execution against a fulfilled fixture, never a live target."""
+    import os
     import shutil
+    from pathlib import Path
     from playwright.sync_api import sync_playwright
-    executable = shutil.which('chromium')
-    if not executable:
-        pytest.skip('Chromium unavailable')
     with sync_playwright() as pw:
+        # Opt-in promises an actual browser. Missing resources must not turn an
+        # explicitly requested acceptance run into a green skip. CI may use the
+        # official Playwright-managed binary without changing the host PATH.
+        executable = (os.environ.get('LUMENIS_TEST_CHROMIUM_EXECUTABLE')
+                      or shutil.which('chromium') or pw.chromium.executable_path)
+        if not Path(executable).is_file() or not os.access(executable, os.X_OK):
+            pytest.fail('Real-browser opt-in requires an executable Chromium binary')
         browser = pw.chromium.launch(executable_path=executable, headless=True)
         context = browser.new_context(service_workers='block')
         fixture = '''<title>Fixture</title><h1>Visible heading</h1><p>First paragraph.</p>
         <div hidden>HIDDEN SECRET</div><form><input value="PRIVATE"><p>FORM SECRET</p></form>
         <div contenteditable>EDIT SECRET</div><script>window.shouldNotLeak='SCRIPT SECRET'</script>
         <p>Last paragraph &amp; symbols.</p>'''
-        context.route('**/*', lambda route: route.fulfill(status=200,content_type='text/html',body=fixture))
+        intercepted = []
+        unexpected = []
+        def serve_fixture(route):
+            intercepted.append(route.request.url)
+            if route.request.url == URL and route.request.is_navigation_request():
+                route.fulfill(status=200, content_type='text/html', body=fixture)
+            else:
+                unexpected.append(route.request.url)
+                route.abort()
+        context.route('**/*', serve_fixture)
         page=context.new_page(); page.goto(URL)
         obj,_=runtime(); obj._page=page; obj._context=context
         result=obj.extract(request())
@@ -182,6 +197,7 @@ def test_real_chromium_visible_capture_without_network():
             assert secret not in json.dumps(result)
         page.set_content('<title>Login</title><input type="password" value="secret">')
         error('BROWSER_EXTRACTION_HUMAN_REQUIRED',lambda:obj.extract(request()))
+        assert intercepted == [URL] and unexpected == []
         context.close(); browser.close()
 
 
