@@ -1,0 +1,72 @@
+{
+  "schema": "oevira-isolated-script-supplement/v1",
+  "head": "57d79f88c6418eef68d40241b22f9bb8d059ff35",
+  "tree": "896d64594742e48b44f6361facd7ab333a8f95a5",
+  "tracked_dirty_after": "",
+  "environment_whitelist": {
+    "PATH": "/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/override:/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin:/opt/codex/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/agent/.local/bin:/opt/codex/runtimes/codex-primary-runtime/dependencies/bin/fallback",
+    "LANG": "C.UTF-8",
+    "LC_ALL": "C.UTF-8",
+    "HOME": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/final-owner-manual/home",
+    "PYTHONPATH": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/frozen-remaining/guard",
+    "ORT_DISABLE_TELEMETRY": "1",
+    "ZBC_ALLOW_NETWORK": "0",
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1",
+    "LUMENIS_TEST_SEED_DB": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/frozen-remaining/synthetic-seed.sqlite3",
+    "LUMENIS_ESPEAK_BINARY": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/bin/espeak-ng",
+    "LD_LIBRARY_PATH": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/lib/x86_64-linux-gnu",
+    "ESPEAK_DATA_PATH": "/workspace/scratch/8d04d68e28f4/espeak_isolated/root/usr/lib/x86_64-linux-gnu/espeak-ng-data",
+    "LUMENIS_FFMPEG_PATH": "/usr/bin/ffmpeg",
+    "LUMENIS_FFPROBE_PATH": "/usr/bin/ffprobe",
+    "ZBC_DB_PATH": "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/final-owner-manual/synthetic-manual.sqlite3"
+  },
+  "guard_sha256": "e3813c7d18fa960c6cdeecb67907bdd378eb9a1143ad097c5e7e3c546efdce88",
+  "source_identity_reference": "final-owner-impact/receipt.json",
+  "status_note": "Two scripts executed from final clean frozen commit; source-wide identity and dependency bridge: final-owner-impact/receipt.json",
+  "rows": [
+    {
+      "script": "tests/test_guard_wiring.py",
+      "source_sha256_before": "7f5de4edfb94d4dc51f6b54a86c3ec4dd39b045abc918555bc8bd23857ae4e38",
+      "started": {
+        "utc": "2026-10-21T10:59:41.790533+00:00",
+        "beijing": "2026-10-21T18:59:41.790533+08:00"
+      },
+      "argv": [
+        "/tmp/oevira-pr-repair-venv/bin/python",
+        "/workspace/scratch/8d04d68e28f4/mainline_clearance_20261021/tests/test_guard_wiring.py"
+      ],
+      "finished": {
+        "utc": "2026-10-21T10:59:48.532052+00:00",
+        "beijing": "2026-10-21T18:59:48.532052+08:00"
+      },
+      "source_sha256_after": "7f5de4edfb94d4dc51f6b54a86c3ec4dd39b045abc918555bc8bd23857ae4e38",
+      "exit_code": 0,
+      "stdout_sha256": "9666ca54120bf7f462cdc327085579efebf025b73c0a1c1d29daa0ffe39337f5",
+      "status": "PASS_SCRIPT_ASSERTIONS",
+      "evidence_limit": "Original assertion/exit behavior executed. Does not prove full original business/live capability. Proxy broad Exception assertion alone is weaker than current permission boundary tests."
+    },
+    {
+      "script": "tests/test_t2_resilience.py",
+      "source_sha256_before": "cb7fe333d16b7137cf78dae6498ff09a3ecddcaf07218db9a205ff24ee50cde2",
+      "started": {
+        "utc": "2026-10-21T10:59:48.532281+00:00",
+        "beijing": "2026-10-21T18:59:48.532281+08:00"
+      },
+      "argv": [
+        "/tmp/oevira-pr-repair-venv/bin/python",
+        "/workspace/scratch/8d04d68e28f4/mainline_clearance_20261021/tests/test_t2_resilience.py"
+      ],
+      "finished": {
+        "utc": "2026-10-21T10:59:49.650476+00:00",
+        "beijing": "2026-10-21T18:59:49.650476+08:00"
+      },
+      "source_sha256_after": "cb7fe333d16b7137cf78dae6498ff09a3ecddcaf07218db9a205ff24ee50cde2",
+      "exit_code": 0,
+      "stdout_sha256": "713c4274dcc793a96c9759a7afa6e8926aade52a3d357fe3f8cc958270c8e649",
+      "status": "PASS_SCRIPT_ASSERTIONS",
+      "evidence_limit": "Original assertion/exit behavior executed. Does not prove full original business/live capability. Proxy broad Exception assertion alone is weaker than current permission boundary tests."
+    }
+  ],
+  "counting": "Separate 4 script executions; never add their printed checks to canonical pytest node count."
+}

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="5" failures="0" skipped="0" tests="36" time="1.908" timestamp="2026-10-21T01:10:00.179427-07:00" hostname="ac98a2bb4923"><testcase classname="tests.test_bmp_scoped_analysis" name="test_scoped_author_and_comparison_api[BMP-03]" time="0.098" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_scoped_author_and_comparison_api[BMP-05]" time="0.033" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_scoped_author_and_comparison_api[BMP-11]" time="0.032" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_profiles_unknown_metrics_are_not_zero" time="0.027" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[overview]" time="0.053" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[list]" time="0.053" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[detail?author_id=user-1]" time="0.110" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[content-dna?author_id=user-1]" time="0.063" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[account?author_id=user-1]" time="0.058" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[ownership]" time="0.058" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[competitor-benchmark]" time="0.058" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[kos-identity?author_id=user-1]" time="0.047" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[tier]" time="0.047" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[koc-tier]" time="0.048" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_production_kos_reads_use_same_scope[ad-candidates]" time="0.043" /><testcase classname="tests.test_bmp_scoped_analysis" name="test_propagation_scope_never_borrows_legacy_heat" time="0.045" /><testcase classname="tests.test_curated_screen_scope" name="test_curated_screen_route_preserves_verified_scope[CTH-04-CTH]" time="0.133" /><testcase classname="tests.test_curated_screen_scope" name="test_curated_screen_route_preserves_verified_scope[CTH-08-CTH]" time="0.027" /><testcase classname="tests.test_curated_screen_scope" name="test_curated_screen_route_preserves_verified_scope[BMP-10-BMP]" time="0.031" /><testcase classname="tests.test_curated_screen_scope" name="test_curated_screen_read_failure_is_not_empty_success[_build_cth04-CTH]" time="0.002" /><testcase classname="tests.test_curated_screen_scope" name="test_curated_screen_read_failure_is_not_empty_success[_build_cth08-CTH]" time="0.001" /><testcase classname="tests.test_curated_screen_scope" name="test_curated_screen_read_failure_is_not_empty_success[_build_bmp10-BMP]" time="0.002" /><testcase classname="tests.test_curated_screen_scope" name="test_act_advice_uses_exact_scope_without_provider_or_completed_action" time="0.006" /><testcase classname="tests.test_curated_screen_scope" name="test_act_route_rejects_invalid_user_input_before_case_lookup[payload0]" time="0.007" /><testcase classname="tests.test_curated_screen_scope" name="test_act_route_rejects_invalid_user_input_before_case_lookup[payload1]" time="0.007" /><testcase classname="tests.test_curated_screen_scope" name="test_act_route_rejects_invalid_user_input_before_case_lookup[payload2]" time="0.007" /><testcase classname="tests.test_curated_screen_scope" name="test_act_route_rejects_invalid_user_input_before_case_lookup[payload3]" time="0.008" /><testcase classname="tests.test_experience_e2e_candidate" name="test_all_44_screens_200_and_binding_is_honest" time="0.014"><error message="failed on setup with &quot;RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION&quot;">tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-88/test_all_44_screens_200_and_bi0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f1b3b1621b0&gt;
+
+    @pytest.fixture()
+    def candidate_client(tmp_path, monkeypatch):
+        src_before = _sha256(SRC_DB)
+        sidecars_before = _sidecar_state(SRC_DB)
+        copy_db = tmp_path / "candidate_copy.db"
+        shutil.copy2(SRC_DB, copy_db)
+        for k in ("ZBC_DB_PATH", "ZBC_EVIDENCE_DB_PATH",
+                  "ZBC_RUNTIME_GUARDIAN_DB", "ZBC_TOKEN_DB_PATH"):
+            monkeypatch.setenv(k, str(copy_db))
+        monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+        from lumenis.system.security import permission as permission_gate
+        # The suite's session fixture enables this independent in-memory bypass.
+        # Removing the environment variable alone does not restore real authorization.
+        monkeypatch.setattr(permission_gate, "_TESTING_BYPASS_ENABLED", False)
+    
+        import database
+        importlib.reload(database)
+        database.DB_PATH = str(copy_db)
+    
+        # Upgrade only the disposable copy with current owner schemas. The supplied
+        # seed is intentionally never migrated, opened for write, or treated as live data.
+        from lumenis.shared.database import DatabaseRepository
+        from lumenis.ai_hub.conversations import ensure_schema as ensure_conversations
+        import subject_registry
+        with DatabaseRepository(str(copy_db)).transaction() as connection:
+            subject_registry.ensure_schema(connection)
+&gt;           ensure_conversations(connection)
+
+tests/test_experience_e2e_candidate.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = &lt;sqlite3.Connection object at 0x7f1b3bde6980&gt;
+
+    def ensure_schema(connection):
+        """Migration-only, no commit: preserve the caller's atomic schema transaction."""
+        if not connection.in_transaction:
+&gt;           raise RuntimeError('CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION')
+E           RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION
+
+lumenis/ai_hub/conversations.py:55: RuntimeError</error></testcase><testcase classname="tests.test_experience_e2e_candidate" name="test_cth01_external_sources_not_faked_as_zero" time="0.006"><error message="failed on setup with &quot;RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION&quot;">tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-88/test_cth01_external_sources_no0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f1b3b2ad1f0&gt;
+
+    @pytest.fixture()
+    def candidate_client(tmp_path, monkeypatch):
+        src_before = _sha256(SRC_DB)
+        sidecars_before = _sidecar_state(SRC_DB)
+        copy_db = tmp_path / "candidate_copy.db"
+        shutil.copy2(SRC_DB, copy_db)
+        for k in ("ZBC_DB_PATH", "ZBC_EVIDENCE_DB_PATH",
+                  "ZBC_RUNTIME_GUARDIAN_DB", "ZBC_TOKEN_DB_PATH"):
+            monkeypatch.setenv(k, str(copy_db))
+        monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+        from lumenis.system.security import permission as permission_gate
+        # The suite's session fixture enables this independent in-memory bypass.
+        # Removing the environment variable alone does not restore real authorization.
+        monkeypatch.setattr(permission_gate, "_TESTING_BYPASS_ENABLED", False)
+    
+        import database
+        importlib.reload(database)
+        database.DB_PATH = str(copy_db)
+    
+        # Upgrade only the disposable copy with current owner schemas. The supplied
+        # seed is intentionally never migrated, opened for write, or treated as live data.
+        from lumenis.shared.database import DatabaseRepository
+        from lumenis.ai_hub.conversations import ensure_schema as ensure_conversations
+        import subject_registry
+        with DatabaseRepository(str(copy_db)).transaction() as connection:
+            subject_registry.ensure_schema(connection)
+&gt;           ensure_conversations(connection)
+
+tests/test_experience_e2e_candidate.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = &lt;sqlite3.Connection object at 0x7f1b3c003790&gt;
+
+    def ensure_schema(connection):
+        """Migration-only, no commit: preserve the caller's atomic schema transaction."""
+        if not connection.in_transaction:
+&gt;           raise RuntimeError('CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION')
+E           RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION
+
+lumenis/ai_hub/conversations.py:55: RuntimeError</error></testcase><testcase classname="tests.test_experience_e2e_candidate" name="test_ai_intent_gate_three_states_in_mounted_app" time="0.006"><error message="failed on setup with &quot;RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION&quot;">tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-88/test_ai_intent_gate_three_stat0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f1b3b2adca0&gt;
+
+    @pytest.fixture()
+    def candidate_client(tmp_path, monkeypatch):
+        src_before = _sha256(SRC_DB)
+        sidecars_before = _sidecar_state(SRC_DB)
+        copy_db = tmp_path / "candidate_copy.db"
+        shutil.copy2(SRC_DB, copy_db)
+        for k in ("ZBC_DB_PATH", "ZBC_EVIDENCE_DB_PATH",
+                  "ZBC_RUNTIME_GUARDIAN_DB", "ZBC_TOKEN_DB_PATH"):
+            monkeypatch.setenv(k, str(copy_db))
+        monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+        from lumenis.system.security import permission as permission_gate
+        # The suite's session fixture enables this independent in-memory bypass.
+        # Removing the environment variable alone does not restore real authorization.
+        monkeypatch.setattr(permission_gate, "_TESTING_BYPASS_ENABLED", False)
+    
+        import database
+        importlib.reload(database)
+        database.DB_PATH = str(copy_db)
+    
+        # Upgrade only the disposable copy with current owner schemas. The supplied
+        # seed is intentionally never migrated, opened for write, or treated as live data.
+        from lumenis.shared.database import DatabaseRepository
+        from lumenis.ai_hub.conversations import ensure_schema as ensure_conversations
+        import subject_registry
+        with DatabaseRepository(str(copy_db)).transaction() as connection:
+            subject_registry.ensure_schema(connection)
+&gt;           ensure_conversations(connection)
+
+tests/test_experience_e2e_candidate.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = &lt;sqlite3.Connection object at 0x7f1b3c003f10&gt;
+
+    def ensure_schema(connection):
+        """Migration-only, no commit: preserve the caller's atomic schema transaction."""
+        if not connection.in_transaction:
+&gt;           raise RuntimeError('CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION')
+E           RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION
+
+lumenis/ai_hub/conversations.py:55: RuntimeError</error></testcase><testcase classname="tests.test_experience_e2e_candidate" name="test_identity_does_not_leak_absolute_path" time="0.005"><error message="failed on setup with &quot;RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION&quot;">tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-88/test_identity_does_not_leak_ab0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f1b3b2aed80&gt;
+
+    @pytest.fixture()
+    def candidate_client(tmp_path, monkeypatch):
+        src_before = _sha256(SRC_DB)
+        sidecars_before = _sidecar_state(SRC_DB)
+        copy_db = tmp_path / "candidate_copy.db"
+        shutil.copy2(SRC_DB, copy_db)
+        for k in ("ZBC_DB_PATH", "ZBC_EVIDENCE_DB_PATH",
+                  "ZBC_RUNTIME_GUARDIAN_DB", "ZBC_TOKEN_DB_PATH"):
+            monkeypatch.setenv(k, str(copy_db))
+        monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+        from lumenis.system.security import permission as permission_gate
+        # The suite's session fixture enables this independent in-memory bypass.
+        # Removing the environment variable alone does not restore real authorization.
+        monkeypatch.setattr(permission_gate, "_TESTING_BYPASS_ENABLED", False)
+    
+        import database
+        importlib.reload(database)
+        database.DB_PATH = str(copy_db)
+    
+        # Upgrade only the disposable copy with current owner schemas. The supplied
+        # seed is intentionally never migrated, opened for write, or treated as live data.
+        from lumenis.shared.database import DatabaseRepository
+        from lumenis.ai_hub.conversations import ensure_schema as ensure_conversations
+        import subject_registry
+        with DatabaseRepository(str(copy_db)).transaction() as connection:
+            subject_registry.ensure_schema(connection)
+&gt;           ensure_conversations(connection)
+
+tests/test_experience_e2e_candidate.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = &lt;sqlite3.Connection object at 0x7f1b3c002200&gt;
+
+    def ensure_schema(connection):
+        """Migration-only, no commit: preserve the caller's atomic schema transaction."""
+        if not connection.in_transaction:
+&gt;           raise RuntimeError('CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION')
+E           RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION
+
+lumenis/ai_hub/conversations.py:55: RuntimeError</error></testcase><testcase classname="tests.test_experience_e2e_candidate" name="test_source_db_immutable_after_full_run" time="0.008"><error message="failed on setup with &quot;RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION&quot;">tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-88/test_source_db_immutable_after0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f1b3b2ad730&gt;
+
+    @pytest.fixture()
+    def candidate_client(tmp_path, monkeypatch):
+        src_before = _sha256(SRC_DB)
+        sidecars_before = _sidecar_state(SRC_DB)
+        copy_db = tmp_path / "candidate_copy.db"
+        shutil.copy2(SRC_DB, copy_db)
+        for k in ("ZBC_DB_PATH", "ZBC_EVIDENCE_DB_PATH",
+                  "ZBC_RUNTIME_GUARDIAN_DB", "ZBC_TOKEN_DB_PATH"):
+            monkeypatch.setenv(k, str(copy_db))
+        monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
+        from lumenis.system.security import permission as permission_gate
+        # The suite's session fixture enables this independent in-memory bypass.
+        # Removing the environment variable alone does not restore real authorization.
+        monkeypatch.setattr(permission_gate, "_TESTING_BYPASS_ENABLED", False)
+    
+        import database
+        importlib.reload(database)
+        database.DB_PATH = str(copy_db)
+    
+        # Upgrade only the disposable copy with current owner schemas. The supplied
+        # seed is intentionally never migrated, opened for write, or treated as live data.
+        from lumenis.shared.database import DatabaseRepository
+        from lumenis.ai_hub.conversations import ensure_schema as ensure_conversations
+        import subject_registry
+        with DatabaseRepository(str(copy_db)).transaction() as connection:
+            subject_registry.ensure_schema(connection)
+&gt;           ensure_conversations(connection)
+
+tests/test_experience_e2e_candidate.py:114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+connection = &lt;sqlite3.Connection object at 0x7f1b3b726020&gt;
+
+    def ensure_schema(connection):
+        """Migration-only, no commit: preserve the caller's atomic schema transaction."""
+        if not connection.in_transaction:
+&gt;           raise RuntimeError('CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION')
+E           RuntimeError: CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION
+
+lumenis/ai_hub/conversations.py:55: RuntimeError</error></testcase><testcase classname="tests.test_event_curation" name="test_event_title_is_noise" time="0.007" /><testcase classname="tests.test_event_curation" name="test_classify_event_quality" time="0.002" /><testcase classname="tests.test_event_curation" name="test_get_events_curated_structure" time="0.082" /><testcase classname="tests.test_event_curation" name="test_get_events_curated_requires_scope" time="0.002" /></testsuite></testsuites>

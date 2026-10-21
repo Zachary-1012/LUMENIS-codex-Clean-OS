@@ -1,0 +1,91 @@
+============================================================
+Team2 采集韧性恢复测试
+============================================================
+
+[1] BEEPExecutor 有限重试 + 证据链
+[BoundaryControl] 边界控制引擎已加载
+  [PASS] BEEP 成功返回 SUCCESS
+  [PASS] BEEP 重试次数=1
+  [PASS] BEEP 有 EVIDENCE 步骤
+  [PASS] BEEP 有 DECISION 步骤
+  [PASS] BEEP to_evidence 不含密钥
+  [PASS] BEEP 失败重试达上限
+  [PASS] BEEP 最终 VERIFY_FAILED
+  [PASS] BEEP 错误被记录
+  [PASS] BEEP verify失败后重试成功
+  [PASS] BEEP verify重试2次
+  [PASS] BEEP precondition=False 跳过
+  [PASS] MAX_RETRY=3（禁止无限重试）
+
+[2] BrowserContract.classify_failure 六类分类
+  [PASS] timeout→TRANSIENT
+  [PASS] network error→TRANSIENT
+  [PASS] session expired→SESSION
+  [PASS] unauthorized→SESSION
+  [PASS] selector not found→PAGE_CHANGED
+  [PASS] forbidden→PERMISSION
+  [PASS] captcha→PLATFORM_RISK
+  [PASS] blocked→PLATFORM_RISK
+  [PASS] safe_stop→PLATFORM_RISK
+  [PASS] unknown→UNKNOWN
+
+[3] AdaptiveRateLimiter 指数退避 + 冷却恢复
+  [PASS] 初始 HEALTHY
+  [PASS] 初始间隔=base
+  [PASS] 成功后间隔缩小
+  [PASS] 成功后仍 HEALTHY
+  [PASS] 1次失败→WARNING
+  [PASS] 失败后间隔翻倍
+  [PASS] 2次失败仍 WARNING
+  [PASS] 3次失败→COOLDOWN
+  [PASS] 冷却截止时间已设置
+  [PASS] 冷却中 can_run=False
+  [FAIL] 成功后恢复 HEALTHY 
+  [FAIL] 冷却清除 
+  [PASS] force_pause→AUTH_REQUIRED
+  [PASS] AUTH_REQUIRED 在 STOP_REQUEST
+
+[4] CollectState 停止请求红线
+  [PASS] COOLDOWN 停止请求
+  [PASS] PAUSED 停止请求
+  [PASS] AUTH_REQUIRED 停止请求
+  [PASS] NEED_VERIFY 停止请求
+  [PASS] HEALTHY 不停止
+  [PASS] WARNING 不停止
+  [PASS] NETWORK_ERROR 不停止（可退避重试）
+
+[5] CollectorGuard 显式风控码映射
+  [PASS] IP_RISK_OR_300012→COOLDOWN
+  [PASS] NEED_VERIFY→NEED_VERIFY
+  [PASS] AUTH_REQUIRED→AUTH_REQUIRED
+
+[6] BrowserState 成功路径序列
+  [PASS] 状态序列含 INIT
+  [PASS] 状态序列含 SESSION_VALID
+  [PASS] 状态序列含 SUCCESS
+  [PASS] 状态序列含 VERIFY_FAILED（失败态）
+  [PASS] 状态序列含 CLASSIFY_FAILURE
+
+[7] state_map 三类分清（A Auth / B Verify / C Risk）
+  [PASS] SESSION_EXPIRED=A类(Auth)
+  [PASS] NEED_VERIFY=B类(Verify)
+  [PASS] BLOCKED=C类(Risk)
+  [PASS] COOLING_DOWN=C类(Risk)
+  [PASS] RISK_WARNING=C类(Risk)
+  [PASS] SUCCESS=OK
+  [PASS] A类需人工
+  [PASS] B类需人工
+  [PASS] C类不需人工（自动冷却）
+  [PASS] A类停止请求
+  [PASS] B类停止请求
+  [PASS] C类停止请求
+  [PASS] SUCCESS 不停止
+  [PASS] SUCCESS ok
+  [PASS] NO_NEW_DATA ok（不是风控空）
+  [PASS] XHS IP_RISK→BLOCKED
+  [PASS] XHS NEED_VERIFY→NEED_VERIFY
+  [PASS] XHS AUTH_REQUIRED→SESSION_EXPIRED
+
+============================================================
+测试结果: 67 PASS, 2 FAIL, 共 69 项
+============================================================

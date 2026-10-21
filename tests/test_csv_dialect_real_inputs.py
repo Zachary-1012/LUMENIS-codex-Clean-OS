@@ -1,4 +1,4 @@
-"""CSV dialect regressions; real sample is optional, never fetched by tests."""
+"""CSV dialect regressions; pinned public UCI sample is local, never fetched by tests."""
 import csv
 import hashlib
 import io
@@ -84,9 +84,9 @@ def test_original_formula_cells_are_not_executed(tmp_path):
 
 
 def test_official_facebook_original_when_provided(tmp_path):
-    source = os.environ.get('LUMENIS_REAL_FACEBOOK_CSV')
-    if not source:
-        pytest.skip('Optional public source must be explicitly supplied; no network collection')
+    source = os.environ.get('LUMENIS_REAL_FACEBOOK_CSV') or (
+        Path(__file__).parent / 'fixtures' / 'uci_facebook_metrics' / 'dataset_Facebook.csv'
+    )
     raw = Path(source).read_bytes()
     assert hashlib.sha256(raw).hexdigest() == '666ec82952b7ce90b464f5a87ec4f0fe92d9a63208f2fcb2d0443cb5f31c3f4c'
     result = parse(tmp_path, raw)
@@ -96,3 +96,17 @@ def test_official_facebook_original_when_provided(tmp_path):
     records = [dict(zip(rows[0], row)) for row in rows[1:]]
     assert {key:sum(r[key]=='' for r in records) for key in ['Paid','like','share']} == {'Paid':1,'like':1,'share':4}
     assert {typ:sum(r['Type']==typ for r in records) for typ in ['Link','Photo','Status','Video']} == {'Link':22,'Photo':426,'Status':45,'Video':7}
+
+
+def test_official_facebook_override_missing_fails_not_skips(tmp_path, monkeypatch):
+    monkeypatch.setenv('LUMENIS_REAL_FACEBOOK_CSV', str(tmp_path / 'missing.csv'))
+    with pytest.raises(FileNotFoundError):
+        test_official_facebook_original_when_provided(tmp_path)
+
+
+def test_official_facebook_override_wrong_bytes_rejected(tmp_path, monkeypatch):
+    source = tmp_path / 'wrong.csv'
+    source.write_bytes(b'name;value\nsynthetic;1\n')
+    monkeypatch.setenv('LUMENIS_REAL_FACEBOOK_CSV', str(source))
+    with pytest.raises(AssertionError):
+        test_official_facebook_original_when_provided(tmp_path)

@@ -1,0 +1,26 @@
+{
+  "base": "f2cd1e660b7f4cd87e7914ef2c4cbf1bcc197a72",
+  "scope": "uncommitted exact hash fixture/test overlay, default offline path, not final merged HEAD",
+  "files_sha256": {
+    "tests/test_csv_dialect_real_inputs.py": "1b16f8541632eb49fa789a67cf26083f6f1770deae126de79fd0eeeb71ea2d38",
+    "tests/fixtures/uci_facebook_metrics/dataset_Facebook.csv": "666ec82952b7ce90b464f5a87ec4f0fe92d9a63208f2fcb2d0443cb5f31c3f4c",
+    "tests/fixtures/uci_facebook_metrics/SOURCE.md": "4b459636aeda41a8a749462a836a7d0bfa284923b085d2f9b233e5ebb95a2861"
+  },
+  "started_utc": "2026-10-21T11:29:11.957400+00:00",
+  "finished_utc": "2026-10-21T11:29:12.723961+00:00",
+  "argv": [
+    "/tmp/oevira-pr-repair-venv/bin/python",
+    "-m",
+    "pytest",
+    "tests/test_csv_dialect_real_inputs.py",
+    "-o",
+    "addopts=",
+    "-q",
+    "--junitxml=/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/skip-facebook-candidate/results.xml"
+  ],
+  "explicit_csv_environment_variable_present": false,
+  "exit_code": 0,
+  "xml_sha256": "fb021762f3bc5c2b9a434dbb0fb65970f8fdaf9d5f6fb9ec5572bbf17f3f4009",
+  "source_stable": true,
+  "baseline_environment_receipt": "../skip-facebook-original-verified/receipt.json"
+}

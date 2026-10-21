@@ -604,3 +604,151 @@ def test_actual_task_artifact_commit_and_load_start_renewal(checkpoint_owner, tm
     assert case["gate"].revoke_approval(grant["approval_token"]) is True
     with pytest.raises(TrainingPhaseBlocked):
         phase.authorize(client.request, "pre_optimizer_step")
+
+
+@pytest.fixture(params=[False, True], ids=["copies", "symlinks"])
+def private_worker_venv(tmp_path, request):
+    """Real isolated venv with local copies of the already installed dependencies.
+
+    No pip/network, global installation, inherited PYTHONPATH or model is used.
+    The same interpreter/dependency bytes exercise both legitimate venv layouts.
+    """
+    import importlib.util
+    import shutil
+    import venv
+
+    environment = tmp_path / ("symlinks" if request.param else "copies")
+    venv.EnvBuilder(with_pip=False, symlinks=request.param).create(environment)
+    executable = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    site_path = json.loads(subprocess.check_output(
+        [str(executable), "-I", "-c", "import json,sysconfig; print(json.dumps(sysconfig.get_path('purelib')))"],
+        text=True, timeout=10))
+    site_path = Path(site_path)
+    for name in ("psutil", "cryptography", "cffi", "_cffi_backend", "pycparser"):
+        specification = importlib.util.find_spec(name)
+        assert specification is not None and specification.origin
+        origin = Path(specification.origin)
+        if specification.submodule_search_locations is not None:
+            shutil.copytree(origin.parent, site_path / name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        else:
+            shutil.copy2(origin, site_path / origin.name)
+    if os.name != "nt":
+        assert executable.is_symlink() is request.param
+    observed = json.loads(subprocess.check_output(
+        [str(executable), "-I", "-c", "import json,sys,psutil; print(json.dumps({'prefix':sys.prefix,'psutil':psutil.__file__}))"],
+        text=True, timeout=10))
+    assert Path(observed["prefix"]) == environment
+    assert Path(observed["psutil"]).is_relative_to(site_path)
+    return executable, environment, site_path
+
+
+def test_managed_worker_preserves_private_venv_for_start_replace_and_reap(private_worker_venv, tmp_path, monkeypatch):
+    from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
+
+    executable, environment, site_path = private_worker_venv
+    root = Path(__file__).resolve().parents[1]
+    # These values must not be forwarded to the child to make its imports work.
+    monkeypatch.setenv("PYTHONPATH", str(tmp_path / "untrusted-pythonpath"))
+    monkeypatch.setenv("LUMENIS_TEST_PRIVATE_ENV_CANARY", "must-not-be-inherited")
+    worker = TrainingProcessFence((tmp_path / "venv.lock").resolve())
+    peers = []
+    try:
+        for generation in range(2):
+            ready = worker.start_managed_training(python_executable=executable, cwd=root,
+                log_path=(tmp_path / f"venv-{generation}.log").resolve(),
+                source_pins=training_worker_source_pins(root), replace=generation > 0)
+            peer = psutil.Process(ready["framework_worker"]["pid"])
+            peers.append(peer.pid)
+            assert os.path.normcase(peer.cmdline()[0]) == os.path.normcase(str(executable))
+            identity = ready["interpreter_identity"]
+            assert Path(identity["executable"]) == executable
+            assert Path(identity["prefix"]) == environment
+            assert identity["prefix"] != identity["base_prefix"]
+            assert identity["version"] == list(sys.version_info[:3])
+            assert Path(identity["psutil_origin"]).is_relative_to(site_path)
+            assert ready["model_loaded"] is False
+            actual_environment = peer.environ()
+            assert "PYTHONPATH" not in actual_environment
+            assert "LUMENIS_TEST_PRIVATE_ENV_CANARY" not in actual_environment
+            assert actual_environment["PYTHONNOUSERSITE"] == "1"
+            if generation == 0:
+                stopped = worker.stop_and_reap()
+                assert not psutil.pid_exists(peer.pid)
+                first_binding = ready["worker_binding"]
+            else:
+                assert worker.require_previous_worker_stopped(first_binding) == stopped
+                with pytest.raises(TrainingBlocked, match="TRAINING_PHASE_TRANSPORT_NOT_BOUND"):
+                    worker.invoke_owned_training(client=object(), phase_transport=None, invocation={}, timeout_seconds=1)
+                assert worker._process.returncode is not None
+                assert not psutil.pid_exists(peer.pid)
+    finally:
+        worker.close()
+    assert all(not psutil.pid_exists(pid) for pid in peers)
+
+
+@pytest.mark.parametrize("invalid_entry", ["relative", "missing", "directory", "broken", "cycle"])
+def test_managed_worker_rejects_invalid_interpreter_before_spawn(tmp_path, invalid_entry):
+    from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
+
+    root = Path(__file__).resolve().parents[1]
+    entry = tmp_path / "invalid-python"
+    if invalid_entry == "relative":
+        entry = Path("python")
+    elif invalid_entry == "directory":
+        entry.mkdir()
+    elif invalid_entry == "broken":
+        entry.symlink_to(tmp_path / "absent")
+    elif invalid_entry == "cycle":
+        entry.symlink_to(entry)
+    fence = TrainingProcessFence((tmp_path / "invalid.lock").resolve())
+    try:
+        with pytest.raises(TrainingBlocked):
+            fence.start_managed_training(python_executable=entry, cwd=root,
+                log_path=(tmp_path / "invalid.log").resolve(), source_pins=training_worker_source_pins(root))
+        assert fence._process is None
+    finally:
+        fence.close()
+
+
+@pytest.mark.parametrize("mutation", ["malformed", "wrong-executable", "missing-entry", "changed-target"])
+def test_managed_worker_rejects_identity_or_entry_change_and_reaps(tmp_path, monkeypatch, mutation):
+    import shutil
+    from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
+
+    root = Path(__file__).resolve().parents[1]
+    # Keep the real launch in its original venv so its dependencies remain intact.
+    executable = Path(sys.executable)
+    fence = TrainingProcessFence((tmp_path / "rejected.lock").resolve())
+    receive = fence._receive_managed
+    actual_resolve = Path.resolve
+    child_pids = []
+
+    def altered_hello(deadline):
+        hello = receive(deadline)
+        child_pids.append(hello["pid"])
+        if mutation == "malformed":
+            hello["interpreter_identity"]["version"] = [True, 12, 0]
+        elif mutation == "wrong-executable":
+            hello["interpreter_identity"]["executable"] = str(tmp_path / "other-python")
+        else:
+            alternate = tmp_path / "alternate-python"
+            if mutation == "changed-target":
+                shutil.copy2(actual_resolve(executable), alternate)
+            def changed_resolve(path, *args, **kwargs):
+                if path == executable:
+                    if mutation == "missing-entry":
+                        raise FileNotFoundError("synthetic launch entry disappeared")
+                    return alternate
+                return actual_resolve(path, *args, **kwargs)
+            monkeypatch.setattr(Path, "resolve", changed_resolve)
+        return hello
+
+    monkeypatch.setattr(fence, "_receive_managed", altered_hello)
+    try:
+        with pytest.raises(TrainingBlocked, match="TRAINING_WORKER_SOURCE_MISMATCH"):
+            fence.start_managed_training(python_executable=executable, cwd=root,
+                log_path=(tmp_path / "rejected.log").resolve(), source_pins=training_worker_source_pins(root))
+        assert fence._process.returncode is not None
+        assert child_pids and all(not psutil.pid_exists(pid) for pid in child_pids)
+    finally:
+        fence.close()

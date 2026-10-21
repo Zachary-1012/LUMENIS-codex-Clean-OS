@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sqlite3
+import uuid
 from lumenis.shared.database import DatabaseRepository
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
@@ -187,12 +188,19 @@ def _sha256_file(path) -> str:
 
 def export_evidence(db_path: str, outbox_dir: str,
                     version: str = "5.9.9", watermark_path: Optional[str] = None):
-    """端到端只读导出。db_path 内部强制 ro；返回 manifest dict。"""
+    """Read-only export with immutable artifacts and atomic watermark publication.
+
+    Callers must serialize runs sharing a watermark. Unique artifact names stop
+    collisions, but are not a cross-file transaction or concurrent exactly-once
+    protocol. Failures retain incomplete artifacts for diagnosis and never report
+    success or advance the watermark before both complete artifacts are written.
+    """
     os.makedirs(outbox_dir, exist_ok=True)
     watermark_path = watermark_path or os.path.join(outbox_dir, "_watermark.json")
     wm = {}
     if os.path.exists(watermark_path):
-        wm = json.load(open(watermark_path, encoding="utf-8"))
+        with open(watermark_path, encoding="utf-8") as watermark_file:
+            wm = json.load(watermark_file)
 
     path = db_path
     if path.startswith("file:"):
@@ -204,18 +212,29 @@ def export_evidence(db_path: str, outbox_dir: str,
         conn.close()
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    jsonl_path = os.path.join(outbox_dir, f"zbc-evidence-{ts}.jsonl")
-    with open(jsonl_path, "w", encoding="utf-8", newline="") as f:
+    artifact_id = f"zbc-evidence-{ts}-{uuid.uuid4().hex}"
+    jsonl_path = os.path.join(outbox_dir, artifact_id + ".jsonl")
+    with open(jsonl_path, "x", encoding="utf-8", newline="") as f:
         for kind in ("notes", "events", "daily_reports"):
             for rec in records[kind]:
                 f.write(json.dumps({"kind": kind, **rec}, ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
 
     manifest = build_manifest(records, new_wm, redacted, version=version)
     manifest["jsonl"] = os.path.basename(jsonl_path)
     manifest["sha256"] = _sha256_file(jsonl_path)
-    man_path = os.path.join(outbox_dir, f"zbc-evidence-{ts}.manifest.json")
-    with open(man_path, "w", encoding="utf-8", newline="") as f:
+    man_path = os.path.join(outbox_dir, artifact_id + ".manifest.json")
+    with open(man_path, "x", encoding="utf-8", newline="") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
-    with open(watermark_path, "w", encoding="utf-8", newline="") as f:
+        f.flush()
+        os.fsync(f.fileno())
+    # Same-directory replacement follows the Collector checkpoint publication
+    # pattern. Exclusive temp creation cannot truncate a previous failed attempt.
+    watermark_temp = watermark_path + "." + uuid.uuid4().hex + ".tmp"
+    with open(watermark_temp, "x", encoding="utf-8", newline="") as f:
         json.dump(new_wm, f, ensure_ascii=False, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(watermark_temp, watermark_path)
     return manifest

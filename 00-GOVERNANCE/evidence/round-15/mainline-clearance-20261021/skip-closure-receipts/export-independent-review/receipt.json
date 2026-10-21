@@ -1,0 +1,30 @@
+{
+  "started": "2026-10-21T11:32:21.517316+00:00",
+  "finished": "2026-10-21T11:32:33.425572+00:00",
+  "argv": [
+    "/tmp/oevira-pr-repair-venv/bin/python",
+    "-m",
+    "pytest",
+    "tests/test_ai.py",
+    "tests/test_intelligence_boundary_audit.py",
+    "tests/test_growth_learning_exchange.py",
+    "-q",
+    "-o",
+    "addopts=",
+    "--junitxml=/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/export-independent-review/results.xml"
+  ],
+  "source_before": {
+    "lumenis/system/collector/adapters/evidence_exporter.py": "36f88b875ce83d91789b78002037f16b1add55fb76be57fa95bf4f5ce9c31807",
+    "tests/test_ai.py": "42da91b9a86306e6373250e87bc32119489be7bbbb58d02f2a158ff90d50c0f1",
+    "tests/test_intelligence_boundary_audit.py": "6f44bfc25d04dacecd64be3ce302fe1f24406ffd7addc3014bf40fa0e64e5ed6"
+  },
+  "source_after": {
+    "lumenis/system/collector/adapters/evidence_exporter.py": "36f88b875ce83d91789b78002037f16b1add55fb76be57fa95bf4f5ce9c31807",
+    "tests/test_ai.py": "42da91b9a86306e6373250e87bc32119489be7bbbb58d02f2a158ff90d50c0f1",
+    "tests/test_intelligence_boundary_audit.py": "6f44bfc25d04dacecd64be3ce302fe1f24406ffd7addc3014bf40fa0e64e5ed6"
+  },
+  "source_stable": true,
+  "exit": 0,
+  "scope": "independent selected regression; dirty candidate exact file hashes, not frozen final HEAD",
+  "xml_sha256": "c5aae9e9c1437644e67a75a1e3e516c2ba200ec68feb4e8131181b397fda8867"
+}

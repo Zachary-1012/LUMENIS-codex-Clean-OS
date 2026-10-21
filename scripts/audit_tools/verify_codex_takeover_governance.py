@@ -288,38 +288,82 @@ CLEARANCE_EVIDENCE_SHA256 = {
 }
 
 
+# Exact reviewed extension; changing members requires a reviewed new manifest pin.
+CLEARANCE_FOLLOWUP_MANIFEST = CLEARANCE_EVIDENCE_DIRECTORY + "/OEVIRA_FOLLOWUP_ARTIFACT_MANIFEST.json"
+CLEARANCE_FOLLOWUP_MANIFEST_SHA256 = "1691d87cd39d2c338e9c966c755e982aa544f6709c65350540d0509fea6cb4ee"
+
+
+def _clearance_evidence_inventory() -> dict[str, str]:
+    content = _recovered_evidence_file(CLEARANCE_FOLLOWUP_MANIFEST).read_bytes()
+    assert hashlib.sha256(content).hexdigest() == CLEARANCE_FOLLOWUP_MANIFEST_SHA256, "clearance manifest SHA256 mismatch"
+    manifest = json.loads(content)
+    assert isinstance(manifest, dict) and set(manifest) == {"schema", "files"}, "malformed clearance manifest"
+    assert manifest["schema"] == "oevira-clearance-followup-artifacts/v1", "unknown clearance manifest schema"
+    entries = manifest["files"]
+    assert isinstance(entries, list) and entries, "empty clearance followup inventory"
+    inventory = dict(CLEARANCE_EVIDENCE_SHA256)
+    inventory[CLEARANCE_FOLLOWUP_MANIFEST] = CLEARANCE_FOLLOWUP_MANIFEST_SHA256
+    for entry in entries:
+        assert isinstance(entry, dict) and set(entry) == {"path", "bytes", "sha256"}, "malformed clearance entry"
+        path = entry["path"]
+        assert _canonical_recovery_path(path) and path.startswith(CLEARANCE_EVIDENCE_DIRECTORY + "/"), "noncanonical clearance member path"
+        assert "__pycache__" not in path.split("/"), "cache is not archived evidence"
+        assert path not in inventory, "duplicate or original clearance member"
+        assert type(entry["bytes"]) is int and entry["bytes"] >= 0, "invalid clearance size"
+        assert isinstance(entry["sha256"], str) and re.fullmatch(r"[0-9a-f]{64}", entry["sha256"]), "invalid clearance hash"
+        assert (ROOT / path).exists(), "clearance evidence missing or unknown member"
+        target = _recovered_evidence_file(path)
+        assert target.stat().st_size == entry["bytes"], "clearance size mismatch"
+        inventory[path] = entry["sha256"]
+    return inventory
+
+
 def _touches_clearance_evidence(path: str) -> bool:
     normalized = posixpath.normpath(path.replace("\\", "/"))
     return normalized == CLEARANCE_EVIDENCE_DIRECTORY or normalized.startswith(CLEARANCE_EVIDENCE_DIRECTORY + "/")
 
 
 def _assert_clearance_evidence_integrity() -> None:
-    """Read the complete finite approved artifact set; never import archive code."""
+    """Check pinned original and followup bytes; never import archive code."""
     directory = ROOT / CLEARANCE_EVIDENCE_DIRECTORY
     assert directory.resolve(strict=True) == ROOT.resolve() / CLEARANCE_EVIDENCE_DIRECTORY, "clearance evidence symlink"
+    inventory = _clearance_evidence_inventory()
+    expected_dirs = set()
+    for path in inventory:
+        parent = posixpath.dirname(path)
+        while parent != CLEARANCE_EVIDENCE_DIRECTORY:
+            expected_dirs.add(parent)
+            parent = posixpath.dirname(parent)
     actual = set()
-    for item in directory.iterdir():
-        if item.name == "__pycache__":
-            # CI compiles tracked Python without executing it. These generated
-            # bytes are not archived evidence and are never publication-admitted.
-            assert not item.is_symlink() and item.is_dir(), "clearance cache must be a real directory"
-            for compiled in item.iterdir():
-                assert (
-                    not compiled.is_symlink() and compiled.is_file()
-                    and re.fullmatch(r"oevira_test_offline_guard\.cpython-[0-9]+(?:\.opt-[0-9]+)?\.pyc", compiled.name)
-                ), "unknown or unsafe clearance cache member"
-            continue
-        actual.add(CLEARANCE_EVIDENCE_DIRECTORY + "/" + item.name)
-    assert actual == set(CLEARANCE_EVIDENCE_SHA256), "clearance evidence missing or unknown member"
-    for path, digest in CLEARANCE_EVIDENCE_SHA256.items():
+    pending = [directory]
+    while pending:
+        for item in pending.pop().iterdir():
+            path = item.relative_to(ROOT).as_posix()
+            if item.parent == directory and item.name == "__pycache__":
+                assert not item.is_symlink() and item.is_dir(), "clearance cache must be a real directory"
+                for compiled in item.iterdir():
+                    assert (not compiled.is_symlink() and compiled.is_file()
+                            and re.fullmatch(r"oevira_test_offline_guard\.cpython-[0-9]+(?:\.opt-[0-9]+)?\.pyc", compiled.name)), "unknown or unsafe clearance cache member"
+                continue
+            assert not item.is_symlink(), "clearance evidence symlink"
+            if item.is_dir():
+                assert path in expected_dirs, "clearance evidence missing or unknown directory"
+                pending.append(item)
+            else:
+                assert item.is_file(), "clearance evidence must be regular file"
+                actual.add(path)
+    assert actual == set(inventory), "clearance evidence missing or unknown member"
+    for path, digest in inventory.items():
         content = _recovered_evidence_file(path).read_bytes()
         assert hashlib.sha256(content).hexdigest() == digest, f"clearance evidence SHA256 mismatch: {path}"
 
 
 def _is_clearance_evidence_path(path: str) -> bool:
-    if not _canonical_recovery_path(path) or path not in CLEARANCE_EVIDENCE_SHA256:
+    if not _canonical_recovery_path(path):
         return False
     try:
+        if path not in _clearance_evidence_inventory():
+            return False
         _assert_clearance_evidence_integrity()
     except (AssertionError, OSError, ValueError, TypeError):
         return False
@@ -457,7 +501,7 @@ def _assert_current_publication_truth(
     paths = _publication_changed_paths() if changed_paths is None else set(changed_paths)
     current_path = str(PATHS["takeover"].relative_to(ROOT)).replace("\\", "/")
     if any(_touches_clearance_evidence(path) for path in paths):
-        assert all(not _touches_clearance_evidence(path) or path in CLEARANCE_EVIDENCE_SHA256 for path in paths), "unknown clearance evidence path"
+        assert all(not _touches_clearance_evidence(path) or path in _clearance_evidence_inventory() for path in paths), "unknown clearance evidence path"
         _assert_clearance_evidence_integrity()
     if any(_is_recovered_evidence_path(path) for path in paths):
         # A receipt-only publication must not conceal corruption in unchanged

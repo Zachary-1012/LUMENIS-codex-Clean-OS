@@ -1,0 +1,24 @@
+{
+  "base_head": "1e549e016666a9b3de078f7020038d8a7df353be",
+  "tree": "f9ceb7b9973187255711cb0459504aa1522e3eae",
+  "patch_sha256": "8e0137168badb60ec86c77dfa0c98888696c30c96aae387450ef9397ae708f4b",
+  "argv": [
+    "/tmp/oevira-pr-repair-venv/bin/python",
+    "-m",
+    "pytest",
+    "tests/test_collector_guard_integration.py",
+    "tests/test_risk_engine_integration.py",
+    "tests/test_risk_engine_persist.py",
+    "tests/test_rate_slot_truth.py",
+    "tests/test_adapter_resilience.py",
+    "-o",
+    "addopts=",
+    "-q",
+    "--junitxml=/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/manual-related/results.xml"
+  ],
+  "started_utc": "2026-10-21T10:37:23.176100+00:00",
+  "ended_utc": "2026-10-21T10:37:40.743255+00:00",
+  "exit_code": 0,
+  "xml_sha256": "6213c64852cdc1fb890d25c27e950b5137c664616cdb9bd81e41ab930c9bc2c4",
+  "scope": "test-only uncommitted staging patch validation; not final clean candidate receipt"
+}

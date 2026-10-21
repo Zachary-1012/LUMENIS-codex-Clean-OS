@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/workspace/scratch/8d04d68e28f4/clearance_v02_20261021/verify-remaining/tests/test_guard_wiring.py", line 9, in <module>
+    from collector_guard.guard import CollectorGuard
+ModuleNotFoundError: No module named 'collector_guard'

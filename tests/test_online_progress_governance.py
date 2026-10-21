@@ -735,7 +735,7 @@ def test_clearance_archive_exact_set_is_documentary_evidence():
 def test_clearance_archive_all_members_checked_for_single_changed_receipt(tmp_path, monkeypatch):
     import pytest
     from scripts.audit_tools import verify_codex_takeover_governance as gate
-    contents = {path: (gate.ROOT / path).read_bytes() for path in gate.CLEARANCE_EVIDENCE_SHA256}
+    contents = {path: (gate.ROOT / path).read_bytes() for path in gate._clearance_evidence_inventory()}
     for path, content in contents.items():
         destination = tmp_path / path
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -783,7 +783,7 @@ def test_clearance_archive_allows_only_generated_guard_bytecode(tmp_path, monkey
     import py_compile
     import pytest
     from scripts.audit_tools import verify_codex_takeover_governance as gate
-    for path in gate.CLEARANCE_EVIDENCE_SHA256:
+    for path in gate._clearance_evidence_inventory():
         destination = tmp_path / path
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes((gate.ROOT / path).read_bytes())
@@ -819,3 +819,77 @@ def test_clearance_archive_allows_only_generated_guard_bytecode(tmp_path, monkey
     cache.symlink_to(moved, target_is_directory=True)
     with pytest.raises(AssertionError, match='real directory'):
         gate._assert_clearance_evidence_integrity()
+
+
+def test_clearance_followup_finite_inventory_and_negative_paths(tmp_path, monkeypatch):
+    import hashlib
+    import json
+    import pytest
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    inventory = gate._clearance_evidence_inventory()
+    for path in inventory:
+        target = tmp_path / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((gate.ROOT / path).read_bytes())
+    monkeypatch.setattr(gate, 'ROOT', tmp_path)
+    gate._assert_clearance_evidence_integrity()
+    path = next(p for p in inventory if '/raw-receipts/' in p)
+    target = tmp_path / path
+    content = target.read_bytes()
+    target.unlink()
+    with pytest.raises(AssertionError, match='missing'):
+        gate._assert_clearance_evidence_integrity()
+    target.write_bytes(content)
+    target.write_bytes(content[:-1] + bytes([content[-1] ^ 1]))
+    with pytest.raises(AssertionError, match='SHA256 mismatch'):
+        gate._assert_clearance_evidence_integrity()
+    target.write_bytes(content)
+    extra = target.parent / 'unreviewed.xml'
+    extra.write_text('<testsuites/>')
+    with pytest.raises(AssertionError, match='unknown'):
+        gate._assert_clearance_evidence_integrity()
+    extra.unlink()
+    target.unlink()
+    outside = tmp_path / 'outside.xml'
+    outside.write_bytes(content)
+    target.symlink_to(outside)
+    with pytest.raises(AssertionError, match='symlink'):
+        gate._assert_clearance_evidence_integrity()
+    target.unlink()
+    target.write_bytes(content)
+    raw = target.parent
+    moved = tmp_path / 'moved-raw'
+    raw.rename(moved)
+    raw.symlink_to(moved, target_is_directory=True)
+    with pytest.raises(AssertionError, match='symlink'):
+        gate._assert_clearance_evidence_integrity()
+    raw.unlink()
+    moved.rename(raw)
+    cache = raw / '__pycache__'
+    cache.mkdir()
+    with pytest.raises(AssertionError, match='unknown directory'):
+        gate._assert_clearance_evidence_integrity()
+    cache.rmdir()
+    manifest_path = tmp_path / gate.CLEARANCE_FOLLOWUP_MANIFEST
+    original_manifest = manifest_path.read_bytes()
+    manifest = json.loads(original_manifest)
+    manifest['files'].append({'path': str(extra.relative_to(tmp_path)), 'bytes': 0, 'sha256': hashlib.sha256(b'').hexdigest()})
+    manifest_path.write_text(json.dumps(manifest))
+    with pytest.raises(AssertionError, match='manifest SHA256 mismatch'):
+        gate._assert_clearance_evidence_integrity()
+    # Even a reviewer-pinned malformed manifest must not allow path escape,
+    # duplicate originals, cache entries, or malformed sizes/hashes.
+    for field, value, reason in (
+        ('path', gate.CLEARANCE_EVIDENCE_DIRECTORY + '/../escape.xml', 'noncanonical'),
+        ('path', '/tmp/escape.xml', 'noncanonical'),
+        ('path', next(iter(gate.CLEARANCE_EVIDENCE_SHA256)), 'duplicate'),
+        ('path', gate.CLEARANCE_EVIDENCE_DIRECTORY + '/__pycache__/x.xml', 'cache'),
+        ('bytes', True, 'size'),
+        ('sha256', 'not-a-digest', 'hash'),
+    ):
+        malformed = json.loads(original_manifest)
+        malformed['files'][0][field] = value
+        manifest_path.write_text(json.dumps(malformed))
+        monkeypatch.setattr(gate, 'CLEARANCE_FOLLOWUP_MANIFEST_SHA256', hashlib.sha256(manifest_path.read_bytes()).hexdigest())
+        with pytest.raises(AssertionError, match=reason):
+            gate._assert_clearance_evidence_integrity()

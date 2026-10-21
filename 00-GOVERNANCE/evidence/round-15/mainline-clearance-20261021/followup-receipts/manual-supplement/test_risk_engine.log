@@ -1,0 +1,12 @@
+PASS 初始 NORMAL/healthy 0/NORMAL
+PASS empty_result=10 NORMAL score=10
+PASS 累计45 WATCH score=45 band=WATCH
+PASS 累计75 COOLDOWN score=75 band=COOLDOWN
+PASS 安全页硬熔断 40/CIRCUIT_OPEN/paused
+PASS 限流硬冷却 COOLDOWN
+PASS 登录失效硬熔断 CIRCUIT_OPEN
+PASS 成功后回落 NORMAL 40->0
+PASS 40s自然衰减12 score=38
+PASS 风险分封顶100 score=100
+
+风险引擎单测结果: 全部通过

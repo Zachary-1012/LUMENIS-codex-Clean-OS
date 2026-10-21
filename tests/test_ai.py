@@ -54,27 +54,53 @@ class TestAIAnalyzer:
         assert len(result) > 0
 
 class TestARKLLM:
-    """豆包AI模块测试"""
+    """Historical node IDs retained; retired ARK is not an installed dependency.
+
+    Current acceptance is the unique Gateway owner and truthful disabled status,
+    never a claim of successful ARK inference or a restored legacy provider.
+    """
 
     def test_ark_llm_import(self):
-        """测试ark_llm模块导入"""
-        try:
-            import ark_llm
-            assert ark_llm is not None
-        except ImportError:
-            pytest.skip("ark_llm模块未安装")
+        """The compatibility AI import resolves to the canonical owner."""
+        import intelligence
+        from lumenis.system.ai_gateway import core, providers
+        assert intelligence is core
+        assert intelligence.ai_status is core.ai_status
+        for name in ("ark", "doubao"):
+            assert providers.is_provider_retired(name)
+            assert providers.provider_status(name) == providers.DISABLED
+            assert providers.provider_info(name)["role"] == "retired_builtin_route"
+            assert providers.provider_info(name)["env_key"] is None
+            assert not providers.is_provider_available(name)
+            assert not providers.is_provider_active(name)
 
-    def test_get_api_status(self):
-        """测试API状态查询"""
-        try:
-            import ark_llm
-            status = ark_llm.get_api_status()
-            assert status is not None
-            assert 'provider' in status
-        except ImportError:
-            pytest.skip("ark_llm模块未安装")
-        except Exception as e:
-            pytest.skip(f"API调用失败: {e}")
+    def test_get_api_status(self, monkeypatch):
+        """Unavailable owned runtime stays unavailable despite legacy selection."""
+        from lumenis.system.ai_gateway import core, channel, providers
+        import socket
+
+        def forbidden(*args, **kwargs):
+            pytest.fail("retired ARK status/dispatch attempted provider discovery or network")
+
+        monkeypatch.setattr(core, "_provider_config", forbidden)
+        monkeypatch.setattr(core.urllib.request, "urlopen", forbidden)
+        monkeypatch.setattr(core.urllib.request, "build_opener", forbidden)
+        monkeypatch.setattr(channel, "route_with_fallback", forbidden)
+        monkeypatch.setattr(socket, "create_connection", forbidden)
+        unavailable = {"available": False, "service_binding": "UNBOUND",
+                       "state": "UNAVAILABLE", "reason": "SYNTHETIC_RUNTIME_UNBOUND"}
+        monkeypatch.setattr(core, "owned_inference_status", lambda: dict(unavailable))
+        for name in ("ark", "doubao"):
+            monkeypatch.setenv("AI_PROVIDER", name)
+            monkeypatch.setenv("ALLOW_CLOUD_AI", "true")
+            status = core.ai_status()
+            assert status["provider"] == "provider_disabled"
+            assert status["enabled"] is status["installed"] is status["running"] is False
+            assert status["owned_status"] == unavailable
+            assert status["runtime"] == "unavailable" and status["base_url"] == ""
+            assert providers.provider_status(name) == providers.DISABLED
+            assert core._chat("synthetic system", "synthetic user") == (None, "provider_disabled")
+            assert core._get_call_meta()["provider"] == "provider_disabled"
 
 class TestIntelligence:
     """智能层测试"""

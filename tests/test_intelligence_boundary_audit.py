@@ -8,7 +8,7 @@
 - TEST-06  Outbox 写入成功（evidence_exporter.export_evidence）
 - TEST-07  Outbox 写入失败不影响生产主链（异常隔离）
 - TEST-09  OSAI 不可用时本地贡献进入待发送状态（outbox 落盘=待发送）
-- TEST-10  网络断开后恢复可以 retry（证据导出器无 retry，标记 BLOCKED 并说明）
+- TEST-10  当前本地运输失败/批准重排恢复；不冒称外部 OSAI 网络 retry 已验收
 - TEST-20  OSAI 不能成为生产启动依赖（源码级 import 审计）
 """
 import ast
@@ -20,6 +20,10 @@ import sys
 import tempfile
 
 import pytest
+
+# Reuse the canonical synthetic Source/Evidence/Permission fixture, not a new owner.
+from tests.test_growth_learning_exchange import journey, enqueue, transition
+from tests.test_saved_document_workflow import workspace
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _REPO_ROOT not in sys.path:
@@ -207,14 +211,48 @@ def test_09_osai_unavailable_local_contribution_pending(tmp_path):
 # ---------------------------------------------------------------------------
 # TEST-10: 网络断开后恢复可以 retry
 # ---------------------------------------------------------------------------
-def test_10_network_recovery_retry_mechanism():
-    """BLOCKED：evidence_exporter 是纯本地批量导出工具，不涉及网络发送，
-    因此不存在「网络断开后 retry」机制。retry 属于 OSAI 侧（Receiver/Sync）
-    职责，不在本仓范围内。本仓保证：导出幂等（watermark），重复运行不会
-    重复导出已发送记录。"""
-    from lumenis.system.collector.adapters import evidence_exporter as EE
-    # 验证幂等性：二次导出为空增量（即 retry 不会重复发送）
-    pytest.skip("TEST-10 BLOCKED: evidence_exporter 零网络，retry 属 OSAI 侧职责；本仓仅保证幂等")
+def test_10_network_recovery_retry_mechanism(journey, monkeypatch):
+    """Legacy node migrated to current local outbox recovery, not remote retry.
+
+    External OSAI receiver delivery remains outside this repository's contract.
+    Exercise actual signed Evidence persistence and exact Permission requeue;
+    EXPORTED means locally staged, never a network send or receiver ACK.
+    """
+    import socket
+    from lumenis.shared.learning import contribution as learning
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("local outbox recovery attempted a network connection")
+
+    monkeypatch.setattr(socket, "create_connection", forbidden)
+    monkeypatch.setattr(socket.socket, "connect", forbidden)
+    j = journey
+    out = enqueue(j)
+    payload_hash = out["payload_sha256"]
+    for count in range(1, 4):
+        out = transition(j, out, "fail")
+        assert out["attempts"] == count
+        assert out["last_error"] == "LOCAL_TRANSPORT_FAILED"
+        assert learning.get_outbox(out["id"], **j["common"]) == out
+    assert out["transport"] == "DEAD_LETTER"
+    with pytest.raises(ValueError, match="WORK_EFFECT_PERMISSION_DENIED"):
+        transition(j, out, "requeue", approved=False)
+    assert learning.get_outbox(out["id"], **j["common"]) == out
+    retried = transition(j, out, "requeue")
+    assert retried["transport"] == "PENDING"
+    assert retried["attempts"] == 0 and retried["retry_cycle"] == 1
+    assert retried["payload_sha256"] == payload_hash
+    assert not retried["delivery_proven"]
+    staged = transition(j, retried, "stage")
+    assert staged["transport"] == "EXPORTED"
+    assert staged["staged_artifact"] == {
+        "storage": "signed_evidence_envelope", "sha256": payload_hash}
+    assert not staged["delivery_proven"]
+    assert staged["payload"]["external_delivery_authorized"] is False
+    assert learning.get_outbox(staged["id"], **j["common"]) == staged
+    with pytest.raises(PermissionError, match="LEARNING_RECEIVER_NOT_BOUND"):
+        transition(j, staged, "receipt", receipt_evidence_ref=j["review"]["evidence_ref"])
+    assert learning.get_outbox(staged["id"], **j["common"]) == staged
 
 
 def test_10_export_idempotent_watermark(tmp_path):
@@ -348,3 +386,66 @@ def test_20_app_starts_with_all_osai_modules_broken(monkeypatch, tmp_path):
     # 确认 app 导入链未加载 OSAI 贡献模块
     assert 'contracts.lumenis_adapter' not in sys.modules
     assert 'lumenis.system.collector.adapters.evidence_exporter' not in sys.modules
+
+
+def _fixed_export_clock(monkeypatch, exporter):
+    from datetime import datetime, timezone
+    class FixedClock:
+        @staticmethod
+        def now(tz=None):
+            return datetime(2026, 10, 21, 11, 27, 0, tzinfo=timezone.utc)
+    monkeypatch.setattr(exporter, "datetime", FixedClock)
+
+
+def test_legacy_export_same_second_preserves_previous_artifact(tmp_path, monkeypatch):
+    """Unintegrated legacy exporter remains safe to call; no external ACK claim."""
+    import hashlib
+    from lumenis.system.collector.adapters import evidence_exporter as EE
+    _fixed_export_clock(monkeypatch, EE)
+    db, outbox = tmp_path / "source.db", tmp_path / "outbox"
+    _make_test_db(str(db))
+    source_before = db.read_bytes()
+    first = EE.export_evidence(str(db), str(outbox))
+    prior = {p.name: p.read_bytes() for p in outbox.iterdir() if p.name != "_watermark.json"}
+    second = EE.export_evidence(str(db), str(outbox))
+    assert first["total"] == 3 and second["total"] == 0
+    assert first["jsonl"] != second["jsonl"]
+    assert all((outbox / name).read_bytes() == content for name, content in prior.items())
+    assert hashlib.sha256((outbox / first["jsonl"]).read_bytes()).hexdigest() == first["sha256"]
+    assert db.read_bytes() == source_before
+
+
+@pytest.mark.parametrize("failure", ["jsonl_collision", "manifest_collision", "manifest_write", "watermark_write", "watermark_replace"])
+def test_legacy_export_failure_preserves_prior_artifacts_and_watermark(tmp_path, monkeypatch, failure):
+    from types import SimpleNamespace
+    from lumenis.system.collector.adapters import evidence_exporter as EE
+    _fixed_export_clock(monkeypatch, EE)
+    db, outbox = tmp_path / "source.db", tmp_path / "outbox"
+    _make_test_db(str(db))
+    first = EE.export_evidence(str(db), str(outbox))
+    with sqlite3.connect(str(db)) as con:
+        con.execute("INSERT INTO notes(id,note_id,title,is_taikoo_verified) VALUES(2,'n2','new synthetic',1)")
+    fixed_id = "a" * 32
+    monkeypatch.setattr(EE.uuid, "uuid4", lambda: SimpleNamespace(hex=fixed_id))
+    if failure.endswith("collision"):
+        suffix = ".jsonl" if failure == "jsonl_collision" else ".manifest.json"
+        (outbox / ("zbc-evidence-20261021T112700Z-" + fixed_id + suffix)).write_bytes(b"preserved existing artifact")
+    before = {p.name: p.read_bytes() for p in outbox.iterdir()}
+    original_dump = EE.json.dump
+    if failure in {"manifest_write", "watermark_write"}:
+        def failed_dump(document, file, *args, **kwargs):
+            matches = str(file.name).endswith(".manifest.json" if failure == "manifest_write" else ".tmp")
+            if matches:
+                file.write("partial synthetic write")
+                raise OSError("synthetic disk failure")
+            return original_dump(document, file, *args, **kwargs)
+        monkeypatch.setattr(EE.json, "dump", failed_dump)
+    elif failure == "watermark_replace":
+        def failed_replace(*args):
+            raise OSError("synthetic atomic publish failure")
+        monkeypatch.setattr(EE.os, "replace", failed_replace)
+    with pytest.raises(OSError):
+        EE.export_evidence(str(db), str(outbox))
+    assert all((outbox / name).read_bytes() == content for name, content in before.items())
+    assert json.loads((outbox / "_watermark.json").read_text())["notes"] == 1
+    assert first["total"] == 3

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="0.990" timestamp="2026-10-21T03:21:28.184869-07:00" hostname="ac98a2bb4923"><testcase classname="tests.test_owned_training_runtime_recovery" name="test_managed_worker_preserves_private_venv_for_start_replace_and_reap[copies]" time="0.349"><failure message="KeyError: 'interpreter_identity'">private_worker_venv = (PosixPath('/tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_0/copies/bin/python'), PosixPath('/tmp/pytes...es'), PosixPath('/tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_0/copies/lib/python3.12/site-packages'))
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_0')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f5bd6b32e70&gt;
+
+    def test_managed_worker_preserves_private_venv_for_start_replace_and_reap(private_worker_venv, tmp_path, monkeypatch):
+        from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
+    
+        executable, environment, site_path = private_worker_venv
+        root = Path(__file__).resolve().parents[1]
+        # These values must not be forwarded to the child to make its imports work.
+        monkeypatch.setenv("PYTHONPATH", str(tmp_path / "untrusted-pythonpath"))
+        monkeypatch.setenv("LUMENIS_TEST_PRIVATE_ENV_CANARY", "must-not-be-inherited")
+        worker = TrainingProcessFence((tmp_path / "venv.lock").resolve())
+        peers = []
+        try:
+            for generation in range(2):
+                ready = worker.start_managed_training(python_executable=executable, cwd=root,
+                    log_path=(tmp_path / f"venv-{generation}.log").resolve(),
+                    source_pins=training_worker_source_pins(root), replace=generation &gt; 0)
+                peer = psutil.Process(ready["framework_worker"]["pid"])
+                peers.append(peer.pid)
+                assert os.path.normcase(peer.cmdline()[0]) == os.path.normcase(str(executable))
+&gt;               identity = ready["interpreter_identity"]
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               KeyError: 'interpreter_identity'
+
+tests/test_owned_training_runtime_recovery.py:663: KeyError</failure></testcase><testcase classname="tests.test_owned_training_runtime_recovery" name="test_managed_worker_preserves_private_venv_for_start_replace_and_reap[symlinks]" time="0.212"><failure message="AssertionError: assert '/opt/codex/r...in/python3.12' == '/tmp/pytest-...ks/bin/python'&#10;  &#10;  - /tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_1/symlinks/bin/python&#10;  + /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12">private_worker_venv = (PosixPath('/tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_1/symlinks/bin/python'), PosixPath('/tmp/pyt...'), PosixPath('/tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_1/symlinks/lib/python3.12/site-packages'))
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_1')
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x7f5bd6b31190&gt;
+
+    def test_managed_worker_preserves_private_venv_for_start_replace_and_reap(private_worker_venv, tmp_path, monkeypatch):
+        from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
+    
+        executable, environment, site_path = private_worker_venv
+        root = Path(__file__).resolve().parents[1]
+        # These values must not be forwarded to the child to make its imports work.
+        monkeypatch.setenv("PYTHONPATH", str(tmp_path / "untrusted-pythonpath"))
+        monkeypatch.setenv("LUMENIS_TEST_PRIVATE_ENV_CANARY", "must-not-be-inherited")
+        worker = TrainingProcessFence((tmp_path / "venv.lock").resolve())
+        peers = []
+        try:
+            for generation in range(2):
+                ready = worker.start_managed_training(python_executable=executable, cwd=root,
+                    log_path=(tmp_path / f"venv-{generation}.log").resolve(),
+                    source_pins=training_worker_source_pins(root), replace=generation &gt; 0)
+                peer = psutil.Process(ready["framework_worker"]["pid"])
+                peers.append(peer.pid)
+&gt;               assert os.path.normcase(peer.cmdline()[0]) == os.path.normcase(str(executable))
+E               AssertionError: assert '/opt/codex/r...in/python3.12' == '/tmp/pytest-...ks/bin/python'
+E                 
+E                 - /tmp/pytest-of-agent/pytest-155/test_managed_worker_preserves_1/symlinks/bin/python
+E                 + /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3.12
+
+tests/test_owned_training_runtime_recovery.py:662: AssertionError</failure></testcase></testsuite></testsuites>

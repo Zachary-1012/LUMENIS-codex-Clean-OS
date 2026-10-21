@@ -1,0 +1,34 @@
+{
+  "sqlite_version": "3.53.1",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "before": {
+    "": {
+      "sha256": "0ab48b25cba617ed3a4acca0161813b314c095ef63544bb4af60769eb1012977",
+      "size": 4096
+    },
+    "-wal": {
+      "sha256": "e521e529716298497d0dcb35144b1a33668c9b0f2d039379a9c615b344ce0bd9",
+      "size": 12392
+    },
+    "-shm": {
+      "sha256": "3d64e130d87dcd8fcb60c141495b61a4d1e3f26dd894958c4b9ae9112db799ec",
+      "size": 32768
+    }
+  },
+  "after": {
+    "": {
+      "sha256": "b1bc044bff3f7b08be6d83792f695db16531ec0f8b8bec29d627f778f9aea554",
+      "size": 8192
+    }
+  },
+  "gc_collected": 17,
+  "logical_rows": [
+    [
+      1,
+      "synthetic"
+    ]
+  ],
+  "context_exit_did_not_close": true,
+  "gc_triggered_checkpoint_and_unlink": true,
+  "scope": "standalone synthetic SQLite, no product source/data touched"
+}
