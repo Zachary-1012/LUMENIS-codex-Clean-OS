@@ -678,8 +678,8 @@
     },
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_CLEARANCE_FOLLOWUP.md",
-      "bytes": 23303,
-      "sha256": "6b0e2e51b4f05fe4a0f8b0bde4758d84e4a3e48b1a1a9fa743c87cef603bd910"
+      "bytes": 23300,
+      "sha256": "a8e395d47b35fb09a10c3b51c62d3c5ebc7bc2ffacb7c7b020bb7ed35722a018"
     },
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook/SOURCE_RECEIPT.json",
@@ -737,22 +737,22 @@
       "sha256": "60ddaf497732b1ac100810791fa320bae576f8b930c6dc1a4199976180500806"
     },
     {
-      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/legacy_exporter_collision.json",
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/exporter-regression/exporter_collision.json",
       "bytes": 379,
       "sha256": "26095c9eb234967324a5ae50bb1e885de9e10258f45f93e06058a31be098979b"
     },
     {
-      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/node-semantic-map.json",
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/exporter-regression/node-semantic-map.json",
       "bytes": 3677,
       "sha256": "03e921de2e16db40e4272adb772cae9dd310aedf5de70bd42e6448ebaf61f1a2"
     },
     {
-      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/export-final.xml",
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/exporter-regression/export-final.xml",
       "bytes": 9649,
       "sha256": "ceca54d41b3c33548b12da096dd222682a24b895e91c781ad8827b4567e4b1af"
     },
     {
-      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ark-osai-exporter/export-final.log",
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/exporter-regression/export-final.log",
       "bytes": 378,
       "sha256": "f9c8be735bf955741a2ef5f87c79c05a0e947cf4e8efef53934b38cc2369e309"
     },
@@ -838,8 +838,8 @@
     },
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_20AD_PUBLIC.json",
-      "bytes": 1558,
-      "sha256": "ffb65bbad8fea56bd4d7ababd051dd5b86a4dbac2833e0546100bc21321ebc84"
+      "bytes": 1872,
+      "sha256": "d9dd1258c8e6aa47a8882bdcafe1de17e61f2180be69de7353d1507d810d19cb"
     },
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/ci-20ad/oevira-offline.log",
@@ -869,7 +869,7 @@
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/SKIP_CLOSURE_CI_FINAL_OVERLAY_PUBLIC.json",
       "bytes": 5530,
-      "sha256": "8df3a6f30995664a66852ff367a7adb4fcb78fe9e910e3b4f3028e2a1da0a029"
+      "sha256": "0d749bd948f4a8f3b1384763f1bbc06f3d7b4f19126cd3f2e6df3186ae238422"
     }
   ]
 }

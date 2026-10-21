@@ -1,8 +1,12 @@
 {
   "schema": "oevira.source-equivalence.v1",
   "captured_utc": "2026-10-21T12:01:33.797719+00:00",
-  "previous_bridge": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE.json",
-  "previous_bridge_sha256": "48693ce11580b0248b50cdce324dcd18ad5636b9b1540e543da6484e64884818",
+  "previous_bridge": {
+    "original_source_filename": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE.json",
+    "original_source_sha256": "48693ce11580b0248b50cdce324dcd18ad5636b9b1540e543da6484e64884818",
+    "public_archive_path": "SKIP_CLOSURE_WORKFLOW_EQUIVALENCE_PUBLIC.json",
+    "public_archive_sha256": "99592df26b6a2a764958c496946c610cc0ebb0b74d0bda3bd6c8b7c007f9e81f"
+  },
   "from_local_head": "2ecf05001adb37742449a1664ae2025a0cb9dbe5",
   "to_local_head": "b0d253eb11dd9b0743183173bfaa72e85ddac382",
   "to_local_tree": "4f119b6a672f65954629544e879a511fab225849",
@@ -25,6 +29,6 @@
       "reported_remote_commit",
       "remote_identity_evidence"
     ],
-    "reason": "Remove internally reported, not independently verified remote identity. Preserve local object comparison."
+    "reason": "Remove internally reported, not independently verified remote identity. Preserve local object comparison. Previous bridge is explicitly mapped to admitted public derivative, not a missing relative original."
   }
 }

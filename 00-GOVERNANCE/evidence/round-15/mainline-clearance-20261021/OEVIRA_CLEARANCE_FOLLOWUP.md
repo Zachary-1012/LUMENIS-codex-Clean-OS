@@ -141,8 +141,8 @@ UCI 官方 Facebook Metrics 页面 https://archive.ics.uci.edu/dataset/368/faceb
 - [精确源码、依赖与前后状态回执](skip-closure-receipts/skip-close-impact/receipt.json)
 - [规范收集回执](skip-closure-receipts/skip-close-collection/receipt.json)
 - [官方 CSV 来源与 hash](skip-closure-receipts/skip-facebook/SOURCE_RECEIPT.json)
-- [旧覆盖缺陷原复现](skip-closure-receipts/ark-osai-exporter/legacy_exporter_collision.json)
-- [语义迁移与 exporter 修复映射](skip-closure-receipts/ark-osai-exporter/node-semantic-map.json)
+- [旧覆盖缺陷原复现](skip-closure-receipts/exporter-regression/exporter_collision.json)
+- [语义迁移与 exporter 修复映射](skip-closure-receipts/exporter-regression/node-semantic-map.json)
 - [独立审阅精确文件 hash 与执行回执](skip-closure-receipts/export-independent-review/receipt.json)
 
 下一道必要门槛是精确候选版本的真实 Chromium CI 原始 XML 与环境读回。它尚未在本节写作时确认，不能由此宣布 PR 可以合并。后续只追加其真实结果，不修改本地原始 SKIP。
