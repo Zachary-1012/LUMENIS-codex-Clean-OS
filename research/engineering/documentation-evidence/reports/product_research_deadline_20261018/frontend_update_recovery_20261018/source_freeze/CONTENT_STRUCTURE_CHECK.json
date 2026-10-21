@@ -1,0 +1,25 @@
+{
+  "status": "CONTENT_STRUCTURE_AND_AUTHOR_SEMANTIC_REVIEW_NOT_RUNTIME_ACCEPTANCE",
+  "chapters": 18,
+  "design_contracts": 213,
+  "task_result_contracts": 188,
+  "mechanisms": 25,
+  "unique_original_ic_in_pdf_index": 295,
+  "original_steps": 311,
+  "screen_semantic_rows": 44,
+  "source_rows_exact": 220,
+  "figures_rendered_and_personally_viewed": 6,
+  "independent_code_freeze_tests": 498,
+  "independent_mounted_entries": 44,
+  "all_images_exist": true,
+  "pdf_status": "PARENT_LAYOUT_AND_VISUAL_QA_PENDING",
+  "requirements_removed": 0,
+  "image_reference_validation": {
+    "markdown_file": "09_SPATIAL_REVIEW_PLATES.md",
+    "references": 6,
+    "all_relative_targets_resolve": true,
+    "all_targets_match_content_manifest_sha256": true,
+    "asset_source_directory": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010",
+    "validation_scope": "Relative path existence and SHA-256 equality only; no new rendering or product acceptance."
+  }
+}

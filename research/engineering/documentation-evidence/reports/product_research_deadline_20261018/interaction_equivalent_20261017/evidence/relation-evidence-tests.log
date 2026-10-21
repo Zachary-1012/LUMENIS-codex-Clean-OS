@@ -1,0 +1,123 @@
+✔ appearance adapter reads initial host preferences and renders them without local storage (3.326614ms)
+✔ appearance color/font edits update host state and preview without resetting the draft (0.98346ms)
+✔ appearance presets keep the swatch and host preference in sync (0.739236ms)
+✔ appearance host reset refreshes all controls, releases wallpaper, and preserves text/selection (1.293379ms)
+✔ appearance local defaults use the host owner and do not claim durable saving (1.962995ms)
+✔ appearance wallpaper stays memory-local, rejects unsupported input, and cleans up lifecycle (0.593623ms)
+✔ appearance defaults are safe for missing or malformed persisted data (2.32463ms)
+✔ appearance schema clamps finite values and rejects CSS injection (0.430546ms)
+✔ review application does not call backend/model or remote scripts (1.541613ms)
+✔ eight distinct local studies, not product route reconstruction (0.283156ms)
+✔ readback reveal has cancellation and no reopen replay (0.241913ms)
+✔ all view and logic modules remain local and exclude executable model content (3.347355ms)
+✔ reveal preference is independent; local voices only and file input is bounded (1.473578ms)
+✔ study hashes never collide with persistent control IDs (1.750438ms)
+✔ stream rejects old run, duplicate revision, malformed block and preserves manual edits (2.2516ms)
+✔ revision is proposed before explicit adoption, keeps note, undo exact (0.379735ms)
+✔ pan never changes playhead/clips, seek never pans, move undo and zoom anchor (0.52518ms)
+✔ task result dedup, cancel rejects late result, approval survives quiet (0.32503ms)
+✔ source lists sixteen motion words, complete cannot precede actual progress (0.202647ms)
+✔ comparison refuses cross-currency or period and never fills missing with zero (0.306201ms)
+✔ orbit produces bounded real positions and layout depends on angle (0.244615ms)
+✔ local intake calculates actual text counts without inventing publication time (0.386579ms)
+✔ typed proposal cannot invent component, code, permission or action (0.349509ms)
+✔ AI suggestion is inspectable, rejectable, adoptable and undoable with truthful origin (0.959627ms)
+✔ permission denial precedes malformed or unsupported presentation (0.234183ms)
+✔ missing comparison row is not a comparable numeric observation (0.187735ms)
+✔ stable grab anchor, logical bounds, measured and bounded release velocity (2.167383ms)
+✔ intake: explicitly reopened version and later manual note beat a pending read (3.518131ms)
+✔ intake: rejection after dispose is handled without DOM/status/storage effects (1.0208ms)
+✔ intake: success after dispose cannot write a detached or newly mounted view (0.591349ms)
+✔ intake: cancel preserves displayed original and note and clears pending status (0.91438ms)
+✔ intake: latest selected file beats older success and failure (1.280358ms)
+✔ intake: failed or missing reopen still invalidates pending read without losing current work (0.989512ms)
+✔ intake: clear selection invalidates a pending read and keeps the visible version (0.796117ms)
+✔ intake: storage is written once per explicit save, never by reopen or late completion (0.886377ms)
+✔ intake: invalid and current failed reads preserve the prior original and notes (1.187715ms)
+✔ write is confirmed only after exact readback, including Unicode (1.924634ms)
+✔ silent ignored or transformed writes are not success (0.351898ms)
+✔ write and read errors preserve explicit failure (0.257741ms)
+✔ invalid serializable value is rejected (0.231606ms)
+✔ reset removes only declared preferences and verifies absence (0.478075ms)
+✔ partial reset reports every failed key and never claims all cleared (1.310086ms)
+✖ relations: preference changes cancel the owned effect and preserve selected evidence (5.418536ms)
+✔ relations: replacement and stale completion cannot detach ownership of the latest effect (2.514629ms)
+✔ relations: filter and permission changes cancel animation without retaining stale relationships (1.324255ms)
+✔ relations: disposal releases animation, listeners and dialog; retained handlers are inert (2.927274ms)
+✔ word edit: reduced motion cancels adoption emphasis without undoing samples or draft (26.733401ms)
+✔ word edit: newer work cancels adoption emphasis and obsolete completion cannot clear the latest effect (13.274586ms)
+✔ word edit: completed animation is released and an invalid adoption never starts an effect (6.91621ms)
+✔ word edit: disposal cancels animation and releases audio without allowing stale controls to restart work (5.313686ms)
+✔ relations: hiding cancels the effect; background work and returning visible never replay it (0.70053ms)
+✔ relations: standalone mounting owns listener cleanup even without host listen (2.154486ms)
+✔ relations: unavailable decorative animation leaves the real action and result usable (1.289738ms)
+✔ word: hiding cancels the effect; background work and returning visible never replay it (3.84937ms)
+✔ word: standalone mounting owns listener cleanup even without host listen (4.428365ms)
+✔ word: unavailable decorative animation leaves the real action and result usable (3.389092ms)
+✔ mass, stiffness and damping measurably change actual trajectories (12.21843ms)
+✔ 30/60/120Hz converge; finite bounded dropped frames (4.939668ms)
+✔ parameter ranges reject NaN and unstable input (0.824275ms)
+✔ magnet radius, strength and release threshold control capture/force (0.469908ms)
+✔ hysteresis retains captured target until exit boundary (0.24902ms)
+✔ inertia responds to velocity friction and restitution (0.332304ms)
+✔ inertia converges at all measured step rates (1.376456ms)
+✔ task view selection no model, deny clears view and no HTML execution (0.545957ms)
+✔ a second pointer cannot finish another pointer drag (1.718386ms)
+✔ confirmation is bound to reviewed object version (3.698412ms)
+✔ cancel and permission revocation invalidate confirmation (0.52925ms)
+✔ confirmation text mismatch cannot archive; valid receipt stays local (0.2797ms)
+✔ civil calendar validation rejects normalized impossible days (1.648854ms)
+✔ invalid schedule draft preserves date and permission blocks adoption (0.683477ms)
+✔ schedule stale proposal cannot apply to a newer version (0.31897ms)
+✔ schedule apply and undo preserve local-only and monotonic version (0.355193ms)
+✔ new remote version fences an already compared merge proposal (0.434892ms)
+✔ revoke prevents accepting a previously reviewed merge (1.229755ms)
+✔ repeated accept without a proposal does not create extra revision (0.706699ms)
+✔ state change to BLOCKED invalidates pending recovery (1.2276ms)
+✔ state change to IP_RISK invalidates pending recovery (0.182334ms)
+✔ state change to COOLDOWN invalidates pending recovery (0.170041ms)
+✔ state change to VERIFY invalidates pending recovery (0.229612ms)
+✔ invalid kind is ignored; unchanged kind does not reset current attempt (1.041437ms)
+✔ new eligible attempt after kind change can recover, old round cannot (0.464061ms)
+✔ out-of-order suggestions never replace newer suggestion or human text (0.404369ms)
+✔ rejected proposal cannot reappear via delayed duplicate (0.219163ms)
+✔ adoption preserves monotonic revision and resumes normal updates (0.461346ms)
+✔ missing evidence never becomes a dashed or ordinary graph edge (2.927105ms)
+✔ unverified-only filter remains truthful empty graph with a visible reason (0.388773ms)
+✔ blank source and missing endpoint cannot support an edge (0.274645ms)
+✔ revocation clears evidence and unverified candidates alike (0.199549ms)
+✔ navigation draft and selection survive isolated route snapshot (2.496857ms)
+✔ unknown routes cannot allocate snapshots; reset is scoped (0.376235ms)
+✔ an existing modal blocks shortcuts to a second modal (0.255589ms)
+✔ revision route preserves exact manual note, field draft, selection and scroll (1.890286ms)
+✔ pending proposal survives route return without automatically adopting (0.632204ms)
+✔ route remount cannot restore revoked editing authority (0.325893ms)
+ℹ tests 94
+ℹ suites 0
+ℹ pass 93
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 358.204794
+
+✖ failing tests:
+
+test at review_working/tests/motion-lifecycle.test.mjs:61:1
+✖ relations: preference changes cancel the owned effect and preserve selected evidence (5.418536ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /没有来源支持/. Input:
+  
+  '转载：人工样例，不是真实来源。样例引用行A→B'
+  
+      at TestContext.<anonymous> (file:///workspace/scratch/8d04d68e28f4/review_working/tests/motion-lifecycle.test.mjs:66:60)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.start (node:internal/test_runner/test:1242:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '转载：人工样例，不是真实来源。样例引用行A→B',
+    expected: /没有来源支持/,
+    operator: 'match',
+    diff: 'simple'
+  }

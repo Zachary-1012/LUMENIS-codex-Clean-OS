@@ -1,0 +1,265 @@
+{
+  "original_g_rows": 195,
+  "unique_g_ids": 195,
+  "expected_original_g_rows": 195,
+  "matches_195": true,
+  "decimal_g_ids": [
+    "G49.0",
+    "G49.1",
+    "G49.2",
+    "G49.3",
+    "G49.4",
+    "G49.5",
+    "G49.6",
+    "G49.7"
+  ],
+  "absent_integer_ids_in_original": [
+    "G49",
+    "G74"
+  ],
+  "invented_ids": [],
+  "duplicate_g_ids": [],
+  "g_ids_missing_report_group": [],
+  "source_coverage": [
+    {
+      "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+      "nonblank_source_lines": 901,
+      "retained_lines": 901,
+      "missing_nonblank_lines": [],
+      "coverage_ratio": 1.0
+    },
+    {
+      "source_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md",
+      "nonblank_source_lines": 888,
+      "retained_lines": 888,
+      "missing_nonblank_lines": [],
+      "coverage_ratio": 1.0
+    },
+    {
+      "source_path": "00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md",
+      "nonblank_source_lines": 819,
+      "retained_lines": 819,
+      "missing_nonblank_lines": [],
+      "coverage_ratio": 1.0
+    }
+  ],
+  "rju_ids_retained": [
+    "J1",
+    "J2",
+    "J3",
+    "J4",
+    "J5",
+    "J6",
+    "J7",
+    "J8",
+    "R01",
+    "R02",
+    "R03",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R08",
+    "R09",
+    "R10",
+    "R11",
+    "R12",
+    "R13",
+    "R14",
+    "R15",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
+    "U09",
+    "U10",
+    "U11",
+    "U12",
+    "U13",
+    "U14",
+    "U15",
+    "U16",
+    "U17",
+    "U18",
+    "U19",
+    "U20",
+    "U21",
+    "U22",
+    "U23",
+    "U24",
+    "U25"
+  ],
+  "rju_expected_missing": [],
+  "total_records_including_structure": 2617,
+  "record_types": {
+    "SOURCE_STRUCTURE": 365,
+    "RETAINED_SOURCE_CLAUSE": 1992,
+    "ORIGINAL_G_REQUIREMENT": 195,
+    "RETAINED_RJU_ROW": 56,
+    "ADDITIVE_USER_REQUIREMENT": 9
+  },
+  "acceptance_status_counts": {
+    "NOT_VERIFIED": 2617
+  },
+  "coverage_boundary": "文本保全验证，不是逐义务源码/运行验收完成；全部引用原文件/附件未在此账穷尽展开，保留原文引用及定位，后续仍须追踪。",
+  "missing_evidence_files": [],
+  "user_supplement_preservation_20261018": {
+    "original_file_sha256": {
+      "MASTER_REGISTER.md": "b379b016f8c990e744c5729d2305df04ae2f768acc63d68c90ae1c0f44068356",
+      "REQUIREMENTS_LEDGER.json": "07cb2d765b2a4ea69473a5d4aefc4935bd91c9c8cfe3073138dbe101a3905efc",
+      "COVERAGE_CHECK.json": "b341fa50d4688fa0160e947b527d8f2fb4150b25e1a2a9016b9928c9cd2d712d"
+    },
+    "original_rows_preserved_equal": true,
+    "original_row_count": 2617,
+    "original_unique_g_count": 195,
+    "original_unique_rju_count": 48,
+    "original_master_prefix_byte_identical": true,
+    "v2_1_file_hashes_unchanged": {
+      "DELIVERY_MANIFEST_V2_1.json": "d8bc7cc4df1906de49f33e93d36590c4c553fabc4a3b72dfdce8c4cc138ae429",
+      "SOURCE_EXCERPTS_V2_1.json": "758464d42fedac208cc38b42b29d7a139d216dee15e435aac8807b3aca0b411a",
+      "CORRECTION_V2_1.md": "92fbc78e40cb904cebaa4d221000e6c96fb6aa9eb518785296221aff97db5e07",
+      "REQUIREMENTS_LEDGER_V2_1_DELTA.json": "1f1fa991ce868d3779bb717071e4cb01beb7eda03c51cdfe66b41ef9b80121f9"
+    },
+    "new_user_requirement_count": 24,
+    "new_ids_unique": true,
+    "new_items_all_not_verified": false,
+    "text_recording_does_not_close_requirements": true,
+    "validation": "PASS_PRESERVATION_AND_NEW_SCOPE_RECORDING_ONLY",
+    "new_capability_items_not_verified": 18,
+    "explicit_scope_exclusion_items": 1,
+    "latest_legal_scope_exclusion_overrides_deferred_status": true,
+    "operational_policy_items": 2,
+    "latest_backup_policy_overrides_new_dated_objects": true,
+    "timestamps_separate_requirement": true,
+    "previous_16_supplement_records_unchanged": true,
+    "append_1446_original_master_prefix_preserved": true,
+    "clarification_1450": {
+      "requirement_id": "USER-ADD-20261018-17",
+      "source_message_id": "PRIVATE_SOURCE_SHA256:0e304fe00263dce00676dace01bb927ac67f55270ed142cefb8f8395786783fc",
+      "item_count_unchanged": true,
+      "original_rows_preserved_equal": true,
+      "other_19_supplements_unchanged": true,
+      "local_record_only": true,
+      "drive_status": "PENDING_BATCHED_SAME_ID_UPDATE",
+      "implementation_and_acceptance": "NOT_VERIFIED"
+    },
+    "data_closure_1452": {
+      "requirement_id": "USER-ADD-20261018-21",
+      "source_message_id": "PRIVATE_SOURCE_SHA256:d64cb30e9df9e4cfbc7011da8be8ffa23df9267ccf969ea9d39ae3553168f2fb",
+      "original_rows_preserved_equal": true,
+      "previous_20_supplements_unchanged": true,
+      "data_import_and_business_read_not_verified": true,
+      "drive_status": "PENDING_BATCHED_SAME_ID_UPDATE"
+    },
+    "case_method_library_clarification_1453": {
+      "requirement_id": "USER-ADD-20261018-21",
+      "source_message_id": "PRIVATE_SOURCE_SHA256:06bda23990e62eb28b626f9b8e3ab8dd3ca73b38c421c4e8942f8d326a567462",
+      "item_count_unchanged": true,
+      "original_rows_preserved_equal": true,
+      "previous_20_supplements_unchanged": true,
+      "original_mapping": "PENDING_SOURCE_TO_IMPLEMENTATION_RECONCILIATION",
+      "drive_status": "PENDING_BATCHED_SAME_ID_UPDATE"
+    },
+    "browser_requirement_22_master_ledger_aligned": true,
+    "first_22_supplements_preserved_equal": true,
+    "latest_name_and_scope_recorded": {
+      "ids": [
+        "USER-ADD-20261018-23",
+        "USER-ADD-20261018-24"
+      ],
+      "current_display_brand": "寰意 / OEVIRA",
+      "domain": "oevira.com",
+      "tagline": "An Open Space for Thought and Creation.",
+      "scope_freeze_after_full_pr83_integration": true,
+      "approved_incomplete_scope_preserved": true,
+      "implementation_not_implied": true
+    },
+    "phase_clarification_1634_1636": {
+      "requirement_id": "USER-ADD-20261018-24",
+      "source_message_ids": [
+        "PRIVATE_SOURCE_SHA256:739e474d417291cdddf60ccba35474cd4847415f5f08962a19798ed976b6a46d",
+        "PRIVATE_SOURCE_SHA256:e2cb29804f44fb51a91144eff552f7a6ec62e8066a17c0cb5d6a18e4a4cafe62",
+        "PRIVATE_SOURCE_SHA256:29d27524c3f9bb65a0caac1d16a943896b0aa35d3770eaa93d2fc2d84901cfda"
+      ],
+      "pre_merge_scope_integrity_required": true,
+      "local_build_not_pre_merge_prerequisite": true,
+      "post_merge_original_scope_closure_only": true,
+      "frontend_stage_draft_if_research_or_plan_incomplete": true,
+      "supplement_count_unchanged": 24,
+      "implementation_acceptance_not_implied": true
+    },
+    "delivery_target_and_work_orders_1638": {
+      "requirement_id": "USER-ADD-20261018-24",
+      "deadline_utc": "2026-10-19T00:00:00Z",
+      "deadline_beijing": "2026-10-19T08:00:00+08:00",
+      "source_message_ids": [
+        "PRIVATE_SOURCE_SHA256:5d5c2c22ef79a64632f9f09f746febee94368507bec7936f4400ac41599b6a2e",
+        "PRIVATE_SOURCE_SHA256:ebd1de537004fa44d033d16af9dcf650d37fdfb10d1ec26641c214a515d2df85"
+      ],
+      "unique_baseline_supports_individual_work_orders": true,
+      "quality_gates_unchanged": true,
+      "completion_not_implied": true,
+      "supplement_count_unchanged": 24
+    },
+    "technical_control_clarification_1645": {
+      "requirement_id": "USER-ADD-20261018-24",
+      "original_ids": [
+        "G20",
+        "G51",
+        "G82",
+        "G88"
+      ],
+      "manual_strategies_founder_mode_only": true,
+      "normal_automatic_selection_not_exposed": true,
+      "business_operations_preserved": true,
+      "default_data_flows": 4,
+      "usual_max": 5,
+      "necessary_max": 8,
+      "not_generic_platform_safety_threshold": true,
+      "post_merge_continue_approved_cloud_scope": true,
+      "implementation_not_verified": true,
+      "supplement_count": 24
+    }
+  },
+  "late_source_mappings_20261018": {
+    "ids": [
+      "SOURCE-SUPPLEMENT-MUSE-20261018"
+    ],
+    "maps_to_original_requirements": [
+      "G30",
+      "G49.0",
+      "G69",
+      "G81",
+      "G86",
+      "G114",
+      "G170",
+      "PLAN-L0057",
+      "PLAN-L0058",
+      "PLAN-L0503"
+    ],
+    "supplement_count_unchanged": 24,
+    "scope_freeze_preserved": true,
+    "private_raw_sources_not_for_public_repository": true,
+    "implementation_not_verified": true
+  },
+  "late_user_clarifications_20261018_1750_1956": {
+    "original_rows_byte_semantics_preserved": true,
+    "original_195_retained": true,
+    "task19_cancelled_not_deleted": true,
+    "shared_support_and_reference_adoption_recorded": true,
+    "scene_mapping_count": 18,
+    "mapping_not_implementation_acceptance": true
+  },
+  "original13_recovery_20261018": {
+    "original_count": 13,
+    "exact_byte_verified": 13,
+    "credential_public_exclusion": true,
+    "original_ledger_rows_unchanged": true,
+    "new_product_task_count": 0,
+    "semantic_adaptation": "existing J05/J06/J07/J09/J13/J15/J18/J20; six concrete scenario inputs; not implementation acceptance"
+  }
+}

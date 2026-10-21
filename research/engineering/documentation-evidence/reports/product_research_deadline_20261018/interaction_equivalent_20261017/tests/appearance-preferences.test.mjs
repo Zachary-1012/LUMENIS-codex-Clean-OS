@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import{appearanceDefaults,appearancePreferences}from'../src/appearance-preferences.mjs';
+test('appearance defaults are safe for missing or malformed persisted data',()=>{for(const v of [null,undefined,[],{bg:'url(secret)',size:Infinity,blur:'false'}])assert.deepEqual(appearancePreferences(v),appearanceDefaults)});
+test('appearance schema clamps finite values and rejects CSS injection',()=>{assert.deepEqual(appearancePreferences({bg:'#Aa12ff',size:200,blur:true}),{bg:'#Aa12ff',size:18,blur:true});assert.equal(appearancePreferences({size:-20}).size,13)});

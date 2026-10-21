@@ -215,3 +215,12 @@ Owner's task-first correction; exact candidate/live acceptance remains separate.
 持久化、权限与错误恢复：最新权限读回后才加载；已撤权只保不泄内容的原因/返回入口。旧本地稿遇新服务端版本先并读保两份；任务进行中回状态而不自动resume；无本地持久记录时不承诺退出后光标恢复。
 
 验收以同一真实任务记录原路径/新路径的操作、切换、重复录入、失误与恢复；没有实测前不填写节约秒数或成功率。便利界面与接线仍须本地构建，后端只按实际Owner测试证据判断，不能用本段规划声称已完成。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/navigation.mjs、navigation-study.mjs、command-palette.mjs、command-study.mjs、object-menu.mjs、menu-study.mjs、route-access.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+首页导航/命令入口沿 `app/lib/shell/lumenis_workspace_shell.dart` 现有路由，不创建演示路由。切换时分别保当前草稿、选区、滚动和对象身份；未保存稿的“保留后切换”若仅内存会话，必须这样标注，不能叫已保存或跨端恢复。命令搜索保留查询和焦点；已有模态层时快捷键不抢占另一模态。对象菜单捕获对象/版本/当前可执行动作，切换对象、来源撤权或关闭后旧菜单回调不得执行。隐藏/权限未核入口不得成为可用命令。
+
+验收：编辑中切换后返回、Esc关闭最内层再回触发控件、菜单打开后对象变化、键盘与触控等价；导航样例不是全编辑器持续状态已实现证明。

@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-10-17T14:38:04.022Z",
+  "node": "v24.19.0",
+  "platform": "linux",
+  "arch": "x64",
+  "input_utf8_bytes": 232338,
+  "headings": 128,
+  "warmup": 10,
+  "iterations": 100,
+  "work": "inspect + preview + permission/baseline-rechecked adoption",
+  "milliseconds": {
+    "p50": 3.298440999999997,
+    "p95": 6.573992999999973,
+    "max": 10.229014999999947
+  },
+  "scope": "Synthetic Node pure-logic benchmark only; no DOM/layout/frame/input-latency/mobile or end-to-end performance acceptance"
+}

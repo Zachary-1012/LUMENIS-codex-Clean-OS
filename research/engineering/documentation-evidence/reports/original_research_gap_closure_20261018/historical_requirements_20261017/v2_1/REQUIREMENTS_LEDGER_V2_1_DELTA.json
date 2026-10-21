@@ -1,0 +1,80 @@
+{
+  "version": "V2.1",
+  "change_type": "ADDITIVE_CORRECTION_DELTA",
+  "base_ledger": "../REQUIREMENTS_LEDGER.json",
+  "base_ledger_sha256": "07cb2d765b2a4ea69473a5d4aefc4935bd91c9c8cfe3073138dbe101a3905efc",
+  "frozen_user_report_sha256": "55eaac563c34d8f6f5df4c5e61715bd99ddcdd149bf567a66d88f57e5a1c3836",
+  "preservation": "V2原文件与已发送文本不改；195个原G及全部原R/J/U/非G要求不删除；只追加纠正映射。",
+  "user_sources": [
+    {
+      "message_id": "PRIVATE_SOURCE_SHA256:f94c8b18dc79cdcaaaf4f2a45b66c080b1a3d01c93dc8d8ddab776985881b89a",
+      "exact_quote": "原聊天摘句已省略；正式需求摘要：界面本身需有AIGC呈现/智能UI，不能以装饰特效替代；此项不新增AIGC内容制作要求。"
+    },
+    {
+      "message_id": "PRIVATE_SOURCE_SHA256:5e6ef6a97ac9251ee0ce4a7b2ca6cab38624e4901367a0ceb0e2c674c4748bfb",
+      "exact_quote": "原聊天摘句已省略；正式需求摘要：界面本身需有AIGC呈现/智能UI，不能以装饰特效替代；此项不新增AIGC内容制作要求。"
+    }
+  ],
+  "rows": [
+    {
+      "id": "V21-CORR-10",
+      "report_groups": [
+        10
+      ],
+      "mapping_change": "本次AIGC纠正不由内容/媒体制作能力承接；原视频/音频/播客及原创作要求完整保留。",
+      "original_rows_preserved": true,
+      "verification_status": "NOT_VERIFIED"
+    },
+    {
+      "id": "V21-CORR-11",
+      "report_groups": [
+        11
+      ],
+      "mapping_change": "前端AIGC不归入装饰特效或200交互计数；原交互/动效/物理全部保留。",
+      "original_rows_preserved": true,
+      "verification_status": "NOT_VERIFIED"
+    },
+    {
+      "id": "V21-REQ-FRONTEND-AIGC",
+      "report_groups": [
+        12,
+        4,
+        2,
+        17
+      ],
+      "primary_report_group": 12,
+      "requirement": "前端界面本身的AIGC呈现/智能UI，含原创生成视觉、创意构成和丰富的任务相关交互/动态呈现，不能缩成静态插画或预生成素材；依据真实任务、上下文、证据、用户操作与设备能力提出并承接适用表现和交互；不是制作AIGC内容，不是装饰特效。",
+      "related_original_ids": [
+        "G14",
+        "G116",
+        "U23",
+        "J8"
+      ],
+      "related_original_ids_are_scope_ceiling": false,
+      "source_evidence_ids": [
+        "V21-SRC-01",
+        "V21-SRC-02",
+        "V21-SRC-03",
+        "V21-SRC-04",
+        "V21-SRC-05",
+        "V21-SRC-06",
+        "V21-SRC-07",
+        "V21-SRC-08",
+        "V21-SRC-09"
+      ],
+      "acceptance": [
+        "真实任务与获准材料产生合适的可操作表现",
+        "用户调整后正确局部更新并保留输入/选区/已编辑内容",
+        "类型化数据/组件/动作绑定原Core、Permission、来源与版本",
+        "真实保存/修订/重开及中断恢复/撤权拒绝",
+        "适用四表面、三语、无障碍及确定性无AI路径",
+        "同任务同预算测量正确性、首个有用结果、操作负担和实际效果"
+      ],
+      "verification_status": "NOT_VERIFIED",
+      "current_progress": "用户语义纠正与当前主线要求已核；当前没有据此关闭完整前端能力的实际运行证据。",
+      "unclosed": "逐工作面表现选择、真实Gateway/组件/动作接线、正常用户任务及同版四端结果待逐项证据；不能由UI样例、动画或测试数替代。"
+    }
+  ],
+  "source_excerpt_file": "SOURCE_EXCERPTS_V2_1.json",
+  "mutation_authority": "本报告不授予产品代码/数据库/运行环境变更或部署权限。"
+}

@@ -643,3 +643,12 @@ UI可按真实历史密度提出列表分组/Reader层级，保稳定地址栏�
 验收先用合成测试站和真实Chromium证明一次登录两任务连续、tab隔离/弹窗归属、一个取消不影响另一个、同账号429等待、动作超时已生效/未生效分别恢复、进程/lease回收及撤权；不得用真实用户凭据做单测。真实外站、多账号和各平台覆盖尚未验证；云端浏览器socket受限时如实记环境阻塞，不绕过，不把纯mock当真浏览器通过。四表面实际前端构建与有权本地产品浏览器验收继续分账。主任务预算、界面自身AIGC原创表达和200以上交互要求保留，便利不省略必要批准/成功核验。
 
 官方参考（2026-10-18已核文本）：[OpenAI Computer use](https://developers.openai.com/api/docs/guides/tools-computer-use)、[browser drivers](https://developers.openai.com/api/docs/guides/tools-computer-use-sdk-drivers)支持动作后观察、过期引用与不明效果恢复的工程参考；[Grok Bot computer and apps](https://docs.x.ai/grok-bot/computer-and-apps)描述共享登录、分屏单任务与人控。这些是机制参考，不构成新模型调用/供应商接入，也未证明序境或Muse端到端能力。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/recovery.mjs、recovery-study.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+现有 `app/lib/features/system/sys06/sys06_view_model.dart` / `sys06_browser_repository.dart` 与受控浏览器恢复Sheet消费真实Owner状态。恢复队列按source/task及attempt关联；切换恢复种类即废弃旧轮观察。dismiss只关Sheet，defer释放当前队列占用，均不标任务恢复。登录入口不能解除BLOCKED/IP_RISK/COOLDOWN；只有当前轮真实会话健康读回才允许原任务继续，不重放其他任务。
+
+验收：来源A核验迟到不能恢复B；等待中种类改为冷却后旧verified无效；关闭、暂缓、撤权、路由离开保原任务暂停及可追溯原因。demo的health注入不是会话验证器，不引入OS执行器或验证码绕过。

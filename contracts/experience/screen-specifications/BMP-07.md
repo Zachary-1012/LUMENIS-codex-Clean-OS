@@ -193,3 +193,14 @@ Public Website仅用获准真实样例说明节点交叉、当月适配与跨市
 UI可按密度建议月历、顺序列表或平台差异对照，保同一节点/所选稿和撤销；生成营销创意不等UI AIGC。价值是节点有据可用且跨市场改写不丢事实。
 
 沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/contracts.mjs 的 initialRevision/proposeRevision、studies.mjs 的 revision`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+预算/需求局部变更先以当前活动版本和真实单位生成提议，明确旧新值、受影响成果位置及未核依赖；人工备注、未提交数值和其他成果不被覆写。采用检查当前Permission/基线/来源版本，取消保原稿，撤销依原Owner生成可追溯修订；演示整数人民币分/固定天数只是数值机制，不是产品通用货币或收入模型。
+
+沿当前 `app/lib/features/bmp07/` 及Shared依赖Owner区分计划改变与执行/发布。验收人工备注之后再采用、预算改动使旧提议失效、已知依赖外不瞎改、部分失败仅重试受影响项；不得将本地修订历史标作跨媒体真正更新。
+
+活动排期的 `schedule.mjs` 仅作原Owner行为参考：日期调整先提议并绑定活动计划版本，取消保原日期，确认核当前编辑权及基线；撤销仅沿现有Owner支持的修订形成新版本。日期计算及实际外部执行回执由原排期Owner定义，不从demo civil-day或本地receipt推导新增calendar API。未有真实可调用写接口的活动操作保持OPEN、禁相应效果，不借CTH-05只读舆情日历落写。

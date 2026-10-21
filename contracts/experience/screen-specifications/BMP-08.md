@@ -512,3 +512,12 @@ preserved; source-backed typed-plan prerequisites apply only to this revision
 path. Initial creation, real audio playback/mixing/mastering/render/export, and
 native/device acceptance are not closed by this binding. Flutter/widget tests
 require execution on the supported toolchain before surface acceptance.
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/topic-planning.mjs、topic-study.mjs、media-chapters.mjs、chapter-study.mjs、audio-signal.mjs、audio-study.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+选题面板沿当前 `podcast/intelligence/topic_scoring.py` / editorial Owner，缺输入为input_required，不套旧 `topic_score.py` 公式；分数/阈值/舍入以真实Owner为准，不将JS golden fixture另立评分权威。人工信号与AI建议逐项并读，建议绑定baseRevision，人工改稿/信号后旧建议失效。嘉宾三项人工判断只约束对应嘉宾提纲入口，不阻自己的脚本/音频独立制作。
+
+章节编辑与试听沿 `app/lib/features/bmp08/` 及Shared媒体工程，不另建播放器。章节标签重排不改音频样本；范围是明确时基的半开区间，采样点到实际Owner时间单位显式转换，播放头/波形不弹性插值。源ID/版本/章节revision与循环session同时匹配才可播放或采用；换源、取消、媒体错误废弃旧loop/undo，保原项目。改稿不等音频已重合成，听审与实际导出需独立证明。验收首末采样点、四舍五入端点、源切换迟到回调、同一工作区单播放器和保存重开，Node样例不算听感验收。

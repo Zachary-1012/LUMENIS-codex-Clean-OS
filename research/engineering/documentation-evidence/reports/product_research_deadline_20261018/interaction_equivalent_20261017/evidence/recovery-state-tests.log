@@ -1,0 +1,44 @@
+✔ review application does not call backend/model or remote scripts (1.228379ms)
+✔ eight distinct local studies, not product route reconstruction (0.267106ms)
+✔ readback reveal has cancellation and no reopen replay (0.203955ms)
+✔ all view and logic modules remain local and exclude executable model content (2.74985ms)
+✔ reveal preference is independent; local voices only and file input is bounded (1.102099ms)
+✔ study hashes never collide with persistent control IDs (1.497995ms)
+✔ stream rejects old run, duplicate revision, malformed block and preserves manual edits (2.820083ms)
+✔ revision is proposed before explicit adoption, keeps note, undo exact (0.498659ms)
+✔ pan never changes playhead/clips, seek never pans, move undo and zoom anchor (0.94807ms)
+✔ task result dedup, cancel rejects late result, approval survives quiet (0.682934ms)
+✔ source lists sixteen motion words, complete cannot precede actual progress (0.319862ms)
+✔ comparison refuses cross-currency or period and never fills missing with zero (0.405816ms)
+✔ orbit produces bounded real positions and layout depends on angle (0.397479ms)
+✔ local intake calculates actual text counts without inventing publication time (0.701008ms)
+✔ typed proposal cannot invent component, code, permission or action (0.604336ms)
+✔ AI suggestion is inspectable, rejectable, adoptable and undoable with truthful origin (0.564833ms)
+✔ permission denial precedes malformed or unsupported presentation (0.233607ms)
+✔ missing comparison row is not a comparable numeric observation (0.186199ms)
+✔ stable grab anchor, logical bounds, measured and bounded release velocity (2.048741ms)
+✔ mass, stiffness and damping measurably change actual trajectories (4.544694ms)
+✔ 30/60/120Hz converge; finite bounded dropped frames (2.451724ms)
+✔ parameter ranges reject NaN and unstable input (0.40233ms)
+✔ magnet radius, strength and release threshold control capture/force (0.32432ms)
+✔ hysteresis retains captured target until exit boundary (0.159392ms)
+✔ inertia responds to velocity friction and restitution (0.201306ms)
+✔ inertia converges at all measured step rates (0.992228ms)
+✔ task view selection no model, deny clears view and no HTML execution (0.581871ms)
+✔ state change to BLOCKED invalidates pending recovery (1.519554ms)
+✔ state change to IP_RISK invalidates pending recovery (0.184296ms)
+✔ state change to COOLDOWN invalidates pending recovery (0.136697ms)
+✔ state change to VERIFY invalidates pending recovery (0.182746ms)
+✔ invalid kind is ignored; unchanged kind does not reset current attempt (0.843545ms)
+✔ new eligible attempt after kind change can recover, old round cannot (0.436251ms)
+✔ out-of-order suggestions never replace newer suggestion or human text (0.404501ms)
+✔ rejected proposal cannot reappear via delayed duplicate (0.233964ms)
+✔ adoption preserves monotonic revision and resumes normal updates (0.464595ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 172.765337

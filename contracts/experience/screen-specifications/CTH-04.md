@@ -168,3 +168,12 @@ Public Website仅用获准真实样例说明事件簇、观点对象与主张证
 UI可按簇结构与观点冲突建议比较布局，保成员表/原文等价，不能虚构因果或替用户定真假。
 
 沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/relations.mjs、relations-study.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+关系图按当前CTH-04 repository读回的实际节点/边/SourceUse展示。缺可定位依据或端点的关系候选进入“待核”清单，不画实线也不以虚线推断关系；筛选变化使旧选中边失效，撤权清呈现但不销毁历史。打开边的依据后返回同节点、筛选、缩放/阅读位置，不让图形布局创造业务关系。
+
+验收缺端点、空source、换范围后旧边回调、权限撤回以及列表/键盘等价访问。demo.source非空只是本地前置，不是生产Evidence核验；采用的是无依据不连边原则而非字符串权限校验。

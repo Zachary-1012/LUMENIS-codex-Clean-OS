@@ -1,0 +1,34 @@
+{
+  "at": "2026-10-17T13:35:49.785Z",
+  "node": "v24.19.0",
+  "scope": "synthetic Node-only; no browser frames, mobile RAM or product API measured",
+  "records": 10000,
+  "platformLabels": 22,
+  "modelConstruction": {
+    "rawMs": [
+      56.45423100000001,
+      37.908274000000006,
+      34.983941000000016,
+      33.81410900000003,
+      34.504411000000005,
+      30.14837399999999,
+      86.88838999999984
+    ],
+    "medianMs": 34.983941000000016,
+    "maxMs": 86.88838999999984
+  },
+  "oneHundredSequentialProjections": {
+    "rawMs": [
+      132.667187,
+      113.12248400000004,
+      124.25311600000003,
+      115.29455499999995,
+      117.0098240000001,
+      122.23170900000002,
+      125.13722400000006
+    ],
+    "medianMs": 122.23170900000002,
+    "maxMs": 132.667187
+  },
+  "tailPercentile": "Not claimed from seven repetitions"
+}

@@ -167,6 +167,38 @@ def production_python_files(root: Path) -> list[Path]:
 def _scan_error(error: OSError) -> None:
     raise error
 
+def tracked_path_errors(tracked_paths: list[str]) -> list[str]:
+    """Historical provenance is not a live product path or execution authority."""
+    try:
+        from . import verify_codex_takeover_governance as recovery
+    except ImportError:
+        import verify_codex_takeover_governance as recovery
+    errors: list[str] = []
+    recovered_paths: set[str] = set()
+    if recovery.RECOVERED_EVIDENCE_RECEIPT in tracked_paths:
+        try:
+            inventory = recovery._recovered_evidence_inventory()
+            assert set(inventory).issubset(tracked_paths), "recovery inventory contains untracked files"
+            recovery._assert_recovered_evidence_integrity()
+            recovered_paths = set(inventory)
+        except (AssertionError, OSError, ValueError, TypeError) as exc:
+            errors.append(f"invalid recovered evidence inventory: {exc}")
+    for path in tracked_paths:
+        normalized = path.replace("\\", "/")
+        if normalized.casefold().startswith("08-audit/"):
+            errors.append(f"obsolete audit archive path present: {path}")
+        if LEGACY_PATH_TOKEN.search(normalized) and path not in recovered_paths:
+            errors.append(f"obsolete product/archive path token present: {path}")
+        if any(path.startswith(prefix) for prefix in FORBIDDEN_PREFIXES):
+            errors.append(f"legacy UI/UX/reference artifact present: {path}")
+        if path in FORBIDDEN_EXACT:
+            errors.append(f"legacy UI/UX/reference artifact present: {path}")
+        if ".pre-opt" in path:
+            errors.append(f"pre-opt backup artifact present: {path}")
+
+    return errors
+
+
 def main() -> int:
     errors: list[str] = []
     if not ARCH.is_file():
@@ -259,19 +291,7 @@ def main() -> int:
         if not (ROOT / path).is_file():
             errors.append(f"missing canonical app foundation: {path}")
 
-    tracked_paths = tracked()
-    for path in tracked_paths:
-        normalized = path.replace("\\", "/")
-        if normalized.casefold().startswith("08-audit/"):
-            errors.append(f"obsolete audit archive path present: {path}")
-        if LEGACY_PATH_TOKEN.search(normalized):
-            errors.append(f"obsolete product/archive path token present: {path}")
-        if any(path.startswith(prefix) for prefix in FORBIDDEN_PREFIXES):
-            errors.append(f"legacy UI/UX/reference artifact present: {path}")
-        if path in FORBIDDEN_EXACT:
-            errors.append(f"legacy UI/UX/reference artifact present: {path}")
-        if ".pre-opt" in path:
-            errors.append(f"pre-opt backup artifact present: {path}")
+    errors.extend(tracked_path_errors(tracked()))
 
     # Shared Reporting must remain the sole implementation owner.
     app_text = (ROOT / "app.py").read_text(encoding="utf-8")

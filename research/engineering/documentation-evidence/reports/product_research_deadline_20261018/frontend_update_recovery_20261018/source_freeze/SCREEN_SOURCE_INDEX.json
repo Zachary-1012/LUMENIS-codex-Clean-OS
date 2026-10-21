@@ -1,0 +1,401 @@
+{
+  "status": "CURRENT_SEMANTIC_MAPPING_REVIEWED_NOT_RUNTIME_ACCEPTANCE",
+  "screens": [
+    {
+      "screen": "ACC-01",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/ACC-01.md",
+      "sha256": "fdab87422aab5112e5e2054c04ef05200358563c22f92e36b4efddcab7d7dd70",
+      "intelligent_adoption_start_line": 200,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "ACC-02",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/ACC-02.md",
+      "sha256": "285a9e15a731b261554fe9caeea4e84310b40624880c2749c8c2ab87c6bcaa76",
+      "intelligent_adoption_start_line": 342,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "ACC-03",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/ACC-03.md",
+      "sha256": "fb9bdb6f60ca19cb75b456304c5823060687d58f7cdbd5642a2519e75c20fb20",
+      "intelligent_adoption_start_line": 166,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "ACC-04",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/ACC-04.md",
+      "sha256": "274a07b62ca841726e2e0aa364d5158ad545e2b89dabc663608021c7625fec12",
+      "intelligent_adoption_start_line": 91,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "AI-01",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/AI-01.md",
+      "sha256": "7e0a38328d3f09c298240ba5ca571f1ab417fdceb7f06f3422cebaa02ee4b3d7",
+      "intelligent_adoption_start_line": 396,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "AI-02",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/AI-02.md",
+      "sha256": "5e6da5a8911cdf442bc00f9e84e6127c7d60c3f036af66ccf52e3dd2bbaa1c05",
+      "intelligent_adoption_start_line": 96,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "AI-03",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/AI-03.md",
+      "sha256": "5002c5e432c2a8924258a7a059d9c442a36b68d05ca6e56393a8c0fbc72d636a",
+      "intelligent_adoption_start_line": 94,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "AI-04",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/AI-04.md",
+      "sha256": "2573b6aec9b06c704797d9316035eef9552c2e5f28117c4f30913c6a18d5c80e",
+      "intelligent_adoption_start_line": 156,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "AI-05",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/AI-05.md",
+      "sha256": "8a7d86ca1af22074f4a348e745ec20060da8e8f52950013e235ae91bc136be46",
+      "intelligent_adoption_start_line": 136,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-01",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-01.md",
+      "sha256": "1aa739fad48b8073a96ab3c7089b7f3dc6765af69e199455cce027725140a33c",
+      "intelligent_adoption_start_line": 133,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-02",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-02.md",
+      "sha256": "f3f5e82f56d2ebf644e6f6e0bb7f25ab1384eda5e7c1c3227dce6e54aa5daf43",
+      "intelligent_adoption_start_line": 137,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-03",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-03.md",
+      "sha256": "b42b6b461e1595132a99ed7a05a60d6a0eb38a829eba96031a933fca04ae82be",
+      "intelligent_adoption_start_line": 153,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-04",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-04.md",
+      "sha256": "872e7a8772c2015b9ba96f6920e31f09bc7661a49ec499184bc4844daf014900",
+      "intelligent_adoption_start_line": 137,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-05",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-05.md",
+      "sha256": "f960fe98c783e9d8249fe4b86812ba7c4308af4c6dd0f9599aa37e127f59f220",
+      "intelligent_adoption_start_line": 181,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-06",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-06.md",
+      "sha256": "b19883c6e3a1c6cc5f59060f9adf22dcc947708dc2590d3954ba1d4bc62b38a4",
+      "intelligent_adoption_start_line": 145,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-07",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-07.md",
+      "sha256": "b37c83ca9defab9d346274ec8f99e251f8a115e7b623914d2f47753470758914",
+      "intelligent_adoption_start_line": 125,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-08",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-08.md",
+      "sha256": "faf53e2e3cdf42083462af6f3e050009ae47bfaf2464df6db1914512fb2f2042",
+      "intelligent_adoption_start_line": 350,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-09",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-09.md",
+      "sha256": "aa5a7aeffd58dec6d38b23464f9b2c403731cb084baad2da9bc8831709cdb1e6",
+      "intelligent_adoption_start_line": 119,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-10",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-10.md",
+      "sha256": "e51064fab656d23c2c236259317193ae9e955214b7ab0708efee01523d113ab0",
+      "intelligent_adoption_start_line": 71,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "BMP-11",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/BMP-11.md",
+      "sha256": "9fa9077974f1b2ec62107d5d653d78189f240d7d1177a9874f7af6379d8c97fe",
+      "intelligent_adoption_start_line": 69,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-01",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-01.md",
+      "sha256": "40d3fe7dedc68b336a84bf68b842bd5df658e589c8e76874227508e68871ec3f",
+      "intelligent_adoption_start_line": 128,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-02",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-02.md",
+      "sha256": "48ef2df0a7e5b71134a719ba8b3111bd7996e5ae4d83d79fcd3d4d803f26e337",
+      "intelligent_adoption_start_line": 121,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-03",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-03.md",
+      "sha256": "17ceb43b813acf5284b0d0e03ad77f6fecb430351444556fbbcd139d2c366046",
+      "intelligent_adoption_start_line": 225,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-04",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-04.md",
+      "sha256": "b7ef07588946bc7e64c179d9e73bd7956c22c2495ace36bb5f8f19ed11642e02",
+      "intelligent_adoption_start_line": 132,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-05",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-05.md",
+      "sha256": "164ab4394ce31af8ff19cf5e3828f8be53ba519f162056f933167d160d7a20c8",
+      "intelligent_adoption_start_line": 131,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-06",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-06.md",
+      "sha256": "4598f7b0477986203f0ac77fa8b92b308f57769f5f0d4b2b9b5dfe8d5ef0f013",
+      "intelligent_adoption_start_line": 133,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-07",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-07.md",
+      "sha256": "cede9df90b2674fbf620f7b5ab1115dd30464128571389ade1c46ea15553c14b",
+      "intelligent_adoption_start_line": 124,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-08",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-08.md",
+      "sha256": "f3d5fb2100d2b782fdc8d9ccc135089e505e4d86e12c67c9d84017d0ce82efe4",
+      "intelligent_adoption_start_line": 95,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-09",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-09.md",
+      "sha256": "389e7ab07dd7269a6d35e4f9b97c278a120a63874d74cb9c3e41220a646f10d2",
+      "intelligent_adoption_start_line": 148,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "CTH-10",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/CTH-10.md",
+      "sha256": "1743bbfb4e4d8a2f688b501a2ec1222064ec854c137aec45018a31c0decf8d07",
+      "intelligent_adoption_start_line": 193,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SH-01",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SH-01.md",
+      "sha256": "0edade67f00c4a7deb886c05c73fdc8e75fe541610ac9e07918b9de7ecd38892",
+      "intelligent_adoption_start_line": 742,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SH-02",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SH-02.md",
+      "sha256": "da449172ea32481e40f65aecfd500a4ca91660343d7fcd0ab64aacfb5e95c0b6",
+      "intelligent_adoption_start_line": 206,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SH-03",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SH-03.md",
+      "sha256": "dd1b09ab30e4ea5eff58bbb2c85bb700f46a0b157c5a1575ac021f33dfa73f90",
+      "intelligent_adoption_start_line": 98,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SH-04",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SH-04.md",
+      "sha256": "9435cdcdcad81942b4a81d67378db4134d3b21ea53486a7ed5dd7f357cc8d07f",
+      "intelligent_adoption_start_line": 126,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SH-05",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SH-05.md",
+      "sha256": "80bc9f8b9679b8e1198ba31f11206d0ab5acaf1840438f1528e961add0d5170b",
+      "intelligent_adoption_start_line": 98,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SH-06",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SH-06.md",
+      "sha256": "70c3058054683683373be569fd00233ead4265721964ea358d56a81a8507e2ef",
+      "intelligent_adoption_start_line": 103,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-01",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-01.md",
+      "sha256": "fc0080b65aaf74186d89ee757b27cbc6ae2037e67fa9e674201a526df70bafe8",
+      "intelligent_adoption_start_line": 148,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-02",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-02.md",
+      "sha256": "a078cd9d33391d543ef841bfe478e14b5bc4ab51bf6d928c9ad5cb784c99005c",
+      "intelligent_adoption_start_line": 192,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-03",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-03.md",
+      "sha256": "7c8cb2edab8429e347519b9a512bf759e59fe6010a69b24545260f74d9325021",
+      "intelligent_adoption_start_line": 109,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-04",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-04.md",
+      "sha256": "bfe2fbb36c684d03b579c3deaee1665c710d6e1131f828f3e44e97ceb2a52903",
+      "intelligent_adoption_start_line": 179,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-05",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-05.md",
+      "sha256": "0427c83edb380e08fd8df2117e6b6386d7493245ea3ff44a3f386fd73f3544f2",
+      "intelligent_adoption_start_line": 213,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-06",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-06.md",
+      "sha256": "02d84c9e3ca31d3067a3c9f84ca3d41f6f16c80942b2fd3578be2121da347e6b",
+      "intelligent_adoption_start_line": 533,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-07",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-07.md",
+      "sha256": "9444805d30b3d58519450f71fc5a40bc932a25c30af63ed1c57b17922e328948",
+      "intelligent_adoption_start_line": 187,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    },
+    {
+      "screen": "SYS-08",
+      "path": "lumenis_working_20261017/source/contracts/experience/screen-specifications/SYS-08.md",
+      "sha256": "b6024b4415cd88461f58b91204bfeae2156c1d9b1efe12323b1b1e655a560dfe",
+      "intelligent_adoption_start_line": 156,
+      "reading_status": "README current intelligent-UI semantic row reviewed; full historical screen file not reread in this revision",
+      "historical_implementation_observations": "do not treat as current runtime proof",
+      "review_design": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md#44屏基线"
+    }
+  ]
+}

@@ -1,0 +1,807 @@
+{
+  "generated_at": "2026-10-17T15:07:33.025785+00:00",
+  "status": "entry/module inventory, NOT semantic 200+ requirement coverage",
+  "entries": [
+    {
+      "id": "spring",
+      "original_number": 1,
+      "title": "拿起一份资料",
+      "declaration_file": "src/app.mjs",
+      "line": 37,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "magnet",
+      "original_number": 2,
+      "title": "靠近，而后落定",
+      "declaration_file": "src/app.mjs",
+      "line": 38,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "inertia",
+      "original_number": 3,
+      "title": "抛出，也能接住",
+      "declaration_file": "src/app.mjs",
+      "line": 39,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "flip",
+      "original_number": 4,
+      "title": "翻到依据这一面",
+      "declaration_file": "src/app.mjs",
+      "line": 40,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "reveal",
+      "original_number": 5,
+      "title": "让新成果抵达",
+      "declaration_file": "src/app.mjs",
+      "line": 41,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "intelligent",
+      "original_number": 6,
+      "title": "内容决定界面",
+      "declaration_file": "src/app.mjs",
+      "line": 36,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "aigc",
+      "original_number": 7,
+      "title": "一张图，多种轻表达",
+      "declaration_file": "src/app.mjs",
+      "line": 42,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "optical",
+      "original_number": 8,
+      "title": "光感服务当前焦点",
+      "declaration_file": "src/app.mjs",
+      "line": 43,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "motion",
+      "original_number": 9,
+      "title": "每个变化都有原因",
+      "declaration_file": "src/studies.mjs",
+      "line": 4,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "trace",
+      "original_number": 10,
+      "title": "沿依据走，再回原处",
+      "declaration_file": "src/studies.mjs",
+      "line": 5,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "stream",
+      "original_number": 11,
+      "title": "陆续到达，也听你的",
+      "declaration_file": "src/studies.mjs",
+      "line": 6,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "revision",
+      "original_number": 12,
+      "title": "改一处，看清影响",
+      "declaration_file": "src/studies.mjs",
+      "line": 7,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "timeline",
+      "original_number": 13,
+      "title": "时间轴，听你的手",
+      "declaration_file": "src/studies.mjs",
+      "line": 8,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "tasks",
+      "original_number": 14,
+      "title": "两件事，不串线",
+      "declaration_file": "src/studies.mjs",
+      "line": 9,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "appearance",
+      "original_number": 15,
+      "title": "你的工作空间",
+      "declaration_file": "src/studies.mjs",
+      "line": 10,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "states",
+      "original_number": 16,
+      "title": "空缺，不会伪装成零",
+      "declaration_file": "src/more-studies.mjs",
+      "line": 6,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "comparison",
+      "original_number": 17,
+      "title": "比较，要先同口径",
+      "declaration_file": "src/more-studies.mjs",
+      "line": 7,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "intake",
+      "original_number": 18,
+      "title": "拿进来，自己看",
+      "declaration_file": "src/more-studies.mjs",
+      "line": 8,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "readaloud",
+      "original_number": 19,
+      "title": "文字，也可以听",
+      "declaration_file": "src/more-studies.mjs",
+      "line": 9,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "orbital",
+      "original_number": 20,
+      "title": "拨动，再聚焦",
+      "declaration_file": "src/more-studies.mjs",
+      "line": 10,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "provenance",
+      "original_number": 21,
+      "title": "建议，最后由你决定",
+      "declaration_file": "src/more-studies.mjs",
+      "line": 4,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "presentation",
+      "original_number": 22,
+      "title": "界面提议，也要可拒绝",
+      "declaration_file": "src/more-studies.mjs",
+      "line": 5,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "recovery",
+      "original_number": 23,
+      "title": "恢复，也要有边界",
+      "declaration_file": "src/recovery-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "conflict",
+      "original_number": 24,
+      "title": "两份修改，都留下",
+      "declaration_file": "src/version-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "commands",
+      "original_number": 25,
+      "title": "不离开手中的工作",
+      "declaration_file": "src/command-study.mjs",
+      "line": 3,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "actiongate",
+      "original_number": 26,
+      "title": "重要操作，先看清楚",
+      "declaration_file": "src/gate-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "waveform",
+      "original_number": 27,
+      "title": "看得见，也能试听",
+      "declaration_file": "src/audio-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "schedule",
+      "original_number": 28,
+      "title": "把计划移到合适的一天",
+      "declaration_file": "src/schedule-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "context",
+      "original_number": 29,
+      "title": "选一个视角，不丢原工作",
+      "declaration_file": "src/context-study.mjs",
+      "line": 3,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "navigation",
+      "original_number": 30,
+      "title": "换个工作，草稿还在",
+      "declaration_file": "src/navigation-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "relations",
+      "original_number": 31,
+      "title": "沿关系看依据",
+      "declaration_file": "src/relations-study.mjs",
+      "line": 3,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "wordedit",
+      "original_number": 32,
+      "title": "改文字，还是剪掉这一段",
+      "declaration_file": "src/word-study.mjs",
+      "line": 4,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "objectmenu",
+      "original_number": 33,
+      "title": "动作，围绕手里的对象",
+      "declaration_file": "src/menu-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "chapters",
+      "original_number": 34,
+      "title": "按章节听，停在准确的位置",
+      "declaration_file": "src/chapter-study.mjs",
+      "line": 7,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "batchreview",
+      "original_number": 35,
+      "title": "逐份审阅，保留每一次选择",
+      "declaration_file": "src/batch-study.mjs",
+      "line": 3,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "versiontree",
+      "original_number": 36,
+      "title": "旧成果，还在原来的版本",
+      "declaration_file": "src/tree-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "riskreview",
+      "original_number": 37,
+      "title": "先核查，再留下自己的判断",
+      "declaration_file": "src/risk-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "propagation",
+      "original_number": 38,
+      "title": "传播到哪里，哪里仍是缺口",
+      "declaration_file": "src/propagation-study.mjs",
+      "line": 3,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "physicaldrawer",
+      "original_number": 39,
+      "title": "拉开来源，文稿还在",
+      "declaration_file": "src/drawer-study.mjs",
+      "line": 3,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "resumablefile",
+      "original_number": 69,
+      "title": "中断后，只补上真正缺失的字节",
+      "declaration_file": "src/resumable-study.mjs",
+      "line": 4,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "topicplanning",
+      "original_number": 70,
+      "title": "先形成选题，再决定怎样创作",
+      "declaration_file": "src/topic-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "researchlearning",
+      "original_number": 71,
+      "title": "读到依据，再决定是否可迁移",
+      "declaration_file": "src/research-study.mjs",
+      "line": 2,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "aggregatefeed",
+      "original_number": 72,
+      "title": "同一主体，连续读完各平台",
+      "declaration_file": "src/aggregate-study.mjs",
+      "line": 3,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    },
+    {
+      "id": "savedreport",
+      "original_number": 73,
+      "title": "写成文稿，再放心继续",
+      "declaration_file": "src/saved-report-study.mjs",
+      "line": 4,
+      "browser": "PENDING",
+      "backend": "UNBOUND"
+    }
+  ],
+  "entry_count": 44,
+  "original_numbers": "01–39 and69 recovered/corrected;70–73 NEW source-backed implementations;40–68 NOT restored",
+  "full_regression_checkpoint": 498,
+  "regression": {
+    "pass": 498,
+    "fail": 0,
+    "skipped": 0,
+    "all_passed": true
+  },
+  "modules": [
+    {
+      "module": "action-gate.mjs",
+      "direct_test_imports": [
+        "tests/recovered-action-contracts.test.mjs"
+      ]
+    },
+    {
+      "module": "aggregate-feed.mjs",
+      "direct_test_imports": [
+        "tests/aggregate-feed.test.mjs"
+      ]
+    },
+    {
+      "module": "aggregate-study.mjs",
+      "direct_test_imports": [
+        "tests/aggregate-adapter.test.mjs",
+        "tests/aggregate-pages-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "app.mjs",
+      "direct_test_imports": [
+        "tests/artifact.test.mjs"
+      ]
+    },
+    {
+      "module": "appearance-preferences.mjs",
+      "direct_test_imports": [
+        "tests/appearance-preferences.test.mjs"
+      ]
+    },
+    {
+      "module": "audio-signal.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "audio-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "batch-review.mjs",
+      "direct_test_imports": [
+        "tests/batch-recovery.test.mjs"
+      ]
+    },
+    {
+      "module": "batch-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "chapter-study.mjs",
+      "direct_test_imports": [
+        "tests/chapter-route-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "command-palette.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "command-study.mjs",
+      "direct_test_imports": [
+        "tests/command-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "content-language.mjs",
+      "direct_test_imports": [
+        "tests/content-language.test.mjs",
+        "tests/content-selection-index.test.mjs",
+        "tests/content-selection.test.mjs",
+        "tests/resumable-file.test.mjs"
+      ]
+    },
+    {
+      "module": "context-selection.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "context-study.mjs",
+      "direct_test_imports": [
+        "tests/context-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "contracts.mjs",
+      "direct_test_imports": [
+        "tests/contracts.test.mjs",
+        "tests/proposal-safety.test.mjs",
+        "tests/recovery-stream-regression.test.mjs",
+        "tests/stream-safety.test.mjs"
+      ]
+    },
+    {
+      "module": "direct-input.mjs",
+      "direct_test_imports": [
+        "tests/direct-input.test.mjs",
+        "tests/pointer-ownership.test.mjs"
+      ]
+    },
+    {
+      "module": "drawer-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "experience-policy.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "export-verification.mjs",
+      "direct_test_imports": [
+        "tests/export-verification.test.mjs"
+      ]
+    },
+    {
+      "module": "feed-pages.mjs",
+      "direct_test_imports": [
+        "tests/feed-pages.test.mjs"
+      ]
+    },
+    {
+      "module": "file-preferences.mjs",
+      "direct_test_imports": [
+        "tests/file-preferences.test.mjs"
+      ]
+    },
+    {
+      "module": "gate-study.mjs",
+      "direct_test_imports": [
+        "tests/gate-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "intelligent-study.mjs",
+      "direct_test_imports": [
+        "tests/intelligent-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "local-persistence.mjs",
+      "direct_test_imports": [
+        "tests/local-persistence.test.mjs"
+      ]
+    },
+    {
+      "module": "manuscript-outline-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "manuscript-structure.mjs",
+      "direct_test_imports": [
+        "tests/manuscript-structure.test.mjs"
+      ]
+    },
+    {
+      "module": "media-chapters.mjs",
+      "direct_test_imports": [
+        "tests/remaining-state-contracts.test.mjs"
+      ]
+    },
+    {
+      "module": "menu-study.mjs",
+      "direct_test_imports": [
+        "tests/menu-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "more-studies.mjs",
+      "direct_test_imports": [
+        "tests/artifact.test.mjs",
+        "tests/intake-race.test.mjs"
+      ]
+    },
+    {
+      "module": "navigation-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "navigation.mjs",
+      "direct_test_imports": [
+        "tests/review-session.test.mjs"
+      ]
+    },
+    {
+      "module": "object-menu.mjs",
+      "direct_test_imports": [
+        "tests/object-menu.test.mjs"
+      ]
+    },
+    {
+      "module": "physical-drawer.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "physics.mjs",
+      "direct_test_imports": [
+        "tests/physics.test.mjs"
+      ]
+    },
+    {
+      "module": "propagation-review.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "propagation-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "proposal-study.mjs",
+      "direct_test_imports": [
+        "tests/proposal-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "recovery-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "recovery.mjs",
+      "direct_test_imports": [
+        "tests/recovery-stream-regression.test.mjs"
+      ]
+    },
+    {
+      "module": "reference-draft-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "reference-draft.mjs",
+      "direct_test_imports": [
+        "tests/reference-draft.test.mjs"
+      ]
+    },
+    {
+      "module": "relations-study.mjs",
+      "direct_test_imports": [
+        "tests/motion-lifecycle.test.mjs"
+      ]
+    },
+    {
+      "module": "relations.mjs",
+      "direct_test_imports": [
+        "tests/relation-evidence.test.mjs"
+      ]
+    },
+    {
+      "module": "research-learning.mjs",
+      "direct_test_imports": [
+        "tests/research-learning.test.mjs"
+      ]
+    },
+    {
+      "module": "research-study.mjs",
+      "direct_test_imports": [
+        "tests/research-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "resumable-file.mjs",
+      "direct_test_imports": [
+        "tests/resumable-file.test.mjs"
+      ]
+    },
+    {
+      "module": "resumable-study.mjs",
+      "direct_test_imports": [
+        "tests/resumable-bidi-adapter.test.mjs",
+        "tests/resumable-file.test.mjs"
+      ]
+    },
+    {
+      "module": "review-session.mjs",
+      "direct_test_imports": [
+        "tests/aggregate-adapter.test.mjs",
+        "tests/chapter-route-adapter.test.mjs",
+        "tests/command-adapter.test.mjs",
+        "tests/context-adapter.test.mjs",
+        "tests/gate-adapter.test.mjs",
+        "tests/intelligent-adapter.test.mjs",
+        "tests/proposal-adapter.test.mjs",
+        "tests/research-adapter.test.mjs",
+        "tests/review-session.test.mjs",
+        "tests/revision-route-adapter.test.mjs",
+        "tests/risk-adapter.test.mjs",
+        "tests/saved-report-adapter.test.mjs",
+        "tests/stream-adapter.test.mjs",
+        "tests/topic-adapter.test.mjs",
+        "tests/version-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "risk-review.mjs",
+      "direct_test_imports": [
+        "tests/remaining-state-contracts.test.mjs",
+        "tests/risk-bounds.test.mjs"
+      ]
+    },
+    {
+      "module": "risk-study.mjs",
+      "direct_test_imports": [
+        "tests/risk-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "route-access.mjs",
+      "direct_test_imports": [
+        "tests/route-access.test.mjs"
+      ]
+    },
+    {
+      "module": "saved-report-study.mjs",
+      "direct_test_imports": [
+        "tests/saved-report-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "saved-report.mjs",
+      "direct_test_imports": [
+        "tests/saved-report.test.mjs"
+      ]
+    },
+    {
+      "module": "schedule-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "schedule.mjs",
+      "direct_test_imports": [
+        "tests/recovered-action-contracts.test.mjs"
+      ]
+    },
+    {
+      "module": "stream-study.mjs",
+      "direct_test_imports": [
+        "tests/stream-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "studies.mjs",
+      "direct_test_imports": [
+        "tests/appearance-adapter.test.mjs",
+        "tests/revision-route-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "study-source.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "topic-planning.mjs",
+      "direct_test_imports": [
+        "tests/topic-planning.test.mjs"
+      ]
+    },
+    {
+      "module": "topic-study.mjs",
+      "direct_test_imports": [
+        "tests/topic-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "tree-study.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "version-conflict.mjs",
+      "direct_test_imports": [
+        "tests/recovered-action-contracts.test.mjs",
+        "tests/version-safety.test.mjs"
+      ]
+    },
+    {
+      "module": "version-study.mjs",
+      "direct_test_imports": [
+        "tests/version-adapter.test.mjs"
+      ]
+    },
+    {
+      "module": "version-tree.mjs",
+      "direct_test_imports": [
+        "tests/remaining-state-contracts.test.mjs"
+      ]
+    },
+    {
+      "module": "word-edit.mjs",
+      "direct_test_imports": []
+    },
+    {
+      "module": "word-study.mjs",
+      "direct_test_imports": [
+        "tests/motion-lifecycle.test.mjs"
+      ]
+    }
+  ],
+  "direct_import_is_not_complete_behavior_coverage": true
+}

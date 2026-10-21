@@ -265,3 +265,12 @@ SYS-05原外观/动态设置增加可发现的等待动效开关，服从系统�
 官网只为真实页面资源/用户提交的等待或明确标示的演示呈现；Web保浏览器返回和慢网，Windows/macOS各验窗口遮挡/休眠/冷开，iOS紧邻当前对象显示小动作且不遮键盘/主要控件。布局和效果可由界面自身AIGC按真实任务、可用表现与设备提出原创可编辑方案，但事实字段/权限/取消仍由原控件承接；用户可锁定/撤销、使用稳定基础布局。加载小动画既不替代原200以上交互/物理要求，也不等同界面本身AIGC能力已经实现。
 
 采用价值以减少不确定、少误点和少返工验证：记录首个可操作结果时间、等待期间重复提交/误取消、关键控件可达性、帧/能耗及无障碍表现；同任务同设备比较开/关动效，未测不编加速或节省数字。现只交原Owner事件与前端合同，实际可爱动效、偏好持久化和四端呈现由本地构建验收。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/appearance-preferences.mjs、file-preferences.mjs、local-persistence.mjs、experience-policy.mjs、physics.mjs、physical-drawer.mjs、drawer-study.mjs、app.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+外观保持 `app/lib/features/system/sys05/sys05_appearance_controller.dart` 的现有偏好键、串行写入及原产品选项，不复制审核包的localStorage键、默认色或新增平行设置库。当前控制器update会持久化；审核包“预览后显式保存”不能被文档当作当前产品已存在行为。凡界面提供预览，必须与已保存状态分开；写入后精确读回，异常标“未确认保存”并保工作值，不能推断一定未写入或盲重试。重置只清本设置已声明键，逐键核读回并报告部分失败；壁纸来源与实际持久方式按现有Owner，不把演示内存URL写入产品。
+
+抽屉/可拖对象保pointer所有权、重抓位置速度连续、取消/失焦/离开/尺寸变化失效旧回调；CSS px与Flutter logical px和秒制速度显式换算。媒体播放头不加弹簧。现有 `app/lib/core/generated_result_reveal.dart` 才是Flutter揭示Owner：新结果读回、稳定已注册字体与真实布局后一次播放，跳过/字体未就绪/换版取消不阻内容；不得以JS离线动画替换它。复用 `app/test/core/generated_result_reveal_test.dart` 并补对应真机操作，demo参数/单帧图不是30/60/120Hz及无障碍通过。

@@ -1,0 +1,35 @@
+✔ review application does not call backend/model or remote scripts (1.241074ms)
+✔ eight distinct local studies, not product route reconstruction (0.354548ms)
+✔ readback reveal has cancellation and no reopen replay (0.267101ms)
+✔ all view and logic modules remain local and exclude executable model content (3.226846ms)
+✔ reveal preference is independent; local voices only and file input is bounded (0.460448ms)
+✔ study hashes never collide with persistent control IDs (1.425035ms)
+✔ stream rejects old run, duplicate revision, malformed block and preserves manual edits (2.470151ms)
+✔ revision is proposed before explicit adoption, keeps note, undo exact (0.39037ms)
+✔ pan never changes playhead/clips, seek never pans, move undo and zoom anchor (0.509639ms)
+✔ task result dedup, cancel rejects late result, approval survives quiet (0.577041ms)
+✔ source lists sixteen motion words, complete cannot precede actual progress (0.326565ms)
+✔ comparison refuses cross-currency or period and never fills missing with zero (0.390019ms)
+✔ orbit produces bounded real positions and layout depends on angle (0.762829ms)
+✔ local intake calculates actual text counts without inventing publication time (0.550851ms)
+✔ typed proposal cannot invent component, code, permission or action (0.356489ms)
+✔ AI suggestion is inspectable, rejectable, adoptable and undoable with truthful origin (0.464645ms)
+✔ permission denial precedes malformed or unsupported presentation (0.171667ms)
+✔ missing comparison row is not a comparable numeric observation (0.116505ms)
+✔ stable grab anchor, logical bounds, measured and bounded release velocity (2.083582ms)
+✔ mass, stiffness and damping measurably change actual trajectories (4.617285ms)
+✔ 30/60/120Hz converge; finite bounded dropped frames (3.053905ms)
+✔ parameter ranges reject NaN and unstable input (0.509654ms)
+✔ magnet radius, strength and release threshold control capture/force (0.302208ms)
+✔ hysteresis retains captured target until exit boundary (0.154004ms)
+✔ inertia responds to velocity friction and restitution (0.270579ms)
+✔ inertia converges at all measured step rates (0.873442ms)
+✔ task view selection no model, deny clears view and no HTML execution (0.69915ms)
+ℹ tests 27
+ℹ suites 0
+ℹ pass 27
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 159.721658

@@ -93,3 +93,12 @@ Current decision: `IMPLEMENTED / BLOCKED_FOR_BRANDFOCUS_RISK`; BMP risk owner mu
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/risk-review.mjs、risk-study.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+风险详情的来源事实、人工判断、处置执行结果分别呈现；severity来自原Owner，未知不补等级。记录判断前须有理由、当前对象/sourceVersion与确认预览；改理由/决定/对象后旧预览失效。未提交判断切换对象需明确保留或取消，不能串到下一线索。来源撤回保历史并标受影响，不静默把旧决定改成新事实；撤权不展示历史内容。
+
+沿 `app/lib/features/bmp10/` 与原风险Owner接线，demo.records及NOT_OBSERVED不能变处置回执。验收重复记录幂等、确认期间换版/撤权、单对象草稿隔离和容量失败保稿，未执行行动不写“已解决”。

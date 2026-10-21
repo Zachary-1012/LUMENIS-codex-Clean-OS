@@ -1,0 +1,34 @@
+✔ mounted end-to-end author save/revise/history/adopt/review/export uses exact version and pure text (24.352169ms)
+✔ reopen requires explicit keep/replace; Escape restores focus and never overwrites draft (5.562421ms)
+✔ late save preserves live editing and selection; failure preserves draft and retries same request (4.739842ms)
+✔ dispose invalidates late UI without claiming storage undo; session returns memory selection without persistence (3.674795ms)
+✔ permission and scope clear visible content, review buffers and prepared exports (4.809138ms)
+✔ explicit cancel makes a delayed receipt inert, and corrupt reopen never replaces editor (3.054426ms)
+✔ download is a second explicit action and sends exact prepared bytes, never claims disk delivery (5.991663ms)
+✔ write and export fixture gates are independent from reading and controls live in settings (2.792222ms)
+✔ changing format during preparation discards late bytes; denied download cannot be forced by handler (5.928683ms)
+✔ editing after destructive preview cancels it without stealing editor focus (5.303581ms)
+✔ silent input change also fences historical adoption at confirmation (1.525603ms)
+✔ reopen replacement cannot discard edits made after preview (1.933886ms)
+✔ chapter move is previewed, explicitly adopted, saved as revision and exactly undoable (5.869203ms)
+✔ later human edits invalidate a chapter proposal and do not get overwritten (0.669978ms)
+✔ changed outline selection invalidates previous preview (0.521912ms)
+✔ unsupported Markdown has an honest fallback and no rewrite (0.482372ms)
+✔ permission revocation clears outline preview and cannot auto-adopt after regrant (0.974909ms)
+✔ disposed outline action does not update the retained controller (0.582364ms)
+✔ reference notebook saves/reopens exact selected source without entering report body or version (18.270637ms)
+✔ source replacement and withdrawal preserve old exact quote with explicit status (2.813297ms)
+✔ reference route return preserves unsaved notebook, source selection and unapplied note (2.807343ms)
+✔ revoke clears reference presentation and does not revive notebook after regrant (1.065077ms)
+✔ invalid source input remains visible and never creates a partial source version (0.572922ms)
+✔ corrupt local reference journal cannot replace current source (1.625708ms)
+✔ scope change while awaiting storage baseline prevents writing into old scope (0.927813ms)
+✔ typing after reference reopen preview cancels its pending replacement (1.463807ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 231.508102

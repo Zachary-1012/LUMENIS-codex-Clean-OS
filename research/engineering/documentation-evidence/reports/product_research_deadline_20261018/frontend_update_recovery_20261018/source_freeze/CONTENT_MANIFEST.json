@@ -1,0 +1,311 @@
+{
+  "kind": "REVIEW_DESIGN_CONTENT_NOT_PRODUCT_IMPLEMENTATION_ACCEPTANCE",
+  "created_utc": "20261017T155538Z",
+  "pdf_order": [
+    "00_HOW_TO_REVIEW.md",
+    "01_CHANGES_FOR_REVIEW.md",
+    "02_WORKSPACE_AND_DEFAULTS.md",
+    "03_JOURNEYS_01_08.md",
+    "04_JOURNEYS_09_17.md",
+    "05_JOURNEYS_18_29.md",
+    "06_CRITICAL_STEP_EXPANSIONS.md",
+    "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md",
+    "08_CREATION_CONTINUITY_AND_ACCEPTANCE.md",
+    "09_SPATIAL_REVIEW_PLATES.md",
+    "10_RESEARCH_DECISIONS_AND_OPEN_ITEMS.md",
+    "15_REUSABLE_LOGIC_AND_DEFAULT_SELECTION.md",
+    "16_IMPLEMENTATION_HANDOFF_INDEX.md",
+    "17_DESIGN_SEMANTIC_DECISIONS.md",
+    "14_INTERACTION_CONTRACT_REVIEW.md",
+    "11_COMPLETE_REVIEW_STEPS.md",
+    "12_CURRENT_REQUIREMENTS_G.md",
+    "13_MEDIA_COMPLETE_REQUIREMENTS.md"
+  ],
+  "main": "4dab98ed6357133da9307de846180ed4f7bba5f5",
+  "files": [
+    {
+      "path": "00_HOW_TO_REVIEW.md",
+      "bytes": 1859,
+      "sha256": "74b4fa26b656ed21baa7b980ec1e8cdead6dc8ff3eaf90db4ad54abddc1e9c4a"
+    },
+    {
+      "path": "01_CHANGES_FOR_REVIEW.md",
+      "bytes": 14055,
+      "sha256": "b1473e578fde984cc79e628982d369f9460e1c71dacd4bc52a533b8d56fd5e0a"
+    },
+    {
+      "path": "02_WORKSPACE_AND_DEFAULTS.md",
+      "bytes": 10462,
+      "sha256": "ba444b0bc34db335e8cb3a3b13bd097d29c4683912e24973bdd70f625c2105e4"
+    },
+    {
+      "path": "03_JOURNEYS_01_08.md",
+      "bytes": 9972,
+      "sha256": "b467998e80b9a6ece612b7fcc66637a2dcb17fc430fe5ae657a6436f42610198"
+    },
+    {
+      "path": "04_JOURNEYS_09_17.md",
+      "bytes": 10293,
+      "sha256": "7ee6c9dbcba4efacd8c9edfae9fa42bcded9eb16217067953cec2613c64c3324"
+    },
+    {
+      "path": "05_JOURNEYS_18_29.md",
+      "bytes": 15605,
+      "sha256": "cfa259e874d15b3b135dcf0c187fe7efe6daf2fbf6f0953958d020b6f6527622"
+    },
+    {
+      "path": "06_CRITICAL_STEP_EXPANSIONS.md",
+      "bytes": 9369,
+      "sha256": "cd2f8fe6498e443f850bc75b73c8890237688fb8d02fd4400446f5dcd61f9596"
+    },
+    {
+      "path": "07_FRONTEND_AIGC_AND_SPATIAL_GRAMMAR.md",
+      "bytes": 14147,
+      "sha256": "8b809a0d86a1e1e5a8d8482dd042613a7318a8d8ae0daa085cf3474f72cab957"
+    },
+    {
+      "path": "08_CREATION_CONTINUITY_AND_ACCEPTANCE.md",
+      "bytes": 7522,
+      "sha256": "5126bb646cf4f2055c95cb332ddd138b9b6238b57869d827a4a52270d86587aa"
+    },
+    {
+      "path": "09_SPATIAL_REVIEW_PLATES.md",
+      "bytes": 3267,
+      "sha256": "1ffd31460dbc25f37250700973fd1edd253d1575934374946e5122c46552393f"
+    },
+    {
+      "path": "10_RESEARCH_DECISIONS_AND_OPEN_ITEMS.md",
+      "bytes": 8433,
+      "sha256": "13ba604fb4c36ee362fe160c0df4fef97c5c0944eb7aeef67e672ff43654723f"
+    },
+    {
+      "path": "11_COMPLETE_REVIEW_STEPS.md",
+      "bytes": 32927,
+      "sha256": "a163a78b031421b4cf3ce52c43d950ab0e4ac06c7150d1a09ffadbd51fc826f7"
+    },
+    {
+      "path": "12_CURRENT_REQUIREMENTS_G.md",
+      "bytes": 88596,
+      "sha256": "6d8fb81905a138cbeb4366a01c808156a0e66527d748f07d5208291633b0b38f"
+    },
+    {
+      "path": "13_MEDIA_COMPLETE_REQUIREMENTS.md",
+      "bytes": 10008,
+      "sha256": "f43c0f1d67acbc0d3e45ee36debf5af17a0ec3403811514d6eb2f54c9fd65323"
+    },
+    {
+      "path": "14_INTERACTION_CONTRACT_REVIEW.md",
+      "bytes": 17449,
+      "sha256": "a6b0fa23616d8794adcfa884544900bce0e8c2b8fbfd9fbc49c0e56e29e9aadf"
+    },
+    {
+      "path": "15_REUSABLE_LOGIC_AND_DEFAULT_SELECTION.md",
+      "bytes": 5453,
+      "sha256": "512fab8d788f98158470d63ccc4a4b792594ad2c050e5c08a49919d75deae57b"
+    },
+    {
+      "path": "16_IMPLEMENTATION_HANDOFF_INDEX.md",
+      "bytes": 4215,
+      "sha256": "53ed67404ea7a1ebcb57b7e94f779a5f0fc03ef6c340cfbdf89f365a8f3fbf9e"
+    },
+    {
+      "path": "17_DESIGN_SEMANTIC_DECISIONS.md",
+      "bytes": 49010,
+      "sha256": "e4d1a01b15841734578d98d6d6507683d8d2a42d3c2aa7291e0f636b7a71a833"
+    },
+    {
+      "path": "CONTENT_STRUCTURE_CHECK.json",
+      "bytes": 544,
+      "sha256": "f58515627767109c0fd5d60fdf2e98f47658f56f97e8a13c48462d34f7c5de7c"
+    },
+    {
+      "path": "CURRENT_SOURCE_MANIFEST.json",
+      "bytes": 2166,
+      "sha256": "c41662d3dd671a146f08760cb18e2b5eb8ea501f50487179af9e9ad45d6d505e"
+    },
+    {
+      "path": "DELIVERY_STRUCTURE.md",
+      "bytes": 1449,
+      "sha256": "977de062cda0114466d23fe10a7ff2ff3b12bd613edabeb85eed3135132e23f6"
+    },
+    {
+      "path": "DESIGN_SEMANTIC_DECISIONS.json",
+      "bytes": 422407,
+      "sha256": "ae3aa42ab25f4044cd6a72012d047c20c769f694b7e51c8f2574ee135b342f44"
+    },
+    {
+      "path": "INTERACTION_CONTRACTS.json",
+      "bytes": 580727,
+      "sha256": "6ebe52ceb9c759e84abbde0891ea951f27b5454102f16bf46b16e71e1e28eff5"
+    },
+    {
+      "path": "SCREEN_SOURCE_INDEX.json",
+      "bytes": 25276,
+      "sha256": "35ca3c0e1e6c2081ee3c5ed77d19b25727337b807b08b98c0866450adc658e7e"
+    },
+    {
+      "path": "SOURCE_ROW_READBACK.json",
+      "bytes": 15935,
+      "sha256": "14be7e3b1988ba4e5aeea24fbd136fc0b28df86ca89d8cd2a40e6ee38034711e"
+    },
+    {
+      "path": "SPATIAL_ACCESSIBILITY_RESEARCH.md",
+      "bytes": 3672,
+      "sha256": "0f5bbd5d330099e04249d29cf00f0e278c203bc26b5cae3c12ead0be7e1eae0a"
+    },
+    {
+      "path": "draw_review_figures.py",
+      "bytes": 8215,
+      "sha256": "7de967ab553e83258684027db673b1ba1d24975d3c01569e688eb49f84d6f71a"
+    },
+    {
+      "path": "figures/VISUAL_REVIEW.json",
+      "bytes": 980,
+      "sha256": "d1013564a2cf01b74ca6c5fa226be9c985a968d6e6009a12ac5b21b3873bbfa3"
+    },
+    {
+      "path": "figures/ai.pdf",
+      "bytes": 288509,
+      "sha256": "2d07ff7cc8fd3879ffec02b5995a733ae87b1f3180f5eaa6b5310e2f2fde29bf"
+    },
+    {
+      "path": "figures/ai.png",
+      "bytes": 152770,
+      "sha256": "cb739f1936676384dc1f6ba6238f428884ef4525d4f7b975ea46ce24a9d174a5",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/ai.png",
+      "repository_bytes": 152770,
+      "repository_sha256": "cb739f1936676384dc1f6ba6238f428884ef4525d4f7b975ea46ce24a9d174a5",
+      "repository_disposition": "reused_existing_identical_asset"
+    },
+    {
+      "path": "figures/ai.svg",
+      "bytes": 5403,
+      "sha256": "43c0bc6b4bddafacb074e408923c0f1ee01a989c4bf39d07967c2d23a32b13a4"
+    },
+    {
+      "path": "figures/bmp.pdf",
+      "bytes": 285059,
+      "sha256": "152b5a87ab51280f0f1e00f5761a94b9504bf8f95aae9dda5cafa2aa6f3e846a"
+    },
+    {
+      "path": "figures/bmp.png",
+      "bytes": 144354,
+      "sha256": "218bdfceea930bd3bf82f38b5116a95467bb64ac00d3357994ff627e3b3bc11c",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/bmp.png",
+      "repository_bytes": 144354,
+      "repository_sha256": "218bdfceea930bd3bf82f38b5116a95467bb64ac00d3357994ff627e3b3bc11c",
+      "repository_disposition": "reused_existing_identical_asset"
+    },
+    {
+      "path": "figures/bmp.svg",
+      "bytes": 6381,
+      "sha256": "702d3e6bf59fba52046506d8bb0cb21d53b416cd4e8a2828003ea5ebc0968da4"
+    },
+    {
+      "path": "figures/cth.pdf",
+      "bytes": 280249,
+      "sha256": "7941af720549083b021d846cac22e98c95d9ce8fea10d6dea00b0928eac0f727"
+    },
+    {
+      "path": "figures/cth.png",
+      "bytes": 133539,
+      "sha256": "9da29edc33d1000143ab40c593dbb89a5d12e4ede5b99297ed8acacec2c41180",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/cth.png",
+      "repository_bytes": 133539,
+      "repository_sha256": "9da29edc33d1000143ab40c593dbb89a5d12e4ede5b99297ed8acacec2c41180",
+      "repository_disposition": "reused_existing_identical_asset"
+    },
+    {
+      "path": "figures/cth.svg",
+      "bytes": 4853,
+      "sha256": "8c62fdea25288ff3cc1e7d57ccf759a9cfa4f5abcb613800017006c6021c3ce2"
+    },
+    {
+      "path": "figures/manifest.json",
+      "bytes": 954,
+      "sha256": "f4191c7ca6a8679bfa8997585b601d0f6e0d9c54d5fc3ac0ed65e9cf0ddf9e78"
+    },
+    {
+      "path": "figures/media.pdf",
+      "bytes": 285217,
+      "sha256": "4ad9065d5694b870a8ed2b1831669f11b2473ba4da8f2a18ac02c2212485e968"
+    },
+    {
+      "path": "figures/media.png",
+      "bytes": 150500,
+      "sha256": "5700c279fff4c2d653bea33411f11e03d7c36f003d1d18b11c8dc6d221b6343c",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/media.png",
+      "repository_bytes": 150500,
+      "repository_sha256": "5700c279fff4c2d653bea33411f11e03d7c36f003d1d18b11c8dc6d221b6343c",
+      "repository_disposition": "reused_existing_identical_asset"
+    },
+    {
+      "path": "figures/media.svg",
+      "bytes": 5855,
+      "sha256": "b1d619481529505731a3b5de105fc3a319449f78197b7354dc4412d342fab817"
+    },
+    {
+      "path": "figures/research.pdf",
+      "bytes": 282564,
+      "sha256": "d7201f9b195407df1530710350a4e6ea2834368ea6309213b3c5cf1ce1fdfef8"
+    },
+    {
+      "path": "figures/research.png",
+      "bytes": 139772,
+      "sha256": "0391227c9cbff2407fc7c6bbd187dfdd394c0490c26fb7330266577c0a9ba6eb",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/research.png",
+      "repository_bytes": 139772,
+      "repository_sha256": "0391227c9cbff2407fc7c6bbd187dfdd394c0490c26fb7330266577c0a9ba6eb",
+      "repository_disposition": "reused_existing_identical_asset"
+    },
+    {
+      "path": "figures/research.svg",
+      "bytes": 4952,
+      "sha256": "bdf43ac11c4e49d6aed435414fa2ba57d1d15ab408ce1aea90fb107a77a6b915"
+    },
+    {
+      "path": "figures/system.pdf",
+      "bytes": 288861,
+      "sha256": "d101527c77fbf2e02191a257fb4b13d457c248c7c7e735254d7b880e8f436498"
+    },
+    {
+      "path": "figures/system.png",
+      "bytes": 154951,
+      "sha256": "b0de3c6b886c5ae4321e0294a8d5233084a299a544d759b7661f1ac948d0b230",
+      "repository_path": "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/figures/v010/system.png",
+      "repository_bytes": 154951,
+      "repository_sha256": "b0de3c6b886c5ae4321e0294a8d5233084a299a544d759b7661f1ac948d0b230",
+      "repository_disposition": "reused_existing_identical_asset"
+    },
+    {
+      "path": "figures/system.svg",
+      "bytes": 5121,
+      "sha256": "dae0a703b60740cbc69b037c08e814c9fdf34d71659896a66dd04db88f8443f3"
+    },
+    {
+      "path": "freeze_content.py",
+      "bytes": 1396,
+      "sha256": "af0d969954af53cda4f25e9f220aa67e8e8ec513c0e9a8a1ee5a0da106df88d0"
+    },
+    {
+      "path": "history/CANDIDATE_CORE_FULL_PRESERVED.md",
+      "bytes": 50697,
+      "sha256": "98ccf4dee990b44fd5de13950ba9ed95d6138497a92777d6d4d08c1589913bf0"
+    },
+    {
+      "path": "history/V1_17_DESIGN_SEMANTIC_DECISIONS.md",
+      "bytes": 21373,
+      "sha256": "9daa2af72793ac86666be545306e803c95ba47e9f8060726621e62fb6afab95a"
+    },
+    {
+      "path": "history/V1_DESIGN_SEMANTIC_DECISIONS.json",
+      "bytes": 260380,
+      "sha256": "114bdf0719dc733cdbc01f6cb8a33d3ce8d63008a325606d5ae24941e441aca2"
+    },
+    {
+      "path": "interaction_names_zh.txt",
+      "bytes": 4401,
+      "sha256": "6bcbc21ef800b9b81cc9229227f7eedfaae4e8ac36f38b05f34d717d340e81d1"
+    }
+  ]
+}

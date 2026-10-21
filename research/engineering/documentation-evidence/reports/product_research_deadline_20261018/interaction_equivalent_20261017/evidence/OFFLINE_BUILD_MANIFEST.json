@@ -1,0 +1,644 @@
+{
+  "type": "NEW_OFFLINE_BUILD_FROM_WORKING_SOURCE",
+  "entry": "app.mjs",
+  "modules": [
+    {
+      "name": "physics.mjs",
+      "exports": [
+        "VERSION",
+        "defaults",
+        "parameters",
+        "spring",
+        "inertia",
+        "magnet",
+        "chooseUI"
+      ],
+      "sha256": "1073ed6af5bed67b1d46f16d1d34c35df74afc06e82e06565f4cfefa45db48b1"
+    },
+    {
+      "name": "intelligent-study.mjs",
+      "exports": [
+        "createIntelligentStudy"
+      ],
+      "sha256": "1ae7a1661127dc9b628b8f22ac5f07d10b41f64d006e12a50ee036b49bdb4ca6"
+    },
+    {
+      "name": "content-language.mjs",
+      "exports": [
+        "CONTENT_LANGUAGE_VERSION",
+        "UI_LANGUAGES",
+        "CONTENT_LANGUAGES",
+        "CONTENT_TEXT_LIMIT",
+        "contentDiagnostics",
+        "contentExcerpt",
+        "createContentSelectionIndex",
+        "contentSelectionRange"
+      ],
+      "sha256": "e2f7c59b33df81b1e42a095662f3fc2beb2943b799095e4da64ef759679eb9e6"
+    },
+    {
+      "name": "saved-report.mjs",
+      "exports": [
+        "SAVED_REPORT_LIMITS",
+        "savedReportArtifactBytes",
+        "browserReportSha256",
+        "validateSavedReportJournal",
+        "createLockedReportStorage",
+        "savedReportLocalEdits",
+        "createSavedReportController"
+      ],
+      "sha256": "affc0ec1372923f45f2bddbf5140eeae891dec4ecfd1f8c9f936e16b8f91c4b6"
+    },
+    {
+      "name": "reference-draft.mjs",
+      "exports": [
+        "REFERENCE_LIMITS",
+        "readReferenceDraft",
+        "createReferenceDraft"
+      ],
+      "sha256": "634875a80c796a64e970d8f8c5bdec759da212c15d0b24422db4b36b6dd8129f"
+    },
+    {
+      "name": "reference-draft-study.mjs",
+      "exports": [
+        "createReferenceDraftStudy"
+      ],
+      "sha256": "6500e1d3932f0f4c03e96bde57dab915a78ae436051c6b05532f769397910173"
+    },
+    {
+      "name": "manuscript-structure.mjs",
+      "exports": [
+        "inspectManuscript",
+        "previewManuscriptMove",
+        "applyManuscriptMove",
+        "undoManuscriptMove"
+      ],
+      "sha256": "e58d6ff8a34eef309087cdceb9f68a758398269038d128d639353ff8c1a98200"
+    },
+    {
+      "name": "manuscript-outline-study.mjs",
+      "exports": [
+        "createManuscriptOutline"
+      ],
+      "sha256": "06f365584a4336e827d7e5ebd384c8644c7197cd4fac50c8c0d5ceb9b4b47353"
+    },
+    {
+      "name": "saved-report-study.mjs",
+      "exports": [
+        "savedReportStudy",
+        "createSavedReportStudy"
+      ],
+      "sha256": "19488d190ea5d6af2ae6cbcd91ce97588bf4ede6f1c989bc89dfe016a42a4493"
+    },
+    {
+      "name": "study-source.mjs",
+      "exports": [
+        "STUDY_SOURCE"
+      ],
+      "sha256": "ee8af853cc192fb23766c3911ce0a5a92b51df4fe5e7dab3f1a5ecd824364c60"
+    },
+    {
+      "name": "feed-pages.mjs",
+      "exports": [
+        "createFeedPages"
+      ],
+      "sha256": "8e3a8ecce1ddc27ba4b47f0ed1476e439876aa5508e8e63923b68b81070ff137"
+    },
+    {
+      "name": "aggregate-feed.mjs",
+      "exports": [
+        "FEED_LIMITS",
+        "createFeedModel",
+        "initialFeed",
+        "feedRecords",
+        "metricView",
+        "feedProjection",
+        "feedReduce",
+        "reopenFeed",
+        "saveFeed"
+      ],
+      "sha256": "1667658897dc603085fce2b61e6a145e930913e66ace54ecacebd67a73089b4d"
+    },
+    {
+      "name": "aggregate-study.mjs",
+      "exports": [
+        "aggregateStudy",
+        "createAggregateStudy"
+      ],
+      "sha256": "ef73d20abdcfe948882d21c87917032debcef36b872ef070f95c7fdef6c1061b"
+    },
+    {
+      "name": "research-learning.mjs",
+      "exports": [
+        "RESEARCH_LEVELS",
+        "RESEARCH_STATUSES",
+        "RESEARCH_BINDING",
+        "createResearchState",
+        "evaluateLearning",
+        "reduceResearch",
+        "saveResearch",
+        "reopenResearch",
+        "compareMetricScopes"
+      ],
+      "sha256": "c3331b2332f3dc7888f263863c5613757b642986828ba5297db52588884edd8f"
+    },
+    {
+      "name": "research-study.mjs",
+      "exports": [
+        "researchStudy",
+        "createResearchStudy"
+      ],
+      "sha256": "4bc113c3715d3b93be0f6d408ca0bdc6c4b73496ea55a6a2693da559b1455528"
+    },
+    {
+      "name": "route-access.mjs",
+      "exports": [
+        "markCurrentRoute",
+        "focusCurrentWork"
+      ],
+      "sha256": "ef2ebf9b3ed21e9cd9abd8d1dff0fc0cd045a0a77819244be8d15d89e2aef17f"
+    },
+    {
+      "name": "topic-planning.mjs",
+      "exports": [
+        "TOPIC_SIGNALS",
+        "GUEST_GATES",
+        "TOPIC_PLANNING_LIMITS",
+        "roundTopicScore",
+        "classifyTopic",
+        "evaluateTopic",
+        "createTopicPlanning",
+        "topicPlanningReduce",
+        "compareTopicSuggestion",
+        "guestQualification",
+        "canEnterPodcastPath",
+        "serializeTopicPlanning",
+        "reopenTopicPlanning"
+      ],
+      "sha256": "2db00c1f5fcf46e00587610bb8e5167434096611dcc62b60cdbd11b1f4fb2eb1"
+    },
+    {
+      "name": "topic-study.mjs",
+      "exports": [
+        "topicStudy",
+        "createTopicStudy"
+      ],
+      "sha256": "c261391c9c2922e09bc8951285a1ef36db9e69a7180d10807539f7f0fb6f2255"
+    },
+    {
+      "name": "file-preferences.mjs",
+      "exports": [
+        "FILE_CHUNK_OPTIONS",
+        "filePreferenceDefaults",
+        "filePreferences"
+      ],
+      "sha256": "255ceeb7bd279bad38955919d070561813838221970e53635501cca0dd6b440e"
+    },
+    {
+      "name": "resumable-file.mjs",
+      "exports": [
+        "RESUMABLE_LIMITS",
+        "RESUMABLE_SCHEMA",
+        "RESUMABLE_STORAGE_KEY",
+        "RESUMABLE_SOURCE",
+        "BACKEND_RESUME_CONTRACT",
+        "sha256Bytes",
+        "chunkPlan",
+        "inspectBackendAdapter",
+        "validateBackendReceiptShape",
+        "createLocalByteSink",
+        "validateResumableSnapshot",
+        "saveResumableSnapshot",
+        "readResumableSnapshot",
+        "createResumableWorkbench"
+      ],
+      "sha256": "9d1a901fe5c75086b4bde04cfca20d1155aa24ca496424fbc02137130fa6b2d8"
+    },
+    {
+      "name": "resumable-study.mjs",
+      "exports": [
+        "resumableStudy",
+        "createResumableFile"
+      ],
+      "sha256": "e85f32b1f3a56b1983bc7525463e8adf165148e4c5efc176abf13eae7fc43405"
+    },
+    {
+      "name": "appearance-preferences.mjs",
+      "exports": [
+        "appearanceDefaults",
+        "appearancePreferences"
+      ],
+      "sha256": "24be4b5df0efb5a568d507acaba7c9fc0df9e9fb16cd04bbd0bda1c1c889d1ab"
+    },
+    {
+      "name": "review-session.mjs",
+      "exports": [
+        "createReviewSession",
+        "canOpenDialog"
+      ],
+      "sha256": "4e99b601c0e9fabe53eeec0e5b93465c9ca9d1f1639f6e5974a39bc50f272581"
+    },
+    {
+      "name": "local-persistence.mjs",
+      "exports": [
+        "writeLocal",
+        "removeLocal"
+      ],
+      "sha256": "345f9f8533e4117e383c425c80c47bd968309931dc20362a6b78bb733eb272cc"
+    },
+    {
+      "name": "physical-drawer.mjs",
+      "exports": [
+        "DRAWER_VERSION",
+        "DRAWER_MAX_STEP",
+        "drawerGeometry",
+        "initialPhysicalDrawer",
+        "physicalDrawerReduce",
+        "drawerSample"
+      ],
+      "sha256": "031a0d39a82d93bfa15cecae933f9052c07ecc65421d27cf7863c6ecec098762"
+    },
+    {
+      "name": "drawer-study.mjs",
+      "exports": [
+        "drawerStudy",
+        "createPhysicalDrawer"
+      ],
+      "sha256": "795399d2b6c50b3e8eca9e16ce2fac48b40a6695bdaaafd889323dcf13f74b35"
+    },
+    {
+      "name": "propagation-review.mjs",
+      "exports": [
+        "PROPAGATION_SAMPLE_LABEL",
+        "PROPAGATION_STAGES",
+        "PROPAGATION_RELATIONS",
+        "propagationFixtures",
+        "propagationWindowKey",
+        "propagationWindowLabel",
+        "validPropagationScope",
+        "propagationMetric",
+        "propagationEdges",
+        "initialPropagation",
+        "propagationView",
+        "comparePropagationChannels",
+        "propagationDenominatorLabel",
+        "propagationReduce"
+      ],
+      "sha256": "c5545aef872b47d6c037f60be1eb4e42f42367b125a01c9e76c8cfce420cf750"
+    },
+    {
+      "name": "propagation-study.mjs",
+      "exports": [
+        "propagationStudy",
+        "createPropagation"
+      ],
+      "sha256": "f5f38521e1ffbaa16c02bfeb0eeb2f9543c0b37060be952a76aee52c9fce0088"
+    },
+    {
+      "name": "risk-review.mjs",
+      "exports": [
+        "initialRiskReview",
+        "riskReviewReduce",
+        "visibleRiskRecords"
+      ],
+      "sha256": "d85d4ddceebf029cfd083b796bb118babcb7c0950e3888b1338645b8b119f37b"
+    },
+    {
+      "name": "risk-study.mjs",
+      "exports": [
+        "riskStudy",
+        "createRiskReview"
+      ],
+      "sha256": "f6a9e04f34ec5376bee97665d59dbeff2c03acc29a1928212dba4b59972d13be"
+    },
+    {
+      "name": "media-chapters.mjs",
+      "exports": [
+        "validateChapterSource",
+        "validateChapters",
+        "initialChapters",
+        "chapterRange",
+        "chapterSeekSample",
+        "chapterStartFromSeconds",
+        "chapterAudioSamples",
+        "chaptersReduce",
+        "chapterSessionIsCurrent",
+        "activeChapterLoop"
+      ],
+      "sha256": "fdffb8efcaf6885cf541d62dd0554fb5b4764da17a426c9b9dd1a1df98c392ce"
+    },
+    {
+      "name": "audio-signal.mjs",
+      "exports": [
+        "makeSignal",
+        "trimSignal",
+        "waveformBins",
+        "encodeWav"
+      ],
+      "sha256": "5da58b5cdcf76aa0a6205ed3366a19b800cdb6652f00c0e8e7ebd9d8437e135f"
+    },
+    {
+      "name": "chapter-study.mjs",
+      "exports": [
+        "chapterStudy",
+        "createChapters"
+      ],
+      "sha256": "32c01f1d4d112106953906b0c37a100be081f515b4e945600e1d7fd575f34d2f"
+    },
+    {
+      "name": "batch-review.mjs",
+      "exports": [
+        "BATCH_SAMPLE_LABEL",
+        "batchFixtures",
+        "parseBatchText",
+        "initialBatchReview",
+        "visibleBatchItems",
+        "batchReviewSummary",
+        "pendingBatchJobs",
+        "batchReviewReduce"
+      ],
+      "sha256": "b7aa9d9bf558dda715c8821fae9ba505df6a7ab1ccc5f51bc56caa9374a22387"
+    },
+    {
+      "name": "batch-study.mjs",
+      "exports": [
+        "batchStudy",
+        "createBatchReview"
+      ],
+      "sha256": "ea0e9783a7058d8c9f67a19b8a73982189723c8f12d7abaac52f44f641b63a22"
+    },
+    {
+      "name": "version-tree.mjs",
+      "exports": [
+        "initialVersionTree",
+        "versionTreeReduce",
+        "validateVersionTree"
+      ],
+      "sha256": "159937e6b6513ade5488d5b54c0af6eea179d0aeedb16e2fff11bc1dd69036df"
+    },
+    {
+      "name": "tree-study.mjs",
+      "exports": [
+        "treeStudy",
+        "createVersionTree"
+      ],
+      "sha256": "1b7ed4c342c4cd36eaebf9ca43c7716e4a3bc9f51327bf46f4eb54d4b2d65964"
+    },
+    {
+      "name": "object-menu.mjs",
+      "exports": [
+        "initialObjectMenu",
+        "openObjectMenu",
+        "objectMenuReduce"
+      ],
+      "sha256": "50b05e4396c42c1e5026922689d060b6462e5d07ad645f20a77e9c2a91262574"
+    },
+    {
+      "name": "menu-study.mjs",
+      "exports": [
+        "menuStudy",
+        "createObjectMenu"
+      ],
+      "sha256": "f12a4b2954936181a391eaae72146dcddc6c9e250349898eb0df276b1dd984b2"
+    },
+    {
+      "name": "word-edit.mjs",
+      "exports": [
+        "initialWordEdit",
+        "wordEditReduce",
+        "renderWordAudio",
+        "wordSeekSample"
+      ],
+      "sha256": "38514bf5ee01b6d5ecefedec6241161b13ef98326c156f512975fd15b8839e18"
+    },
+    {
+      "name": "word-study.mjs",
+      "exports": [
+        "wordStudy",
+        "createWordEdit"
+      ],
+      "sha256": "0f589e0c5155775842948fb5aaf82ca69824c1068b24720b8c221c538eb18396"
+    },
+    {
+      "name": "relations.mjs",
+      "exports": [
+        "relationView",
+        "adjacentRelations"
+      ],
+      "sha256": "7724ef80b60256b81c3345df8b1290b2fdae52cb3a0aa911de8b908dd5795ea8"
+    },
+    {
+      "name": "relations-study.mjs",
+      "exports": [
+        "relationsStudy",
+        "createRelations"
+      ],
+      "sha256": "ebc9804bfef3729470122f9ff84da680155e3d12699ee0a64a7b3ef56f1111cf"
+    },
+    {
+      "name": "navigation.mjs",
+      "exports": [
+        "initialNavigation",
+        "navigationReduce"
+      ],
+      "sha256": "f8213230685e9222d2a7b32863862bb72bb2da946e25b17a3df3645f4ae10cc5"
+    },
+    {
+      "name": "navigation-study.mjs",
+      "exports": [
+        "navigationStudy",
+        "createNavigation"
+      ],
+      "sha256": "d25681a96d340dd7b6d51d488ac980f8ad21ba84857d8f61e0748b66c791a635"
+    },
+    {
+      "name": "context-selection.mjs",
+      "exports": [
+        "contextCandidates",
+        "initialContext",
+        "contextReduce"
+      ],
+      "sha256": "67c136705cfaa7dafbed594660f5f437f5ecf0ec7f29d7ecce8a959d4cf695d0"
+    },
+    {
+      "name": "context-study.mjs",
+      "exports": [
+        "contextStudy",
+        "createContext"
+      ],
+      "sha256": "90585912340ac79357aeff5ededf5c3a197fe5380f34a11696d4167d0bb5b2cb"
+    },
+    {
+      "name": "schedule.mjs",
+      "exports": [
+        "validDay",
+        "shiftDay",
+        "initialSchedule",
+        "scheduleReduce"
+      ],
+      "sha256": "0e826dba38bdf6f4c15513bbf77e0265b936d035c5642f965670bcc848bcf84e"
+    },
+    {
+      "name": "schedule-study.mjs",
+      "exports": [
+        "scheduleStudy",
+        "createSchedule"
+      ],
+      "sha256": "9ad5567ecee337828c568e50459c71c32ebc1f9909e553446bfa31ee0027f808"
+    },
+    {
+      "name": "audio-study.mjs",
+      "exports": [
+        "audioStudy",
+        "createAudio"
+      ],
+      "sha256": "891ef1bc4a713e5ac77f197a46f6739c76334639e19857ff1d105205344f1d6a"
+    },
+    {
+      "name": "action-gate.mjs",
+      "exports": [
+        "initialGate",
+        "gateReduce"
+      ],
+      "sha256": "5dc3f8b14d92a7901fe3c896ddb9524e100ba188fd8ed28b6aceafd51e5eab57"
+    },
+    {
+      "name": "gate-study.mjs",
+      "exports": [
+        "gateStudy",
+        "createGate"
+      ],
+      "sha256": "90edc5aac9889734986215d2b7fa277cab7050326b5295767384d68690799e30"
+    },
+    {
+      "name": "command-palette.mjs",
+      "exports": [
+        "commandRegistry",
+        "searchCommands",
+        "chooseCommand"
+      ],
+      "sha256": "1401162bf66977e2e87a1383d34d24924a92744ea867e9eedf210fe570983a07"
+    },
+    {
+      "name": "command-study.mjs",
+      "exports": [
+        "commandStudy",
+        "createCommands"
+      ],
+      "sha256": "c68dff05a4ec1d89ddbdc2632c9e76d78176604430c1535dc588ba0cb4a33cce"
+    },
+    {
+      "name": "version-conflict.mjs",
+      "exports": [
+        "initialVersion",
+        "versionReduce"
+      ],
+      "sha256": "f09a5ee330702f258a0e20518465c4a24ae261cd7fdcb6884de0b37054724cc0"
+    },
+    {
+      "name": "version-study.mjs",
+      "exports": [
+        "versionStudy",
+        "createVersion"
+      ],
+      "sha256": "4db8f80ca8cf6f24a800abc4e5bc2c597943664cebecabfb4ac9f508367ebdc4"
+    },
+    {
+      "name": "recovery.mjs",
+      "exports": [
+        "recoveryKinds",
+        "initialRecovery",
+        "recoveryReduce",
+        "recoveryPresentation"
+      ],
+      "sha256": "a8e6884a97870e76056b0a3412fffd3091b795b35b278d5ec5b00e85f44efef3"
+    },
+    {
+      "name": "recovery-study.mjs",
+      "exports": [
+        "recoveryStudy",
+        "createRecovery"
+      ],
+      "sha256": "9cd3ce62c984e8c124a9359682c26679f435800d0a9dc71a492460d94e3d9faf"
+    },
+    {
+      "name": "direct-input.mjs",
+      "exports": [
+        "INPUT_VERSION",
+        "beginDrag",
+        "moveDrag",
+        "endDrag",
+        "cancelDrag"
+      ],
+      "sha256": "afd49c2c5a81a28622c1b7d221376dba2a67317a152c8e6706a0b5a5030a6160"
+    },
+    {
+      "name": "contracts.mjs",
+      "exports": [
+        "CONTRACT_VERSION",
+        "clone",
+        "STREAM_LIMITS",
+        "initialStream",
+        "validStreamSnapshot",
+        "streamReduce",
+        "initialRevision",
+        "proposeRevision",
+        "revisionReduce",
+        "initialTimeline",
+        "timelineReduce",
+        "initialTasks",
+        "taskReduce",
+        "captureContext",
+        "restoreContext",
+        "motionVocabulary",
+        "reduceMotionState",
+        "DATA_STATES",
+        "compareRows",
+        "orbitPosition",
+        "intakeText",
+        "validatePresentation",
+        "initialProvenance",
+        "provenanceReduce"
+      ],
+      "sha256": "c4b2a0cdcf6ab3591903f5af79f468ae4e4a748b6ee1a501fb164d86c082c35f"
+    },
+    {
+      "name": "proposal-study.mjs",
+      "exports": [
+        "createProvenanceStudy",
+        "createPresentationStudy"
+      ],
+      "sha256": "d97aa6b6b16a76a5d1047d88e9ebe57a8e8b897fd45101d8c5bc048b7f288d4c"
+    },
+    {
+      "name": "more-studies.mjs",
+      "exports": [
+        "moreStudies",
+        "createMore"
+      ],
+      "sha256": "07ba5e4ec5f60207f48c193f8b5f9ae1f581f061921710e8251e301e0ad76195"
+    },
+    {
+      "name": "stream-study.mjs",
+      "exports": [
+        "createStreamStudy"
+      ],
+      "sha256": "e91efa7a78668dd647aafd19f04cc5914e32c27d9dd53b1bc2c97036d167ca4a"
+    },
+    {
+      "name": "studies.mjs",
+      "exports": [
+        "extraStudies",
+        "createExtra"
+      ],
+      "sha256": "d007c6aee0b4c3fa25dbacf7c6728b6b61b23d732be45da04465603a89678266"
+    },
+    {
+      "name": "app.mjs",
+      "exports": [],
+      "sha256": "f5b89994e092c7c696dc220fa450f4d850cc2880f8a4600daecb517813880ecf"
+    }
+  ],
+  "offline_sha256": "bb7b7233a7b64f492c64dd037082fa3cb4d2661f11070fc0a9953c311433c883",
+  "asset_sha256": "8c3580e9d2b757d97da432f3d62cf4b3a2109a4aa877e2cbfcc78bda616f75e8"
+}

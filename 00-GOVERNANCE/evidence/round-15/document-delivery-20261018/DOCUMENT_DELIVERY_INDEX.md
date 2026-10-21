@@ -2,6 +2,8 @@
 
 本索引只定位候选交付物与证据，不是产品规则、任务派工或验收声明。2026-10-18批准的规划和研究与产品实现、运行和验收分别记录。录音采集不在本候选范围；现有ASR、字幕、播客、语音交互与授权声音导入保留。
 
+两批Library原件覆盖275项清单：109份首包内嵌文件与166份补充原件的路径、字节数和SHA-256逐项核对，无缺项或重复源hash。当前回执区分265份逐字副本、7份来源派生的引用/范围修正、1份复用的既有竞品基准、2份私有Google Drive链接已去敏的派生文件（`MASTER_REGISTER.md`与`USER_REPORT.txt`）。六张空间图沿用规划中已存在且hash一致的原件，不重复复制。明细、去敏前后hash及当前仓库文件hash见[Library恢复回执](../../../../research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/LIBRARY_RECOVERY_RECEIPT_20261020.json)。来源根路径与独立许可映射仍为`UNKNOWN`；所有材料仅作研究/审核证据，不代表产品实现、正式前端或验收。
+
 ## 唯一产品规划与完整研究
 
 - [唯一完整前后端规划](../../../LOOP-PLAN-20261014/product-plan-full.md)：完整v010正文及主线独有要求，195G、311步骤、213合同保全；精确修订和正文覆盖回执另存。
@@ -36,6 +38,10 @@
 - [platform_capability_research_20261018](../../../../research/intelligence/02_platform_intelligence/research-20261018/platform_capability_research_20261018/README.md)
 - [platform_evidence_gap_research_20261018](../../../../research/intelligence/02_platform_intelligence/research-20261018/platform_evidence_gap_research_20261018/README.md)
 - [product_research_deadline_20261018](../../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/review_final/01_WHOLE_PRODUCT_UPGRADE_REVIEW.md)
+- [frontend_update_recovery_20261018](../../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/00_README_CURRENT_UPDATE.md)：清单44项均已恢复；仍是候选前端研究文稿，非实现验收，来源根路径及独立许可映射为`UNKNOWN`。
+- [interaction_equivalent_20261017](../../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)：清单210项均已恢复，为交互审核工作副本，不是正式产品前端；代码和素材未执行，产品接线与验收仍OPEN。
+- [historical_requirements_20261017](../../../../research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/RESTORATION_NOTICE.md)：保留14份原始历史要求/审计记录及7份补充审阅原件，不是第二份现行规划、派工或验收；来源根路径及独立许可映射为`UNKNOWN`。
+- 恢复包内与[既有官方竞品基准](../../../../research/engineering/documentation-evidence/reports/competitor_research_20261018/01_official_competitor_benchmark.md)字节完全相同的文稿已由仓库现有原件覆盖，本次未重复添加。
 - [rea_research_frozen_20261018_2136](../../../../research/engineering/documentation-evidence/reports/rea_research_frozen_20261018_2136/README.md)
 - [real_public_validation_research_20261018](../../../../research/intelligence/12_tests_regression_memory/research-20261018/real_public_validation_research_20261018/README.md)
 - [slashui_research_20261018](../../../../research/engineering/documentation-evidence/reports/slashui_research_20261018/01_SLASHUI_LUMENIS_RESEARCH.md)
