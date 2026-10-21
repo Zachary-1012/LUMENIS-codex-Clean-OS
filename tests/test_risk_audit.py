@@ -22,6 +22,14 @@ import canonical_metrics as cm  # noqa: E402
 from subject_rules import subject_hit, subject_hit_note, SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def explicit_reference_subject():
+    """Legacy reference-subject assertions require an explicit scoped binding."""
+    from subject_context import brand_scope
+    with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+        yield
+
+
 # ============================================================
 # 1. unknown 不等于 0 或 negative
 # ============================================================

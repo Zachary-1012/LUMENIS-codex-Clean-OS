@@ -1,5 +1,13 @@
 """Trainable instance of OpenAI/math 113 ent:gibbs (finite matching law).
 
+Attribution: OpenAI/math, paper 113, ent:gibbs finite exponential-family equation; source identity is
+pinned in lumenis.shared.evaluation.openai_math_papers.provenance.REGISTRY
+at upstream fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb.
+This bounded Python specialization is not the full paper algorithm or proof.
+Upstream paper/source rights remain separate; see LICENSING.md and the
+third-party register. This header does not assert a new upstream license grant.
+
+
 Paper: p_theta(M)=exp(theta·1_M)/Z; grad log Z = edge marginals.
 Implementation choice: theta_e = w·features_e. For a supervised matching M*,
 grad_w[-log p(M*)] = sum_e (mu_e - 1[e in M*])*features_e.

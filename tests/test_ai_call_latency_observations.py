@@ -85,7 +85,7 @@ def test_log_call_keeps_only_finite_nonnegative_real_latency(
     assert _stored_latency(temp_ai_call_db, call_id) == expected
 
 
-def test_recorded_correction_rate_is_incidence_not_review_accuracy(temp_ai_call_db):
+def test_recorded_correction_count_does_not_invent_review_denominator(temp_ai_call_db):
     no_record_id = acl.log_call(provider="correction_incidence_test", latency_ms=4)
     corrected_id = acl.log_call(
         provider="correction_incidence_test",
@@ -105,13 +105,14 @@ def test_recorded_correction_rate_is_incidence_not_review_accuracy(temp_ai_call_
         days=7, provider="correction_incidence_test",
     )
     assert result["human_correction_count"] == 1
-    assert result["human_correction_rate"] == 0.5
+    assert result["human_correction_rate"] is None
+    assert result["human_correction_state"] == "REVIEW_DENOMINATOR_NOT_RECORDED"
     assert result["metric_definitions"]["human_correction_rate"] == {
         "numerator": "calls_with_nonempty_human_correction",
-        "denominator": "calls_with_known_recorded_correction_state",
+        "denominator": "reviewed_calls_not_recorded",
         "meaning": (
-            "recorded correction incidence among calls with a known "
-            "correction state; not review accuracy"
+            "rate is unavailable because the reviewed-call denominator "
+            "is not recorded; the numerator is an observed correction count"
         ),
     }
     assert result["human_review_coverage"] == {
@@ -127,8 +128,25 @@ def test_logged_zero_is_preserved_and_analyzer_marks_provenance_unresolved(temp_
     result = LearningLoop(db_path=temp_ai_call_db, enabled=True).analyze_call_quality(
         days=7, provider="latency_zero_test",
     )
-    assert result["avg_latency_ms"] == 0.0
+    assert result["avg_latency_ms"] is None
+    assert result["metric_samples"]["avg_latency_ms"]["valid_samples"] == 0
+    assert result["metric_samples"]["avg_latency_ms"]["unknown_samples"] == 1
     assert result["metric_samples"]["avg_latency_ms"]["zero_value_samples"] == 1
     assert result["metric_samples"]["avg_latency_ms"]["zero_value_provenance"] == (
         "unresolved_legacy_default_or_measured_zero"
     )
+
+
+def test_quality_average_uses_observed_positive_samples_only(temp_ai_call_db):
+    for latency in (None, 0, 10, 30):
+        assert acl.log_call(provider="latency_mixed_test", latency_ms=latency)
+    result = LearningLoop(db_path=temp_ai_call_db, enabled=True).analyze_call_quality(
+        days=7, provider="latency_mixed_test",
+    )
+    assert result["total_calls"] == 4
+    assert result["avg_latency_ms"] == 20.0
+    samples = result["metric_samples"]["avg_latency_ms"]
+    assert samples["valid_samples"] == 2
+    assert samples["unknown_samples"] == 2
+    assert samples["state"] == "partial"
+    assert samples["zero_value_samples"] == 1

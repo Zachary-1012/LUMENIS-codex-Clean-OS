@@ -23,6 +23,7 @@ class Sh04ViewModel extends ChangeNotifier {
   String? _selectedArtifactId;
   bool _operationBusy = false;
   bool _disposed = false;
+  int _generation = 0;
   String? _pendingCreateFingerprint;
   String? _pendingCreateRequestId;
   String? _pendingRevisionFingerprint;
@@ -38,8 +39,12 @@ class Sh04ViewModel extends ChangeNotifier {
       .where((item) => item.internalId == _selectedArtifactId)
       .firstOrNull;
   bool get operationBusy => _operationBusy;
+  int get readGeneration => _generation;
 
   Future<void> refresh() async {
+    if (_disposed) return;
+    final generation = ++_generation;
+    _operationBusy = false;
     _phase = Sh04LoadPhase.loading;
     _failureKind = null;
     _loadMoreFailureKind = null;
@@ -48,12 +53,16 @@ class Sh04ViewModel extends ChangeNotifier {
     _selectedArtifactId = null;
     _notifyIfAlive();
     try {
-      _snapshot = await _repository.loadExports();
+      final snapshot = await _repository.loadExports();
+      if (!_isCurrent(generation)) return;
+      _snapshot = snapshot;
       _phase = Sh04LoadPhase.ready;
     } on Sh04ScopeError catch (error) {
+      if (!_isCurrent(generation)) return;
       _scopeError = error.kind;
       _phase = Sh04LoadPhase.blocked;
     } catch (error) {
+      if (!_isCurrent(generation)) return;
       _failureKind = _classifyFailure(error);
       _phase = Sh04LoadPhase.failed;
     }
@@ -62,11 +71,15 @@ class Sh04ViewModel extends ChangeNotifier {
 
   Future<void> loadMore() async {
     final current = _snapshot;
-    if (current == null || !current.hasMore || _operationBusy) return;
+    if (_disposed || current == null || !current.hasMore || _operationBusy) {
+      return;
+    }
+    final generation = _generation;
     _loadMoreFailureKind = null;
     _setOperationBusy(true);
     try {
       final next = await _repository.loadExports(cursor: current.nextCursor);
+      if (!_isCurrent(generation)) return;
       final byId = <String, Sh04Export>{
         for (final item in current.exports) item.internalId: item,
         for (final item in next.exports) item.internalId: item,
@@ -82,9 +95,12 @@ class Sh04ViewModel extends ChangeNotifier {
         nextCursor: next.nextCursor,
       );
     } catch (error) {
-      _loadMoreFailureKind = _classifyFailure(error);
+      if (!_isCurrent(generation)) return;
+      if (!_hideDeniedContent(error)) {
+        _loadMoreFailureKind = _classifyFailure(error);
+      }
     } finally {
-      _setOperationBusy(false);
+      if (_isCurrent(generation)) _setOperationBusy(false);
     }
   }
 
@@ -99,12 +115,13 @@ class Sh04ViewModel extends ChangeNotifier {
       _pendingCreateRequestId = _newRequestId();
     }
     final requestId = _pendingCreateRequestId!;
-    return _runOperation(() async {
+    return _runOperation((generation) async {
       final saved = await _repository.saveReport(
         title: title,
         markdown: markdown,
         requestId: requestId,
       );
+      _requireCurrent(generation);
       _mergeItem(saved);
       _pendingCreateFingerprint = null;
       _pendingCreateRequestId = null;
@@ -112,7 +129,9 @@ class Sh04ViewModel extends ChangeNotifier {
     });
   }
 
-  Future<Sh04Export> reopen(Sh04Export item) => _runOperation(() async {
+  Future<Sh04Export> reopen(Sh04Export item) => _runOperation((
+    generation,
+  ) async {
     final reopened = await _repository.reopen(item.internalId);
     if (reopened.internalId != item.internalId ||
         reopened.sha256 != item.sha256 ||
@@ -121,6 +140,7 @@ class Sh04ViewModel extends ChangeNotifier {
         'The reopened SavedWork version does not match the selected version.',
       );
     }
+    _requireCurrent(generation);
     _mergeItem(reopened);
     return reopened;
   });
@@ -147,7 +167,7 @@ class Sh04ViewModel extends ChangeNotifier {
       _pendingRevisionRequestId = _newRequestId();
     }
     final requestId = _pendingRevisionRequestId!;
-    return _runOperation(() async {
+    return _runOperation((generation) async {
       final revised = await _repository.reviseReport(
         parent: parent,
         title: title,
@@ -162,6 +182,7 @@ class Sh04ViewModel extends ChangeNotifier {
           'The returned revision does not continue the selected version.',
         );
       }
+      _requireCurrent(generation);
       _mergeItem(revised);
       _pendingRevisionFingerprint = null;
       _pendingRevisionRequestId = null;
@@ -170,7 +191,7 @@ class Sh04ViewModel extends ChangeNotifier {
   }
 
   Future<SavedWorkExportFile> export(Sh04Export item, String format) =>
-      _runOperation(() async {
+      _runOperation((generation) async {
         final file = await _repository.export(
           artifactId: item.internalId,
           format: format,
@@ -184,10 +205,13 @@ class Sh04ViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    ++_generation;
     super.dispose();
   }
 
-  Future<T> _runOperation<T>(Future<T> Function() operation) async {
+  Future<T> _runOperation<T>(Future<T> Function(int) operation) async {
+    final generation = _generation;
+    _requireCurrent(generation);
     if (_operationBusy) {
       throw const LumenisCoreException(
         'Another SavedWork operation is in progress.',
@@ -196,10 +220,51 @@ class Sh04ViewModel extends ChangeNotifier {
     }
     _setOperationBusy(true);
     try {
-      return await operation();
+      final result = await operation(generation);
+      _requireCurrent(generation);
+      return result;
+    } catch (error) {
+      if (_isCurrent(generation)) _hideDeniedContent(error);
+      rethrow;
     } finally {
-      _setOperationBusy(false);
+      if (_isCurrent(generation)) _setOperationBusy(false);
     }
+  }
+
+  // Refresh establishes a new read context. An old completion must neither
+  // publish content nor clear the busy state of a newer operation.
+  bool _isCurrent(int generation) => !_disposed && generation == _generation;
+
+  void _requireCurrent(int generation) {
+    if (!_isCurrent(generation)) {
+      throw const LumenisCoreException(
+        'The SavedWork read context changed. Read again before retrying.',
+        errorCode: 'SAVED_WORK_CONTEXT_CHANGED',
+      );
+    }
+  }
+
+  bool _hideDeniedContent(Object error) {
+    final kind = _classifyFailure(error);
+    if (error is! Sh04ScopeError &&
+        kind != Sh04FailureKind.authentication &&
+        kind != Sh04FailureKind.permissionDenied) {
+      return false;
+    }
+    ++_generation;
+    _snapshot = null;
+    _selectedArtifactId = null;
+    _operationBusy = false;
+    _loadMoreFailureKind = null;
+    if (error is Sh04ScopeError) {
+      _scopeError = error.kind;
+      _phase = Sh04LoadPhase.blocked;
+    } else {
+      _failureKind = kind;
+      _phase = Sh04LoadPhase.failed;
+    }
+    _notifyIfAlive();
+    return true;
   }
 
   void _mergeItem(Sh04Export item) {
@@ -246,6 +311,10 @@ class Sh04ViewModel extends ChangeNotifier {
   }
 
   static Sh04FailureKind _classifyFailure(Object error) {
+    if (error is LumenisCoreException) {
+      if (error.statusCode == 401) return Sh04FailureKind.authentication;
+      if (error.statusCode == 403) return Sh04FailureKind.permissionDenied;
+    }
     final message = error.toString().toLowerCase();
     if (message.contains('http 401')) return Sh04FailureKind.authentication;
     if (message.contains('http 403')) return Sh04FailureKind.permissionDenied;

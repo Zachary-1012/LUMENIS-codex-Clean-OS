@@ -86,9 +86,10 @@ def _run_ai_off_tests():
     # 4. subject_hit() works without AI
     print("\n--- 4. Subject Filter (No AI) ---")
     try:
-        from subject_rules import subject_hit, SUBJECT_WORDS
-        hit1 = subject_hit("广州太古汇今天有活动")
-        hit2 = subject_hit("上海恒隆广场很好")
+        from subject_rules import subject_hit, subject_hit_for_brand, SUBJECT_WORDS
+        hit1 = subject_hit_for_brand("广州太古汇今天有活动", brand_key="guangzhou_taikoo_hui")
+        hit2 = subject_hit_for_brand("上海恒隆广场很好", brand_key="guangzhou_taikoo_hui")
+        check("unbound subject does not invent focus", subject_hit("广州太古汇今天有活动") is False)
         check("subject_hit detects Taikoo Hui", hit1 == True, f"hit1={hit1}")
         check("subject_hit excludes non-Taikoo", hit2 == False, f"hit2={hit2}")
         check("SUBJECT_WORDS non-empty", len(SUBJECT_WORDS) > 0, f"count={len(SUBJECT_WORDS)}")

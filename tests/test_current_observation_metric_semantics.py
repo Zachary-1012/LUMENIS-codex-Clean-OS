@@ -216,3 +216,27 @@ def test_unchanged_collect_search_reconciles_legacy_canonical_without_new_histor
     # observation time, source publication and scope proof remain unchanged.
     assert note_after_times[0]
     assert note_after_times[1:] == note_times[1:]
+
+
+@pytest.mark.parametrize('field,index', [('likes', 0), ('total_comments', 1), ('collects', 2), ('shares', 3)])
+@pytest.mark.parametrize('observed', [None, 0])
+def test_signed_current_counter_converges_notes_canonical_native(social_case, field, index, observed):
+    case = social_case
+    note_id = 'current-counter-' + field + '-' + str(observed)
+    first = _prepared(case, _capture(note_id))
+    with case['database'].get_db() as connection:
+        connection.execute('BEGIN IMMEDIATE')
+        _insert_note(case, first, connection=connection)
+        initial = _bind(case, first, connection=connection)
+    assert initial['ok']
+    current = _prepared(case, _capture(note_id, **{field: observed}))
+    with case['database'].get_db() as connection:
+        connection.execute('BEGIN IMMEDIATE')
+        _insert_note(case, current, connection=connection)
+        result = _bind(case, current, connection=connection)
+    assert result['ok'] and result['observation_changed']
+    saved = _snapshot(case['db_path'], note_id)
+    assert saved['note'][6 + index] == observed
+    assert saved['canonical'][7 + index] == observed
+    assert saved['native'][5 + index] == observed
+    assert saved['note'][-2:] == ('VERIFIED', str(initial['evidence_ref']))

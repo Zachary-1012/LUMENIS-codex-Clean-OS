@@ -81,8 +81,8 @@ def measure_runtime():
 def measure_tests():
     # Retain schema/history without importing or collecting module test suites.
     return {"collected": None, "executed": False,
-            "status": "NOT_REQUIRED_BY_PO_POLICY",
-            "reason": "PO-20261008-REAL-OUTCOME-POLICY-C1-RESUME"}
+            "status": "NOT_EXECUTED_BY_DIAGNOSTIC",
+            "reason": "This footprint diagnostic does not collect or execute tests; use independent version-bound test results."}
 
 
 def measure_db():

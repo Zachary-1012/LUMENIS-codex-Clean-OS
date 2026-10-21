@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+from pathlib import Path
 from typing import Optional
 
 from .paths import main_db_path
@@ -19,16 +20,37 @@ def connect_sqlite(
     foreign_keys: bool = True,
     busy_timeout_ms: int = 30000,
     read_only: bool = False,
+    immutable: bool = False,
 ) -> sqlite3.Connection:
     """Open SQLite through the canonical database authority.
 
     Explicit db_path is reserved for disposable tests, controlled migration
     tooling, or an explicitly architecture-registered SYSTEM operational store.
     Ordinary business callers omit it and resolve main_db_path() at call time.
+    immutable is reserved for independently read-back, fully closed snapshots
+    that will not change during this connection. It requires read_only and an
+    explicit non-canonical path, never the live business database or WAL files.
     """
     path = os.path.abspath(db_path or main_db_path())
+    if immutable:
+        if not read_only or db_path is None:
+            raise ValueError("immutable requires an explicit read-only snapshot")
+        requested = Path(path)
+        if any(component.is_symlink() for component in [requested, *requested.parents]):
+            raise ValueError("immutable snapshot must not traverse symbolic links")
+        if requested.exists() and requested.stat().st_nlink != 1:
+            raise ValueError("immutable snapshot must not have hard-link aliases")
+        canonical = Path(main_db_path()).resolve()
+        snapshot = Path(path).resolve()
+        if snapshot == canonical or (snapshot.exists() and canonical.exists()
+                                     and os.path.samefile(snapshot, canonical)):
+            raise ValueError("immutable cannot open the live canonical database")
+        if any(os.path.lexists(str(snapshot) + suffix) for suffix in ("-wal", "-shm", "-journal")):
+            raise ValueError("immutable snapshot must have no live SQLite sidecars")
     if read_only:
         target = f"file:{path.replace(os.sep, '/')}?mode=ro"
+        if immutable:
+            target = Path(path).as_uri() + "?mode=ro&immutable=1"
         conn = sqlite3.connect(
             target,
             uri=True,

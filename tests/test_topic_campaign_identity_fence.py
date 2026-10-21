@@ -21,7 +21,7 @@ def _set_allowed_policy(monkeypatch):
 def test_default_and_invalid_worker_endpoints_fail_closed(monkeypatch):
     _set_allowed_policy(monkeypatch)
     monkeypatch.delenv('XHS_CDP_URL', raising=False)
-    assert campaign._canonical_campaign_identity()['code'] == 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+    assert campaign._legacy_campaign_route_status()['code'] == 'CANONICAL_COLLECTOR_BINDING_REQUIRED'
 
     for endpoint in (
         'http://127.0.0.1:9222',
@@ -42,9 +42,10 @@ def test_default_and_invalid_worker_endpoints_fail_closed(monkeypatch):
         ' https://worker.example:9443',
     ):
         monkeypatch.setenv('XHS_CDP_URL', endpoint)
-        route = campaign._canonical_campaign_identity()
+        route = campaign._legacy_campaign_route_status()
         assert route['ok'] is False, endpoint
-        assert route['code'] == 'COLLECTOR_ENDPOINT_INVALID', endpoint
+        assert route['code'] == 'CANONICAL_COLLECTOR_BINDING_REQUIRED', endpoint
+        assert route['identity']['cdp_url'] is None
 
 
 def test_policy_can_allow_hk_route_but_legacy_caller_stays_unavailable(monkeypatch):
@@ -54,7 +55,7 @@ def test_policy_can_allow_hk_route_but_legacy_caller_stays_unavailable(monkeypat
     assert identity['ok'] is True
     assert identity['account'] == 'XHS_RETINAUT'
     assert identity['region'] == 'intl'
-    assert identity['cdp_port'] == 9223
+    assert identity['cdp_port'] is None
     assert identity['host'] == 'www.rednote.com'
 
     route = campaign._legacy_campaign_route_status()
@@ -96,11 +97,11 @@ def test_blocked_default_paths_do_not_probe_files_cdp_database_or_processes(monk
 
     monkeypatch.setattr(builtins, '__import__', guarded_import)
 
-    assert campaign._run_collector('#test')['status'] == 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+    assert campaign._run_collector('#test')['status'] == 'CANONICAL_COLLECTOR_BINDING_REQUIRED'
     assert campaign._probe_xhs_health_via_cdp()[0] is False
-    assert campaign._probe_runtime_state()['overall'] == 'blocked'
+    assert campaign._probe_runtime_state()['overall'] == 'unavailable'
     assert campaign._half_open_probe()[0] is False
-    assert campaign.run_campaign()['blocked'] is True
+    assert campaign.run_campaign()['unavailable'] is True
     assert campaign.start_scheduler() is False
     assert campaign._app_topic_collect('#test')['enabled'] is False
 
@@ -168,9 +169,9 @@ def test_status_route_reports_blocked_runtime_instead_of_circuit_health(monkeypa
     response = client.get('/api/topic-campaign/status')
     assert response.status_code == 200
     runtime = response.get_json()['runtime_state']
-    assert runtime['overall'] == 'blocked'
+    assert runtime['overall'] == 'unavailable'
     assert runtime['healthy'] is False
-    assert runtime['detail']['code'] == 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+    assert runtime['detail']['code'] == 'CANONICAL_COLLECTOR_BINDING_REQUIRED'
 
 
 def test_half_open_route_serializes_blocked_runtime_dict(monkeypatch):
@@ -181,9 +182,9 @@ def test_half_open_route_serializes_blocked_runtime_dict(monkeypatch):
     assert response.status_code == 200
     payload = response.get_json()
     assert payload['half_open_success'] is False
-    assert payload['overall'] == 'blocked'
+    assert payload['overall'] == 'unavailable'
     assert payload['healthy'] is False
-    assert payload['detail']['code'] == 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'
+    assert payload['detail']['code'] == 'CANONICAL_COLLECTOR_BINDING_REQUIRED'
 
 
 def test_registration_with_missing_endpoint_does_not_probe_legacy_identity(monkeypatch):
@@ -205,3 +206,15 @@ def test_registration_with_missing_endpoint_does_not_probe_legacy_identity(monke
     app = Flask('topic-campaign-registration-test')
     campaign.register_topic_campaign(app)
     assert campaign._scheduler_running is False
+
+
+@pytest.mark.parametrize('mismatch', [
+    {'account': 'XHS_CN_PRIMARY'}, {'region': 'cn'}, {'host': 'www.xiaohongshu.com'}, {'ok': False},
+])
+def test_retired_campaign_still_rejects_noncanonical_identity(monkeypatch, mismatch):
+    from lumenis.system.collector.adapters import rednote_policy
+    _set_allowed_policy(monkeypatch)
+    allowed = rednote_policy.collection_gate(account='XHS_RETINAUT', region='intl')
+    monkeypatch.setattr(rednote_policy, 'collection_gate', lambda **kw: {**allowed, **mismatch})
+    assert campaign._canonical_campaign_identity()['code'] == 'IDENTITY_BLOCKED'
+    assert campaign._legacy_campaign_route_status()['ok'] is False

@@ -1275,6 +1275,17 @@ def _bind_collected_social_observations(stored, observations, *, scope, platform
     if evidence_id is None:
         raise _CollectionWriteRejected({"ok": False, "status": "SCOPE_EVIDENCE_UNAVAILABLE", "verified": 0})
     if accepted:
+        # These are current, scope-admitted observations backed by the Evidence
+        # above, not a partial file-import patch. Missing current counters must
+        # remain unknown across notes/Canonical/native, never reuse an old value.
+        # Keep source timestamps, analysis and the original scope proof intact.
+        for observed in accepted:
+            current = to_canonical_record(observed, platform=canonical_platform)
+            connection.execute(
+                "UPDATE notes SET likes=?,comments=?,collects=?,shares=? WHERE note_id=?",
+                (current.get("like_count"), current.get("comment_count"),
+                 current.get("collect_count"), current.get("share_count"), observed["content_id"]),
+            )
         pending = _prelaunch_scope_note_ids_needing_verification(
             accepted_ids, scope, connection=connection,
         )

@@ -25,7 +25,8 @@ def test_no_key_ai_status_degrades(monkeypatch):
     assert s["runtime"] == "unavailable"
     assert s["hints"] == []
     assert probes == []
-    assert intelligence._CACHE["provider"] is None
+    # Retired cache is ignored, not a current runtime state owner.
+    assert intelligence._CACHE["provider"] == "zhipu"
 
 
 def test_no_key_ai_enabled_false(monkeypatch):

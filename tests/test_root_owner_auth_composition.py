@@ -235,7 +235,7 @@ def auth_composition(tmp_path, monkeypatch):
         "_content_project_scope", "_source_brief_context", "_shared_work_actor_scope",
         "_shared_saved_work_route_allowed", "_shared_content_project_route_allowed",
         "_artifact_experiment_route_matches", "_parse_shared_workspace_scope_header",
-        "_shared_work_response", "save_shared_work", "read_shared_work", "runtime_subjects",
+        "_with_committed_readback_state", "_shared_work_response", "save_shared_work", "read_shared_work", "runtime_subjects",
         "register_experience_runtime",
     }, experience_namespace)
     experience_bp = Blueprint("experience_runtime", "experience_runtime")

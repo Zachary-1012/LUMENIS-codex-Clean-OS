@@ -59,8 +59,12 @@ def test_schedule_sleep_seconds():
     # COOLDOWN/FROZEN -> 深度降频
     assert schedule_sleep_seconds("pause_until_cooldown", 6.0) == 24.0
     assert schedule_sleep_seconds("freeze_and_recover", 6.0) == 30.0
-    # None -> 默认 NORMAL 1x；下限保护
-    assert schedule_sleep_seconds(None, 6.0) == 6.0
+    # An absent/unknown lifecycle is fail-closed, not observed NORMAL.
+    from lumenis.system.collector.guard.schedule_adapter import should_stop_schedule
+    for unknown in (None, 'not_a_lifecycle', ''):
+        assert schedule_sleep_seconds(unknown, 6.0) == 30.0
+        assert should_stop_schedule(unknown) is True
+    # Explicit NORMAL retains its minimum interval protection.
     assert schedule_sleep_seconds("schedule_normal", 0.1) >= 0.5
 
 

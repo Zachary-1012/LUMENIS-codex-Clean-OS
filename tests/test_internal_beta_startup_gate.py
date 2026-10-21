@@ -282,10 +282,7 @@ def test_bridge_rejects_scheduled_collection_before_identity_checks(monkeypatch)
 def test_manual_mode_suppresses_rednote_resident_until_explicit_auto_opt_in(monkeypatch):
     events = []
     monkeypatch.setattr(app, 'INTERNAL_BETA_SAFE_STARTUP', False)
-    monkeypatch.setattr(
-        app.threading, 'Thread',
-        lambda **_kwargs: SimpleNamespace(start=lambda: events.append('scheduler')),
-    )
+    monkeypatch.setattr(app, '_start_scheduler', lambda: events.append('scheduler'))
     monkeypatch.setattr(app.xhs_p0_orchestrator, 'start_resident', lambda: events.append('resident'))
     monkeypatch.setattr(
         app.memory_optimizer, 'get_memory_optimizer',
@@ -347,6 +344,19 @@ def test_manual_scheduler_does_not_probe_rednote_session(monkeypatch):
     def stop_after_first_tick(_seconds):
         raise StopIteration
 
-    monkeypatch.setattr(app.time, 'sleep', stop_after_first_tick)
+    monkeypatch.setattr(app, '_SCHEDULER_STOP', SimpleNamespace(
+        is_set=lambda: False, wait=stop_after_first_tick,
+    ))
     with pytest.raises(StopIteration):
         app.scheduler_loop()
+
+
+def test_stopped_scheduler_does_not_start_another_tick(monkeypatch):
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError('stopped scheduler must not inspect time or wait again')
+
+    monkeypatch.setattr(app, '_SCHEDULER_STOP', SimpleNamespace(
+        is_set=lambda: True, wait=forbidden,
+    ))
+    monkeypatch.setattr(app, 'datetime', SimpleNamespace(now=forbidden))
+    app.scheduler_loop()

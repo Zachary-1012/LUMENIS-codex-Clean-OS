@@ -36,7 +36,7 @@ class TestRetiredWebShell:
         from pathlib import Path
         architecture = Path(PROJECT_ROOT, "00-GOVERNANCE", "LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md").read_text(encoding="utf-8")
         constitution = Path(PROJECT_ROOT, "00-GOVERNANCE", "LUMENIS-EXPERIENCE-CONSTITUTION.md").read_text(encoding="utf-8")
-        assert "Flutter LUMENIS Experience" in architecture
+        assert "Flutter OEVIRA Experience" in architecture
         assert "No shared renderer may turn these 44 IDs into one template" in constitution
 
 

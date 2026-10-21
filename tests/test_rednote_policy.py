@@ -105,7 +105,7 @@ def test_production_gate_and_forced_route_remain_hk_only(monkeypatch):
     assert allowed["ok"] is True
     assert allowed["account"] == "XHS_RETINAUT"
     assert allowed["region"] == "intl"
-    assert allowed["cdp_port"] == 9223
+    assert allowed["cdp_port"] is None
     assert allowed["host"] == "www.rednote.com"
     assert mainland_account["ok"] is False
     assert mainland_account["code"] == "account_paused"
@@ -114,7 +114,7 @@ def test_production_gate_and_forced_route_remain_hk_only(monkeypatch):
     assert forced_mainland["blocked"] is True
     assert forced_mainland["requested_region"] == "cn"
     assert forced_mainland["region"] == "intl"
-    assert forced_mainland["cdp_port"] == 9223
+    assert forced_mainland["cdp_port"] is None
     assert forced_mainland["host"] == "www.rednote.com"
 
 

@@ -4,6 +4,8 @@ import os
 import re
 import json
 import hashlib
+import logging
+from concurrent.futures import CancelledError
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 from pathlib import Path
@@ -15,6 +17,9 @@ from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .registry import register_adapter
 from .public_source import fetch_public_url, public_source_provenance
 from .routing import resolve_capability_route
+
+
+logger = logging.getLogger(__name__)
 
 
 _TERMINAL_IG_DETAIL_STATES = frozenset({
@@ -502,6 +507,11 @@ class InstagramAdapter(BasePlatformAdapter):
                 detail_counts["attempted"] += 1
                 try:
                     detail_result = engine.detail(shortcode, media_type=media_type)
+                except CancelledError:
+                    self._record_detail_outcome(item, "CANCELLED", stop_reason="CANCELLED")
+                    detail_counts["failed"] += 1
+                    detail_stop_reason = "CANCELLED"
+                    continue
                 except Exception as exc:
                     logger.error("Instagram逐帖详情异常 error_type=%s", type(exc).__name__)
                     detail_result = None
@@ -553,6 +563,8 @@ class InstagramAdapter(BasePlatformAdapter):
                 ),
                 "media_semantics": "URL_HINTS_ONLY_NO_BYTES_OR_ARTIFACT",
             }
+            if detail_incomplete and status == CollectionStatus.SUCCESS:
+                status = CollectionStatus.COLLECT_ERROR
             if detail_stop_reason:
                 status = {
                     "VERIFICATION_REQUIRED": CollectionStatus.NEED_VERIFY,
@@ -573,6 +585,8 @@ class InstagramAdapter(BasePlatformAdapter):
                     "engine": "v4_instagram",
                     "provider": "authorized_browser_worker",
                     "detail": detail_metadata,
+                    "search_status": self._map_status(result.success, result.notes, result.error).value,
+                    "acquisition_state": "PARTIAL" if items and detail_incomplete else ("COMPLETE" if result.success else "FAILED"),
                     "original_query": keyword if verified_topic_reference is not None else None,
                     "native_topic_reference": verified_topic_reference,
                     "native_topic_reference_status": (

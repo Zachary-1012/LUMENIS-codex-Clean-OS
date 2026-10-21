@@ -21,10 +21,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 pytestmark = pytest.mark.redline
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture
 def sr():
     import subject_rules as m
-    return m
+    from subject_context import brand_scope
+    # This suite tests the declared Guangzhou policy, not a process default.
+    with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+        yield m
 
 
 # ---------- subject_hit 正向命中 ----------
@@ -129,3 +132,17 @@ def test_build_daily_report_entry_stable():
     from lumenis.shared.reporting import daily as daily_report
     assert callable(risk_engine.build_daily_report)
     assert callable(daily_report.generate_daily_digest)
+
+
+def test_unbound_subject_does_not_borrow_reference_policy():
+    import subject_rules as sr
+    from subject_context import clear_thread_context, get_thread_context, set_thread_context
+    previous = get_thread_context()
+    clear_thread_context()
+    try:
+        assert sr.subject_hit(title="广州太古汇") is False
+        with pytest.raises(ValueError, match="LEGACY_SUBJECT_SCOPE_REQUIRED"):
+            sr._subject_sql_and_values()
+    finally:
+        if previous is not None:
+            set_thread_context(previous)

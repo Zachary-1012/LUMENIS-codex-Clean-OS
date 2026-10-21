@@ -18,6 +18,7 @@
 
 时间口径：publish_date 取自 create_time（笔记真实发布日期），采集时间由入库层
 统一写 captured_at，二者严格分离，绝不用采集时间冒充发布时间。
+publish_date 是抖音来源的 UTC+08:00 日历日期，不是 UTC 事件时间；原始 create_time 保留。
 """
 import re
 import json
@@ -366,13 +367,15 @@ class DouyinAdapter(BaseAdapter):
 
     @staticmethod
     def _ts_to_date(ts):
-        """Unix 秒时间戳 → YYYY-MM-DD；无效返回空串（不臆造）。"""
+        """Unix 秒 → 抖音 UTC+08:00 日历日期；不依赖主机时区，无效为空。"""
         try:
             ts = int(ts)
             if ts <= 0:
                 return ""
-            return datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
-        except (TypeError, ValueError, OSError):
+            return datetime.datetime.fromtimestamp(
+                ts, tz=datetime.timezone(datetime.timedelta(hours=8))
+            ).strftime("%Y-%m-%d")
+        except (TypeError, ValueError, OverflowError, OSError):
             return ""
 
     @staticmethod

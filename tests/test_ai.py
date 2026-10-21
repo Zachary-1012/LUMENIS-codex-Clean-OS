@@ -93,6 +93,12 @@ class TestIntelligence:
         assert isinstance(result, bool)
 
 class TestSubjectRules:
+    @pytest.fixture(autouse=True)
+    def explicit_reference_focus(self):
+        from subject_context import brand_scope
+        with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+            yield
+
     """主体规则测试"""
 
     def test_subject_words_defined(self):

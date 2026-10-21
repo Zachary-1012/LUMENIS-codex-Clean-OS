@@ -19,6 +19,13 @@ from subject_rules import (
 )
 
 
+@pytest.fixture(autouse=True)
+def explicit_reference_focus():
+    from subject_context import brand_scope
+    with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+        yield
+
+
 class TestSubjectHitLogic:
     """主体判定逻辑"""
 
@@ -75,79 +82,56 @@ class TestSubjectHitLogic:
 
 
 class TestSubjectRejudgeDataQuality:
-    """重判数据质量原则"""
+    """Current identity and relevance are separate; never inspect a production seed.
 
-    def test_no_data_deletion(self):
-        """重判只更新字段，不删除数据（通过生产库验证总数）。"""
-        db_path = os.environ['ZBC_DB_PATH']
-        if not os.path.exists(db_path):
-            pytest.skip("生产库不存在")
-        conn = sqlite3.connect(db_path)
-        total = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
-        conn.close()
-        # 重判只更新字段不删数据；采集使 notes 只增不减，故总数不得低于建测基线 963（不写死等值）
-        assert total >= 963, f"重判不应删除数据，notes 总数 {total} 低于建测基线 963"
+    The old 963-row/subject_type=CTH assertions described a historical dataset,
+    not a repeatable operation. Exercise the current Database writer twice on
+    synthetic rows and prove no loss, explicit unknown identity and independent
+    subject relevance instead of restoring the retired conflation.
+    """
+    @pytest.fixture
+    def rows(self, tmp_path, monkeypatch):
+        import database
+        from lumenis.shared.database import repository
+        path = tmp_path / "subject-rejudge.sqlite3"
+        repo = repository.DatabaseRepository(str(path))
+        monkeypatch.setenv("ZBC_DB_PATH", str(path))
+        monkeypatch.setattr(repository, "_default_repository", repo)
+        database.init_db()
+        inputs = [
+            {"note_id": "focus", "title": "广州太古汇探店", "content": "太古汇LV"},
+            {"note_id": "excluded", "title": "上海太古汇", "content": "上海兴业太古汇"},
+            {"note_id": "unknown", "title": "天气", "content": "无身份来源"},
+        ]
+        for note in inputs:
+            database.insert_note(note)
+        before = repo.query_one("SELECT COUNT(*) FROM notes")[0]
+        for note in inputs:
+            database.insert_note(note)
+        with repo.connection() as connection:
+            result = [dict(r) for r in connection.execute("SELECT * FROM notes ORDER BY note_id")]
+        return before, result
 
-    def test_no_empty_subject_type(self):
-        """重判后不应有空/NULL subject_type。"""
-        db_path = os.environ['ZBC_DB_PATH']
-        if not os.path.exists(db_path):
-            pytest.skip("生产库不存在")
-        conn = sqlite3.connect(db_path)
-        empty = conn.execute(
-            "SELECT COUNT(*) FROM notes WHERE subject_type IS NULL OR subject_type = ''"
-        ).fetchone()[0]
-        conn.close()
-        assert empty == 0, f"仍有 {empty} 条空/NULL subject_type"
+    def test_no_data_deletion(self, rows):
+        before, after = rows
+        assert before == len(after) == 3
+        assert {r["note_id"] for r in after} == {"focus", "excluded", "unknown"}
 
-    def test_unknown_is_explicit(self):
-        """不相关笔记 subject_type 应为 'unknown'，不是'未知'或空。"""
-        db_path = os.environ['ZBC_DB_PATH']
-        if not os.path.exists(db_path):
-            pytest.skip("生产库不存在")
-        conn = sqlite3.connect(db_path)
-        # 不应有"未知"这种静默填充
-        bad = conn.execute(
-            "SELECT COUNT(*) FROM notes WHERE subject_type = '未知'"
-        ).fetchone()[0]
-        conn.close()
-        assert bad == 0, "存在'未知'静默填充，违反显式标记原则"
+    def test_no_empty_subject_type(self, rows):
+        assert all(r["subject_type"] for r in rows[1])
 
-    def test_cth_notes_hit_subject(self):
-        """CTH 分类的笔记应确实命中主体。"""
-        db_path = os.environ['ZBC_DB_PATH']
-        if not os.path.exists(db_path):
-            pytest.skip("生产库不存在")
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        cth_notes = conn.execute(
-            "SELECT title, body, content, source_keyword, matched_keywords FROM notes WHERE subject_type = 'CTH' LIMIT 20"
-        ).fetchall()
-        conn.close()
-        assert len(cth_notes) > 0
-        for n in cth_notes:
-            assert subject_hit(
-                title=n['title'], body=n['body'], content=n['content'],
-                source_keyword=n['source_keyword'], matched_keywords=n['matched_keywords']
-            ) is True, f"CTH 笔记未命中主体: {n['title']}"
+    def test_unknown_is_explicit(self, rows):
+        assert {r["subject_type"] for r in rows[1]} == {"unknown"}
 
-    def test_unknown_notes_dont_hit_subject(self):
-        """unknown 分类的笔记应确实不命中主体。"""
-        db_path = os.environ['ZBC_DB_PATH']
-        if not os.path.exists(db_path):
-            pytest.skip("生产库不存在")
-        conn = sqlite3.connect(db_path)
-        conn.row_factory = sqlite3.Row
-        unknown_notes = conn.execute(
-            "SELECT title, body, content, source_keyword, matched_keywords FROM notes WHERE subject_type = 'unknown' LIMIT 20"
-        ).fetchall()
-        conn.close()
-        assert len(unknown_notes) > 0
-        for n in unknown_notes:
-            assert subject_hit(
-                title=n['title'], body=n['body'], content=n['content'],
-                source_keyword=n['source_keyword'], matched_keywords=n['matched_keywords']
-            ) is False, f"unknown 笔记实际命中主体: {n['title']}"
+    def test_cth_notes_hit_subject(self, rows):
+        focused = next(r for r in rows[1] if r["note_id"] == "focus")
+        assert subject_hit_note(focused) is True
+        assert focused["subject_type"] == "unknown"  # A mention is not account identity.
+
+    def test_unknown_notes_dont_hit_subject(self, rows):
+        unrelated = [r for r in rows[1] if r["note_id"] != "focus"]
+        assert len(unrelated) == 2
+        assert all(not subject_hit_note(r) for r in unrelated)
 
 
 class TestSubjectWordsProtected:
@@ -176,3 +160,11 @@ class TestSubjectWordsProtected:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_missing_identity_is_unknown_not_default_normal_user():
+    from subject_classifier import SubjectClassifier
+    result = SubjectClassifier().classify()
+    assert result["subject_type"] == "unknown"
+    assert result["identity_truth"] == "NOT_ESTABLISHED"
+    assert result["identity_status"] == "INSUFFICIENT_EVIDENCE"

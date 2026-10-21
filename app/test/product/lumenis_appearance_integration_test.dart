@@ -269,6 +269,11 @@ void _expectDraftAndScreenUnchanged(
 class _AppearanceClient extends LumenisCoreClient {
   final screenReads = <String>[];
 
+  // These tests start after scope confirmation: appearance must not cause
+  // another read. Unknown-to-confirmed scope remounting is a separate boundary.
+  @override
+  Map<String, dynamic>? get currentContextEnvelope => _globalContext;
+
   @override
   Future<Map<String, dynamic>> runtimeIdentity() async => {
     'ok': true,

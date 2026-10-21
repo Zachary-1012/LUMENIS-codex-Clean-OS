@@ -5,11 +5,28 @@ All CDP, cookie-name, recovery, cache, and check_all inputs are mocked. Tests
 never probe an account or write the resident health file.
 """
 import json, os, sys, unittest
+import pytest
 from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import resident_health as rh
 import xhs_cookie_bridge as bridge
+
+
+@pytest.fixture(autouse=True)
+def registered_synthetic_worker(monkeypatch):
+    """Resolve a synthetic registered session, not a historical fixed port."""
+    import cdp_helper
+    monkeypatch.setattr(cdp_helper, "resolve_registered_xhs_worker", lambda **kwargs: {
+        "available": True, "port": 9223, "endpoint": "http://127.0.0.1:9223",
+    })
+
+
+def test_unregistered_worker_never_falls_back_to_historical_port(monkeypatch):
+    import cdp_helper
+    monkeypatch.setattr(cdp_helper, "resolve_registered_xhs_worker", lambda **kwargs: {"available": False})
+    assert bridge.cdp_port_for(bridge.XHS_RETINAUT_NAME) is None
+    assert bridge.cdp_url_for(bridge.XHS_RETINAUT_NAME) == ""
 
 
 class TestResidentHealthImports(unittest.TestCase):
@@ -20,7 +37,7 @@ class TestResidentHealthImports(unittest.TestCase):
         self.assertTrue(os.path.isfile(rh.RESIDENT_LAUNCHER))
 
     def test_bridge_contract_alignment(self):
-        """The supported default is the approved Hong Kong RedNote identity."""
+        """The approved identity resolves only through its registered worker."""
         self.assertEqual(bridge.cdp_port_for(bridge.XHS_RETINAUT_NAME), 9223)
         self.assertEqual(bridge.DEFAULT_COLLECTION_ACCOUNT, bridge.XHS_RETINAUT_NAME)
 

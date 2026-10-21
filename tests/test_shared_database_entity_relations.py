@@ -41,7 +41,11 @@ def country_client(relation_db, monkeypatch):
     monkeypatch.setattr(subject_registry, "list_subjects", list_subjects)
     monkeypatch.setattr(auth, "get_current_user", lambda: {"id": 71})
     monkeypatch.setattr(authorization, "check_dual_domain_permission", lambda *a, **k: True)
+    # These route tests exercise the account-gated variant, not the separately
+    # approved pre-account open workspace. Enable the actual gate explicitly.
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
     app = Flask(__name__)
+    app.config["LUMENIS_OPEN_WORKSPACE"] = False
     app.register_blueprint(subject_registry.subject_registry_bp)
     return app.test_client()
 

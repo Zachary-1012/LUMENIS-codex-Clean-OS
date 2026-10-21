@@ -74,6 +74,26 @@ The table records direct manifest entries, not every transitive dependency.
 | feedparser | PRODUCTION | RSS / Atom public-feed parsing, as declared in `requirements.txt` | Public-feed acquisition adapter | VERIFY_BEFORE_RELEASE | Yes |
 | [markitdown[pptx]](https://github.com/microsoft/markitdown/tree/v0.1.8) 0.1.8 | PRODUCTION / OPTIONAL IMPORTER ENHANCEMENT | Local HTML/PPTX to Markdown conversion behind `lumenis/importer/parser.py`; no network, Evidence or Canonical ownership | Importer adapter only; existing PDF/Word/Excel parsers remain authoritative; remove or replace by the same ParseResult contract | MIT ([v0.1.8 license](https://github.com/microsoft/markitdown/blob/v0.1.8/LICENSE)); python-pptx and transitive dependencies require separate notice/license reconciliation | Yes |
 
+| [xlrd](https://pypi.org/project/xlrd/2.0.2/) | PRODUCTION | Importer legacy XLS parsing | lumenis/importer/parser.py; preserves original bytes and cached-value limitations | VERIFY_BEFORE_RELEASE | Yes |
+| [jsonschema](https://pypi.org/project/jsonschema/) | PRODUCTION | Registered MCP tool JSON Schema validation | mcp_skill_runtime.py; validation only, not execution permission | VERIFY_BEFORE_RELEASE | Yes |
+| [statsmodels](https://pypi.org/project/statsmodels/0.14.6/) | PRODUCTION | Shared statistical estimation | lumenis/shared/reporting/statistics_methods.py; source/scope and uncertainty retained | VERIFY_BEFORE_RELEASE | Yes |
+| [ruptures](https://pypi.org/project/ruptures/1.1.10/) | PRODUCTION | Shared trend change-point detection | Existing Shared Reporting statistics owner; no independent truth store | VERIFY_BEFORE_RELEASE | Yes |
+| [networkx](https://pypi.org/project/networkx/3.5/) | PRODUCTION | Shared graph computation | lumenis/shared/reporting/statistics_methods.py; bounded computational adapter | VERIFY_BEFORE_RELEASE | Yes |
+| [scipy](https://pypi.org/project/scipy/1.17.1/) | PRODUCTION | Shared bounded scientific computation | requirements.txt selects 1.17.1 on Python <3.12 and 1.18.1 on Python >=3.12; same Reporting owner | VERIFY_BEFORE_RELEASE | Yes |
+| [scikit-learn](https://pypi.org/project/scikit-learn/1.7.2/) | PRODUCTION | Shared calibration, clustering and text transforms | Existing Shared Reporting statistics owner; no model-service or weight license grant | VERIFY_BEFORE_RELEASE | Yes |
+| [pymc](https://pypi.org/project/pymc/5.25.1/) | PRODUCTION | Existing bounded MMM statistical model | lumenis/shared/reporting/statistics_mmm.py; execution budget and actual diagnostic state required | VERIFY_BEFORE_RELEASE | Yes |
+| [arviz](https://pypi.org/project/arviz/0.22.0/) | PRODUCTION | Existing MMM posterior diagnostics | lumenis/shared/reporting/statistics_mmm.py; no false certainty or missing-to-zero conversion | VERIFY_BEFORE_RELEASE | Yes |
+| [pdfplumber](https://pypi.org/project/pdfplumber/0.11.10/) | PRODUCTION | Local PDF text/table parsing and test verification | lumenis/importer/parser.py; runtime dependency, not test-only; no cloud parser | VERIFY_BEFORE_RELEASE | Yes |
+| [ortools](https://pypi.org/project/ortools/9.15.6755/) | PRODUCTION | Shared bounded scheduling optimization | lumenis/shared/reporting/statistics_methods.py; official CP-SAT adapter, no separate task scheduler | VERIFY_BEFORE_RELEASE | Yes |
+
+2026-10-21 manifest reconciliation: the linked upstream PyPI project/release
+pages were read for identity/version provenance. This does not certify the
+actual shipped wheel/sdist, transitive licenses or notices; the explicit
+VERIFY_BEFORE_RELEASE state remains. [SciPy 1.18.1](https://pypi.org/project/scipy/1.18.1/)
+is the separate Python >=3.12 pin. This register has one row per package identity;
+conditional manifest entries are not duplicate components. Library source terms
+never license model weights, source datasets or customer materials.
+
 ### Commented / optional entries observed but not required by the current manifest
 
 The current `requirements.txt` mentions, but does not require-install: `openai`, `ollama`, `docx2pdf`, `pypdf`, and Windows-specific `win32-setctime`. Presence at runtime must be checked before treating any of them as active dependencies.
@@ -135,7 +155,7 @@ receipt is not current product operation or release evidence.
 | Component | Class | Purpose in repository | Integration / replacement boundary | License status | Replaceable |
 | --- | --- | --- | --- | --- | --- |
 | pytest | TEST ONLY | Automated test collection/execution and CI blocking regression gate | Test runner boundary; production runtime must not depend on it | VERIFY_BEFORE_RELEASE | Yes |
-| pdfplumber | TEST ONLY | Pinned 0.11.10; independent extraction of exported PDF text | PDF verification only; no production import; upstream MIT, transitive notices still require reconciliation (https://github.com/jsvine/pdfplumber) | VERIFY_BEFORE_RELEASE | Yes |
+| [xlwt](https://pypi.org/project/xlwt/1.3.0/) | TEST ONLY | Pinned 1.3.0; synthetic BIFF8 fixture writing | requirements-dev.txt only; production XLS parsing uses xlrd; upstream release identity checked, distribution notices not cleared | VERIFY_BEFORE_RELEASE | Yes |
 
 ## 4. Node direct dependencies observed in root `package.json`
 

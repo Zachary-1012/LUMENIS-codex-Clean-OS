@@ -1,5 +1,13 @@
 """CommonBasesFPRAS.ExactOracles/commonBaseCount for two PARTITION MATROIDS.
 
+Attribution: OpenAI/math, paper 114, ExactOracles/commonBaseCount; source identity is
+pinned in lumenis.shared.evaluation.openai_math_papers.provenance.REGISTRY
+at upstream fd4aeeb2ee4fc729c18d98444fed42fd0529eeeb.
+This bounded Python specialization is not the full paper algorithm or proof.
+Upstream paper/source rights remain separate; see LICENSING.md and the
+third-party register. This header does not assert a new upstream license grant.
+
+
 Independence is derived from partition capacities, not trusted arbitrary callbacks.
 Exact finite enumeration; NOT the common-bases FPRAS.
 """

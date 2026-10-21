@@ -248,10 +248,12 @@ class TestL4FullChain:
             import subject_registry
             from account.models import ACCOUNT_TABLES_SQL
             from canonical_data import ensure_canonical_table
+            from lumenis.shared.database.business_schema import ensure_business_scope_storage
             from lumenis.shared.evidence import store as evidence_store
             # 验证数据库可连接
             with db.get_db() as conn:
                 subject_registry.ensure_schema(conn)
+                ensure_business_scope_storage(conn)
                 evidence_store.ensure_evidence_schema(conn)
                 ensure_canonical_table(connection=conn)
                 conn.executescript(ACCOUNT_TABLES_SQL)
@@ -297,7 +299,7 @@ class TestL4FullChain:
             _record_step("COLLECT(mock)", False, error=e)
             pytest.fail(f"COLLECT failed: {e}")
 
-    def test_step_05_process(self, chain_state):
+    def test_step_05_process(self, chain_state, l4_cth_subject_context):
         """STEP 5: PROCESS - 数据清洗与主题识别"""
         try:
             import subject_rules as sr
@@ -470,19 +472,22 @@ class TestL4FullChain:
             _record_step("EVIDENCE", False, error=e)
             pytest.fail(f"EVIDENCE failed: {e}")
 
-    def test_step_10_report(self, chain_state):
+    def test_step_10_report(self, chain_state, l4_cth_subject_context):
         """STEP 10: REPORT - 报告生成"""
         try:
             from lumenis.shared.reporting import daily as daily_report
             # 生成今日摘要
-            summary = daily_report.generate_today_summary()
+            scope = {"domain_id": l4_cth_subject_context.domain_id,
+                     "subject_id": l4_cth_subject_context.subject_id,
+                     "brand_focus_id": None, "global_scope": False}
+            summary = daily_report.generate_today_summary(scope=scope)
             assert summary is not None, "报告摘要为空"
             assert isinstance(summary, dict), "报告摘要不是 dict"
             # 验证报告包含关键字段
             assert "total_notes" in summary or "date" in summary or "summary" in summary, \
                 f"报告缺少关键字段: {list(summary.keys())[:5]}"
             # 生成完整日报
-            digest = daily_report.generate_daily_digest()
+            digest = daily_report.generate_daily_digest(scope=scope)
             assert digest is not None, "日报为空"
             _record_step("REPORT", True,
                          f"报告生成成功，摘要字段: {list(summary.keys())[:5]}")

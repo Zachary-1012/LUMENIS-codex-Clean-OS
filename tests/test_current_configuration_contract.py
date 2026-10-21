@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from tests.test_user_api_adapter import configured
 
 
 def _clear_current_config_env(monkeypatch):
@@ -127,7 +128,7 @@ def test_legacy_settings_api_projects_current_runtime_truth(tmp_path, monkeypatc
     assert current["domain"]["local_url"] == "http://127.0.0.1:8201"
 
 
-def test_settings_explicit_external_configuration_is_not_live_inference(tmp_path, monkeypatch):
+def test_settings_explicit_external_configuration_is_not_live_inference(tmp_path, monkeypatch, configured):
     import settings_module
 
     monkeypatch.setattr(settings_module, "CONFIG_FILE", str(tmp_path / "missing.json"))
@@ -137,7 +138,7 @@ def test_settings_explicit_external_configuration_is_not_live_inference(tmp_path
     monkeypatch.setenv("USER_MODEL_API_MODEL", "model")
     current = settings_module.load_config()["ai"]
     assert current["provider"] == "user_api"
-    assert current["model"] == "model"
+    assert current["model"] == "openai/gpt-oss-20b"
     assert current["available"] is False
     assert current["status"] == "CONFIGURED_NOT_VERIFIED"
     assert current["fallback_allowed"] is False

@@ -31,13 +31,13 @@ class TestRegionRotation:
         for last in (None, "cn", "intl"):
             sel = rp.select_region(kos_only=True, last_region=last)
             assert sel["region"] == "intl"
-            assert sel["cdp_port"] == 9223
+            assert sel["cdp_port"] is None
             assert "rednote" in sel["host"]
 
     def test_force_region(self):
         sel = rp.select_region(force_region="cn")
         assert sel["region"] == "intl"
-        assert sel["cdp_port"] == 9223
+        assert sel["cdp_port"] is None
         assert sel["blocked"] is True
 
     def test_cn_paused_fallback_intl(self, monkeypatch):
@@ -46,20 +46,20 @@ class TestRegionRotation:
         assert sel["region"] == "intl"
 
     def test_port_mapping(self):
-        assert rp.get_cdp_port("cn") == 9222
-        assert rp.get_cdp_port("intl") == 9223
+        assert rp.get_cdp_port("cn") is None
+        assert rp.get_cdp_port("intl") is None
 
     def test_kos_consistent_with_explicit_worker_config(self, monkeypatch):
-        # 9223 是策略身份；网络地址必须由 server-owned XHS_CDP_URL 显式配置，禁止 localhost 默认值。
+        # 退休桥接不再解释环境端口；实际端点只由 SYSTEM Browser Owner 解析。
         from xhs_cookie_bridge import cdp_url_for, XHS_RETINAUT_NAME
 
         endpoint = "https://browser-worker.example:9223"
         monkeypatch.setenv("XHS_CDP_URL", endpoint)
         url = cdp_url_for(XHS_RETINAUT_NAME)
         sel = rp.select_region(kos_only=True)
-        assert url == endpoint
-        assert sel["cdp_port"] == 9223
-        assert str(sel["cdp_port"]) in url
+        assert url == ""
+        assert sel["cdp_port"] is None
+        assert sel["region"] == "intl"
 
     def test_no_implicit_worker_endpoint(self, monkeypatch):
         from xhs_cookie_bridge import cdp_url_for, XHS_RETINAUT_NAME

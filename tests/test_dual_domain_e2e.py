@@ -263,6 +263,12 @@ class TestRiskDualDomain:
 # 4. Subject 规则：CTH 强制，ZBMP 不被隐式过滤
 # ============================================================================
 class TestSubjectRulesDualDomain:
+    @pytest.fixture(autouse=True)
+    def explicit_reference_focus(self):
+        from subject_context import brand_scope
+        with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+            yield
+
     """CTH subject 规则强制，ZBMP 数据不被 199品牌/9业态 隐式过滤。"""
 
     def test_cth_subject_hit_for_taikoo(self):

@@ -23,6 +23,7 @@ P1 复杂度治理 — 持续验证 ZBC 主库与 OSAI 外部库的边界隔离�
 from __future__ import annotations
 
 import ast
+import hashlib
 import json
 import os
 import re
@@ -36,7 +37,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 # 配置
 # ============================================================
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_DB = PROJECT_ROOT / "data" / "monitor.db"
+DEFAULT_DB = None  # Source audit must never probe the production database implicitly.
 OUTPUT_MD = PROJECT_ROOT / "audit" / "BOUNDARY_CHECK_REPORT.md"
 OUTPUT_JSON = PROJECT_ROOT / "audit" / "BOUNDARY_CHECK_REPORT.json"
 
@@ -49,6 +50,7 @@ EXCLUDE_DIRS = {
     "staging", "user_file", "_path_backup", "_scan_output",
     "audit", "docs", "00-GOVERNANCE", "02-ARCHITECTURE",
     "intelligence_library",  # 研究库单独检查
+    "tests", "test",
 }
 
 # 生产代码目录（白名单优先）
@@ -95,7 +97,13 @@ class Violation:
 
 def is_production_file(rel_path: str) -> bool:
     """判断是否为生产代码文件（排除备份/扫描输出/文档等）"""
-    parts = rel_path.replace("\\", "/").split("/")
+    normalized = rel_path.replace("\\", "/")
+    if any(normalized.startswith(f"app/{platform}/flutter/ephemeral/")
+           for platform in ("linux", "windows", "macos")):
+        return False  # Flutter-generated dependency links, never owned source.
+    parts = normalized.split("/")
+    if parts[0] == "work" or rel_path == "scripts/audit_tools/boundary_check.py":
+        return False
     for part in parts:
         if part in EXCLUDE_DIRS:
             return False
@@ -110,13 +118,25 @@ def is_production_file(rel_path: str) -> bool:
 def get_production_py_files() -> List[Path]:
     """获取所有生产 Python 文件"""
     files = []
-    for py_file in PROJECT_ROOT.rglob("*.py"):
-        rel = str(py_file.relative_to(PROJECT_ROOT))
-        if not is_production_file(rel):
-            continue
-        if rel.startswith(("data/", "logs/", "backups/", "node_modules/")):
-            continue
-        files.append(py_file)
+    def failed(error):
+        raise OSError("Included source traversal failed") from error
+    for directory, dirs, names in os.walk(PROJECT_ROOT, onerror=failed, followlinks=False):
+        rel_dir = Path(directory).relative_to(PROJECT_ROOT)
+        selected = sorted(d for d in dirs if is_production_file((rel_dir / d / "entry.py").as_posix()))
+        if any((Path(directory) / d).is_symlink() for d in selected):
+            raise OSError("Included source directory is a symlink; review required")
+        dirs[:] = selected
+        for name in sorted(names):
+            if not name.endswith(".py"):
+                continue
+            path = Path(directory) / name
+            rel = path.relative_to(PROJECT_ROOT).as_posix()
+            if is_production_file(rel) and not rel.startswith("data/"):
+                if path.is_symlink():
+                    raise OSError("Symlink source requires explicit review: " + rel)
+                # Included source parse/read failures are not silently skipped.
+                ast.parse(path.read_text(encoding="utf-8-sig"), filename=rel)
+                files.append(path)
     return files
 
 
@@ -131,15 +151,15 @@ def check_direct_osai_import(files: List[Path]) -> List[Violation]:
     for fpath in files:
         rel = str(fpath.relative_to(PROJECT_ROOT))
         try:
-            source = fpath.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
+            source = fpath.read_text(encoding="utf-8-sig")
+        except Exception as error:
+            raise OSError("Source boundary input unavailable") from error
 
         # 用 AST 精确检测 import（排除字符串中的 subprocess 调用）
         try:
             tree = ast.parse(source, filename=str(fpath))
-        except SyntaxError:
-            continue
+        except SyntaxError as error:
+            raise ValueError("Source boundary syntax unavailable") from error
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -196,8 +216,8 @@ def check_osai_db_connection(osai_path: Optional[Path]) -> List[Violation]:
         rel = str(py_file.relative_to(osai_path))
         try:
             source = py_file.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
+        except Exception as error:
+            raise OSError("Source boundary input unavailable") from error
         for i, line in enumerate(source.split("\n"), 1):
             for pat in db_patterns:
                 if pat.search(line):
@@ -235,8 +255,8 @@ def check_osai_write_production(osai_path: Optional[Path],
         rel = str(py_file.relative_to(osai_path))
         try:
             source = py_file.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
+        except Exception as error:
+            raise OSError("Source boundary input unavailable") from error
         for i, line in enumerate(source.split("\n"), 1):
             for pat in write_patterns:
                 m = pat.search(line)
@@ -323,18 +343,18 @@ def check_app_startup_no_osai() -> List[Violation]:
 def check_contract_artifact_usage(files: List[Path]) -> List[Violation]:
     """检查跨库交互是否通过 contract 文件/artifact 交换（正向检查+违规提示）"""
     violations = []
-    # 查找所有 subprocess 调用 OSAI 的地方，确认是否有 contract 伴随
+    # AST only: comments, prose, test fixtures and this scanner are not calls.
     subprocess_osai = []
     for fpath in files:
-        rel = str(fpath.relative_to(PROJECT_ROOT))
-        try:
-            source = fpath.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
-        if "osai" in source.lower() and ("subprocess" in source or "Popen" in source or "run(" in source):
-            for i, line in enumerate(source.split("\n"), 1):
-                if "osai" in line.lower() and ("subprocess" in line or "Popen" in line or ".run(" in line):
-                    subprocess_osai.append((rel, i, line.strip()[:100]))
+        rel = fpath.relative_to(PROJECT_ROOT).as_posix()
+        source = fpath.read_text(encoding="utf-8-sig")
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            called = ast.unparse(node.func)
+            if called.startswith("subprocess.") and "osai" in ast.unparse(node).lower():
+                subprocess_osai.append((rel, node.lineno, called))
 
     # 检查 contracts 目录是否存在
     contracts_dir = PROJECT_ROOT / "contracts"
@@ -348,27 +368,143 @@ def check_contract_artifact_usage(files: List[Path]) -> List[Violation]:
             "跨库交互应通过 contract 文件定义接口"
         ))
 
-    # 检查是否有 artifact 交换机制
-    artifact_files = list(PROJECT_ROOT.rglob("*artifact*"))
-    artifact_files = [f for f in artifact_files if f.is_file() and is_production_file(str(f.relative_to(PROJECT_ROOT)))]
-    if not artifact_files:
-        violations.append(Violation(
-            "B5-CONTRACT", "N/A", 0,
-            "未找到 artifact 交换机制文件",
-            SEVERITY_LOW,
-            "跨库数据交换建议通过 artifact 文件（JSON/CSV）"
-        ))
+    # Artifact existence is not proof of a safe exchange. Caller contracts and
+    # actual permission/effect tests remain independent mandatory evidence.
 
     # 记录 subprocess 调用为 INFO（合规模式）
     for rel, lineno, line in subprocess_osai[:10]:
         violations.append(Violation(
             "B5-CONTRACT", rel, lineno,
-            f"subprocess 调用 OSAI（合规模式）: {line}",
+            f"实际 subprocess 调用 OSAI: {line}",
             SEVERITY_INFO,
-            "通过 subprocess 调用 OSAI 是允许的边界模式，需确保有 contract 定义"
+            "只确认调用存在；Permission、合同与实际可用性须独立核验，不据此宣布合规或可用"
         ))
 
     return violations
+
+
+# Review identities for the ten ambiguous legacy findings at 79a88b5.
+# Not a directory whitelist, execution grant or semantic proof. Any changed
+# bytes require renewed review; permission/source denial regressions still run.
+_REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE: execute_skill_api checks dual domain, '
+                                         'task binding, then run_execution_chain; local path '
+                                         'authorized_context and readback.',
+                       'sha256': 'cb7a76c667552994a144416aa0e99987ce8a03d1457375b85aaef95a7e7113f6'},
+ 'agent_boundary.py': {'classification': 'LOCAL_GUARD: execute_with_approval calls firewall.check, '
+                                         'denies, atomically consumes bound grant; not SYSTEM '
+                                         'authority; no production caller found.',
+                       'sha256': 'e618affe99f146b35b54534092af933a5a382e5558178357ca92876ed7aaea3f'},
+ 'agent_capability/formation.py': {'classification': 'INTEGRITY_DELEGATE: FormedTool.invoke '
+                                                     'asserts current actor/context/implementation '
+                                                     'before callback; CapabilityRouter and '
+                                                     'AgentLoop own Permission.',
+                                   'dependencies': {'agent_capability/router.py': '332edd66089df095b090d27c41d2adab2244f58fcfa1304568a183ed2f567259',
+                                                    'agent_runtime/loop.py': '2a3c8d678b6ecb37a1f7becc81d00f1a935e3ad712880f4df39cb2c9bd5a1d4a'},
+                                   'sha256': 'a4fd55b510ec84e3fbed5ad6f3f25c2ca8ad12aa550802e333f57cac3e0f6e51'},
+ 'agent_capability/router.py': {'classification': 'CANONICAL_CHAIN: formed invoke callback '
+                                                  'executes only via FormedCall/AgentLoop; execute '
+                                                  'and resource reader check actor authorization '
+                                                  'and canonical Permission/Firewall/Effect Fence.',
+                                'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
+                                'sha256': '332edd66089df095b090d27c41d2adab2244f58fcfa1304568a183ed2f567259'},
+ 'agent_memory/semantic.py': {'classification': 'SOURCE_OWNER_DELEGATE: catalog existence reads '
+                                                'SELECT 1, never facts; catalog shortcut excluded; '
+                                                'discover_research_sources/verified_research_source '
+                                                'facts_only=True and independent re-read, '
+                                                'authorize_saved_work and binding checks.',
+                              'dependencies': {'intelligence_library_api.py': '53b1314e81d1d1f9627bcd7c4961fdce62d4064b6836add07b5013f7b29499c0'},
+                              'sha256': '03ddfcac676ee688e135dc0c670c2570c43a20cd760dc46f612a43845a613222'},
+ 'agent_research/debate.py': {'classification': 'PURE_LEGACY_HELPER: in-memory critique '
+                                                'transformation, no I/O/model/action; current '
+                                                'ResearchRunner no longer uses template debate as '
+                                                'evidence.',
+                              'sha256': 'f09fcbd75525f95706ffb5e2f1e7389e2e7e87ff987e2db6034814e8239546d6'},
+ 'agent_research/runner.py': {'classification': 'PURE_DELEGATE: analyze_source_records transforms '
+                                                'caller-resolved records; source-bound caller owns '
+                                                'authorization, not a runtime execution gate.',
+                              'dependencies': {'agent_research/source_bound.py': 'c4025dd6a2968a4a71c37bb00fc7081a9fe0593ea75ed40aa59b383cd0809f0e'},
+                              'sha256': '2feb3519841ae10faf6d8f5780d61093fa13f7818f21d875fa98fc93b549f8bc'},
+ 'agent_runtime/agent_zero_gui_executor.py': {'classification': 'DELEGATED: execute calls '
+                                                                '_preflight before worker; exact '
+                                                                'task-scoped permission checked by '
+                                                                '_permission_matches; caller owns '
+                                                                'Permission issuance.',
+                                              'sha256': '40a4bb47bc94b5309724f611d9014ac40f91993fe16c22e63d7f477ce8ca54e8'},
+ 'agent_runtime/loop.py': {'classification': 'CANONICAL_CHAIN: run reaches _execute_step; '
+                                             'gate.check allowed state is required before tool '
+                                             'invocation, with task scope and current binding '
+                                             'checks.',
+                           'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
+                           'sha256': '2a3c8d678b6ecb37a1f7becc81d00f1a935e3ad712880f4df39cb2c9bd5a1d4a'},
+ 'agent_runtime/task_binding.py': {'classification': 'CANONICAL_DELEGATE: authorized_context calls '
+                                                     'check_actor_scope_permission/check_local_workspace_scope_permission; '
+                                                     'invocation and result recheck bindings.',
+                                   'sha256': '7c99ef64456794d6d3c9d7fa78ddee038604f173f271ea296a7dc33e5431ae95'},
+ 'agent_smart_tool/base.py': {'classification': 'CANONICAL_CHAIN: registry.execute delegates to '
+                                                'registered SmartTool.execute; '
+                                                '_check_security_gates calls canonical '
+                                                'Permission/Firewall/Effect Fence and rejects '
+                                                'before _run.',
+                              'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
+                              'sha256': '839e213a3492b90ee5b860be394c4c99d21ce142423c06ce2c1b510ad072758a'},
+ 'lumenis/shared/agents/skills/execution.py': {'classification': 'CANONICAL_CHAIN: execute_skill '
+                                                                 'and bound background handler are '
+                                                                 'inner operations; '
+                                                                 'run_execution_chain checks '
+                                                                 'Permission/Firewall/Effect Fence '
+                                                                 'first and background owner '
+                                                                 'revalidates producer/scope.',
+                                               'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
+                                               'sha256': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
+ 'lumenis_shared_skills.py': {'classification': 'DELEGATED: run_shared_skill is called by '
+                                                'shared.agents.skills.execution._execute_builtin_local '
+                                                'after canonical Permission/Firewall/Effect Fence; '
+                                                'no independent permission grant.',
+                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
+                              'sha256': '16b684ebfc7103da27882a7d254b2d965d4847a61d061a529dc3107138789a89'},
+ 'lumenis_skill_adapter.py': {'classification': 'DELEGATED: invoked by '
+                                                'shared.agents.skills.execution.execute_skill only '
+                                                'after run_execution_chain '
+                                                'Permission/Firewall/Effect Fence. OSAI missing '
+                                                'remains unavailable.',
+                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
+                              'sha256': '9baa31c2da14ca9fa7fc79be778e875f59007548c88baa71f599bc30e394c3fe'},
+ 'mcp_skill_runtime.py': {'classification': 'DELEGATED: registered MCP invoked by same execution '
+                                            'owner; own installation/tool allowlist/human '
+                                            'approval/read-only contract checks retained.',
+                          'dependencies': {'lumenis/shared/agents/skills/execution.py': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
+                          'sha256': '60d8c6ad3116a6fbaa4ca9bca9df3d8b65f6d87642ebbce6e8ba8ea353425a6b'},
+ 'migrations/create_intelligence_assets_table.py': {'classification': 'SCHEMA_DIAGNOSTIC: '
+                                                                      'controlled migration count '
+                                                                      'after CREATE TABLE; not '
+                                                                      'content admission or '
+                                                                      'production fact '
+                                                                      'consumption; not executed '
+                                                                      'by this source checker.',
+                                                    'sha256': 'c436c8fa5c9b7ce18d5b2e3c38fe45d6ede99abb89ff974f8c9add77a7111eaf'},
+ 'scripts/audit_tools/new_asset_acceptance_check.py': {'classification': 'LEGACY_DIAGNOSTIC: '
+                                                                         'catalog counts/status '
+                                                                         'distribution/pending IDs '
+                                                                         'for audit only; not '
+                                                                         'product fact consumer, '
+                                                                         'no live caller found; '
+                                                                         'its runtime DB not '
+                                                                         'accessed or accepted '
+                                                                         'here.',
+                                                       'sha256': '262bbe44b9dde42722cc796d9ee7d97edca522146fed0db2aa32aa4dd3a12490'}}
+
+
+def _review_status(rel, path):
+    reviewed = _REVIEWED_BOUNDARIES.get(rel)
+    if reviewed is None:
+        return None
+    if hashlib.sha256(path.read_bytes()).hexdigest() != reviewed["sha256"]:
+        return False
+    for dependency, expected in reviewed.get("dependencies", {}).items():
+        linked = PROJECT_ROOT / dependency
+        if not linked.is_file() or linked.is_symlink() or hashlib.sha256(linked.read_bytes()).hexdigest() != expected:
+            return False
+    return True
 
 
 # ============================================================
@@ -398,27 +534,56 @@ def check_permission_gate(files: List[Path]) -> List[Violation]:
         ))
         return violations
 
-    # 检查 agent/skill 文件是否 import permission_gate
     for fpath in agent_skill_files:
-        rel = str(fpath.relative_to(PROJECT_ROOT))
-        try:
-            source = fpath.read_text(encoding="utf-8", errors="replace")
-        except Exception:
+        rel = fpath.relative_to(PROJECT_ROOT).as_posix()
+        reviewed = _review_status(rel, fpath)
+        if reviewed is True:
             continue
-        has_gate_import = ("permission_gate" in source or
-                          "PermissionGate" in source or
-                          "check_permission" in source)
-        has_execution = ("def execute" in source or
-                        "def run" in source or
-                        "def invoke" in source or
-                        "def call_skill" in source)
-        if has_execution and not has_gate_import:
-            violations.append(Violation(
-                "B6-PERMISSION", rel, 0,
-                f"Agent/Skill 执行入口未引用 Permission Gate",
-                SEVERITY_MEDIUM,
-                "Agent/Skill 执行前应检查权限（permission_gate）"
-            ))
+        if reviewed is False:
+            violations.append(Violation("B6-PERMISSION", rel, 0,
+                "Reviewed boundary changed; renew caller and denial-case review", SEVERITY_HIGH))
+            continue
+        tree = ast.parse(fpath.read_text(encoding="utf-8-sig"))
+        entries = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                   and n.name.startswith(("execute", "run", "invoke", "call_skill"))]
+        functions = {}
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                functions.setdefault(node.name, []).append(node)
+        gate_names = {"check_permission", "check_actor_scope_permission", "check_local_workspace_scope_permission",
+                      "authorized_context", "run_execution_chain"}
+        def reaches_gate(function, seen):
+            if function.name in seen:
+                return False
+            seen = seen | {function.name}
+            # Function-local calls plus explicitly reached local delegates.
+            # A gate in an unrelated function cannot authorize this entry.
+            calls = []
+            def visit(node):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)):
+                    return
+                if isinstance(node, ast.Call):
+                    calls.append(node)
+                for child in ast.iter_child_nodes(node):
+                    visit(child)
+            for statement in function.body:
+                visit(statement)
+            for call in calls:
+                called = ast.unparse(call.func)
+                name = called.rsplit(".", 1)[-1].lstrip("_")
+                if name in gate_names:
+                    return True
+                if called.endswith("get_permission_gate().check") or called.endswith("_get_permission_gate().check"):
+                    return True
+                raw_name = called.rsplit(".", 1)[-1]
+                if len(functions.get(raw_name, [])) == 1 and reaches_gate(functions[raw_name][0], seen):
+                    return True
+            return False
+        for entry in entries:
+            if not reaches_gate(entry, set()):
+                violations.append(Violation("B6-PERMISSION", rel, entry.lineno,
+                    "Execution entry has no reachable authorization check or reviewed delegation", SEVERITY_HIGH,
+                    "Static candidate, not a proven exploit; trace caller and preserve denial tests before admission"))
 
     return violations
 
@@ -429,71 +594,27 @@ def check_permission_gate(files: List[Path]) -> List[Violation]:
 def check_pending_assets_production_ref(files: List[Path]) -> List[Violation]:
     """检查 intelligence_library 中 PENDING/CONCEPT 状态资产是否被生产代码直接引用"""
     violations = []
-
-    # 从 DB 读取 PENDING/CONCEPT 资产
-    pending_assets = set()
-    if DEFAULT_DB.exists():
-        try:
-            conn = sqlite3.connect(str(DEFAULT_DB))
-            c = conn.cursor()
-            c.execute("""
-                SELECT asset_id, title, knowledge_status, admission_status
-                FROM intelligence_assets
-                WHERE knowledge_status IN ('PENDING', 'CONCEPT')
-                   OR admission_status IN ('PENDING', 'CANDIDATE')
-            """)
-            for row in c.fetchall():
-                pending_assets.add(row[0])
-                pending_assets.add(row[1])  # title 也可能被引用
-            conn.close()
-        except Exception:
-            pass
-
-    # 检查生产代码中是否硬编码引用这些资产 ID/标题
     for fpath in files:
-        rel = str(fpath.relative_to(PROJECT_ROOT))
-        if "intelligence_library" in rel:
-            continue  # 研究库自身不算
-        try:
-            source = fpath.read_text(encoding="utf-8", errors="replace")
-        except Exception:
+        rel = fpath.relative_to(PROJECT_ROOT).as_posix()
+        if rel == "intelligence_library_api.py" or rel.startswith("intelligence_library/"):
+            continue  # Source owner has dedicated admission regressions, not consumer heuristics.
+        source = fpath.read_text(encoding="utf-8-sig")
+        tree = ast.parse(source)
+        queries = [n for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)
+                   and re.search(r"\bSELECT\b.*\bFROM\s+intelligence_assets\b", n.value, re.I | re.S)]
+        if not queries:
             continue
-        for asset_id in list(pending_assets)[:200]:  # 限制检查数量
-            if asset_id and len(asset_id) > 4 and asset_id in source:
-                # 找到行号
-                for i, line in enumerate(source.split("\n"), 1):
-                    if asset_id in line:
-                        violations.append(Violation(
-                            "B7-PENDING-REF", rel, i,
-                            f"生产代码引用未验证资产: {asset_id[:50]}",
-                            SEVERITY_MEDIUM,
-                            "PENDING/CONCEPT 状态资产不得被生产代码直接引用"
-                        ))
-                        break
-
-    # 检查生产代码是否直接查询 intelligence_assets 且不过滤状态
-    for fpath in files:
-        rel = str(fpath.relative_to(PROJECT_ROOT))
-        if "intelligence_library" in rel or "intelligence_library_api" in rel:
+        reviewed = _review_status(rel, fpath)
+        if reviewed is True:
             continue
-        if "test" in rel.lower() or rel.startswith("_") or "/_tmp" in rel:
-            continue  # 测试/扫描脚本不算生产引用
-        try:
-            source = fpath.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
-        if "intelligence_assets" in source:
-            for i, line in enumerate(source.split("\n"), 1):
-                if "intelligence_assets" in line and "SELECT" in line.upper():
-                    if "knowledge_status" not in source and "admission_status" not in source:
-                        violations.append(Violation(
-                            "B7-PENDING-REF", rel, i,
-                            f"查询 intelligence_assets 未过滤 knowledge_status/admission_status",
-                            SEVERITY_HIGH,
-                            "生产代码查询 intelligence_assets 必须过滤 PENDING/CONCEPT 状态"
-                        ))
-                    break
-
+        # Presence queries return no source material; their later use still
+        # belongs to semantic review. Direct content queries require review.
+        for query in queries:
+            if re.fullmatch(r"\s*SELECT\s+1\s+FROM\s+intelligence_assets\s+WHERE\s+asset_id\s*=\s*\?\s*", query.value, re.I) and reviewed is not False:
+                continue
+            violations.append(Violation("B7-PENDING-REF", rel, query.lineno,
+                "Direct catalog material query requires SourceUse/Permission review", SEVERITY_HIGH,
+                "Status words elsewhere in file do not prove source admission"))
     return violations
 
 
@@ -516,15 +637,15 @@ def check_credential_safety(files: List[Path]) -> List[Violation]:
         if "test" in rel.lower() or "example" in rel.lower():
             continue
         try:
-            source = fpath.read_text(encoding="utf-8", errors="replace")
-        except Exception:
-            continue
+            source = fpath.read_text(encoding="utf-8-sig")
+        except Exception as error:
+            raise OSError("Source boundary input unavailable") from error
         for i, line in enumerate(source.split("\n"), 1):
             for pat, desc in secret_patterns:
                 if pat.search(line):
                     violations.append(Violation(
                         "B8-CREDENTIAL", rel, i,
-                        f"{desc}: {line.strip()[:60]}",
+                        f"{desc}（内容不输出）",
                         SEVERITY_HIGH,
                         "凭证必须通过 .env/系统密钥注入，不得硬编码"
                     ))
@@ -539,7 +660,7 @@ def check_credential_safety(files: List[Path]) -> List[Violation]:
 def get_production_tables() -> Set[str]:
     """获取生产表名集合（小写）"""
     tables = set()
-    if DEFAULT_DB.exists():
+    if DEFAULT_DB is not None and DEFAULT_DB.exists():
         try:
             conn = sqlite3.connect(str(DEFAULT_DB))
             c = conn.cursor()
@@ -555,7 +676,7 @@ def get_production_tables() -> Set[str]:
 def run_all_checks(osai_path: Optional[Path] = None) -> Dict:
     """执行所有边界检查"""
     print("=" * 60)
-    print("ZBC/LUMENIS 双库边界检查器 v1.0.0")
+    print("OEVIRA source boundary diagnostics v2.0.0 (bounded static evidence)")
     print("=" * 60)
 
     files = get_production_py_files()
@@ -631,17 +752,26 @@ def run_all_checks(osai_path: Optional[Path] = None) -> Dict:
     result = {
         "metadata": {
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "scanner_version": "1.0.0",
+            "scanner_version": "2.0.0",
+            "runtime_db_access": "NOT_ACCESSED",
+            "limitations": "Static source candidates, not exhaustive authorization proof; delegated paths require same-version negative regressions.",
             "project_root": str(PROJECT_ROOT),
             "osai_path": str(osai_path) if osai_path else "not specified",
             "production_files_scanned": len(files),
             "production_tables": len(production_tables),
         },
         "summary": {
-            "total_violations": len(all_violations),
+            "total_violations": len(all_violations),  # Legacy field: includes INFO, not vulnerability count.
+            "blocking_findings": sum(v.severity in (SEVERITY_CRITICAL, SEVERITY_HIGH) for v in all_violations),
+            "information_items": sum(v.severity == SEVERITY_INFO for v in all_violations),
             "by_severity": severity_counts,
             "by_check": {k: v["violations"] for k, v in check_results.items()},
         },
+        "reviewed_boundaries": [
+            {"file": rel, "classification": entry["classification"],
+             "identity_matches": _review_status(rel, PROJECT_ROOT / rel)}
+            for rel, entry in sorted(_REVIEWED_BOUNDARIES.items())
+        ],
         "checks": check_results,
         "violations": [v.to_dict() for v in all_violations],
     }
@@ -662,7 +792,7 @@ def generate_markdown(result: Dict) -> str:
         "",
         "## 1. 总览 (Summary)",
         "",
-        f"**总违规数: {s['total_violations']}**",
+        f"**静态记录数: {s['total_violations']}；阻断候选: {s['blocking_findings']}（不等同已证实漏洞数）**",
         "",
         "### 按严重度",
         "",
@@ -786,7 +916,7 @@ def main():
     # 摘要
     s = result["summary"]
     print(f"\n{'='*60}")
-    print(f"边界检查完成: {s['total_violations']} violations")
+    print(f"边界检查完成: {s['total_violations']} records, {s['blocking_findings']} blocking candidates")
     for sev, count in s["by_severity"].items():
         print(f"  {sev}: {count}")
     print(f"{'='*60}")

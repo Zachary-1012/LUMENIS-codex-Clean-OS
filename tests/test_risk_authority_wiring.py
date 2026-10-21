@@ -34,9 +34,11 @@ def test_compat_root_risk_engine_is_pure_forward(monkeypatch):
     import risk_engine as compat
     import subject_rules
 
-    # _subject_sql_and_values 必须转发 subject_rules 权威
-    clause_a, vals_a = compat._subject_sql_and_values("n")
-    clause_b, vals_b = subject_rules.subject_sql_and_values("n")
+    # Explicit legacy focus; missing scope must still reject.
+    from subject_context import brand_scope
+    with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+        clause_a, vals_a = compat._subject_sql_and_values("n")
+        clause_b, vals_b = subject_rules.subject_sql_and_values("n")
     assert clause_a == clause_b and vals_a == vals_b
 
     # build_daily_report 必须转发 daily_report.generate_daily_digest（不自己算）
@@ -53,3 +55,12 @@ def test_scoring_engine_module_independent_from_active_state_machine():
     r = RiskEngine()
     snap = r.snapshot()
     assert "risk_score" in snap and "should_stop_request" in snap
+
+
+def test_legacy_subject_forward_rejects_absent_context(monkeypatch):
+    import pytest
+    import risk_engine as compat
+    import subject_context
+    monkeypatch.setattr(subject_context, 'get_thread_context', lambda: None)
+    with pytest.raises(ValueError, match='LEGACY_SUBJECT_SCOPE_REQUIRED'):
+        compat._subject_sql_and_values('n')
