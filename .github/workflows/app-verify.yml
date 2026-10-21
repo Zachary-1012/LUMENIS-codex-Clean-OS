@@ -124,6 +124,14 @@ jobs:
             test/features/shared/sh01/sh01_screen_test.dart \
             test/features/shared/sh04/sh04_view_model_race_test.dart
 
+      - name: Test browser contracts (BLOCKING)
+        working-directory: app
+        run: |
+          flutter test --no-pub --platform chrome \
+            test/core/lumenis_http_transport_web_test.dart \
+            test/lumenis_core_web_origin_test.dart \
+            test/features/shared/sh01/media_preview_web_test.dart
+
       - name: Build real Web Workspace (BLOCKING)
         working-directory: app
         run: flutter build web --release

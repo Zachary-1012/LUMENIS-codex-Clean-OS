@@ -2,7 +2,7 @@ import copy
 import pytest
 from tests.test_saved_document_workflow import workspace
 from tests.test_independent_growth_real_app import real_app, headers, counts
-from test_domain_report_shared_adoption import domain_report
+from tests.test_domain_report_shared_adoption import domain_report
 URL='/api/experience/saved-work'
 
 

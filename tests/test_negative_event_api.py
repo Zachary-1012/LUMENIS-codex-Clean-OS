@@ -17,11 +17,27 @@ from subject_rules import subject_sql_and_values, subject_hit
 from database import note_to_dict
 
 
-@pytest.fixture(scope="module", autouse=True)
-def _ensure_isolated_schema():
-    """Clean-checkout CI starts from an empty temp file; initialize only that file."""
+@pytest.fixture(autouse=True)
+def _ensure_isolated_schema(tmp_path, monkeypatch):
+    """Exercise the legacy SQL contract on scoped synthetic rows, not old data."""
     import database
+    from lumenis.shared.database import repository
+    from subject_context import brand_scope
+    path = tmp_path / "negative-events.sqlite3"
+    repo = repository.DatabaseRepository(str(path))
+    monkeypatch.setenv("ZBC_DB_PATH", str(path))
+    monkeypatch.setattr(repository, "_default_repository", repo)
     database.init_db()
+    with repo.transaction() as connection:
+        connection.executemany(
+            "INSERT INTO notes(note_id,title,content,sentiment,negative_confirmed,is_duplicate,noise_type) "
+            "VALUES(?,?,?,'negative',0,?,'')",
+            [("scope-negative", "广州太古汇服务反馈", "广州太古汇", 0),
+             ("foreign-case", "ZARA 独立案例", "其他主体", 0),
+             ("scope-duplicate", "广州太古汇重复", "广州太古汇", 1)],
+        )
+    with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+        yield
 
 
 def _visible(note):
@@ -46,8 +62,7 @@ def test_negative_pending_no_case_brands():
     conn.row_factory = sqlite3.Row
     try:
         pending, _, _ = _get_pending(conn)
-        if not pending:
-            pytest.skip('数据库无负面待办数据，跳过')
+        assert [n["note_id"] for n in pending] == ["scope-negative"]
         CASE_BRANDS = ['拉夫劳伦', 'Ralph Lauren', '宝格丽', 'ZARA', 'GBC', '宝珀']
         leaked = [n for n in pending if any(b.lower() in (n.get('title') or '').lower() for b in CASE_BRANDS)]
         assert len(leaked) == 0, f'待办列表混入公关案例: {[n.get("title") for n in leaked]}'
@@ -61,8 +76,7 @@ def test_negative_pending_subject_visible():
     conn.row_factory = sqlite3.Row
     try:
         pending, _, _ = _get_pending(conn)
-        if not pending:
-            pytest.skip('数据库无负面待办数据，跳过')
+        assert [n["note_id"] for n in pending] == ["scope-negative"]
         hidden = [n['note_id'] for n in pending if not _visible(n)]
         assert len(hidden) == 0, f'以下笔记经详情主体口径不可见: {hidden}'
     finally:
@@ -130,3 +144,10 @@ if __name__ == '__main__':
     test_event_mentions_linked_notes()
     test_negative_stats_matches_list()
     print('负面审核主体口径: 全部通过')
+
+
+def test_negative_sql_refuses_unbound_scope(monkeypatch):
+    import subject_context
+    monkeypatch.setattr(subject_context, "get_thread_context", lambda: None)
+    with pytest.raises(ValueError, match="LEGACY_SUBJECT_SCOPE_REQUIRED"):
+        subject_sql_and_values()

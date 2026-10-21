@@ -389,17 +389,30 @@ class TestModifiedFilesImport:
         import lumenis_skill_adapter
         assert hasattr(lumenis_skill_adapter, "_osai_root")
 
-    def test_db_path_in_modified_files_points_to_data_dir(self):
-        """修改后的 DB_PATH 指向 data/monitor.db"""
+    def test_db_path_in_modified_files_points_to_data_dir(self, tmp_path, monkeypatch):
+        """Real connections follow the call-time owner, not cached import aliases."""
         import auth_recovery_center
         import brand_knowledge_base
         import case_deep_analysis
 
-        from lumenis.shared.database import main_db_path
-        expected = str(Path(main_db_path()).resolve())
-        assert auth_recovery_center.AuthRecoveryCenter.DB_PATH == expected
-        assert brand_knowledge_base.DB_PATH == expected
-        assert case_deep_analysis.DB_PATH == expected
+        first = tmp_path / "first.sqlite3"
+        monkeypatch.setenv("ZBC_DB_PATH", str(first))
+        knowledge = brand_knowledge_base.BrandKnowledgeBase()
+        analysis = case_deep_analysis.CaseDeepAnalysis()
+        # These DB_PATH compatibility constants are import-time observations.
+        # The effective writer/readers must honor current binding even when a
+        # module was first imported by another isolated test.
+        readers = [lambda: auth_recovery_center.AuthRecoveryCenter._get_conn(None),
+                   knowledge._conn, analysis._conn]
+        for target in (first, tmp_path / "second.sqlite3"):
+            monkeypatch.setenv("ZBC_DB_PATH", str(target))
+            for reader in readers:
+                connection = reader()
+                try:
+                    actual = connection.execute("PRAGMA database_list").fetchone()[2]
+                    assert Path(actual).resolve() == target.resolve()
+                finally:
+                    connection.close()
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ def scoped_notes_app(tmp_path, monkeypatch):
     from canonical_data import CanonicalRecord, ensure_canonical_table, persist_canonical
     from lumenis.auth.service import AUTH_CONFIG
     from lumenis.shared.database import repository
+    from lumenis.shared.database.business_schema import ensure_business_scope_storage
     from lumenis.shared.evidence import store as evidence_store
     from subject_context import init_app
 
@@ -31,6 +32,7 @@ def scoped_notes_app(tmp_path, monkeypatch):
 
     with isolated_repository.connect() as connection:
         evidence_store.ensure_evidence_schema(connection)
+        ensure_business_scope_storage(connection)
         ensure_canonical_table(connection=connection)
         subject_registry.ensure_schema(connection)
         connection.executescript(ACCOUNT_TABLES_SQL)
@@ -65,6 +67,10 @@ def scoped_notes_app(tmp_path, monkeypatch):
                 test_name="canonical_note_projection_binding", result="PASS",
                 status="verified", inputs={"source_ids": [source_id]},
                 outputs={"authorized": True}, domain_id="cth", subject_id=subject_id,
+            )
+            connection.execute(
+                "UPDATE notes SET subject_id=?,scope_status='VERIFIED',scope_evidence_ref=? WHERE note_id=?",
+                (subject_id, str(evidence_id), source_id),
             )
             persist_canonical(connection, CanonicalRecord(
                 canonical_id=f"canonical-{source_id}", product_id="CTH",
@@ -237,16 +243,16 @@ def test_active_event_count_uses_only_exact_scoped_canonical_note_ids(scoped_not
     import database
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    event_a = database.upsert_event({
-        "event_key": "scope-a-event", "title": "A event", "first_seen": now,
-        "last_seen": now, "status": "active", "risk_level": "low",
-    })
-    event_b = database.upsert_event({
-        "event_key": "scope-b-event", "title": "B event", "first_seen": now,
-        "last_seen": now, "status": "active", "risk_level": "low",
-    })
-    database.link_event_mentions(event_a, [{"source_id": "note-a1", "source_platform": "xhs"}])
-    database.link_event_mentions(event_b, [{"source_id": "note-b1", "source_platform": "xhs"}])
+    with pytest.raises(ValueError, match="SCOPE_REQUIRED"):
+        database.upsert_event({"event_key": "unscoped", "title": "must be rejected"})
+    for subject, source_id in (("SUBJECT-A", "note-a1"), ("SUBJECT-B", "note-b1")):
+        scope = {"domain_id": "cth", "subject_id": subject,
+                 "brand_focus_id": None, "global_scope": False}
+        exact = database._normalize_event_scope(scope, allow_global=False)
+        database.upsert_event({
+            "event_key": database._event_scope_token(exact) + ".event", "title": subject + " event",
+            "first_seen": now, "last_seen": now, "status": "active", "risk_level": "low",
+        }, scope=scope, mentions=[{"source_type": "note", "source_id": source_id}])
 
     assert database.get_active_event_count_for_canonical_source_ids(
         ["note-a1"], since=now[:10],

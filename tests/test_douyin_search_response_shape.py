@@ -1,5 +1,10 @@
 """Regression for the current Douyin search/single response and honest empty state."""
 
+import os
+import time
+
+import pytest
+
 from lumenis.adapters.douyin import DouyinAdapter
 
 
@@ -77,3 +82,38 @@ def test_only_successful_explicit_empty_data_is_a_verified_empty_search():
         {"status_code": 0, "data": []},
         {"status_code": 0, "data": [{"aweme_info": {"desc": "not parsed"}}]},
     ])
+
+
+@pytest.mark.parametrize("host_tz", ["UTC0", "EST5", "JST-9"])
+def test_source_calendar_date_is_host_timezone_independent(host_tz):
+    if not hasattr(time, "tzset"):
+        pytest.skip("host does not expose tzset")
+    previous = os.environ.get("TZ")
+    try:
+        os.environ["TZ"] = host_tz
+        time.tzset()
+        # The original midnight-UTC sample must not move back a date on US hosts.
+        notes = DouyinAdapter()._notes_from_bags([_live_shaped_bag()], 3)
+        assert notes[0].publish_date == "2026-09-12"
+        assert notes[0].raw_data["create_time"] == 1789171200
+        from lumenis.system.collector.adapters.douyin import DouyinAdapter as MainAdapter
+        item = MainAdapter()._v4_notes_to_items(notes)[0]
+        assert item["publish_datetime"] == "2026-09-12"
+        assert item["raw"]["create_time"] == 1789171200
+    finally:
+        if previous is None:
+            os.environ.pop("TZ", None)
+        else:
+            os.environ["TZ"] = previous
+        time.tzset()
+
+
+@pytest.mark.parametrize("invalid", [None, "", "unknown", 0, -1, float("inf"), 10**100])
+def test_invalid_source_timestamp_stays_unknown(invalid):
+    assert DouyinAdapter._ts_to_date(invalid) == ""
+
+
+def test_source_calendar_boundary_differs_from_utc_event_date():
+    # 2026-09-11 15:59:59/16:00:00 UTC straddle midnight in UTC+08.
+    assert DouyinAdapter._ts_to_date(1789142399) == "2026-09-11"
+    assert DouyinAdapter._ts_to_date(1789142400) == "2026-09-12"

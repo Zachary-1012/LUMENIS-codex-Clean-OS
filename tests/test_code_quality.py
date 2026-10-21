@@ -224,8 +224,11 @@ class TestConfigCompleteness:
                             known_keys.add(sub.value)
         assert len(known_keys) >= 30, 'config.py known_keys 数量过少: %d' % len(known_keys)
         # 核心配置必须存在
-        for core_key in ['DATABASE_PATH', 'AI_PROVIDER', 'ZHIPU_API_KEY']:
+        for core_key in ['DATABASE_PATH', 'AI_PROVIDER', 'AI_MODEL',
+                         'USER_MODEL_API_BASE_URL', 'USER_MODEL_API_KEY', 'USER_MODEL_API_MODEL']:
             assert core_key in known_keys, 'config.py known_keys 缺少核心配置: %s' % core_key
+        # Retired built-in provider credentials must not become required config.
+        assert 'ZHIPU_API_KEY' not in known_keys
 
 
 # ============================================================

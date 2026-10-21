@@ -141,7 +141,8 @@ def test_reportlab_fallback_preserves_complete_report(monkeypatch, tmp_path):
         "key_insights": [{"type": "insight-type", "insight": "insight-detail", "metric": "metric-detail"}],
         "action_items": [{"action": "action-detail", "owner": "action-owner", "deadline": "2026-10-08"}],
         "data_quality": {"warnings": ["quality-detail"], "total_collected": 0},
-        "cth_specific": {"tone_evaluation": {"overall": "tone-detail", "warm_ratio": 0},
+        "cth_specific": {"reference_scope": True,
+                         "tone_evaluation": {"overall": "tone-detail", "warm_ratio": 0},
                          "active_activity_nodes": [{"name": "activity-detail", "month": "October"}]},
     }
     from pathlib import Path
@@ -301,3 +302,45 @@ def test_special_report_pdf_preserves_multilingual_literal_text():
     assert result.status_code == 200
     text = pdf_text(result.data)
     assert compact(TEXT) in compact(text) and "<b>literal</b> &" in text
+
+
+@pytest.mark.parametrize("reference_scope", [None, False])
+def test_nonreference_report_does_not_export_reference_only_material(tmp_path, reference_scope):
+    from pathlib import Path
+    from docx import Document
+    cth = {"tone_evaluation": {"overall": "REFERENCE-TONE-ONLY"},
+           "active_activity_nodes": [{"name": "REFERENCE-ACTIVITY-ONLY"}]}
+    if reference_scope is not None:
+        cth["reference_scope"] = reference_scope
+    report = {"brand_name": "Isolated ordinary subject", "executive_summary": TEXT,
+              "cth_specific": cth}
+    path = ReportExporter(str(tmp_path)).export_pdf(report, "ordinary.pdf")
+    assert path
+    text = pdf_text(Path(path).read_bytes())
+    word = "\n".join(p.text for p in Document(tmp_path / "ordinary.docx").paragraphs)
+    for rendered in (text, word):
+        assert compact(TEXT) in compact(rendered)
+        assert "REFERENCE-TONE-ONLY" not in rendered
+        assert "REFERENCE-ACTIVITY-ONLY" not in rendered
+        assert "参考主体专项分析" not in rendered
+
+
+def test_report_pdf_preserves_long_multilingual_summary_across_pages(tmp_path):
+    from pathlib import Path
+    lines = [f"段落{index:03d} 中文边界 English 한국어 END{index:03d}" for index in range(180)]
+    report = {"brand_name": "Isolated pagination", "executive_summary": "\n".join(lines),
+              "cth_specific": {"reference_scope": True,
+                               "tone_evaluation": {"overall": "FINAL-TONE", "warm_ratio": 0},
+                               "active_activity_nodes": [{"name": "FINAL-ACTIVITY"}]}}
+    path = ReportExporter(str(tmp_path)).export_pdf(report, "multipage.pdf")
+    assert path
+    raw = Path(path).read_bytes()
+    text = pdf_text(raw)
+    with pdfplumber.open(io.BytesIO(raw)) as pdf:
+        assert len(pdf.pages) >= 3
+    normalized = compact(text)
+    for line in lines:
+        assert normalized.count(compact(line)) == 1
+    assert "FINAL-TONE" in text and "FINAL-ACTIVITY" in text
+    assert normalized.index(compact(lines[0])) < normalized.index(compact(lines[-1]))
+    assert normalized.index(compact(lines[-1])) < normalized.index("FINAL-TONE")

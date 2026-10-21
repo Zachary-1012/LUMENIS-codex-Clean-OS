@@ -37,7 +37,14 @@ def test_has_runtime_metrics(result):
 
 
 def test_has_test_metrics(result):
-    assert result["tests"]["collected"] > 300
+    # Footprint measurement is not test execution. Never invent a historical
+    # collection count or imply that applicable regressions are unnecessary.
+    metrics = result["tests"]
+    assert metrics["collected"] is None
+    assert metrics["executed"] is False
+    assert metrics["status"] == "NOT_EXECUTED_BY_DIAGNOSTIC"
+    assert "independent version-bound test results" in metrics["reason"]
+    assert "PO_POLICY" not in metrics["status"]
 
 
 def test_has_db_and_frontend(result):

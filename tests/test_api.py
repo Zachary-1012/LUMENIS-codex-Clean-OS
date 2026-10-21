@@ -17,10 +17,36 @@ def auth_headers():
 class TestDashboardAPI:
     """仪表盘API测试"""
 
-    def test_dashboard_all(self, client, auth_headers):
-        """测试仪表盘汇总API"""
-        response = client.get('/api/dashboard/all', headers=auth_headers)
-        assert response.status_code == 200
+    def test_dashboard_all(self, client, auth_headers, tmp_path, monkeypatch):
+        """A valid explicit global read uses a disposable current schema."""
+        import database
+        import subject_registry
+        from canonical_data import ensure_canonical_table
+        from lumenis.shared.database import repository
+        from lumenis.shared.evidence.store import ensure_evidence_schema
+        repo = repository.DatabaseRepository(str(tmp_path / "dashboard.sqlite3"))
+        monkeypatch.setenv("ZBC_DB_PATH", repo.db_path)
+        monkeypatch.setattr(repository, "_default_repository", repo)
+        database.init_db()
+        from lumenis.system.security import permission
+        monkeypatch.setattr(permission, "_TESTING_BYPASS_ENABLED", False)
+        with repo.transaction() as connection:
+            subject_registry.ensure_schema(connection)
+            ensure_canonical_table(connection=connection)
+            ensure_evidence_schema(connection)
+        from account import models as account_models
+        from lumenis.auth import service as auth_service
+        account_models.init_account_db()
+        with repo.transaction() as connection:
+            connection.execute("INSERT INTO v4_users(id,username,password_hash,role,status) "
+                               "VALUES (701,'dashboard-fixture','not-a-login-hash','owner','active')")
+        monkeypatch.setattr(auth_service, "get_current_user",
+                            lambda **_kwargs: {"id": 701, "role": "owner"})
+        response = client.get('/api/dashboard/all', headers={
+            **auth_headers, "X-Domain-Id": "CTH", "X-Product-Id": "CTH",
+            "X-Lumenis-Context-Mode": "GLOBAL_ALL",
+        })
+        assert response.status_code == 200, response.get_json()
         data = response.get_json()
         assert data['ok'] is True
         assert 'overview' in data
