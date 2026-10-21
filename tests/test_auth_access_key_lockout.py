@@ -144,7 +144,7 @@ def test_access_key_lockout_is_per_ip_and_success_resets_only_its_bucket(auth_ru
         assert response.get_json()["success"] is False
         assert not _has_session_cookie(response)
 
-    check_a = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A)
+    check_a = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind="key")
     assert check_a["allowed"] is False
     original_lock_until = check_a["locked_until"]
     before_locked_request = len(
@@ -170,7 +170,7 @@ def test_access_key_lockout_is_per_ip_and_success_resets_only_its_bucket(auth_ru
             (ACCESS_KEY_BUCKET, TEST_IP_A),
         )
     )
-    check_a_after = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A)
+    check_a_after = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind="key")
     assert after_locked_request == before_locked_request
     assert check_a_after["locked_until"] == original_lock_until
 
@@ -211,8 +211,8 @@ def test_access_key_lockout_is_per_ip_and_success_resets_only_its_bucket(auth_ru
         "SELECT user_id FROM v4_sessions ORDER BY id DESC LIMIT 1",
     )[0]
     assert session["user_id"] == owner["id"]
-    assert runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_B)["remaining"] == attempts
-    assert runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A)["allowed"] is False
+    assert runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_B, attempt_kind="key")["remaining"] == attempts
+    assert runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind="key")["allowed"] is False
 
     audit_rows_b = _read_rows(
         runtime.database_path,
@@ -234,7 +234,7 @@ def test_access_key_missing_ip_uses_unknown_bucket_and_cooldown_expires(auth_run
         )
         assert result["success"] is False
 
-    check = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, "")
+    check = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, "", attempt_kind="key")
     assert check["allowed"] is False
     assert check["locked_until"] == (
         runtime.clock.current + timedelta(minutes=runtime.config["lockout_minutes"])
@@ -248,7 +248,7 @@ def test_access_key_missing_ip_uses_unknown_bucket_and_cooldown_expires(auth_run
         )
     )
     runtime.clock.current += timedelta(minutes=runtime.config["lockout_minutes"])
-    after_cooldown = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, None)
+    after_cooldown = runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, None, attempt_kind="key")
     assert after_cooldown["allowed"] is True
     assert after_cooldown["remaining"] == attempts
     count_after_expiry = len(
@@ -288,7 +288,7 @@ def test_concurrent_access_key_failures_stop_at_the_configured_limit(auth_runtim
     )
     assert len(failures) == attempts
     assert not _read_rows(runtime.database_path, "SELECT id FROM v4_sessions")
-    assert runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A)["allowed"] is False
+    assert runtime.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind="key")["allowed"] is False
 
 
 def test_password_lockout_cooldown_resets_and_key_failures_do_not_pollute_owner(auth_runtime):
@@ -366,3 +366,196 @@ def test_password_lockout_cooldown_resets_and_key_failures_do_not_pollute_owner(
     )[0]
     assert owner_after_success["failed_attempts"] == 0
     assert owner_after_success["locked_until"] is None
+
+
+def test_key_failures_never_mutate_colliding_legacy_account(auth_runtime):
+    rt = auth_runtime
+    conn = sqlite3.connect(rt.database_path)
+    conn.execute(
+        "INSERT INTO v4_users(username, password_hash, role, status, failed_attempts) "
+        "VALUES (?, ?, 'user', 'active', 1)",
+        (ACCESS_KEY_BUCKET, rt.security.hash_password(TEST_PASSWORD)),
+    )
+    conn.commit()
+    conn.close()
+    for _ in range(3):
+        assert not rt.service.login_by_key('wrong-key', TEST_IP_A)['success']
+    row = _read_rows(rt.database_path,
+                     'SELECT failed_attempts, locked_until FROM v4_users WHERE username=?',
+                     (ACCESS_KEY_BUCKET,))[0]
+    assert row['failed_attempts'] == 1
+    assert row['locked_until'] is None
+    assert rt.service.login_by_key(TEST_ACCESS_KEY, TEST_IP_B)['success']
+
+
+@pytest.mark.parametrize('bucket', [ACCESS_KEY_BUCKET, '__workspace_key__', '__workspace_key_ZBMP__'])
+@pytest.mark.parametrize('account_writer', ['lumenis', 'account'])
+def test_attempt_kinds_isolate_success_failures_and_account_locks(auth_runtime, monkeypatch, bucket, account_writer):
+    rt = auth_runtime
+    account_models = importlib.import_module('account.models')
+    account_security = importlib.import_module('account.security')
+    monkeypatch.setattr(account_models, 'get_db', rt.security.get_db)
+    monkeypatch.setattr(account_security, 'AUTH_CONFIG', rt.config)
+    conn = rt.security.get_db()
+    conn.execute("INSERT INTO v4_users(username, password_hash, role, status, failed_attempts) "
+                 "VALUES (?, '', 'user', 'active', 1)", (bucket,))
+    conn.commit()
+    conn.close()
+    writer = rt.security if account_writer == 'lumenis' else account_security
+    key_check = lambda: rt.security.check_login_attempts(bucket, TEST_IP_A, attempt_kind='key')
+    for _ in range(2):
+        rt.security.record_login_attempt(bucket, TEST_IP_A, False, attempt_kind='key')
+    writer.record_login_attempt(bucket, TEST_IP_A, True)
+    assert key_check()['remaining'] == 1  # password success cannot reset key guesses
+    writer.record_login_attempt(bucket, TEST_IP_A, False)
+    assert key_check()['remaining'] == 1  # password failure cannot consume key budget
+    before = dict(_read_rows(rt.database_path, 'SELECT * FROM v4_users WHERE username=?', (bucket,))[0])
+    rt.security.record_login_attempt(bucket, TEST_IP_A, True, attempt_kind='key')
+    assert key_check()['remaining'] == 3
+    assert dict(_read_rows(rt.database_path, 'SELECT * FROM v4_users WHERE username=?', (bucket,))[0]) == before
+    for ip in (TEST_IP_A, TEST_IP_B):
+        writer.record_login_attempt(bucket, ip, False)
+    assert not rt.security.check_login_attempts(bucket, '192.0.2.99')['allowed']
+    assert key_check()['allowed']  # account-wide lock is not a key/IP lock
+    before = dict(_read_rows(rt.database_path, 'SELECT * FROM v4_users WHERE username=?', (bucket,))[0])
+    for _ in range(3):
+        rt.security.record_login_attempt(bucket, TEST_IP_A, False, attempt_kind='key')
+    assert not key_check()['allowed']
+    assert rt.security.check_login_attempts(bucket, TEST_IP_B, attempt_kind='key')['allowed']
+    assert dict(_read_rows(rt.database_path, 'SELECT * FROM v4_users WHERE username=?', (bucket,))[0]) == before
+    assert {row['attempt_kind'] for row in _read_rows(rt.database_path, 'SELECT attempt_kind FROM v4_login_attempts')} == {'account', 'key'}
+
+
+@pytest.mark.parametrize('initializer', ['account', 'lumenis'])
+def test_attempt_kind_upgrade_preserves_history_and_cooldown(auth_runtime, monkeypatch, initializer):
+    rt = auth_runtime
+    account_models = importlib.import_module('account.models')
+    auth_models = importlib.import_module('lumenis.auth.models')
+    monkeypatch.setattr(account_models, 'get_db', rt.security.get_db)
+    monkeypatch.setattr(auth_models, 'get_db', rt.security.get_db)
+    conn = rt.security.get_db()
+    # Disposable pre-upgrade schema, never a production database.
+    conn.execute('DROP TABLE v4_login_attempts')
+    conn.execute('CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY, username TEXT, ip TEXT, success INTEGER, created_at TEXT)')
+    for success in (0, 0, 0, 1):
+        conn.execute('INSERT INTO v4_login_attempts(username, ip, success, created_at) VALUES(?,?,?,?)',
+                     (ACCESS_KEY_BUCKET, TEST_IP_A, success, rt.clock.timestamp()))
+    conn.commit()
+    conn.close()
+    old = [tuple(row) for row in _read_rows(rt.database_path, 'SELECT * FROM v4_login_attempts')]
+    initialize = account_models.init_account_db if initializer == 'account' else auth_models.init_auth_db
+    initialize()
+    initialize()  # Both bootstrap paths must be idempotent.
+    rows = _read_rows(rt.database_path, 'SELECT * FROM v4_login_attempts')
+    assert [tuple(row)[:-1] for row in rows] == old
+    assert {row['attempt_kind'] for row in rows} == {'legacy'}
+    assert not rt.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind='key')['allowed']
+    rt.clock.current += timedelta(minutes=2)
+    assert rt.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind='key')['remaining'] == 3
+    rt.security.record_login_attempt(ACCESS_KEY_BUCKET, TEST_IP_A, False, attempt_kind='key')
+    assert rt.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind='key')['remaining'] == 2
+    rt.security.record_login_attempt(ACCESS_KEY_BUCKET, TEST_IP_A, True, attempt_kind='key')
+    assert rt.security.check_login_attempts(ACCESS_KEY_BUCKET, TEST_IP_A, attempt_kind='key')['remaining'] == 3
+    assert len(_read_rows(rt.database_path, 'SELECT * FROM v4_login_attempts')) == len(old) + 2
+
+
+def test_password_login_cannot_reset_access_key_budget(auth_runtime):
+    rt = auth_runtime
+    conn = rt.security.get_db()
+    conn.execute("INSERT INTO v4_users(username, password_hash, role, status) VALUES (?, ?, 'user', 'active')",
+                 (ACCESS_KEY_BUCKET, rt.security.hash_password(TEST_PASSWORD)))
+    conn.commit()
+    conn.close()
+    for _ in range(2):
+        assert not rt.service.login_by_key('wrong-key', TEST_IP_A)['success']
+    assert rt.service.login(ACCESS_KEY_BUCKET, TEST_PASSWORD, TEST_IP_A)['success']
+    assert not rt.service.login_by_key('wrong-key', TEST_IP_A)['success']
+    assert not rt.service.login_by_key(TEST_ACCESS_KEY, TEST_IP_A)['success']
+    assert rt.service.login(ACCESS_KEY_BUCKET, TEST_PASSWORD, TEST_IP_B)['success']
+
+
+def test_workspace_unlock_ignores_colliding_legacy_account(auth_runtime, monkeypatch):
+    rt = auth_runtime
+    models = importlib.import_module('lumenis.auth.models')
+    route = importlib.import_module('lumenis.blueprint')
+    monkeypatch.setattr(models, 'get_db', rt.security.get_db)
+    monkeypatch.setattr(route, 'get_current_user', lambda: {'id': 1, 'username': TEST_OWNER, 'role': 'owner', 'token': 'isolated'})
+    workspace = importlib.import_module('lumenis.auth.workspace')
+    monkeypatch.setattr(workspace, 'get_db', rt.security.get_db)
+    bucket = rt.security.workspace_key_bucket('ZBMP')
+    conn = rt.security.get_db()
+    conn.execute("INSERT INTO v4_users(username, password_hash, role, status, failed_attempts) VALUES (?, '', 'user', 'active', 1)", (bucket,))
+    conn.commit()
+    conn.close()
+    assert workspace.issue_workspace_key('ZBMP', plain='isolated-workspace-key')['success']
+    assert _post(rt.client, '/v4/auth/workspace/unlock', {'workspace': 'ZBMP', 'key': 'wrong'}, TEST_IP_A).status_code == 401
+    before = dict(_read_rows(rt.database_path, 'SELECT * FROM v4_users WHERE username=?', (bucket,))[0])
+    assert _post(rt.client, '/v4/auth/workspace/unlock', {'workspace': 'ZBMP', 'key': 'isolated-workspace-key'}, TEST_IP_A).status_code == 200
+    assert dict(_read_rows(rt.database_path, 'SELECT * FROM v4_users WHERE username=?', (bucket,))[0]) == before
+    for _ in range(3):
+        assert _post(rt.client, '/v4/auth/workspace/unlock', {'workspace': 'ZBMP', 'key': 'wrong'}, TEST_IP_A).status_code == 401
+    assert _post(rt.client, '/v4/auth/workspace/unlock', {'workspace': 'ZBMP', 'key': 'wrong'}, TEST_IP_A).status_code == 429
+    assert _post(rt.client, '/v4/auth/workspace/unlock', {'workspace': 'CTH', 'key': 'wrong'}, TEST_IP_A).status_code == 401
+    assert _post(rt.client, '/v4/auth/workspace/unlock', {'workspace': 'ZBMP', 'key': 'wrong'}, TEST_IP_B).status_code == 401
+    row = _read_rows(rt.database_path, 'SELECT failed_attempts, locked_until FROM v4_users WHERE username=?', (bucket,))[0]
+    assert row['failed_attempts'] == 1 and row['locked_until'] is None
+
+
+def test_attempt_kind_and_key_bucket_are_validated(auth_runtime):
+    security = auth_runtime.security
+    for kind, bucket in [('unknown', ACCESS_KEY_BUCKET), ('key', 'ordinary-user')]:
+        with pytest.raises(ValueError):
+            security.record_login_attempt(bucket, TEST_IP_A, False, attempt_kind=kind)
+        with pytest.raises(ValueError):
+            security.check_login_attempts(bucket, TEST_IP_A, attempt_kind=kind)
+    assert not _read_rows(auth_runtime.database_path, 'SELECT * FROM v4_login_attempts')
+
+
+
+def test_attempt_kind_upgrade_is_safe_for_parallel_initializers(tmp_path, monkeypatch):
+    from threading import Barrier
+    from account import models
+
+    db = tmp_path / 'parallel-attempt-upgrade.sqlite3'
+    with sqlite3.connect(db) as conn:
+        conn.execute('CREATE TABLE v4_login_attempts(id INTEGER PRIMARY KEY, username TEXT, success INTEGER)')
+        conn.execute("INSERT INTO v4_login_attempts VALUES(1, '__access_key__', 0)")
+    barrier = Barrier(2)
+    original_exists = models._column_exists
+
+    def simultaneous_missing_column(conn, table, column):
+        exists = original_exists(conn, table, column)
+        if table == 'v4_login_attempts' and column == 'attempt_kind' and not exists:
+            barrier.wait(timeout=5)
+        return exists
+
+    monkeypatch.setattr(models, '_column_exists', simultaneous_missing_column)
+
+    def initialize():
+        with sqlite3.connect(db, timeout=10) as conn:
+            conn.row_factory = sqlite3.Row
+            models.ensure_login_attempt_kind_column(conn)
+            conn.commit()
+            return tuple(conn.execute('SELECT * FROM v4_login_attempts').fetchone())
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(lambda _: initialize(), range(2)))
+    assert results == [(1, '__access_key__', 0, 'legacy')] * 2
+
+
+@pytest.mark.parametrize('message, exists_after', [
+    ('attempt to write a readonly database', True),
+    ('database is locked', True),
+    ('duplicate column name: attempt_kind', False),
+])
+def test_attempt_kind_upgrade_does_not_hide_other_errors(monkeypatch, message, exists_after):
+    from account import models
+    observations = iter([False, exists_after])
+    monkeypatch.setattr(models, '_column_exists', lambda *args: next(observations))
+
+    class FailedConnection:
+        def execute(self, sql):
+            raise sqlite3.OperationalError(message)
+
+    with pytest.raises(sqlite3.OperationalError, match=message):
+        models.ensure_login_attempt_kind_column(FailedConnection())

@@ -516,7 +516,12 @@ class GitHubConnector:
                     reported_total_count = total
                 else:
                     provider_total_valid = False
-                incomplete_results = incomplete_results or raw.get("incomplete_results") is True
+                flag = raw.get("incomplete_results")
+                if type(flag) is not bool:
+                    # Missing/malformed completeness signal is unknown, not complete.
+                    incomplete_results = True
+                else:
+                    incomplete_results = incomplete_results or flag
             else:
                 if not isinstance(raw, list):
                     if pages_fetched == 0:

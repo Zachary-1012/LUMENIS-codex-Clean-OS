@@ -1177,8 +1177,14 @@ def log_web_run(adapter,query,started,finished,fetched,accepted,rejected,error='
 def get_web_mentions(limit=100, relevant_only=True):
     q='SELECT * FROM web_mentions'
     if relevant_only: q += " WHERE relevance='relevant'"
-    q += ' ORDER BY COALESCE(published_at,fetched_at) DESC LIMIT ?'
+    # Order by instant, not text: legacy 'YYYY-MM-DD HH:MM:SS' and new
+    # offset-bearing ISO values must interleave chronologically.
+    # Exact microsecond instants (lumenis.shared.database.instants), so
+    # sub-millisecond and year-9999 values keep their chronological place.
+    q += " ORDER BY COALESCE(lumenis_utc_us(published_at),lumenis_utc_us(fetched_at)) DESC LIMIT ?"
     with get_db() as conn:
+        from lumenis.shared.database.instants import register_instant_function
+        register_instant_function(conn)
         rows=conn.execute(q,(limit,)).fetchall()
         out=[]
         for r in rows:

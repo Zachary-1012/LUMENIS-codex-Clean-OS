@@ -420,12 +420,32 @@ def import_historical_batch(records, db_path=None, product_id=DEFAULT_PRODUCT_ID
             for detail in stats["details"][:-1]:
                 if detail.get("persistence_state") == "PENDING_CALLER_COMMIT":
                     detail["persistence_state"] = "ROLLED_BACK"
-                    if detail.get("status") == IMPORT_STATUS_INSERTED:
+                    # Both IDs referred to rows removed by the rollback.
+                    detail["inserted_id"] = None
+                    detail["log_id"] = None
+                    prior_status = detail.get("status")
+                    if prior_status == IMPORT_STATUS_DEDUP_SKIPPED:
+                        # Keep the dedup hit when its target was committed
+                        # before this batch and survived the rollback; only
+                        # its pending import-log row was removed.
+                        still = check_duplicate(
+                            conn, detail.get("content_hash", ""), detail.get("note_id", ""))
+                        if still["is_duplicate"]:
+                            detail["warnings"].append(
+                                "import log rolled back; duplicate target still committed")
+                            continue
+                    if prior_status in (IMPORT_STATUS_INSERTED, IMPORT_STATUS_DEDUP_SKIPPED):
+                        # A rolled-back dedup skip may point at a same-batch
+                        # insert that no longer exists; reclassify as an error
+                        # so error-only retry cannot lose the record.
                         detail["status"] = IMPORT_STATUS_ERROR
                         detail["warnings"].append(
                             "batch transaction rolled back after a later write failure"
                         )
-                        stats["inserted"] -= 1
+                        if prior_status == IMPORT_STATUS_INSERTED:
+                            stats["inserted"] -= 1
+                        else:
+                            stats["dedup_skipped"] -= 1
                         stats["errors"] += 1
             for pending in records[index + 1:]:
                 pending_id = (

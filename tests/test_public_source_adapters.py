@@ -888,3 +888,43 @@ def test_web_rss_missing_item_url_fails_before_canonical_import(monkeypatch, app
     assert result["provenance"]["error_type"] == "MISSING_SOURCE_IDENTITY"
     assert evidence["status"] == "PROVIDER_UNAVAILABLE"
     assert evidence["provenance"]["source"] == "news.google.com/rss/search"
+
+
+def test_web_mentions_order_by_instant_across_legacy_and_iso_formats(tmp_path, monkeypatch):
+    import sqlite3
+    import database
+
+    db_file = tmp_path / "mentions.sqlite"
+    conn = sqlite3.connect(db_file)
+    conn.execute(
+        "CREATE TABLE web_mentions (source_id TEXT, relevance TEXT, published_at TEXT, fetched_at TEXT)"
+    )
+    conn.executemany(
+        "INSERT INTO web_mentions VALUES (?, 'relevant', ?, '2026-10-20 00:00:00')",
+        [
+            ("legacy-late", "2026-10-20 23:00:00"),
+            ("iso-early", "2026-10-20T01:00:00+00:00"),
+            ("iso-offset", "2026-10-21T06:00:00+08:00"),
+            ("micro-early", "2026-10-19T00:00:00.000100Z"),
+            ("micro-late", "2026-10-19T00:00:00.000400Z"),
+            ("max-year", "9999-12-31T23:59:59.999999Z"),
+        ],
+    )
+    conn.commit()
+    conn.close()
+
+    from contextlib import contextmanager
+
+    @contextmanager
+    def fixture_db():
+        c = sqlite3.connect(db_file)
+        c.row_factory = sqlite3.Row
+        try:
+            yield c
+        finally:
+            c.close()
+
+    monkeypatch.setattr(database, "get_db", fixture_db)
+    rows = database.get_web_mentions(limit=10)
+    ids = [r["source_id"] if not isinstance(r, dict) else r["source_id"] for r in rows]
+    assert ids == ["max-year", "legacy-late", "iso-offset", "iso-early", "micro-late", "micro-early"]

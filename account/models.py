@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS v4_login_attempts (
     username TEXT,
     ip TEXT,
     success INTEGER,
+    attempt_kind TEXT NOT NULL DEFAULT 'legacy',
     created_at TEXT DEFAULT (datetime('now','localtime'))
 );
 
@@ -157,26 +158,13 @@ CREATE TABLE IF NOT EXISTS v4_login_approvals (
 CREATE INDEX IF NOT EXISTS idx_la_status ON v4_login_approvals(status);
 """
 
-# ── 新增表：TOTP 种子 ──
-TOTP_TABLES_SQL = """
-CREATE TABLE IF NOT EXISTS v4_totp_secrets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    secret TEXT NOT NULL,                -- 混淆存储的TOTP种子
-    enabled INTEGER DEFAULT 0,           -- 0=待确认, 1=已启用
-    created_at TEXT DEFAULT (datetime('now','localtime')),
-    last_used_at TEXT,
-    UNIQUE(user_id, enabled)
-);
-"""
-
 # ── 新增表：产品保护配置 ──
 PROTECTION_TABLES_SQL = """
 CREATE TABLE IF NOT EXISTS v4_product_protection (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id TEXT UNIQUE NOT NULL,     -- ZBMP / CTH / SYSTEM
     enabled INTEGER DEFAULT 1,
-    method TEXT DEFAULT 'none',          -- totp / password / reauth / none
+    method TEXT DEFAULT 'none',          -- password / reauth / none
     config_json TEXT,
     updated_at TEXT DEFAULT (datetime('now','localtime'))
 );
@@ -213,7 +201,7 @@ CREATE TABLE IF NOT EXISTS skills_registry (
 
 ACCOUNT_TABLES_SQL = (BASE_TABLES_SQL + VERIFICATION_TABLES_SQL +
                       AUTHORIZATION_TABLES_SQL + APPROVAL_TABLES_SQL +
-                      TOTP_TABLES_SQL + PROTECTION_TABLES_SQL +
+                      PROTECTION_TABLES_SQL +
                       NAV_CONFIG_TABLES_SQL + SKILLS_TABLES_SQL)
 
 # 需要对 v4_users 新增的字段（幂等 ALTER）
@@ -282,6 +270,24 @@ def ensure_auth_user_columns(conn):
             conn.execute(f"ALTER TABLE v4_users ADD COLUMN {col} {col_type}")
 
 
+def ensure_login_attempt_kind_column(conn):
+    """Add provenance without reclassifying or deleting historical audit rows.
+
+    Legacy failures remain eligible for conservative key throttling; legacy
+    successes cannot reset it because their original caller is unknown.
+    """
+    if not _column_exists(conn, "v4_login_attempts", "attempt_kind"):
+        try:
+            conn.execute("ALTER TABLE v4_login_attempts ADD COLUMN "
+                         "attempt_kind TEXT NOT NULL DEFAULT 'legacy'")
+        except sqlite3.OperationalError as exc:
+            # Another startup may have added it after our PRAGMA. Suppress
+            # only that verified race, not locked/read-only/corrupt DB errors.
+            if ("duplicate column name" not in str(exc).lower()
+                    or not _column_exists(conn, "v4_login_attempts", "attempt_kind")):
+                raise
+
+
 def _ensure_owner_account(conn):
     """Provision an initial owner only from explicit operator injection.
 
@@ -297,6 +303,9 @@ def _ensure_owner_account(conn):
             return
         if not username or len(password) < 16:
             raise ValueError("Initial owner requires an explicit username and password of at least 16 characters")
+        from lumenis.auth.security import is_reserved_username
+        if is_reserved_username(username):
+            raise ValueError("Initial owner username is reserved for system use")
         pwd_hash = hash_password(password)
         conn.execute(
             "INSERT INTO v4_users (username, password_hash, role, display_name, status, must_change_password) "
@@ -319,9 +328,14 @@ def init_account_db():
     conn = get_db()
     try:
         conn.executescript(ACCOUNT_TABLES_SQL)
+        # TOTP was removed by product decision. Existing v4_totp_secrets rows and
+        # stored 'totp' protection methods are retained untouched (AGENTS.md §9:
+        # no silent destructive migration); nothing reads them any more and
+        # product_protection maps a stored 'totp' method to password on read.
         conn.commit()
         # 幂等新增列
         ensure_auth_user_columns(conn)
+        ensure_login_attempt_kind_column(conn)
         for col, col_type in _WS_KEY_NEW_COLUMNS:
             if not _column_exists(conn, "v4_workspace_keys", col):
                 conn.execute(f"ALTER TABLE v4_workspace_keys ADD COLUMN {col} {col_type}")

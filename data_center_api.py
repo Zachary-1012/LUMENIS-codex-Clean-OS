@@ -83,15 +83,45 @@ def _parse_date_bound(value: str) -> tuple[datetime, bool]:
     return parsed, date_only
 
 
-def _unix_date_filter(
-    value: str, *, end: bool, timestamp_multiplier: float = 1,
-) -> tuple[str, float]:
-    """Convert an ISO bound to a source-native Unix timestamp comparison."""
+from lumenis.shared.database.instants import (  # noqa: E402
+    DAY_US as _DAY_US,
+    register_instant_function as _register_instant_function,
+    utc_microseconds as _utc_microseconds,
+)
+
+
+def _bound_microseconds(value: str, *, end: bool) -> tuple[str, int]:
+    """Validated ISO bound -> (operator, inclusive/exclusive UTC microseconds)."""
     parsed, date_only = _parse_date_bound(value)
+    instant = _utc_microseconds(parsed)
     if date_only and end:
         # Include the whole requested end date, including fractional seconds.
-        return "<", (parsed + timedelta(days=1)).timestamp() * timestamp_multiplier
-    return ("<=" if end else ">="), parsed.timestamp() * timestamp_multiplier
+        return "<", instant + _DAY_US
+    return ("<=" if end else ">="), instant
+
+
+def _text_date_filter(value: str, *, end: bool) -> tuple[str, int]:
+    """Bound for text columns, compared through lumenis_utc_us()."""
+    return _bound_microseconds(value, end=end)
+
+
+def _unix_date_filter(
+    value: str, *, end: bool, timestamp_multiplier: float = 1,
+    integer_column: bool = False,
+) -> tuple[str, float]:
+    """Convert an ISO bound to a source-native Unix timestamp comparison.
+
+    Integer columns get exact integer source units with operator-aware
+    rounding (>=, < round up; <= rounds down) so no float collapse merges
+    distinct bounds. REAL columns keep fractional units.
+    """
+    operator, instant = _bound_microseconds(value, end=end)
+    unit_us = 1000 if timestamp_multiplier == 1000 else int(1_000_000 // timestamp_multiplier)
+    if integer_column:
+        if operator == "<=":
+            return operator, instant // unit_us
+        return operator, -((-instant) // unit_us)
+    return operator, instant / unit_us
 
 
 @data_center_bp.route("/platforms", methods=["GET"])
@@ -281,13 +311,19 @@ def query_table(table_name: str):
                         operator, value = _unix_date_filter(
                             start_date, end=False,
                             timestamp_multiplier=timestamp_multiplier,
+                            integer_column="INT" in time_col_type,
                         )
                     else:
-                        _parse_date_bound(start_date)
-                        operator, value = ">=", start_date
+                        operator, value = _text_date_filter(start_date, end=False)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid start_date"}), 400
-                where_clauses.append(f"{time_expr} {operator} ?")
+                if not numeric_time_col:
+                    # Compare exact UTC instants (microseconds), not strings:
+                    # declared offsets (Z/+08:00), 'T' or space are applied.
+                    _register_instant_function(conn)
+                    where_clauses.append(f"lumenis_utc_us({time_expr}) {operator} ?")
+                else:
+                    where_clauses.append(f"{time_expr} {operator} ?")
                 params.append(value)
             if end_date:
                 try:
@@ -295,13 +331,19 @@ def query_table(table_name: str):
                         operator, value = _unix_date_filter(
                             end_date, end=True,
                             timestamp_multiplier=timestamp_multiplier,
+                            integer_column="INT" in time_col_type,
                         )
                     else:
-                        _parse_date_bound(end_date)
-                        operator, value = "<=", end_date
+                        operator, value = _text_date_filter(end_date, end=True)
                 except ValueError:
                     return jsonify({"ok": False, "error": "invalid end_date"}), 400
-                where_clauses.append(f"{time_expr} {operator} ?")
+                if not numeric_time_col:
+                    # Compare exact UTC instants (microseconds), not strings:
+                    # declared offsets (Z/+08:00), 'T' or space are applied.
+                    _register_instant_function(conn)
+                    where_clauses.append(f"lumenis_utc_us({time_expr}) {operator} ?")
+                else:
+                    where_clauses.append(f"{time_expr} {operator} ?")
                 params.append(value)
 
         where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""

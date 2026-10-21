@@ -171,6 +171,11 @@ def test_requires_official_source_url(reg, url):
     "https://official.example/brand?AWS-ACCESS-KEY=private-value",
     "https://official.example/brand?redirect=https%3A%2F%2Flogin.example%2Fcb%3Faccess_token%3Dsynthetic",
     "https://official.example/brand?campaign=x;client_secret=synthetic",
+    "https://official.example/brand?redirect=https%3A%2F%2Fuser%3Apassword%40login.example%2F",
+    "https://official.example/brand?next=https%253A%252F%252Fuser%253Apw%2540login.example%252F",
+    "https://official.example/brand?next=https%25253A%25252F%25252Fuser%25253Apw%252540login.example%25252F",
+    "https://official.example/brand?next=https%252525252525253A%252525252525252F%252525252525252Fuser%252525252525253Apassword%2525252525252540login.example%252525252525252F",
+    "https://official.example/?next=https%3A%2F%2Flogin.example%2F%23access_token%3Dsecret",
     "https://official.example/brand#private-fragment",
 ])
 def test_rejects_credential_bearing_source_url(reg, url):

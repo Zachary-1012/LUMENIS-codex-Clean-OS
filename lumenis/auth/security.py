@@ -2,11 +2,11 @@
 安全工具：密码哈希、Token生成、安全问答验证、登录限流
 不依赖第三方库，全部用标准库实现。
 """
+import re
 import hashlib
 import hmac
 import secrets
 import time
-import sqlite3
 from datetime import datetime, timedelta
 from ..config import AUTH_CONFIG
 from .models import get_db
@@ -30,30 +30,71 @@ def _parse_attempt_timestamp(value: str) -> datetime:
     return datetime.strptime(value, _ATTEMPT_TIME_FORMAT)
 
 
-def _check_access_key_attempts(conn, ip: str) -> dict:
+WORKSPACE_KEY_ATTEMPT_USERNAME = "__workspace_key__"
+_IP_ATTEMPT_BUCKETS = frozenset({_ACCESS_KEY_ATTEMPT_USERNAME, WORKSPACE_KEY_ATTEMPT_USERNAME})
+
+
+def is_reserved_username(username) -> bool:
+    """Names shaped like ``__name__`` are reserved for synthetic attempt
+    buckets and cannot be newly registered as account usernames."""
+    name = str(username or "").strip()
+    return len(name) >= 4 and name.startswith("__") and name.endswith("__")
+
+
+_WORKSPACE_BUCKET_RE = re.compile(r"__workspace_key_[A-Z0-9_]{1,32}__")
+
+
+def workspace_key_bucket(workspace: str) -> str:
+    """Per-workspace bucket so success on one workspace never resets guesses
+    against another. Attempt kind isolates even existing legacy usernames."""
+    ws = str(workspace or "").strip().upper()
+    if not re.fullmatch(r"[A-Z0-9_]{1,32}", ws):
+        raise ValueError("invalid workspace")
+    return f"__workspace_key_{ws}__"
+
+
+def _is_ip_bucket(username) -> bool:
+    """Validate names for trusted key flows; names never select attempt kind."""
+    return username in _IP_ATTEMPT_BUCKETS or (
+        isinstance(username, str) and _WORKSPACE_BUCKET_RE.fullmatch(username) is not None
+    )
+
+
+def _validate_attempt_kind(username, attempt_kind):
+    """Kind comes from the trusted login flow, never from a username or request."""
+    if attempt_kind not in ("account", "key"):
+        raise ValueError("invalid login attempt kind")
+    if attempt_kind == "key" and not _is_ip_bucket(username):
+        raise ValueError("invalid key attempt bucket")
+
+
+def _check_access_key_attempts(conn, ip: str, bucket: str = None) -> dict:
     """Check the access-key/IP bucket using the existing attempt audit rows."""
     max_attempts = int(AUTH_CONFIG["max_login_attempts"])
     if max_attempts <= 0:
         return {"allowed": False, "remaining": 0, "locked_until": None}
 
     cooldown = timedelta(minutes=int(AUTH_CONFIG["lockout_minutes"]))
-    bucket = _ACCESS_KEY_ATTEMPT_USERNAME
+    bucket = bucket or _ACCESS_KEY_ATTEMPT_USERNAME
     last_success = conn.execute(
         """
         SELECT id
         FROM v4_login_attempts
-        WHERE username=? AND success=1
+        WHERE username=? AND attempt_kind='key' AND success=1
           AND (ip=? OR (?='unknown' AND (ip IS NULL OR TRIM(ip)='')))
         ORDER BY id DESC LIMIT 1
         """,
         (bucket, ip, ip),
     ).fetchone()
+    # Pre-migration rows have unknown provenance. Retain their failures until
+    # cooldown or a verified key success, but never trust an ambiguous success
+    # as a reset: it may have been a password login for a legacy account.
     after_success_id = last_success["id"] if last_success else 0
     failures = conn.execute(
         """
         SELECT id, created_at
         FROM v4_login_attempts
-        WHERE username=? AND success=0 AND id>?
+        WHERE username=? AND attempt_kind IN ('key', 'legacy') AND success=0 AND id>?
           AND (ip=? OR (?='unknown' AND (ip IS NULL OR TRIM(ip)='')))
         ORDER BY id DESC LIMIT ?
         """,
@@ -133,17 +174,18 @@ def verify_security_answer(answer: str, stored_hash: str) -> bool:
     return verify_password(answer.strip(), stored_hash)
 
 
-def check_login_attempts(username: str, ip: str, conn=None) -> dict:
+def check_login_attempts(username: str, ip: str, conn=None, *, attempt_kind="account") -> dict:
     """
     检查登录尝试，返回是否允许登录
     返回: {"allowed": bool, "remaining": int, "locked_until": str}
     """
+    _validate_attempt_kind(username, attempt_kind)
     owns_connection = conn is None
     if owns_connection:
         conn = get_db()
     try:
-        if username == _ACCESS_KEY_ATTEMPT_USERNAME:
-            return _check_access_key_attempts(conn, normalize_login_ip(ip))
+        if attempt_kind == "key":
+            return _check_access_key_attempts(conn, normalize_login_ip(ip), username)
 
         # 检查账号锁定
         cur = conn.execute(
@@ -181,19 +223,20 @@ def check_login_attempts(username: str, ip: str, conn=None) -> dict:
             conn.close()
 
 
-def record_login_attempt(username: str, ip: str, success: bool, conn=None):
-    """记录登录尝试，失败时累加，成功时重置"""
+def record_login_attempt(username: str, ip: str, success: bool, conn=None, *, attempt_kind="account"):
+    """Record a trusted flow; only account attempts mutate account state."""
+    _validate_attempt_kind(username, attempt_kind)
     owns_connection = conn is None
     if owns_connection:
         conn = get_db()
     try:
         conn.execute(
-            "INSERT INTO v4_login_attempts (username, ip, success, created_at) VALUES (?,?,?,?)",
-            (username, normalize_login_ip(ip), 1 if success else 0, _local_timestamp())
+            "INSERT INTO v4_login_attempts (username, ip, success, created_at, attempt_kind) VALUES (?,?,?,?,?)",
+            (username, normalize_login_ip(ip), 1 if success else 0, _local_timestamp(), attempt_kind)
         )
-        # Access-key attempts have their own username/IP bucket in the shared
-        # attempt log; they must not mutate the owner's password lockout state.
-        if username == _ACCESS_KEY_ATTEMPT_USERNAME:
+        # Key attempts have their own kind/username/IP bucket in the shared
+        # log; even legacy same-name accounts must remain untouched.
+        if attempt_kind == "key":
             pass
         elif success:
             conn.execute(

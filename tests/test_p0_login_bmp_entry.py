@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-test_p0_login_zbmp_entry.py — P0 登录流程重构 + TOTP + 域身份 测试
+test_p0_login_zbmp_entry.py — P0 登录流程重构 + 域身份 测试
 
 覆盖：
 1. CTH登录流程（/v4/auth/login）
 2. ZBMP entry status 端点（/api/auth/zbmp-entry/status）
-3. TOTP setup → confirm → verify 全链路
+3. TOTP 已按产品决定删除（不再测试）
 4. 域身份获取（/api/auth/domain-identity）
 5. ZBMP entry verify（/api/auth/zbmp-entry/verify）
 6. /zbmp/login 重定向到CTH
 7. 设置页API连通性
 """
 
-# 本文件是依赖已启动 Runtime、测试账号与有状态 TOTP 流程的独立验收脚本。
+# 本文件是依赖已启动 Runtime、测试账号与有状态登录流程的独立验收脚本。
 # record() 只累计结果而不向 pytest 抛错，故不得被 hermetic pytest 自动收集；
 # 正式运行验收阶段以脚本 main() 的退出码执行并记录证据。
 __test__ = False
@@ -101,90 +101,6 @@ def test_zbmp_entry_status():
         return None
 
 
-def test_totp_setup():
-    """测试3: TOTP setup 生成二维码"""
-    print('\n=== 3. TOTP Setup（生成二维码） ===')
-    s = _shared_session
-    if not s:
-        record('TOTP setup', False, '无session')
-        return None
-    try:
-        r = s.post(f'{BASE}/api/system/account/totp/setup',
-                   json={}, timeout=TIMEOUT)
-        data = r.json()
-        record('TOTP setup返回200', r.status_code == 200, f'status={r.status_code}')
-        record('TOTP setup success', data.get('success') is True,
-               f'success={data.get("success")}')
-        record('TOTP setup返回secret', bool(data.get('secret')),
-               f'sector_len={len(data.get("secret", ""))}')
-        record('TOTP setup返回qr_code', bool(data.get('qr_code')),
-               f'qr_code前缀={data.get("qr_code", "")[:30]}...')
-        record('TOTP qr_code是data URL', data.get('qr_code', '').startswith('data:image/'),
-               f'格式检查')
-        record('TOTP setup返回otpauth_url', bool(data.get('otpauth_url')),
-               f'otpauth={data.get("otpauth_url", "")[:50]}...')
-        record('TOTP digits=6', data.get('digits') == 6, f'digits={data.get("digits")}')
-        record('TOTP period=30', data.get('period') == 30, f'period={data.get("period")}')
-        return data
-    except Exception as e:
-        record('TOTP setup异常', False, str(e))
-        return None
-
-
-def test_totp_confirm():
-    """测试4: TOTP confirm 绑定（用当前code验证）"""
-    print('\n=== 4. TOTP Confirm（绑定） ===')
-    s = _shared_session
-    setup_data = _shared_setup_data
-    if not s or not setup_data:
-        record('TOTP confirm', False, '无setup数据')
-        return False
-    try:
-        # 用 pyotp 或手动计算当前TOTP code
-        secret = setup_data.get('secret')
-        if not secret:
-            record('TOTP confirm', False, '无secret')
-            return False
-        # 手动计算TOTP
-        code = compute_totp(secret)
-        record('TOTP计算当前code', bool(code), f'code={code}')
-
-        r = s.post(f'{BASE}/api/system/account/totp/confirm',
-                   json={'code': code}, timeout=TIMEOUT)
-        data = r.json()
-        record('TOTP confirm返回', r.status_code in (200, 400), f'status={r.status_code}')
-        if data.get('success'):
-            record('TOTP confirm绑定成功', True, data.get('message', ''))
-            return True
-        else:
-            # 可能是时钟偏移，尝试前后窗口
-            record('TOTP confirm首次失败（可能时钟偏移）', False,
-                   data.get('error', data.get('message', '')))
-            # 不重试，标记为已知问题
-            return False
-    except Exception as e:
-        record('TOTP confirm异常', False, str(e))
-        return False
-
-
-def compute_totp(secret, period=30, digits=6):
-    """手动计算TOTP验证码（不依赖pyotp）"""
-    import hmac
-    import hashlib
-    import struct
-    import base64
-    try:
-        key = base64.b32decode(secret.upper() + '=' * ((8 - len(secret) % 8) % 8))
-        counter = int(time.time() // period)
-        msg = struct.pack('>Q', counter)
-        h = hmac.new(key, msg, hashlib.sha1).digest()
-        offset = h[-1] & 0x0F
-        binary = struct.unpack('>I', h[offset:offset + 4])[0] & 0x7FFFFFFF
-        return str(binary % (10 ** digits)).zfill(digits)
-    except Exception:
-        return None
-
-
 def test_domain_identity():
     s = _shared_session
     """测试5: 域身份获取"""
@@ -233,7 +149,6 @@ def test_settings_apis():
         ('/api/system/account/profile', 'GET'),
         ('/api/system/account/members', 'GET'),
         ('/api/system/account/devices', 'GET'),
-        ('/api/system/account/totp/status', 'GET'),
         ('/api/system/account/quota', 'GET'),
         ('/api/system/account/skills', 'GET'),
         ('/api/system/account/nav?domain=CTH', 'GET'),
@@ -271,7 +186,7 @@ def test_ai_collector_apis():
 
 def main():
     print('=' * 60)
-    print('P0 登录流程重构 + TOTP + 域身份 集成测试')
+    print('P0 登录流程重构 + 域身份 集成测试')
     print(f'目标: {BASE}')
     print(f'账号: {TEST_USER}')
     print('=' * 60)
@@ -281,13 +196,6 @@ def main():
 
     # 2. ZBMP entry status
     status_data = test_zbmp_entry_status(s)
-
-    # 3. TOTP setup
-    setup_data = test_totp_setup(s)
-
-    # 4. TOTP confirm（如果setup成功）
-    if setup_data and setup_data.get('success'):
-        test_totp_confirm(s, setup_data)
 
     # 5. Domain identity
     test_domain_identity(s)

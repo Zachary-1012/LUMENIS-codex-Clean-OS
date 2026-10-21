@@ -699,3 +699,65 @@ def test_git_info_redacts_scp_style_remote_username(tmp_path: Path) -> None:
 
     assert result["remote"] == "github.com:org/repo.git"
     assert "fixture-secret" not in result["remote"]
+
+
+def _remote_result(tmp_path: Path, name: str, url: str) -> dict:
+    repo_path = tmp_path / name
+    repo_path.mkdir()
+    _new_local_git_repo(repo_path)
+    subprocess.run(["git", "remote", "add", "origin", url], cwd=repo_path, check=True)
+    return _git_info()(repo_path)
+
+
+def test_git_info_fails_closed_for_opaque_scheme_remote_with_credentials(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "opaque", "https:fixture-user:fixture-secret@host/repo")
+    assert result["available"] is False
+    assert result["remote"] == "UNKNOWN"
+    assert "fixture-secret" not in json.dumps(result)
+
+
+def test_git_info_sanitizes_network_path_remotes(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "netpath", "//fixture-user:fixture-secret@host/repo")
+    assert result["remote"] == "//host/repo"
+    assert "fixture-secret" not in json.dumps(result)
+    helper = _remote_result(tmp_path, "netpath-helper", "foo:://fixture-user:fixture-secret@host/repo")
+    assert "fixture-secret" not in json.dumps(helper)
+
+
+def test_git_info_accepts_dotted_and_plus_helper_transports(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "dotted", "foo.bar+x::https://u:fixture-secret@host/repo")
+    assert result["available"] is True
+    assert result["remote"] == "foo.bar+x::https://host/repo"
+
+
+def test_git_info_preserves_windows_drive_letter_remote(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "windows", "C:/repos/example.git")
+    assert result["available"] is True
+    assert result["remote"] == "C:/repos/example.git"
+
+
+def test_git_info_sanitizes_authority_in_drive_letter_shaped_remote(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "windows-auth", "C://user:secret@host/repo.git")
+    assert "secret" not in str(result.get("remote"))
+    assert "user:" not in str(result.get("remote"))
+
+
+@pytest.mark.parametrize(("url", "expected"), [
+    ("github.com:org/repo.git", "github.com:org/repo.git"),
+    ("git@github.com:org/repo.git", "github.com:org/repo.git"),
+])
+def test_git_info_accepts_scp_like_remote_with_optional_user(tmp_path: Path, url, expected) -> None:
+    result = _remote_result(tmp_path, "scp", url)
+    assert result["available"] is True
+    assert result["remote"] == expected
+
+
+def test_git_info_fails_closed_for_scp_like_remote_with_password(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "scp-pw", "user:fixture-secret@host:org/repo.git")
+    assert "fixture-secret" not in json.dumps(result)
+
+
+def test_git_info_strips_query_from_scp_like_remote(tmp_path: Path) -> None:
+    result = _remote_result(tmp_path, "scp-q", "github.com:org/repo.git?access_token=fixture-secret")
+    assert "fixture-secret" not in json.dumps(result)
+    assert result["remote"] == "github.com:org/repo.git"
