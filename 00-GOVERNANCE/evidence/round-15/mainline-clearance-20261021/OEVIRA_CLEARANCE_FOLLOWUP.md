@@ -3,9 +3,23 @@
 最新结论导航（下面各旧阶段按时间保留，不改写原始结果）：
 - 本轮 tests/ 规范节点按精确执行与明确继承重建：12,816 个唯一 PASS，0 个未闭 SKIP/FAIL；不等于整产品验收。
 - 候选 head `20ad82d432f8b8953f3f600be6d1f0341862e57d` 的真实 Product/App CI 已通过，含真实隔离 Chromium。
-- 最终归档提交的精确 HEAD CI、正常合并及 main 独立读回仍待执行；本报告不预写未来成功。
+- PR #118 最终 head `60f9f8da05a30c595d3b8fcbb9d1c183d4da2e68` 的必需 CI 已通过；2026-10-21 12:36:05 UTC / 北京时间 20:36:05 正常合并为 `f7c864cbb007eb79eea116aa3d84da93333fba5a`，独立 main 读回及合并后 Product/App 检查均通过。下文旧阶段的“待执行”保留其历史语义，不是当前待办。
 
 本回执处理 2026 年 10 月 21 日复核报告提出的 V01、V02，以及用户随后授权的原 10 项 SKIP 与关联既有缺陷收尾，不推翻 PR #116、#117 已完成的修复，也不提前开始产品闭环开发。最终结论须结合本 PR 的最终检查、正常合并和独立 main 读回；源码、隔离测试、生产 Runtime/DB 与用户成果各自分层。
+
+## PR #118 最终发布与合并原件
+
+本节补齐已经发生的发布证据，不改产品功能、测试定义、完成口径或历史原件。唯一报告仍为本文件，不另建报告副本。
+
+- [合并及独立 main 读回回执](final-publication-receipts/PR118_MERGE_READBACK.json)：记录最终审阅 head、merge SHA、4,622 个 blob 身份、PR 与合并后 main 的必需检查。回执中的 174 成员 manifest 是 PR #118 当时的冻结值，不替代本次扩充后的 manifest。
+- [最终 PR CI 原始 offline XML](final-publication-receipts/oevira-offline.xml)：1,189 个规范节点及单列 318 subtests；XML 的 tests=1,507 不能作为新增唯一节点数。
+- [最终 PR CI 原始 HTTP XML](final-publication-receipts/oevira-http.xml)：5 PASS；[真实 Chromium XML](final-publication-receipts/oevira-browser.xml)：1 PASS；[offline 原始日志](final-publication-receipts/oevira-offline.log)。三份 XML 均无 FAIL/ERROR/SKIP，原字节保留。
+
+以上 XML 来源是最终 PR Product run [39600006718](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39600006718) 的官方 artifact `12346385886`，不是合并后 main 再跑所得 XML。实际 synthetic checkout 为 `6cae4f4b9b9c88cbf850d0c216b9a647262911d8`，tree 与最终 PR、合并 main 同为 `4aee4c8d418036c1635e2a3e379b51590e8cef34`。官方下载 ZIP 的 SHA256 为 `b29bf44d79817f1be45b09f8d020a686d496ecb8815fc8855f87966f7178db36`，精确四成员及 CRC 已核；ZIP 不重复入仓。
+
+最终 PR App run [39600006710](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39600006710) 成功。合并后 main 的 Product [39600906245](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39600906245) 与 App [39600906369](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39600906369) 也实际成功；最终读回时间为 2026-10-21 12:41:52.208 UTC / 北京时间 20:41:52.208，main 未改变。
+
+本次仅把这五个缺失原件纳入现有有限 manifest，并更新当前入口；新归档 PR 的自身 CI/merge 以其官方记录与交付回执为准，不循环新增“归档的归档”。原 12,816 唯一适用节点账本及继承边界不变；不宣称单次全仓重跑、生产/设备/训练或整产品验收，不进入下一开发阶段。Issue #17 保持 OPEN。
 
 ## 修复范围与冻结版本
 
