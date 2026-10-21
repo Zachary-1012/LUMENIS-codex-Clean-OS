@@ -678,8 +678,8 @@
     },
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/OEVIRA_CLEARANCE_FOLLOWUP.md",
-      "bytes": 23300,
-      "sha256": "a8e395d47b35fb09a10c3b51c62d3c5ebc7bc2ffacb7c7b020bb7ed35722a018"
+      "bytes": 25884,
+      "sha256": "bd0b428326c908a75ce0c3fd8a6f0114d5632ac1776a045a7b48781b88c3a8be"
     },
     {
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/skip-facebook/SOURCE_RECEIPT.json",
@@ -870,6 +870,31 @@
       "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/skip-closure-receipts/SKIP_CLOSURE_CI_FINAL_OVERLAY_PUBLIC.json",
       "bytes": 5530,
       "sha256": "0d749bd948f4a8f3b1384763f1bbc06f3d7b4f19126cd3f2e6df3186ae238422"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/final-publication-receipts/oevira-offline.xml",
+      "bytes": 3973286,
+      "sha256": "76102caecb07a52f8c163415a7082eef92fcc881472f1c0b8247bdc35d7735e7"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/final-publication-receipts/oevira-offline.log",
+      "bytes": 1628,
+      "sha256": "d1006734fb48e7b56c070f10e6b482897d004ae1edf7853b63618ad4bfbb2e86"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/final-publication-receipts/oevira-browser.xml",
+      "bytes": 371,
+      "sha256": "443b1e4e7d4e8d55aaf007fa07d61278efa528fbba2a9937eac2c9c533aa00f2"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/final-publication-receipts/oevira-http.xml",
+      "bytes": 870,
+      "sha256": "d51489ab71404630ed0da4d9b656ad5058bf5cf771923d34d3dee83f9cca5dae"
+    },
+    {
+      "path": "00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/final-publication-receipts/PR118_MERGE_READBACK.json",
+      "bytes": 2876,
+      "sha256": "7bdae73bdeb557ff7d22421d29c3be03f2a63256859dcd2eb0fd344aeb2b168c"
     }
   ]
 }

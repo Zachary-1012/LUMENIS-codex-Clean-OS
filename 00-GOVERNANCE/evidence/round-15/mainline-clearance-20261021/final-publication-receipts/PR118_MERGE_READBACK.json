@@ -1,0 +1,74 @@
+{
+  "schema": "oevira-pr118-final-delivery/v1",
+  "repository": "Zachary-1012/LUMENIS-codex-Clean-OS",
+  "pr": 118,
+  "pr_url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/118",
+  "base": "7c261229731c9b2e22f267b6455f024ab8861f83",
+  "reviewed_head": "60f9f8da05a30c595d3b8fcbb9d1c183d4da2e68",
+  "merge_sha": "f7c864cbb007eb79eea116aa3d84da93333fba5a",
+  "merge_utc": "2026-10-21T12:36:05Z",
+  "readback_utc": "2026-10-21T12:36:16.750Z",
+  "tree": "4aee4c8d418036c1635e2a3e379b51590e8cef34",
+  "source_identity": {
+    "tree": "4aee4c8d418036c1635e2a3e379b51590e8cef34",
+    "blob_count": 4622,
+    "truncated": false,
+    "readback_utc": "2026-10-21T12:30:20.401Z",
+    "local_head": "ccd39eb51b097009f7895d654e22ed1efd1e9f3b",
+    "remote_head": "60f9f8da05a30c595d3b8fcbb9d1c183d4da2e68"
+  },
+  "required_pr_ci": {
+    "product": 39600006718,
+    "app": 39600006710,
+    "conclusion": "success",
+    "actual_checkout": "6cae4f4b9b9c88cbf850d0c216b9a647262911d8"
+  },
+  "artifact": {
+    "id": 12346385886,
+    "bytes": 32297,
+    "sha256": "b29bf44d79817f1be45b09f8d020a686d496ecb8815fc8855f87966f7178db36",
+    "zip_crc": "PASS",
+    "xml_failures": 0,
+    "xml_errors": 0,
+    "xml_skips": 0,
+    "canonical_offline_nodes": 1189,
+    "subtests_separate": 318,
+    "http_nodes": 5,
+    "real_chromium_nodes": 1
+  },
+  "ledger": {
+    "unique_nodes": 12816,
+    "statuses": {
+      "PASS": 12816
+    },
+    "basis": "Immutable original frozen ledger, exact-source affected delta, and one real-browser CI overlay. Not a single full final-commit rerun; repeated batches/subtests are not added.",
+    "manifest_members": 174,
+    "manifest_sha256": "1691d87cd39d2c338e9c966c755e982aa544f6709c65350540d0509fea6cb4ee"
+  },
+  "issue17": "OPEN",
+  "boundary": "Bounded existing-mainline engineering clearance candidate for independent review, not full-product/production/user-device/model-training acceptance. No next-stage development.",
+  "merge_beijing": "2026-10-21T20:36:05+08:00",
+  "readback_beijing": "2026-10-21T20:36:16.750000+08:00",
+  "post_merge_main_ci": [
+    {
+      "id": 39600906245,
+      "name": "LUMENIS Product Gate",
+      "head_sha": "f7c864cbb007eb79eea116aa3d84da93333fba5a",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39600906245",
+      "updated_at": "2026-10-21T12:40:40Z"
+    },
+    {
+      "id": 39600906369,
+      "name": "LUMENIS App Gate",
+      "head_sha": "f7c864cbb007eb79eea116aa3d84da93333fba5a",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/actions/runs/39600906369",
+      "updated_at": "2026-10-21T12:39:41Z"
+    }
+  ],
+  "final_readback_utc": "2026-10-21T12:41:52.208Z",
+  "final_readback_beijing": "2026-10-21T20:41:52.208000+08:00"
+}
