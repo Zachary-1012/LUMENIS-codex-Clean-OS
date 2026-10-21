@@ -4,6 +4,14 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-21 Existing-mainline engineering clearance — in verification
+
+PO authorized bounded online engineering clearance after an independent audit of `79a88b50791d80b16e2861ecd03503c1f352e727`. The prior research/plan/handoff reconciliation remains valid within its scope, but it was not evidence that existing-source errors or the full applicable regression baseline were cleared. Current clearance status is **NOT_READY / VERIFICATION_IN_PROGRESS**, pending independent review, affected and applicable regression terminal results, exact-head required CI, normal merge and remote readback.
+
+This pass repairs the existing safety-boundary compatibility backup through the original Shared Database Owner, failure gating and explicitly owned retention; Instagram partial-result preservation; SH-04 request/context races; credential-path/preflight/CI agreement; fail-closed Experience diff selection; current-architecture Boundary Check classification; and stale regression fixtures without restoring retired providers, inventing review denominators, or converting unknown measurements to zero. A newly reproduced current user-API incomplete-response acceptance defect is included in the same response-integrity scope. Existing full product requirements remain unchanged. No production database, user computer, real account collection, external model/training, deployment or paid resource is authorized by this clearance.
+
+Historical source/audio limits remain truthful provenance and do not block independent engineering repairs. Next-stage unimplemented product outcomes and real device/runtime/user acceptance remain separate. Do not infer overall engineering readiness from a green bounded CI or from publication of this status. Issue #17 remains open; this work references rather than closes it.
+
 ## 2026-10-21 Mainline research and handoff reconciliation
 
 Available-evidence adoption closure: the remaining concrete contract omissions identified in this pass are now expressed in the original plan/sketch and existing handoff: all 29 Claude adaptation rows with per-item interfaces/limits/tests, EvoOntology stages, model-interpretation observation/prediction/intervention/user-outcome evidence, and full source/log/report/delivery preservation. Existing implementations are retained; original report observations are not treated as fresh code defects. New references connect 12 existing outcome work items and 23 existing coverage items without changing owners or dispatch. Previously completed research is reused rather than re-run; current-code evidence controls actual implementation status. Historical identity/audio limits remain provenance, not the latest PO's whole-mainline blocker.
@@ -819,7 +827,10 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `LOCAL_CANDIDATE_NOT_PUBLISHED`
+
+The current protected local candidate only is not yet part of GitHub main and is not published Product Source. Promotion requires one coherent delivery: all applicable clearance failures resolved, substantive review, exact-head required checks, normal PR merge and independent remote readback. Existing published research/plan and prior repair evidence remain unchanged.
+
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`
 User outcome: `NOT_VERIFIED`

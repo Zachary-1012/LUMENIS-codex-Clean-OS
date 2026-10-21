@@ -1425,7 +1425,7 @@ def test_mmm_actual_cpu_macro_control_posterior_and_training_scaling(workspace, 
     low, median, high = result["macro_control_coefficients"][0]["posterior_interval_95_and_median"]
     assert low < 6 < high
     assert median == pytest.approx(6, abs=2)
-    destination = Path(__file__).resolve().parents[2] / "runtime_evidence/business_analysis/mmm_macro_cpu_result.json"
+    destination = workspace["root"] / "mmm_macro_cpu_result.json"
     destination.write_text(json.dumps(result, ensure_ascii=False, indent=2))
 
 

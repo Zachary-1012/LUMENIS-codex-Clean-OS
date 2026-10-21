@@ -401,7 +401,8 @@ def _send(cfg, body, timeout, *, connection=None):
             if len(raw) > 2_000_000:
                 return None, "user_api_invalid_response", None
             data = json.loads(raw.decode("utf-8"))
-        if not isinstance(data, dict) or data.get("error"):
+        if (not isinstance(data, dict) or data.get("error")
+                or data.get("status") not in (None, "completed")):
             return None, "user_api_invalid_response", None
         choice = (data.get("choices") or [{}])[0]
         content = (choice.get("message") or {}).get("content")

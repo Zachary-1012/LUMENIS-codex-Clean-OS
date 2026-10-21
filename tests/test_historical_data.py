@@ -209,6 +209,12 @@ class TestCTHNamespace:
 
 
 class TestSubjectFilter:
+    @pytest.fixture(autouse=True)
+    def explicit_legacy_focus(self):
+        from subject_context import brand_scope
+        with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+            yield
+
     def test_cth_hit(self):
         r = hdi.apply_subject_filter(title="广州太古汇探店", content="太古汇LV")
         assert r["subject_hit"] is True
@@ -666,3 +672,10 @@ class TestSilentOverwriteRisk:
             hdi._safe_identifier("col name")
         with pytest.raises(ValueError):
             hdi._safe_identifier("")
+
+
+def test_historical_subject_filter_does_not_invent_missing_focus(monkeypatch):
+    import subject_context
+    monkeypatch.setattr(subject_context, "get_thread_context", lambda: None)
+    result = hdi.apply_subject_filter(title="广州太古汇探店", content="太古汇LV")
+    assert result["subject_hit"] is False

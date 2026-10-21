@@ -100,6 +100,8 @@ class TestXAdapter:
 
 def _x_element(text="", **attributes):
     element = MagicMock()
+    element.evaluate.return_value = False
+    element.query_selector.return_value = None
     element.inner_text.return_value = text
     element.get_attribute.side_effect = attributes.get
     return element
@@ -146,7 +148,7 @@ def test_facebook_parser_preserves_long_body_and_metric_display_through_canonica
         'a[href*="comments"], span[aria-label*="评论"]': None,
         'span[aria-label*="分享"], a[href*="shares"]': _x_element("1.2K", **{"aria-label": "1.2K shares"}),
     }.get
-    note = FacebookAdapter(cookie_string="test-only")._parse_facebook_card(card, None)
+    note = FacebookAdapter(cookie_string="test-only")._parse_facebook_card(card, MagicMock(url="https://www.facebook.com/search/posts"))
     item = MainFacebookAdapter(backend=object())._v4_notes_to_items([note])[0]
     native = _native_record(item, "facebook", "原文段落", "2026-10-08T06:00:00+08:00")
 
@@ -180,7 +182,7 @@ def test_facebook_comment_body_is_not_truncated_or_assigned_zero_metrics():
         '.x193iq5w, [dir="auto"]': _x_element(body),
         'span[aria-label*="赞"]': _x_element("1.2K", **{"aria-label": "1.2K Likes"}),
     }.get
-    with patch("lumenis.adapters.human_browser.HumanBrowser") as browser, patch("lumenis.adapters.cookie_vault.inject_into_context"):
+    with patch("lumenis.adapters.human_browser.HumanBrowser") as browser, patch("lumenis.adapters.cookie_vault.inject_into_context"), patch("lumenis.adapters.human_browser.configured_readonly_worker_url", return_value="http://127.0.0.1:1"):
         page = browser.return_value.new_page.return_value
         page.query_selector.return_value = None
         page.query_selector_all.return_value = [comment]
@@ -199,7 +201,7 @@ def test_x_parser_keeps_the_complete_observed_long_post():
     body = "Source text paragraph. " * 40 + "Final source paragraph."
     tweet = MagicMock()
     tweet.query_selector.side_effect = {'[data-testid="tweetText"]': _x_element(body)}.get
-    tweet.query_selector_all.return_value = []
+    tweet.query_selector_all.side_effect = lambda selector: ([node] if (node := tweet.query_selector(selector)) is not None else [])
     note = XAdapter(cookie_string="test-only")._parse_x_tweet(tweet)
     assert note.content == body
     assert note.raw_data["tweet_id"] is None
@@ -218,8 +220,9 @@ def test_x_parser_preserves_native_id_explicit_zero_unknown_counts_and_publish_t
         '[data-testid="retweet"]': _x_element("1.2K", **{"aria-label": "1.2K Reposts"}),
         "time": _x_element(**{"datetime": "2026-09-28T01:02:03Z"}),
     }.get
-    tweet.query_selector_all.return_value = []
+    tweet.query_selector_all.side_effect = lambda selector: ([node] if (node := tweet.query_selector(selector)) is not None else [])
 
+    tweet.query_selector('a[href*="/status/"]').query_selector.return_value = tweet.query_selector("time")
     note = XAdapter(cookie_string="test-only")._parse_x_tweet(tweet)
 
     assert note.raw_data["tweet_id"] == "12345678901234567890"
@@ -229,7 +232,7 @@ def test_x_parser_preserves_native_id_explicit_zero_unknown_counts_and_publish_t
     assert note.collects is None
     assert note.publish_date == "2026-09-28T01:02:03Z"
     assert note.raw_data["metric_display"]["shares"] == {
-        "aria_label": "1.2K Reposts", "text": "1.2K",
+        "aria_label": "1.2K Reposts", "text": "1.2K", "locator": '[data-testid="retweet"]',
     }
 
 
@@ -238,7 +241,7 @@ def test_x_metric_parser_falls_back_to_text_and_rejects_approximate_or_bad_group
 
     def extract(label, text):
         tweet = MagicMock()
-        tweet.query_selector.return_value = _x_element(text, **{"aria-label": label})
+        tweet.query_selector_all.return_value = [_x_element(text, **{"aria-label": label})]
         return XAdapter._extract_metric_observation(tweet, "metric")
 
     approximate, approximate_display = extract("1.2K Likes", "1.2K")
@@ -259,7 +262,7 @@ def test_x_parser_keeps_missing_identity_and_publish_time_unknown():
     tweet.query_selector.side_effect = {
         '[data-testid="tweetText"]': _x_element("Post without a status link"),
     }.get
-    tweet.query_selector_all.return_value = []
+    tweet.query_selector_all.side_effect = lambda selector: ([node] if (node := tweet.query_selector(selector)) is not None else [])
     note = XAdapter(cookie_string="test-only")._parse_x_tweet(tweet)
 
     assert note.raw_data["tweet_id"] is None
@@ -317,9 +320,9 @@ def test_main_facebook_adapter_constructs_search_and_detail_results():
     from lumenis.system.collector.adapters.facebook import FacebookAdapter, CollectionStatus
 
     note = SimpleNamespace(
-        raw_data={"post_id": "fb-post-123"}, title="Post", content="Body",
+        raw_data={"post_id": "123456789", "native_identity": {"post_id": "123456789", "requested_post_id": "123456789", "observed_post_id": "123456789", "status": "OBSERVED_MATCH"}}, title="Post", content="Body",
         author_id="page-1", author="Brand", publish_date="2026-10-05T10:00:00Z",
-        url="https://www.facebook.com/page/posts/fb-post-123", likes=None,
+        url="https://www.facebook.com/page/posts/123456789", likes=None,
         comments=None, collects=None, shares=None,
     )
 
@@ -329,7 +332,7 @@ def test_main_facebook_adapter_constructs_search_and_detail_results():
             return SimpleNamespace(success=True, notes=[note], raw_count=1, error="")
 
         def detail(self, content_id):
-            assert content_id == "fb-post-123"
+            assert content_id in {"123456789", "https://www.facebook.com/page/posts/123456789"}
             return SimpleNamespace(success=True, notes=[note], raw_count=1, error="")
 
         def comments(self, content_id, *, max_comments):
@@ -340,13 +343,13 @@ def test_main_facebook_adapter_constructs_search_and_detail_results():
 
     adapter = FacebookAdapter(backend=Backend())
     search = adapter.search("brand update", max_results=12)
-    detail = adapter.detail("fb-post-123")
-    comments = adapter.comments("fb-post-123")
+    detail = adapter.detail("123456789")
+    comments = adapter.comments("123456789")
     creator = adapter.creator("page-1")
 
     assert search.platform == detail.platform == comments.platform == creator.platform == "facebook"
     assert search.status == detail.status == CollectionStatus.SUCCESS
-    assert search.items[0]["platform_content_id"] == "fb-post-123"
+    assert search.items[0]["platform_content_id"] == "123456789"
     assert search.items[0]["likes"] is None
 
 
@@ -362,7 +365,7 @@ def _facebook_detail_result(monkeypatch, article, final_url="https://www.faceboo
     worker.new_page.return_value = page
     with patch("lumenis.adapters.human_browser.HumanBrowser", return_value=worker), \
             patch("lumenis.adapters.human_browser.configured_readonly_worker_url", return_value="http://127.0.0.1:9223"), \
-            patch("lumenis.adapters.cookie_vault.inject_into_context"):
+            patch("lumenis.adapters.cookie_vault.inject_into_context"), patch("lumenis.adapters.human_browser.configured_readonly_worker_url", return_value="http://127.0.0.1:1"):
         return FacebookAdapter(cookie_string="test-only").detail(final_url)
 
 
@@ -547,7 +550,7 @@ def test_main_facebook_adapter_errors_keep_platform_and_health_unverified(monkey
     adapter = FacebookAdapter(backend=BrokenBackend())
     failed = adapter.search("brand")
     assert failed.platform == "facebook"
-    assert failed.status == CollectionStatus.COLLECT_ERROR
+    assert failed.status == CollectionStatus.PROVIDER_UNAVAILABLE
 
     monkeypatch.setattr(
         "lumenis.adapters.cookie_vault.check_cookie_status",
@@ -556,7 +559,7 @@ def test_main_facebook_adapter_errors_keep_platform_and_health_unverified(monkey
     )
     health = adapter.health_check()
     assert health.platform == "facebook"
-    assert health.status == CollectionStatus.NEED_VERIFY
+    assert health.status == CollectionStatus.NOT_CONFIGURED
     assert "private-cookie-path" not in health.message
 
     monkeypatch.setattr(

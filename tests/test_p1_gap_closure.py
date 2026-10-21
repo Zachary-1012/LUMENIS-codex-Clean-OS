@@ -176,7 +176,7 @@ class TestTrackBObservability:
         assert compatibility_only["status"] == "DISABLED"
         assert compatibility_only["readiness_verified"] is False
         assert compatibility_only["multi_channel"]["primary"] == "ark"
-        assert compatibility_only["multi_channel"]["provider_status"] == providers.LEGACY
+        assert compatibility_only["multi_channel"]["provider_status"] == providers.DISABLED
 
         # An active but unverified route can be described without probing it.
         synthetic = "synthetic_gateway_provider"

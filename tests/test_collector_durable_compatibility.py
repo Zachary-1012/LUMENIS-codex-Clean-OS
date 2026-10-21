@@ -357,7 +357,7 @@ def test_keyless_keyword_search_uses_existing_rss_parser_and_canonical_chain(dur
     """Owned RSS bytes test keyword discovery, not a user-supplied feed URL."""
     from tests.test_collector_transaction_truth import REGISTERED_NAME
     from lumenis.system.collector.adapters.web_rss import WebRSSAdapter
-    import web_discovery
+    from lumenis.system.collector.adapters import public_source
     case = durable_case
     requests = []
     class Response:
@@ -372,9 +372,10 @@ def test_keyless_keyword_search_uses_existing_rss_parser_and_canonical_chain(dur
         assert url.startswith('https://news.google.com/rss/search?q=')
         if transient_connection_error and len(requests) == 1:
             monkeypatch.setitem(case['surface']._last_action, 'web_rss', 0.0)
-            raise web_discovery.requests.ConnectionError('owned transient fixture')
-        return Response()
-    monkeypatch.setattr(web_discovery.requests, 'get', owned_transport)
+            raise ConnectionError('owned transient fixture')
+        return public_source.PublicResponse(url=url, content=Response.content,
+            content_type="application/rss+xml", status_code=200)
+    monkeypatch.setattr(public_source, 'fetch_public_url', owned_transport)
     monkeypatch.setattr(case['surface'], '_get_runtime_adapter', lambda _: WebRSSAdapter())
     import time
     monkeypatch.setitem(case['surface']._last_action, 'web_rss',

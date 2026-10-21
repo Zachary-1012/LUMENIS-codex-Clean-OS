@@ -50,15 +50,27 @@ def test_propagation_scope_never_borrows_legacy_heat(bmp_client, monkeypatch):
     import database
     import experience_runtime as runtime
     import experience_screens as screens
+    # The classification owner now verifies the registered scope on read.
+    import subject_registry
+    from lumenis.shared.database import get_repository
+    with get_repository().transaction() as connection:
+        subject_registry.ensure_schema(connection)
+        connection.execute("""INSERT INTO lumenis_subject_registry
+            (subject_id,brand_focus_id,domain_id,subject_type,name_en,name_zh,
+             name_en_norm,name_zh_norm,status,created_at,updated_at)
+            VALUES ('SUBJ-NIKE','BRAND-NIKE','BMP','brand','Nike','耐克',
+                    'nike','耐克','configured','2026-10-21','2026-10-21')""")
     observed = []
     def events(limit, *, scope):
         observed.append(scope)
-        return []
+        return {"featured": [], "total": 0, "read_complete": True,
+                "rejected_count": 0, "scanned_count": 0, "returned_count": 0, "truncated": False}
     monkeypatch.setattr(database, 'get_events_curated', events)
     monkeypatch.setattr(runtime, '_all_builders', lambda: {'BMP-04': screens._build_bmp04})
     response = client.get('/api/experience/screen/BMP-04', headers={
         'X-Lumenis-Context-Mode':'FOCUS','X-Domain-Id':'BMP','X-Subject-ID':'SUBJ-NIKE'})
     assert response.status_code == 200, response.get_json()
     assert observed[0]['brand_focus_id'] == 'BRAND-NIKE'
+    assert response.get_json()['truth']['classification_state'] == 'EMPTY'
     assert response.get_json()['truth']['heat'] is None
     assert response.get_json()['truth']['source_count'] == 1

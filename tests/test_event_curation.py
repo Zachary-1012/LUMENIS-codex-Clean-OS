@@ -6,6 +6,9 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pytest
+from tests.test_event_aggregation_authority import signed_scoped_event_sources
+
 from database import classify_event_quality, _event_title_is_noise, get_events_curated
 
 
@@ -46,9 +49,16 @@ def test_classify_event_quality():
     }) == 'noise'
 
 
-def test_get_events_curated_structure():
+def test_get_events_curated_structure(signed_scoped_event_sources):
     """get_events_curated 返回结构完整且重点事件不含噪音。"""
-    cur = get_events_curated(50)
+    import reprocess
+    scope = {"domain_id": "cth", "subject_id": "SUBJECT-A",
+             "brand_focus_id": None, "global_scope": False}
+    built = reprocess.build_cross_platform_events(scope=scope)
+    assert built["status"] == "COMPLETED"
+    cur = get_events_curated(50, scope=scope)
+    assert cur["featured"], "signed source must reach the real curated consumer"
+    assert all(row["subject_id"] == "SUBJECT-A" for row in cur["featured"])
     # 四字段完整
     assert all(k in cur for k in ('featured', 'generic_count', 'noise_count', 'total'))
     # 重点事件列表中不出现噪音标题
@@ -61,8 +71,11 @@ def test_get_events_curated_structure():
             assert featured[0].get('risk_level') == 'high'
 
 
+def test_get_events_curated_requires_scope():
+    with pytest.raises(ValueError, match="SCOPE_REQUIRED"):
+        get_events_curated(50)
+
+
 if __name__ == '__main__':
-    test_event_title_is_noise()
-    test_classify_event_quality()
-    test_get_events_curated_structure()
-    print('事件中心质量分级: 全部通过')
+    # Pytest owns the isolated signed fixture; direct calls would skip setup.
+    raise SystemExit(pytest.main([__file__]))

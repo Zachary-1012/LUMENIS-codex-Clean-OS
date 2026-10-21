@@ -27,7 +27,7 @@ class Sh04Screen extends StatefulWidget {
 
 class _Sh04ScreenState extends State<Sh04Screen> {
   final _exportFiles = Sh04ExportFiles();
-  late final Sh04ViewModel _viewModel = Sh04ViewModel(
+  late Sh04ViewModel _viewModel = Sh04ViewModel(
     repository: widget.repository ?? CoreSh04Repository(client: widget.client),
   );
 
@@ -35,6 +35,20 @@ class _Sh04ScreenState extends State<Sh04Screen> {
   void initState() {
     super.initState();
     _viewModel.refresh();
+  }
+
+  @override
+  void didUpdateWidget(covariant Sh04Screen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.client, widget.client) ||
+        !identical(oldWidget.repository, widget.repository)) {
+      _viewModel.dispose();
+      _viewModel = Sh04ViewModel(
+        repository:
+            widget.repository ?? CoreSh04Repository(client: widget.client),
+      );
+      _viewModel.refresh();
+    }
   }
 
   @override
@@ -72,12 +86,15 @@ class _Sh04ScreenState extends State<Sh04Screen> {
   );
 
   Future<void> _createReport() async {
+    final viewModel = _viewModel;
+    final generation = viewModel.readGeneration;
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => _Sh04EditorDialog(
         onSubmit: (title, markdown, _) async {
           try {
-            await _viewModel.saveReport(title: title, markdown: markdown);
+            if (!_isCurrent(viewModel, generation)) return false;
+            await viewModel.saveReport(title: title, markdown: markdown);
             return true;
           } catch (_) {
             return false;
@@ -85,7 +102,7 @@ class _Sh04ScreenState extends State<Sh04Screen> {
         },
       ),
     );
-    if (saved == true && mounted) {
+    if (saved == true && mounted && _isCurrent(viewModel, generation)) {
       _showNotice(
         _copy(
           context,
@@ -98,13 +115,16 @@ class _Sh04ScreenState extends State<Sh04Screen> {
   }
 
   Future<void> _revise(Sh04Export item) async {
+    final viewModel = _viewModel;
+    final generation = viewModel.readGeneration;
     final saved = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => _Sh04EditorDialog(
         source: item,
         onSubmit: (title, markdown, reason) async {
           try {
-            await _viewModel.reviseReport(
+            if (!_isCurrent(viewModel, generation)) return false;
+            await viewModel.reviseReport(
               parent: item,
               title: title,
               markdown: markdown,
@@ -117,7 +137,7 @@ class _Sh04ScreenState extends State<Sh04Screen> {
         },
       ),
     );
-    if (saved == true && mounted) {
+    if (saved == true && mounted && _isCurrent(viewModel, generation)) {
       _showNotice(
         _copy(
           context,
@@ -130,9 +150,11 @@ class _Sh04ScreenState extends State<Sh04Screen> {
   }
 
   Future<void> _reopen(Sh04Export item) async {
+    final viewModel = _viewModel;
+    final generation = viewModel.readGeneration;
     try {
-      await _viewModel.reopen(item);
-      if (mounted) {
+      await viewModel.reopen(item);
+      if (mounted && _isCurrent(viewModel, generation)) {
         _showNotice(
           _copy(
             context,
@@ -143,7 +165,7 @@ class _Sh04ScreenState extends State<Sh04Screen> {
         );
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && _isCurrent(viewModel, generation)) {
         _showNotice(
           _copy(
             context,
@@ -157,6 +179,8 @@ class _Sh04ScreenState extends State<Sh04Screen> {
   }
 
   Future<void> _export(Sh04Export item) async {
+    final viewModel = _viewModel;
+    final generation = viewModel.readGeneration;
     final formats = _exportFiles.canSaveFile
         ? const ['md', 'txt', 'docx', 'pdf', 'xlsx']
         : const ['md', 'txt'];
@@ -164,15 +188,18 @@ class _Sh04ScreenState extends State<Sh04Screen> {
       context: context,
       builder: (dialogContext) => _Sh04FormatDialog(formats: formats),
     );
-    if (format == null || !mounted) return;
+    if (format == null || !_isCurrent(viewModel, generation)) {
+      return;
+    }
     try {
-      final file = await _viewModel.export(item, format);
+      final file = await viewModel.export(item, format);
+      if (!mounted || !_isCurrent(viewModel, generation)) return;
       if (_exportFiles.canSaveFile) {
         final saved = await _exportFiles.save(
           file,
           suggestedName: 'lumenis-report-v${item.version}.$format',
         );
-        if (saved && mounted) {
+        if (saved && mounted && _isCurrent(viewModel, generation)) {
           _showNotice(
             _copy(
               context,
@@ -189,7 +216,7 @@ class _Sh04ScreenState extends State<Sh04Screen> {
       } else {
         final text = utf8.decode(file.bytes);
         await Clipboard.setData(ClipboardData(text: text));
-        if (mounted) {
+        if (mounted && _isCurrent(viewModel, generation)) {
           _showNotice(
             _copy(
               context,
@@ -201,7 +228,7 @@ class _Sh04ScreenState extends State<Sh04Screen> {
         }
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && _isCurrent(viewModel, generation)) {
         _showNotice(
           _copy(
             context,
@@ -213,6 +240,11 @@ class _Sh04ScreenState extends State<Sh04Screen> {
       }
     }
   }
+
+  bool _isCurrent(Sh04ViewModel model, int generation) =>
+      mounted &&
+      identical(model, _viewModel) &&
+      model.readGeneration == generation;
 
   void _showNotice(String text) {
     ScaffoldMessenger.maybeOf(

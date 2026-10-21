@@ -31,7 +31,10 @@ import json
 import time
 import shutil
 import hashlib
-from datetime import datetime
+import sqlite3
+import tempfile
+from pathlib import Path
+from datetime import datetime, timedelta
 from enum import Enum
 
 # 添加项目路径
@@ -211,74 +214,114 @@ class BoundaryControlEngine:
         return [c for c in self.pending_confirmations if c['status'] == 'pending']
 
     def backup_before_operation(self, operation_type, description):
-        """操作前备份现场"""
-        if not self.backup_before_auto_fix:
+        """Snapshot through Shared Database, never copy an open SQLite file."""
+        if not self.backup_before_auto_fix or self.get_safety_level(operation_type) == SafetyLevel.SAFE:
             return None
-
-        safety_level = self.get_safety_level(operation_type)
-        if safety_level == SafetyLevel.SAFE:
-            return None  # 安全操作不需要备份
-
+        operation = operation_type.value if isinstance(operation_type, OperationType) else str(operation_type)
         try:
-            backup_dir = os.path.join(self.root_dir, 'data', 'backups')
+            from lumenis.shared.database.connection import connect_sqlite
+            from lumenis.shared.database.migrations import backup_database_to_path
+            from lumenis.shared.database.paths import main_db_path
+
+            backup_dir = os.path.abspath(os.path.join(self.root_dir, 'data', 'backups'))
+            # Refuse redirected storage rather than writing or pruning its target.
+            if any(parent.is_symlink() for parent in [Path(backup_dir), *Path(backup_dir).parents]):
+                raise ValueError('backup directory must not traverse symlinks')
             os.makedirs(backup_dir, exist_ok=True)
+            backup_path = tempfile.mkdtemp(prefix='before_boundary_', dir=backup_dir)
+            db_path = main_db_path()
+            destination = os.path.join(backup_path, 'monitor.db')
+            backup_database_to_path(destination)
+            # Independent closed-snapshot readback, not source-connection success.
+            restored = connect_sqlite(destination, read_only=True, immutable=True, row_factory=False, wal=False)
+            try:
+                if restored.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
+                    raise sqlite3.DatabaseError('backup readback failed')
+                restored.execute('SELECT name FROM sqlite_master').fetchall()
+            finally:
+                restored.close()
 
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-            backup_name = f"before_{operation_type}_{timestamp}"
-            backup_path = os.path.join(backup_dir, backup_name)
-            os.makedirs(backup_path, exist_ok=True)
-
-            # 备份数据库
-            db_path = os.path.join(self.root_dir, 'data', 'monitor.db')
-            if os.path.exists(db_path):
-                shutil.copy2(db_path, os.path.join(backup_path, 'monitor.db'))
-
-            # 备份配置
             config_path = os.path.join(self.root_dir, '.env')
+            if os.path.islink(config_path):
+                raise ValueError('configuration backup must not follow a symlink')
             if os.path.exists(config_path):
                 shutil.copy2(config_path, os.path.join(backup_path, '.env'))
 
-            # 记录备份信息
+            snapshot_hash = self.calculate_file_hash(destination)
+            if snapshot_hash is None:
+                raise OSError('backup digest readback failed')
             backup_info = {
-                'backup_path': backup_path,
-                'operation_type': operation_type,
-                'description': description,
-                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'owner': 'safety_boundary', 'format_version': 1,
+                'backup_path': backup_path, 'source_db': db_path,
+                'operation_type': operation, 'description': description,
+                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'database_sha256': snapshot_hash,
+                'restore_readback': 'verified',
             }
-            with open(os.path.join(backup_path, 'backup_info.json'), 'w', encoding='utf-8') as f:
+            with open(os.path.join(backup_path, 'backup_info.json'), 'x', encoding='utf-8') as f:
                 json.dump(backup_info, f, ensure_ascii=False, indent=2)
-
-            self.log('info', f'操作前备份完成: {backup_path}', operation_type=operation_type)
-
-            # 清理旧备份
-            self._cleanup_old_backups(backup_dir)
-
+            self.log('info', f'操作前备份完成: {backup_path}', operation_type=operation)
+            # Retention is explicit maintenance, not a side effect of a safety backup.
             return backup_path
         except Exception as e:
-            self.log('error', f'操作前备份失败: {e}', operation_type=operation_type)
+            self.log('error', f'操作前备份失败: {e}', operation_type=operation)
             return None
 
     def _cleanup_old_backups(self, backup_dir):
-        """清理旧备份"""
-        try:
-            if not os.path.exists(backup_dir):
-                return
+        """Prune only owned, verified snapshots; preserve legacy/unknown material.
 
+        Returns a truthful maintenance result independently of backup success.
+        No callers automatically invoke retention while executing an operation.
+        """
+        result = {'status': 'ok', 'removed': [], 'skipped': [], 'errors': []}
+        expected = os.path.abspath(os.path.join(self.root_dir, 'data', 'backups'))
+        backup_dir = os.path.abspath(backup_dir)
+        try:
+            if backup_dir != expected or any(p.is_symlink() for p in [Path(backup_dir), *Path(backup_dir).parents]):
+                raise ValueError('unowned or redirected backup directory')
+            if not os.path.exists(backup_dir):
+                return result
+            if self.backup_retention_days < 0:
+                raise ValueError('negative retention is not allowed')
             cutoff = datetime.now() - timedelta(days=self.backup_retention_days)
             for item in os.listdir(backup_dir):
                 item_path = os.path.join(backup_dir, item)
-                if os.path.isdir(item_path):
-                    # 检查备份信息
+                try:
                     info_path = os.path.join(item_path, 'backup_info.json')
-                    if os.path.exists(info_path):
-                        with open(info_path, 'r', encoding='utf-8') as f:
-                            info = json.load(f)
-                        created = datetime.strptime(info['created_at'], '%Y-%m-%d %H:%M:%S')
-                        if created < cutoff:
-                            shutil.rmtree(item_path)
-                            self.log('info', f'清理旧备份: {item_path}')
+                    if (not item.startswith('before_boundary_') or os.path.islink(item_path)
+                            or not os.path.isdir(item_path) or os.path.islink(info_path)):
+                        result['skipped'].append(item)
+                        continue
+                    with open(info_path, 'r', encoding='utf-8') as f:
+                        info = json.load(f)
+                    if (info.get('owner') != 'safety_boundary' or info.get('format_version') != 1
+                            or info.get('backup_path') != item_path or info.get('restore_readback') != 'verified'):
+                        result['skipped'].append(item)
+                        continue
+                    # Do not remove a directory containing foreign files or links.
+                    names = set(os.listdir(item_path))
+                    if (not {'monitor.db', 'backup_info.json'} <= names
+                            or names - {'monitor.db', 'backup_info.json', '.env'}
+                            or any(not os.path.isfile(os.path.join(item_path, n)) or os.path.islink(os.path.join(item_path, n)) for n in names)
+                            or self.calculate_file_hash(os.path.join(item_path, 'monitor.db')) != info.get('database_sha256')):
+                        result['skipped'].append(item)
+                        continue
+                    created = datetime.strptime(info['created_at'], '%Y-%m-%d %H:%M:%S')
+                    if created < cutoff:
+                        shutil.rmtree(item_path)
+                        result['removed'].append(item)
+                    else:
+                        result['skipped'].append(item)
+                except Exception as e:
+                    result['errors'].append({'entry': item, 'error': str(e)})
+            if result['errors']:
+                result['status'] = 'partial_failure'
         except Exception as e:
-            self.log('error', f'清理旧备份失败: {e}')
+            result['status'] = 'failed'
+            result['errors'].append({'error': str(e)})
+        if result['errors']:
+            self.log('error', f"清理旧备份失败: {result['errors']}")
+        return result
 
     def calculate_file_hash(self, file_path):
         """计算文件哈希（用于完整性校验）"""
@@ -387,6 +430,12 @@ class BoundaryControlEngine:
 
         # 2. 操作前备份
         backup_path = self.backup_before_operation(operation_type, description)
+
+        # A disabled or failed mandatory backup never grants execution.
+        if self.get_safety_level(operation_type) != SafetyLevel.SAFE and not backup_path:
+            self.log('error', '必要备份未完成，操作未执行')
+            return {'status': 'backup_failed', 'backup_path': None,
+                    'operation_executed': False, 'message': '必要备份未完成，操作未执行'}
 
         # 3. 执行操作
         try:

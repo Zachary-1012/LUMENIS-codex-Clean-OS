@@ -62,7 +62,7 @@ def _parse_requirements(path=REQUIREMENTS):
         match = re.match(r"^([a-zA-Z0-9_.-]+)", line)
         if match:
             packages.append(_canonical_package_name(match.group(1)))
-    return packages
+    return list(dict.fromkeys(packages))
 
 
 def _register_section(start_heading, end_heading):
@@ -264,13 +264,17 @@ class TestCurrentProvenanceEvidence:
 
     def test_license_keeps_third_party_terms_separate(self):
         license_text = _read_utf8(LICENSE)
-        assert "LUMENIS Materials" in license_text
-        assert "does not replace, restrict, expand, relicense or claim ownership of" in license_text
-        assert re.search(
-            r"subject to their respective copyright,\s*license, attribution, notice and usage terms",
-            license_text,
-        )
-        assert "unresolved for release purposes rather than inferred" in license_text
+        # Current source grant changed on 2026-10-10. Test the unmodified
+        # Apache text and the separate retained-rights scope, not retired words.
+        assert "Apache License" in license_text
+        assert "Version 2.0, January 2004" in license_text
+        assert "END OF TERMS AND CONDITIONS" in license_text
+        scope = _read_utf8(os.path.join(REPO_ROOT, "LICENSING.md"))
+        assert "does not relicense third-party contributions" in scope
+        assert "retain their original licenses and notices" in scope
+        assert "An entry marked VERIFY_BEFORE_RELEASE or NOT VERIFIED is not a license grant" in scope
+        assert "Downloaded models/weights, training corpora and third-party datasets" in scope
+        assert "do not replace an unknown license with Apache-2.0 by inference" in scope
 
     def test_no_media_crawler_noncommercial_source_marker(self):
         """Reject the known non-commercial source marker in production Python files."""

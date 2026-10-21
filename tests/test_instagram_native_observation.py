@@ -17,8 +17,10 @@ def test_instagram_display_counts_are_exact_or_unknown(value, expected):
 
 def _detail_result(data):
     from lumenis.adapters.instagram import InstagramAdapter
-    with patch("lumenis.adapters.instagram.HumanBrowser") as browser, patch("lumenis.adapters.instagram.inject_into_context"):
+    with patch("lumenis.adapters.instagram.HumanBrowser") as browser, patch("lumenis.adapters.instagram.inject_into_context"), patch("lumenis.adapters.instagram.configured_readonly_worker_url", return_value="http://127.0.0.1:1"):
+        data = {**data, "article_observed": True}
         page = browser.return_value.new_page.return_value
+        page.url = "https://www.instagram.com/p/synthetic-post/"
         page.evaluate.return_value = data
         result = InstagramAdapter()._detail_browser("synthetic-post", "post", "test-only")
     return result
@@ -70,10 +72,10 @@ def test_instagram_discovery_preserves_source_cover_and_unmeasured_fields():
     cover = "https://example.test/image?source=" + "a" * 400
     page.evaluate.return_value = [{"code": "synthetic-code", "kind": "p", "lines": [],
                                    "alt": "Observed image description", "cover": cover}]
-    note = InstagramAdapter()._parse_cards(page, 1)[0]
+    note = InstagramAdapter()._parse_cards(page.evaluate.return_value, 1)[0]
     assert note.likes is None and note.author == "" and note.publish_date == ""
     assert note.raw_data["cover"] == cover
-    assert note.raw_data["body_state"] == "DISCOVERY_TEXT_ONLY_NOT_NATIVE_FULL_POST"
+    assert note.raw_data["body_state"] == "SEARCH_PREVIEW_ONLY_NOT_NATIVE_FULL_POST"
     assert note.raw_data["needs_detail"] is True
     assert note.raw_data["image_alt"] == "Observed image description"
 
@@ -84,7 +86,7 @@ def test_instagram_discovery_prefers_observed_text_and_keeps_compact_metric_disp
     page.evaluate.return_value = [{"code": "synthetic-code", "kind": "p",
         "lines": ["author", "1.2K", "Observed discovery text"],
         "alt": "Different image description", "cover": ""}]
-    note = InstagramAdapter()._parse_cards(page, 1)[0]
+    note = InstagramAdapter()._parse_cards(page.evaluate.return_value, 1)[0]
     assert note.content == "Observed discovery text" and note.likes is None
     assert note.raw_data["metric_display"]["likes"] == "1.2K"
     assert note.raw_data["image_alt"] == "Different image description"

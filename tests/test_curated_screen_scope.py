@@ -8,7 +8,7 @@ import experience_screens as screens
 
 def binding(domain):
     return {"contract": "lumenis.scope-read-binding.v1", "scope_verified": True,
-            "read_allowed": True, "domain_id": domain, "canonical_scope": "FOCUS",
+            "read_allowed": True, "domain_id": domain, "product_id": "ZBMP" if domain == "BMP" else "CTH", "canonical_scope": "FOCUS",
             "subject_id": "SUBJECT-A", "brand_focus_id": "BRAND-A" if domain == "BMP" else None}
 
 

@@ -1,7 +1,7 @@
 """Retired vision routes must fail closed before provider discovery or I/O."""
 import pytest
 
-from lumenis.system.ai_gateway import core
+from lumenis.system.ai_gateway import core, channel, providers
 
 
 @pytest.mark.parametrize(
@@ -24,11 +24,11 @@ def test_legacy_vision_entry_fails_closed_without_provider_probe(monkeypatch, pr
         pytest.fail("retired compatibility route attempted provider discovery or I/O")
 
     monkeypatch.setattr(core, "_ollama_vision_chat", forbidden)
-    monkeypatch.setattr(core, "is_provider_available", forbidden)
+    monkeypatch.setattr(providers, "is_provider_available", forbidden)
     monkeypatch.setattr(core, "_provider_config", forbidden)
     monkeypatch.setattr(core.urllib.request, "urlopen", forbidden)
     monkeypatch.setattr(core.urllib.request, "build_opener", forbidden)
-    monkeypatch.setattr(core.ai_channel, "route_with_fallback", forbidden)
+    monkeypatch.setattr(channel, "route_with_fallback", forbidden)
 
     assert core.vision_chat("private system", "private prompt", "opaque-image",
                             local_only=local_only) == (None, "provider_disabled")
@@ -44,9 +44,9 @@ def test_text_gateway_retired_selection_fails_before_provider_or_network(monkeyp
         pytest.fail("retired compatibility route attempted provider discovery or I/O")
 
     monkeypatch.setattr(core, "_provider_config", forbidden)
-    monkeypatch.setattr(core, "is_provider_available", forbidden)
+    monkeypatch.setattr(providers, "is_provider_available", forbidden)
     monkeypatch.setattr(core.urllib.request, "urlopen", forbidden)
-    monkeypatch.setattr(core.ai_channel, "route_with_fallback", forbidden)
+    monkeypatch.setattr(channel, "route_with_fallback", forbidden)
 
     assert core._chat("private system", "private user") == (None, "provider_disabled")
     assert core._get_call_meta()["provider"] == "provider_disabled"

@@ -24,6 +24,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # ============================================================
 
 class TestSubjectFilterProtection:
+    @pytest.fixture(autouse=True)
+    def explicit_reference_focus(self):
+        from subject_context import brand_scope
+        with brand_scope("guangzhou_taikoo_hui", product_id="CTH"):
+            yield
+
     """P0 红线：SUBJECT_WORDS / subject_hit() 不被修改，采集流程不绕过。"""
 
     def test_subject_words_unchanged(self):

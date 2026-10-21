@@ -14,11 +14,13 @@ LUMENIS 数据边界（Data Boundary）
 
 设计原则：
 - 只用标准库；任何返回结构都不携带真实密钥值，最多携带“文件相对路径 / 命中行号 / 匹配类型”。
-- 非 Git 环境（git 不可用）降级为 skip 并说明，绝不误判为通过或失败的硬阻断。
+- Git 跟踪面不可读时检查失败；缺失扫描证据不能成为放行依据。
 """
 from __future__ import annotations
 
 import os
+import hashlib
+from pathlib import Path
 import re
 import secrets
 import subprocess
@@ -115,45 +117,80 @@ def _is_credential_path(rel_path: str) -> bool:
 
 
 def git_tracked_files(root: str = ROOT_DIR, timeout: int = 15):
-    """返回 Git 跟踪文件相对路径列表；git 不可用时返回 None（调用方按 skip 处理）。"""
+    """返回 Git 跟踪文件相对路径列表；git 不可用时返回 None（调用方阻断，不当作空清单）。"""
     try:
         out = subprocess.run(
-            ["git", "-C", root, "ls-files"],
-            capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="ignore",
+            ["git", "-C", root, "ls-files", "-z"],
+            capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="strict",
         )
         if out.returncode != 0:
             return None
-        return [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return [name for name in out.stdout.split("\0") if name]
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError, UnicodeError):
         return None
 
 
-def assert_no_tracked_credentials(root: str = ROOT_DIR):
-    """检查 Git 跟踪面是否混入凭证/业务数据库。
+# Individually reviewed immutable evidence, not credential containers.  A changed
+# byte, alternate path, symlink or unreadable file requires a fresh review.
+# These hashes prove only identity of the reviewed receipt, not a global secret scan.
+_REVIEWED_CREDENTIAL_NAMED_EVIDENCE = {
+    "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/URL_TOKEN_REDACTIONS.json":
+        "03117f67a9bbc3d8434dc47832349acd4193a1656d18a32da100641f997b249e",
+    "00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/results/public-credential-signature-scan.json":
+        "244f4f60b64b06eac8f0778847bd00f425decb19267d8d4d34db46ea09d7c597",
+    "research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/evidence/session-tests.log":
+        "618162e4f8bcd8ad5f95e601d55fb2c80f034beded2f6cfa34eb92d5af79b29a",
+}
 
-    返回结构绝不读取这些文件内容，也不返回任何密钥值。
+
+def _git_index_digest(root, rel_path):
+    """Verify the staged object too: a clean working receipt cannot mask staged bytes."""
+    try:
+        result = subprocess.run(["git", "-C", str(root), "show", ":" + rel_path],
+                                capture_output=True, check=True, timeout=15)
+        return hashlib.sha256(result.stdout).hexdigest()
+    except (subprocess.SubprocessError, OSError):
+        return None
+
+
+def _is_reviewed_evidence(root, rel_path):
+    expected = _REVIEWED_CREDENTIAL_NAMED_EVIDENCE.get(rel_path)
+    if expected is None:
+        return False
+    root = Path(root).resolve()
+    path = root / rel_path
+    try:
+        if any(part.is_symlink() for part in [path, *path.parents] if part != root):
+            return False
+        if not path.is_file() or not path.resolve().is_relative_to(root):
+            return False
+        return (hashlib.sha256(path.read_bytes()).hexdigest() == expected
+                and _git_index_digest(root, rel_path) == expected)
+    except OSError:
+        return False
+
+
+def assert_no_tracked_credentials(root: str = ROOT_DIR):
+    """Path boundary plus identity validation of three reviewed non-secret receipts.
+
+    Never returns file contents or credential values.  `leaks` is retained for
+    callers, but means unapproved path candidates, not confirmed secret leakage.
+    Full content scanning remains an independent security layer.
     """
     tracked = git_tracked_files(root)
     if tracked is None:
-        return {
-            "status": "skip",
-            "tracked_total": 0,
-            "leaks": [],
-            "detail": "当前不是可用 Git 工作树（git ls-files 不可用），凭证入库检查跳过",
-        }
-    leaks = sorted({p for p in tracked if _is_credential_path(p)})
-    if leaks:
-        return {
-            "status": "fail",
-            "tracked_total": len(tracked),
-            "leaks": leaks,
-            "detail": f"发现 {len(leaks)} 个凭证/数据类文件进入 Git 跟踪面，必须移出跟踪",
-        }
+        return {"status": "fail", "tracked_total": 0, "leaks": [],
+                "reviewed_evidence": [], "reason_code": "TRACKED_INVENTORY_UNAVAILABLE",
+                "detail": "Git 跟踪面不可读，无法完成凭据路径检查，禁止据此放行"}
+    candidates = sorted({p for p in tracked if _is_credential_path(p)})
+    admitted = [p for p in candidates if _is_reviewed_evidence(root, p)]
+    leaks = [p for p in candidates if p not in admitted]
     return {
-        "status": "pass",
-        "tracked_total": len(tracked),
-        "leaks": [],
-        "detail": f"Git 跟踪面 {len(tracked)} 个文件，未发现 Cookie/Token/.env/私钥/数据库被跟踪",
+        "status": "fail" if leaks else "pass", "tracked_total": len(tracked),
+        "leaks": leaks, "reviewed_evidence": admitted,
+        "reason_code": "UNAPPROVED_CREDENTIAL_PATH" if leaks else "PATH_BOUNDARY_VERIFIED",
+        "detail": (f"发现 {len(leaks)} 个未获准凭据语义路径，需安全分类；不等同已确认秘密泄露"
+                   if leaks else f"Git 跟踪面 {len(tracked)} 个文件路径检查完成；已核回执 {len(admitted)}，非全量秘密扫描结论"),
     }
 
 

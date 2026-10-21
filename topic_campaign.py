@@ -99,7 +99,7 @@ def _canonical_campaign_identity(auto_trigger=False):
                 'reason': f'RedNote policy unavailable; collection is blocked: {exc}'}
 
     if (gate.get('ok') is not True or gate.get('account') != account
-            or gate.get('region') != region or gate.get('cdp_port') != 9223
+            or gate.get('region') != region
             or gate.get('host') != 'www.rednote.com'):
         return {'ok': False, 'code': 'IDENTITY_BLOCKED',
                 'reason': gate.get('reason') or 'Canonical policy did not allow the HK/international route',
@@ -111,17 +111,11 @@ def _canonical_campaign_identity(auto_trigger=False):
         return {'ok': False, 'code': 'AUTO_RUN_DISABLED',
                 'reason': 'Automatic RedNote collection requires REDNOTE_AUTO_RUN=true', 'policy': gate}
 
-    endpoint = os.environ.get('XHS_CDP_URL') or ''
-    if not endpoint:
-        return {'ok': False, 'code': 'COLLECTOR_ENDPOINT_NOT_CONFIGURED',
-                'reason': 'No explicit HK browser endpoint is configured', 'policy': gate}
-    if endpoint != 'http://127.0.0.1:9223':
-        return {'ok': False, 'code': 'COLLECTOR_ENDPOINT_INVALID',
-                'reason': 'Only the explicit approved HK endpoint http://127.0.0.1:9223 is permitted',
-                'policy': gate}
-
-    return {'ok': True, 'account': account, 'region': region, 'cdp_port': 9223,
-            'host': 'www.rednote.com', 'cdp_url': endpoint,
+    # Endpoint ownership moved to SYSTEM Browser. This retired caller must not
+    # interpret a legacy environment URL or revive a hard-coded CDP port.
+    # Identity eligibility is not permission to run the old campaign worker.
+    return {'ok': True, 'account': account, 'region': region, 'cdp_port': None,
+            'host': 'www.rednote.com', 'cdp_url': None,
             'policy_version': gate.get('policy_version'), 'policy': gate}
 
 

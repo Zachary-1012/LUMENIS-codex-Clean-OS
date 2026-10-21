@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from unittest.mock import MagicMock
+from concurrent.futures import CancelledError
 
 import pytest
 
@@ -30,7 +31,9 @@ def _make_note(**overrides) -> CollectedNote:
         shares=0,
         cover="",
         source_platform="instagram",
-        raw_data={"shortcode": "ABC123", "media_type": "post", "needs_detail": False},
+        raw_data={"shortcode": "ABC123", "media_type": "post", "needs_detail": False,
+                  "native_identity": {"shortcode": "ABC123", "requested_shortcode": "ABC123",
+                                      "status": "OBSERVED_MATCH"}},
     )
     defaults.update(overrides)
     return CollectedNote(**defaults)
@@ -151,7 +154,7 @@ def test_status_mapping_blocked():
     )
     adapter = _adapter_with_engine(result)
     cr = adapter.search("test")
-    assert cr.status == CollectionStatus.BLOCKED
+    assert cr.status == CollectionStatus.COOLING_DOWN
 
 
 def test_status_mapping_collect_error_proxy():
@@ -161,7 +164,7 @@ def test_status_mapping_collect_error_proxy():
     )
     adapter = _adapter_with_engine(result)
     cr = adapter.search("test")
-    assert cr.status == CollectionStatus.COLLECT_ERROR
+    assert cr.status == CollectionStatus.NOT_CONFIGURED
     assert "代理" in cr.message
 
 
@@ -169,7 +172,7 @@ def test_status_mapping_collect_error_other():
     result = AdapterResult(success=False, error="Instagram 浏览器采集异常: timeout")
     adapter = _adapter_with_engine(result)
     cr = adapter.search("test")
-    assert cr.status == CollectionStatus.COLLECT_ERROR
+    assert cr.status == CollectionStatus.PROVIDER_UNAVAILABLE
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +188,7 @@ def test_health_check_no_cookie_no_proxy(monkeypatch):
     assert hc.status == CollectionStatus.NOT_CONFIGURED
     assert hc.metadata["worker_binding_registered"] is False
     assert hc.metadata["login_and_collection_verified"] is False
-    assert hc.metadata["legacy_cookie_checked"] is False
+    assert not adapter._engine.mock_calls
 
 
 def test_health_check_ready(monkeypatch, tmp_path):
@@ -438,3 +441,78 @@ def test_search_exception_returns_collect_error():
     cr = adapter.search("test")
     assert cr.status == CollectionStatus.COLLECT_ERROR
     assert "browser crashed" in cr.message
+
+
+def test_detail_exception_preserves_search_observation_and_honest_partial_state(caplog):
+    engine = _make_engine(AdapterResult(success=True, notes=[_make_note(likes=0)], raw_count=1))
+    engine.detail.side_effect = TimeoutError('do not log secret payload')
+    result = InstagramAdapter(engine=engine).search('test')
+    assert result.status == CollectionStatus.PROVIDER_UNAVAILABLE and not result.ok
+    assert len(result.items) == result.raw_count == 1
+    item = result.items[0]
+    assert item['raw']['search_summary_observation']['text'] == 'caption text'
+    assert item['raw']['search_summary_observation']['metrics']['likes'] == 0
+    assert item['content'] == '' and item['likes'] is None
+    assert item['raw']['detail_observation']['status'] == 'PROVIDER_UNAVAILABLE'
+    assert result.metadata['search_status'] == 'SUCCESS'
+    assert result.metadata['acquisition_state'] == 'PARTIAL'
+    assert 'do not log secret payload' not in caplog.text
+
+
+def _native_note(code, **kwargs):
+    return _make_note(url=f'https://www.instagram.com/p/{code}/', raw_data={
+        'shortcode': code, 'native_identity': {'shortcode': code,
+        'requested_shortcode': code, 'status': 'OBSERVED_MATCH'}}, **kwargs)
+
+
+@pytest.mark.parametrize('failure', [TimeoutError('synthetic timeout'), CancelledError()])
+def test_mixed_detail_failure_keeps_completed_body_and_stops_remaining_requests(failure):
+    notes = [_native_note(code) for code in ('ONE', 'TWO', 'THREE')]
+    engine = _make_engine(AdapterResult(success=True, notes=notes, raw_count=3))
+    engine.detail.side_effect = [AdapterResult(success=True, notes=[_native_note('ONE', likes=0, comments=None)]), failure]
+    result = InstagramAdapter(engine=engine).search('test')
+    assert not result.ok and len(result.items) == 3
+    assert engine.detail.call_count == 2
+    first, second, third = result.items
+    assert first['content'] == 'caption text' and first['likes'] == 0 and first['comments'] is None
+    assert first['raw']['detail_observation']['status'] == 'SUCCESS'
+    assert second['raw']['search_summary_observation']['text'] == 'caption text'
+    assert third['raw']['detail_observation']['status'] == 'PENDING'
+    assert result.metadata['detail']['succeeded'] == 1
+    assert result.metadata['detail']['failed'] == result.metadata['detail']['pending'] == 1
+    assert result.metadata['acquisition_state'] == 'PARTIAL'
+
+
+def test_missing_detail_result_is_not_complete_success():
+    engine = _make_engine(AdapterResult(success=True, notes=[_make_note()], raw_count=1))
+    engine.detail.return_value = AdapterResult(success=True, notes=[], raw_count=0)
+    result = InstagramAdapter(engine=engine).search('test')
+    assert result.status == CollectionStatus.COLLECT_ERROR and not result.ok
+    assert len(result.items) == 1
+    assert result.items[0]['raw']['detail_observation']['status'] == 'DETAIL_NOT_RETURNED'
+
+
+def test_async_cancellation_is_not_swallowed_as_provider_failure():
+    import asyncio
+    engine = _make_engine(AdapterResult(success=True, notes=[_make_note()], raw_count=1))
+    engine.detail.side_effect = asyncio.CancelledError()
+    with pytest.raises(asyncio.CancelledError):
+        InstagramAdapter(engine=engine).search('test')
+
+
+def test_unverified_detail_identity_stays_partial_without_promoting_body():
+    engine = _make_engine(AdapterResult(success=True, notes=[_make_note()], raw_count=1))
+    engine.detail.return_value = AdapterResult(success=True, notes=[_make_note(raw_data={'shortcode': 'ABC123'})])
+    result = InstagramAdapter(engine=engine).search('test')
+    assert not result.ok and result.metadata['acquisition_state'] == 'PARTIAL'
+    assert result.items[0]['content'] == ''
+    assert result.items[0]['raw']['detail_observation']['status'] == 'IDENTITY_MISMATCH'
+
+
+def test_missing_native_id_keeps_preview_without_detail_call_or_success():
+    engine = _make_engine(AdapterResult(success=True, notes=[_make_note(url='', raw_data={})], raw_count=1))
+    result = InstagramAdapter(engine=engine).search('test')
+    engine.detail.assert_not_called()
+    assert not result.ok and len(result.items) == 1
+    assert result.items[0]['raw']['search_summary_observation']['text'] == 'caption text'
+    assert result.items[0]['raw']['detail_observation']['status'] == 'NOT_ATTEMPTED_NO_NATIVE_ID'

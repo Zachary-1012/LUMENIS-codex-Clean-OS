@@ -104,6 +104,24 @@ def candidate_client(tmp_path, monkeypatch):
     importlib.reload(database)
     database.DB_PATH = str(copy_db)
 
+    # Upgrade only the disposable copy with current owner schemas. The supplied
+    # seed is intentionally never migrated, opened for write, or treated as live data.
+    from lumenis.shared.database import DatabaseRepository
+    from lumenis.ai_hub.conversations import ensure_schema as ensure_conversations
+    import subject_registry
+    from canonical_data import ensure_canonical_table
+    from lumenis.shared.database.business_schema import ensure_business_scope_storage
+    from lumenis.shared.evidence.store import ensure_evidence_schema
+    with DatabaseRepository(str(copy_db)).transaction() as connection:
+        connection.execute("BEGIN IMMEDIATE")
+        subject_registry.ensure_schema(connection)
+        ensure_conversations(connection)
+        ensure_canonical_table(connection=connection)
+        ensure_business_scope_storage(connection)
+        ensure_evidence_schema(connection)
+    from shared_artifacts import ensure_artifact_table
+    ensure_artifact_table()
+
     import experience_runtime
     # 懒加载合并全部 44 屏 builder（P0-E2E-03 破循环导入），必须无传播错误且全量绑定
     builders = experience_runtime._all_builders()
@@ -127,7 +145,12 @@ def test_all_44_screens_200_and_binding_is_honest(candidate_client):
     cli, _, _ = candidate_client
     bound, unbound = [], []
     for sid in _all_screen_ids():
-        r = cli.get(f"/api/experience/screen/{sid}")
+        headers = {}
+        if sid.startswith("BMP-"):
+            headers = {"X-Domain-Id": "BMP", "X-Lumenis-Context-Mode": "GLOBAL_ALL"}
+        elif sid in {"SH-01", "SH-05"}:
+            headers = {"X-Domain-Id": "CTH"}
+        r = cli.get(f"/api/experience/screen/{sid}", headers=headers)
         assert r.status_code == 200, sid
         j = r.get_json()
         assert _scan_bad_tokens(j) == [], (sid, _scan_bad_tokens(j))
@@ -185,8 +208,32 @@ def test_source_db_immutable_after_full_run(candidate_client):
     cli, src_before, sidecars_before = candidate_client
     # 跑一遍全部屏幕 + 外壳 + runtime.js，制造完整读负载
     for sid in _all_screen_ids():
-        cli.get(f"/api/experience/screen/{sid}")
+        headers = {}
+        if sid.startswith("BMP-"):
+            headers = {"X-Domain-Id": "BMP", "X-Lumenis-Context-Mode": "GLOBAL_ALL"}
+        elif sid in {"SH-01", "SH-05"}:
+            headers = {"X-Domain-Id": "CTH"}
+        cli.get(f"/api/experience/screen/{sid}", headers=headers)
     # 源库字节必须逐位不变
     assert _sha256(SRC_DB) == src_before
     # 已有 WAL/SHM 属候选库既有状态；完整读负载不得新增或改变它们。
     assert _sidecar_state(SRC_DB) == sidecars_before
+
+
+def test_conversation_missing_schema_is_not_empty_success(candidate_client):
+    cli, _, _ = candidate_client
+    from lumenis.shared.database import get_repository
+    with get_repository().transaction() as connection:
+        connection.execute('DROP TABLE ai_conversation_turns')
+        connection.execute('DROP TABLE ai_conversations')
+    response = cli.get('/api/experience/screen/AI-03')
+    assert response.status_code == 503
+    assert response.get_json()['bound'] is False
+
+
+@pytest.mark.parametrize('screen', ['SH-01', 'SH-05'])
+def test_content_screen_missing_domain_is_not_implicit_scope(candidate_client, screen):
+    cli, _, _ = candidate_client
+    response = cli.get('/api/experience/screen/' + screen)
+    assert response.status_code == 400
+    assert response.get_json()['bound'] is False

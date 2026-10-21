@@ -179,9 +179,13 @@ class SubjectClassifier:
                 confidence = max(confidence, 0.6)
                 return self._result('normal_user', confidence, reasons, 'ugc')
 
-        # 默认普通用户
-        reasons.append('无明显主体特征，默认普通用户')
-        return self._result('normal_user', confidence, reasons, 'ugc')
+        # No identity evidence is not evidence of an ordinary-user identity.
+        # Keep the derived candidate explicit without inventing ownership.
+        reasons.append('缺少可判定主体特征，身份保持未知')
+        result = self._result('unknown', confidence, reasons, 'ugc')
+        result.update(identity_truth='NOT_ESTABLISHED', needs_manual_review=True,
+                      identity_status='INSUFFICIENT_EVIDENCE')
+        return result
 
     def _resolve_conflicts(self, matches: dict, full_text: str) -> dict:
         """冲突解决：当多个类型同时匹配时，按优先级规则解决"""

@@ -136,7 +136,7 @@ class TestMetaAdsBlocked:
         # 关键：禁止返回空列表冒充成功
         assert result["data"] != []
 
-    def test_proxy_required_blocks_without_proxy(self):
+    def test_proxy_required_blocks_without_proxy(self, monkeypatch):
         from ad_intelligence.platforms.meta_ads import MetaAdsCollector, MetaAdsConfig
         config = MetaAdsConfig(
             access_token="test_token",
@@ -144,22 +144,22 @@ class TestMetaAdsBlocked:
             requires_proxy=True,
             proxy_url="",
         )
-        # 确保环境变量中没有代理
-        old_proxy = os.environ.get("HTTPS_PROXY")
-        old_openai = os.environ.get("OPENAI_PROXY")
-        os.environ.pop("HTTPS_PROXY", None)
-        os.environ.pop("OPENAI_PROXY", None)
-        try:
-            collector = MetaAdsCollector(config)
-            result = collector.get_account_insights()
-            assert result["success"] is False
-            assert result["status"] == "blocked"
-            assert "proxy" in result["reason"].lower()
-        finally:
-            if old_proxy:
-                os.environ["HTTPS_PROXY"] = old_proxy
-            if old_openai:
-                os.environ["OPENAI_PROXY"] = old_openai
+        # Test the missing-proxy branch independently of this machine's proxy.
+        # Never let a synthetic token reach an external Graph endpoint.
+        for key in ("HTTPS_PROXY", "HTTP_PROXY", "OPENAI_PROXY"):
+            monkeypatch.delenv(key, raising=False)
+        import requests
+        calls = []
+        def forbidden_transport(*args, **kwargs):
+            calls.append(True)
+            raise AssertionError("offline credential/proxy test attempted transport")
+        monkeypatch.setattr(requests.sessions.Session, "request", forbidden_transport)
+        collector = MetaAdsCollector(config)
+        result = collector.get_account_insights()
+        assert result["success"] is False
+        assert result["status"] == "blocked"
+        assert "proxy" in result["reason"].lower()
+        assert calls == []
 
     def test_health_check_reports_blocked(self):
         from ad_intelligence.platforms.meta_ads import MetaAdsCollector, MetaAdsConfig

@@ -10,7 +10,9 @@ def test_reports_project_actual_saved_versions(workspace, monkeypatch):
         markdown='Private deterministic result', payload={}, citations=[], request_id='bmp-report-projection-001')
     monkeypatch.setattr(experience_runtime, '_bmp_saved_work_actor_scope', lambda binding: (ws['actor'],scope))
     result = experience_screens._build_bmp09(binding={'canonical_scope':'GLOBAL_ALL'})
-    rows = result['sections'][1]['rows']
+    # Saved artifact projection is a semantic contract; section positions can change.
+    rows = result['saved_artifacts']
+    assert len(rows) == 1
     assert rows[0]['id'] == saved['artifact']['artifact_id']
     assert rows[0]['assessment'] == 'NOT_ESTABLISHED_BY_STORAGE'
     assert rows[0]['version'] == 1
