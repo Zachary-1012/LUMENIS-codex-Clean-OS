@@ -156,3 +156,12 @@ All calls above are through the existing `LumenisCoreClient.runtimeIdentity()` a
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/aggregate-feed.mjs、aggregate-study.mjs、feed-pages.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+主体资料聚合阅读沿 `app/lib/features/cth/` 与现有CTH/Canonical Owner，不增加平台服务。平台切换与平台内内容切换分轴；手势先锁pointer/轴，未达阈值或取消不换对象，平台位置按稳定内容ID保留，范围变更重验。宽屏稳定扇面只作原创浏览候选；窄屏、密集正文、减弱动态用同一数据的平铺，探索随机序不叫排序推荐，22个fixture平台标签不等采集能力。
+
+分页绑定actor/范围/platform/opaque cursor，Owner前后权限有效才提交；换范围/平台、取消、撤权、dispose使旧响应与旧错误失效。坏页、重复ID、游标不推进、total小于已载量整页拒绝；未知total为null，失败保已核页与原cursor，仅重试失败页。实际Owner若用不同字段由现有repository映射，不能新造demo endpoint。验收用真实授权分页加乱序/撤权反例，纸面候选不更改本屏当前实现状态。

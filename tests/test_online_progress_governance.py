@@ -304,6 +304,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
             "scripts/audit_tools/verify_codex_takeover_governance.py",
             "scripts/audit_tools/verify_lumenis_single_product.py",
             "tests/test_online_progress_governance.py",
+            "tests/test_audit_inventory_boundaries.py",
             ".codex/model-routing.toml",
             ".codex/tests/test_engineering.py",
             "website/DEVELOPMENT-BRIEF.md",

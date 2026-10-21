@@ -155,3 +155,12 @@ API integration remains an existing Python acceptance layer, not replaced by Flu
 - **覆盖：** 四端职责、中文/英文/韩文、明暗模式、宽度/字号、键盘/读屏、加载/空/未知/拒绝/离线/错误/恢复；必要长内容可滚动，其余避免无意义整页上下滚动。
 - **变更及验收：** 设计 diff → 受影响组件/Token/Action → 原状态/焦点/路由/任务连续性回归 → 实际操作证据及回退。只修对应部分，不重生成全 App；源码/设计/测试状态分别记录。
 - **完成边界：** 当前 Figma 链和真实四端操作证据未核实，不提升本屏状态。PNG、伪造 .fig、44张示意图、路由存在或 Widget 可显示都不能代替可编辑设计和真实用户结果。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/aggregate-feed.mjs、aggregate-study.mjs、feed-pages.mjs、contracts.mjs 的 compareRows`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+品牌聚合阅读采用同一平台/内容双轴机制，但查询必须是当前BMP真实品牌范围，不从主体demo映射猜BrandFocus。各平台保稳定选中ID，切换品牌清除旧读权限与手势；列表/扇面都显示原来源、原期间、缺失原因。未知、0、未采集、过期、离线、拒绝、失败分别表达；单位/币种/期间/分母不同不计算伪差值，表图文字及导出消费同一个结果版本。
+
+分页落实CTH-01本轮明确的代次、撤权、cursor进展与整页校验原则，但以BMP现有repository/Owner字段绑定。验收品牌A迟到页不能进入B、随机探索不冒称价值排名、触控/键盘切换返回原位置、无模型可正常阅读。`app/lib/features/bmp01/` 保留现有实现；demo人工材料不得成为生产默认数据。

@@ -389,3 +389,12 @@ Public Website仅用获准真实样例说明平台与主体话题词条库及未
 UI可依据真实语境分组词条并显示别名歧义，不能生成热榜/排序事实；锁定、手工列表和撤销可用。
 
 沿本屏现有Owner/Permission/SourceUse/版本/回执接线；缺callable保持OPEN并禁对应效果，不猜route，不改既有当前实现/验收状态。此段补全旧要求的可执行设计，不证明实现通过。
+
+
+### 2026-10-21 交互源码吸收：开发前行为边界
+
+材料：[独立审核包](../../../research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/README.md)，静态对读 `src/context-selection.mjs、context-study.mjs`。这里只吸收适用行为与反例，不执行、移植或发布审核包，不改变本屏既有实现/验收状态。
+
+范围选择器的搜索、候选选中、确认预览与实际范围切换分开。确认绑定当前候选ID、范围revision、当前Owner可读身份及镜头；预览后换候选/换范围/撤权，旧确认失效，保留搜索词但不得切入旧对象。取消回原任务的输入、选区和滚动；清除选择只回本屏现有合法范围，不从demo的GLOBAL_ALL默认值推导全局授权。沿现有范围绑定与shell消费方落实，不复制demo.allowed或identity字符串为权限。
+
+验收反例：确认框打开后换对象、旧范围异步返回、候选被撤权；均不得沿用旧确认或启动采集。键盘和窄屏逐层确认与宽屏同语义，回到原触发点。

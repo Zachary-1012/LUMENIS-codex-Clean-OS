@@ -84,3 +84,51 @@ class AuditInventoryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_pinned_history_does_not_reintroduce_active_legacy_paths():
+    inventory = governance._recovered_evidence_inventory()
+    paths = list(inventory) + [governance.RECOVERED_EVIDENCE_RECEIPT]
+    assert product.tracked_path_errors(paths) == []
+    for unapproved in (
+        'research/frontend/arbitrary.py',
+        'research/engineering/documentation-evidence/reports/frontend/unlisted.md',
+        'app/lib/frontend/runtime.dart', 'lumenis/legacy/runtime.py',
+        next(path for path in inventory if 'frontend_' in path) + '.neighbor',
+    ):
+        errors = product.tracked_path_errors(paths + [unapproved])
+        assert any('obsolete product/archive path token' in error and unapproved in error for error in errors)
+    missing = paths[1:]
+    assert any('invalid recovered evidence inventory' in error for error in product.tracked_path_errors(missing))
+
+
+def test_history_exception_rejects_forged_or_corrupt_receipt(tmp_path, monkeypatch):
+    import json
+    original = json.loads((governance.ROOT / governance.RECOVERED_EVIDENCE_RECEIPT).read_text())
+    paths = [entry['repository_relative_path'] for entry in original['files']]
+    paths.append(governance.RECOVERED_EVIDENCE_RECEIPT)
+    receipt = tmp_path / governance.RECOVERED_EVIDENCE_RECEIPT
+    receipt.parent.mkdir(parents=True)
+    monkeypatch.setattr(governance, 'ROOT', tmp_path)
+    receipt.write_text(json.dumps(original))
+    # Pinned receipt alone cannot authorize files whose bytes are missing.
+    assert any('invalid recovered evidence inventory' in error for error in product.tracked_path_errors(paths))
+    original['files'][0]['repository_relative_path'] = 'research/frontend/arbitrary.py'
+    paths[0] = 'research/frontend/arbitrary.py'
+    receipt.write_text(json.dumps(original))
+    errors = product.tracked_path_errors(paths)
+    assert any('approved finite set' in error for error in errors)
+    assert any('obsolete product/archive path token' in error for error in errors)
+    receipt.write_text('{invalid')
+    assert any('invalid recovered evidence inventory' in error for error in product.tracked_path_errors(paths))
+
+
+def test_single_product_production_cli_smoke():
+    import subprocess
+    import sys
+    result = subprocess.run(
+        [sys.executable, str(Path(product.__file__))], cwd=product.ROOT,
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'architecture guard: PASS' in result.stdout
