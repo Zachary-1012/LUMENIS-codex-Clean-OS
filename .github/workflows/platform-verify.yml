@@ -148,7 +148,15 @@ jobs:
               'tests/test_runtime_preflight.py', 'tests/test_safety_boundary.py',
               'tests/test_safety_boundary_backup_contract.py', 'tests/test_instagram_partial_collection.py',
               'tests/test_instagram_main_adapter.py', 'tests/test_ai_gateway_result_status.py',
-              'tests/test_root_owner_auth_composition.py']))
+              'tests/test_root_owner_auth_composition.py',
+              # CPython 3.11 worker-entry matrix: real local processes only,
+              # no network/model/training. Full affected recovery runs are
+              # separately recorded on the frozen source with synthetic DBs.
+              'tests/test_owned_training_runtime_recovery.py::test_source_pinned_managed_worker_has_actual_private_peer_and_stop_replacement',
+              'tests/test_owned_training_runtime_recovery.py::test_unbound_invocation_reaps_real_managed_worker_without_waiting',
+              'tests/test_owned_training_runtime_recovery.py::test_managed_worker_preserves_private_venv_for_start_replace_and_reap',
+              'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_invalid_interpreter_before_spawn',
+              'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_identity_or_entry_change_and_reaps']))
           PY
 
       - name: Record gate scope (INFORMATIONAL)

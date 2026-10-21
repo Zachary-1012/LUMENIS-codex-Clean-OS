@@ -672,20 +672,23 @@ class TrainingProcessFence:
         The child waits for the existing owner's actual binding before loading
         anything. It receives public material and receipts; no signer or session.
         """
-        if type(python_executable) is not type(Path()):
+        if (type(python_executable) is not type(Path())
+                or not python_executable.is_absolute()):
             raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH")
-        # Hosted Linux toolchains expose ``python`` as a symlink to the real
-        # interpreter. Resolve it before validation so the fence checks the
-        # actual regular executable while argv still launches the same binary.
-        python_executable = python_executable.resolve()
-        if (not python_executable.is_absolute()
-                or type(source_pins) is not dict or source_pins != training_worker_source_pins(cwd)
+        # Validate the actual executable separately from its launch entry.
+        # PEP 405 locates pyvenv.cfg relative to the *unresolved* entry; replacing
+        # a venv symlink with its target changes sys.prefix and dependency scope.
+        try:
+            executable_target = python_executable.resolve(strict=True)
+            executable_stat = _regular_stat(executable_target, directory=False)
+        except (OSError, RuntimeError):
+            raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH") from None
+        if (type(source_pins) is not dict or source_pins != training_worker_source_pins(cwd)
                 or type(replace) is not bool
                 or remote_transport is not None and any(not callable(getattr(remote_transport, name, None))
                     for name in ("start_stdio", "admit_peer", "require_live", "signal_writer_group",
                         "fetch_checkpoint_bytes", "stop_remote_and_reap"))):
             raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH")
-        _regular_stat(python_executable, directory=False)
         self._source_root, self._source_pins = cwd, dict(source_pins)
         if remote_transport is not None:
             if self._remote_transport is not None and self._remote_transport is not remote_transport:
@@ -710,9 +713,29 @@ class TrainingProcessFence:
             else:
                 self.start(argv, cwd=cwd, log_path=log_path, _managed=True)
             hello = self._receive_managed(time.monotonic() + 30)
-            if (type(hello) is not dict or set(hello) != {"kind", "pid", "created_at", "source_pins"}
+            if (type(hello) is not dict or set(hello) != {"kind", "pid", "created_at", "source_pins", "interpreter_identity"}
                     or hello["kind"] != "owned_training_worker_ready" or hello["source_pins"] != self._source_pins
                     or type(hello["pid"]) is not int or type(hello["created_at"]) not in {int, float}):
+                raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH")
+            identity = hello["interpreter_identity"]
+            if (type(identity) is not dict or set(identity) != {
+                    "executable", "prefix", "base_prefix", "version", "psutil_origin"}
+                    or any(type(identity.get(name)) is not str or not Path(identity[name]).is_absolute()
+                           for name in ("executable", "prefix", "base_prefix", "psutil_origin"))
+                    or type(identity.get("version")) is not list or len(identity["version"]) != 3
+                    or any(type(value) is not int or value < 0 for value in identity["version"])
+                    or os.path.normcase(os.path.abspath(identity["executable"]))
+                       != os.path.normcase(os.path.abspath(python_executable))):
+                raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH")
+            # A changed launch link/target cannot be accepted as the checked one.
+            try:
+                current_target = python_executable.resolve(strict=True)
+                current_stat = _regular_stat(current_target, directory=False)
+            except (OSError, RuntimeError):
+                raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH") from None
+            if (current_target != executable_target
+                    or (current_stat.st_dev, current_stat.st_ino, current_stat.st_size, current_stat.st_mtime_ns)
+                    != (executable_stat.st_dev, executable_stat.st_ino, executable_stat.st_size, executable_stat.st_mtime_ns)):
                 raise TrainingBlocked("TRAINING_WORKER_SOURCE_MISMATCH")
             root = self.require_live()
             peer = psutil.Process(hello["pid"])
@@ -721,7 +744,8 @@ class TrainingProcessFence:
                 raise TrainingBlocked("CHECKPOINT_WORKER_FENCE_LOST")
             self._peer = {"pid": peer.pid, "created_at": peer.create_time()}
             return {"worker_binding": self.worker_binding, "framework_worker": dict(self._peer),
-                    "source_pins": dict(self._source_pins), "model_loaded": False}
+                    "source_pins": dict(self._source_pins), "model_loaded": False,
+                    "interpreter_identity": copy.deepcopy(identity)}
         except BaseException:
             if self._worker is not None:
                 self.stop_and_reap()
@@ -1133,6 +1157,14 @@ def _managed_training_worker(*, remote=False):
         fields = Path("/proc/self/stat").read_text().rsplit(")", 1)[1].split()
         hello.update(kind="owned_training_remote_worker_ready", process_group_id=os.getpgid(0),
             session_id=os.getsid(0), proc_start_ticks=int(fields[19]))
+    else:
+        # Observed on the retained private pipe, not inferred from the binary
+        # target, parent's environment or an activation marker. No model loaded.
+        hello["interpreter_identity"] = {
+            "executable": sys.executable, "prefix": sys.prefix,
+            "base_prefix": sys.base_prefix, "version": list(sys.version_info[:3]),
+            "psutil_origin": str(Path(psutil.__file__).absolute()),
+        }
     _write_pipe(outgoing, hello)
     proxy = None
     try:
