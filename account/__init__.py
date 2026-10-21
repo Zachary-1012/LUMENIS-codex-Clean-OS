@@ -2,8 +2,8 @@
 account/ — ZBC/LUMENIS 主线账户体系模块（P1-F Apple ID 式账户）
 
 将 lumenis/auth/ 提升为一级主线模块，保留 v4_ 表名保护现有数据。
-新增：名额硬约束(1+3+5)、双域授权矩阵、TOTP动态口令、随机数字验证码、
-产品保护配置(ZBMP=TOTP/CTH=密码/SYSTEM=二次确认)、导航自定义、技能管理、
+新增：名额硬约束(1+3+5)、双域授权矩阵、随机数字验证码、
+产品保护配置(ZBMP=密码/CTH=密码/SYSTEM=二次确认)、导航自定义、技能管理、
 静态密钥迁移。
 
 不删表、不丢数据；lumenis/auth/ 保留为 deprecated 兼容层。
@@ -28,10 +28,6 @@ from .authorization import (
     check_dual_domain_permission,
 )
 from .audit import log_audit, query_audit_logs, get_audit_stats
-from .totp import (
-    get_totp_status, setup_totp, confirm_totp, verify_user_totp, reset_totp,
-    TOTP_CONFIG, get_totp as _get_totp,
-)
 from .product_protection import (
     get_protection_config, set_protection_config, check_protection_required,
 )
@@ -58,8 +54,6 @@ __all__ = [
     "get_member_authorizations", "set_member_authorizations",
     "check_dual_domain_permission",
     "log_audit", "query_audit_logs", "get_audit_stats",
-    "get_totp_status", "setup_totp", "confirm_totp", "verify_user_totp", "reset_totp",
-    "TOTP_CONFIG",
     "get_protection_config", "set_protection_config", "check_protection_required",
     "get_nav_config", "save_nav_config", "reset_nav_config", "DEFAULT_NAV",
     "list_skills", "set_skill_status", "get_enabled_skills",

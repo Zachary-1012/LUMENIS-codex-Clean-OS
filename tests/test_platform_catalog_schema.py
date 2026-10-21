@@ -664,6 +664,77 @@ class TestDataCenterAPI:
         assert payload["total"] == 3
         assert {row["id"] for row in payload["data"]} == {9601, 9602, 9603}
 
+    def test_text_publication_bounds_compare_instants_not_strings(
+        self, platform_db, monkeypatch,
+    ):
+        """Offset-bearing text timestamps are compared as UTC instants."""
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.executemany(
+            "INSERT INTO notes (id, publish_date) VALUES (?, ?)",
+            [
+                (9701, "2026-10-31T05:00:00Z"),        # == 13:00+08:00, inside
+                (9702, "2026-10-31 03:00:00"),         # == 11:00+08:00, before
+                (9703, "2026-10-31T12:30:00+08:00"),   # inside
+            ],
+        )
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+        from urllib.parse import quote
+        response = client.get(
+            "/api/data-center/table/notes?start_date="
+            + quote("2026-10-31T12:00:00+08:00") + "&end_date=2026-10-31"
+        )
+        assert response.status_code == 200
+        assert {row["id"] for row in response.get_json()["data"]} == {9701, 9703}
+
+    def test_text_publication_max_end_date_is_inclusive_not_an_error(self, platform_db, monkeypatch):
+        columns = {row["name"] for row in platform_db.execute("PRAGMA table_info(notes)")}
+        if "publish_date" not in columns:
+            platform_db.execute("ALTER TABLE notes ADD COLUMN publish_date TEXT")
+        platform_db.execute("DELETE FROM notes")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9801, '9999-12-31T12:00:00Z')")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9802, '9999-12-31T23:59:59.999999Z')")
+        platform_db.commit()
+        path = platform_db.execute("PRAGMA database_list").fetchone()[2]
+        client = _data_center_client(monkeypatch, path)
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59.999999Z")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        # Offset-adjusted extremes leave Python's UTC range: no 500.
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59-05:00")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        response = client.get("/api/data-center/table/notes?start_date=0001-01-01T00:00:00%2B05:00")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802]
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9803, '9999-12-31T23:59:59.500000Z')")
+        platform_db.commit()
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59Z")
+        assert response.status_code == 200
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801]
+        response = client.get("/api/data-center/table/notes?end_date=9999-12-31T23:59:59.999999Z")
+        assert sorted(row["id"] for row in response.get_json()["data"]) == [9801, 9802, 9803]
+        # A start after every representable stored instant is valid and empty.
+        response = client.get("/api/data-center/table/notes?start_date=9999-12-31T23:59:59-05:00")
+        assert response.status_code == 200
+        assert response.get_json()["data"] == []
+        # Sub-millisecond precision is preserved on both bounds.
+        platform_db.execute("DELETE FROM notes")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9811, '2026-01-01T00:00:00.000100Z')")
+        platform_db.execute("INSERT INTO notes (id, publish_date) VALUES (9812, '2026-01-01T00:00:00.000400Z')")
+        platform_db.commit()
+        response = client.get("/api/data-center/table/notes?end_date=2026-01-01T00:00:00.000100Z")
+        assert [row["id"] for row in response.get_json()["data"]] == [9811]
+        response = client.get("/api/data-center/table/notes?start_date=2026-01-01T00:00:00.000400Z")
+        assert [row["id"] for row in response.get_json()["data"]] == [9812]
+
     @pytest.mark.parametrize(("parameter", "invalid_date"), [
         ("start_date", "2026-02-30"),
         ("end_date", "2026-13-01"),
@@ -995,3 +1066,15 @@ with patch.object(socket.socket, 'connect', side_effect=AssertionError('network 
         capability_matrix()['youtube']['raw_tables'].append('not-real')
         get_platform_capabilities('yt')['raw_tables'].append('not-real-either')
         assert PLATFORM_CAPABILITIES['youtube']['raw_tables'] == original
+
+
+
+def test_integer_timestamp_bounds_are_exact_source_units():
+    import data_center_api as d
+    lo = d._unix_date_filter("9999-12-31T23:59:59.000001Z", end=False,
+                             timestamp_multiplier=1000, integer_column=True)
+    at = d._unix_date_filter("9999-12-31T23:59:59Z", end=False,
+                             timestamp_multiplier=1000, integer_column=True)
+    assert lo == (">=", at[1] + 1) and isinstance(lo[1], int)
+    assert d._unix_date_filter("2026-01-01T00:00:00.5Z", end=True, integer_column=True) == ("<=", 1767225600)
+    assert d._unix_date_filter("2026-01-01", end=True, integer_column=True) == ("<", 1767312000)

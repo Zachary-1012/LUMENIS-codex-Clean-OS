@@ -54,7 +54,10 @@ def test_build_spec_covers_every_nonstatic_rule():
     assert set(spec["paths"]) == covered
     note = spec["paths"]["/api/note/{note_id}"]
     assert set(note) == {"get", "delete"}
-    assert note["get"]["operationId"] == "note_detail"
+    # One Flask endpoint serves GET and DELETE: IDs stay unique per OpenAPI.
+    assert note["get"]["x-flask-endpoint"] == note["delete"]["x-flask-endpoint"] == "note_detail"
+    assert note["get"]["operationId"] == "note_detail__get"
+    assert note["delete"]["operationId"] == "note_detail__delete"
     assert note["get"]["security"] == [{"httpBasic": []}, {"v4Auth": []}]
     assert note["get"]["parameters"][0]["name"] == "note_id"
     # /v4 仅 v4Auth；/healthz 无 security
@@ -122,6 +125,12 @@ def test_real_app_spec_full_coverage(app):
                 assert len(op["x-route-candidates"]) > 1
             else:
                 assert op["operationId"] and op["x-flask-rule"]
+                assert op["x-flask-endpoint"]
+    operation_ids = [
+        op["operationId"]
+        for ops in spec["paths"].values() for op in ops.values() if "operationId" in op
+    ]
+    assert len(operation_ids) == len(set(operation_ids)), "operationId must be unique (OpenAPI 3.0.3)"
 
 
 def test_generated_spec_files_valid(app):

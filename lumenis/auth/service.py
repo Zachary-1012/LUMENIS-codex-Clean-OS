@@ -95,7 +95,7 @@ def login_by_key(access_key: str, ip: str = None, user_agent: str = None) -> dic
         # Serialize the per-IP check, comparison, attempt record and session
         # insert so concurrent bad keys cannot all pass the final slot.
         conn.execute("BEGIN IMMEDIATE")
-        check = check_login_attempts("__access_key__", ip, conn=conn)
+        check = check_login_attempts("__access_key__", ip, conn=conn, attempt_kind="key")
         if not check["allowed"]:
             conn.rollback()
             return {"success": False, "error": f"尝试过多已锁定，请{check['locked_until']}后再试", "remaining": 0}
@@ -103,7 +103,7 @@ def login_by_key(access_key: str, ip: str = None, user_agent: str = None) -> dic
         if not master or not access_key or not hmac.compare_digest(
             str(access_key).strip().encode("utf-8"), str(master).strip().encode("utf-8")
         ):
-            record_login_attempt("__access_key__", ip, False, conn=conn)
+            record_login_attempt("__access_key__", ip, False, conn=conn, attempt_kind="key")
             conn.commit()
             remaining = check["remaining"] - 1
             return {"success": False, "error": f"密钥错误，剩余尝试次数：{max(0, remaining)}",
@@ -114,7 +114,7 @@ def login_by_key(access_key: str, ip: str = None, user_agent: str = None) -> dic
         if not user:
             conn.rollback()
             return {"success": False, "error": "主账号未初始化，请先用账号密码登录一次"}
-        record_login_attempt("__access_key__", ip, True, conn=conn)
+        record_login_attempt("__access_key__", ip, True, conn=conn, attempt_kind="key")
         token = generate_token(user["id"])
         expires_at = time.strftime("%Y-%m-%d %H:%M:%S",
                                    time.localtime(time.time() + AUTH_CONFIG["token_expire_hours"] * 3600))
@@ -267,7 +267,9 @@ def require_security_verification(f):
 def create_user(username: str, password: str, role: str = "user",
                 display_name: str = None, email: str = None, created_by: int = None) -> dict:
     """创建用户（主账号操作）"""
-    from .security import hash_password
+    from .security import hash_password, is_reserved_username
+    if is_reserved_username(username):
+        return {"success": False, "error": "用户名为系统保留名称"}
     ensure_initialized()
     conn = get_db()
     try:

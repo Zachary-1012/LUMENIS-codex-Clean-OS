@@ -489,3 +489,76 @@ def test_fix_094_article_aggregate_retains_only_bounded_output():
     assert observation["returned_text_char_length"] == len(item["content"])
     assert observation["truncated"] is True
     assert observation["completeness"] == "TRUNCATED_SEMANTIC_PREVIEW"
+
+
+def test_form_or_navigation_root_is_never_selected_as_article():
+    import lumenis.system.collector.adapters.public_http as public_http
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<html><body>"
+        "<article role='navigation'>menu home about contact</article>"
+        "<article role=' navigation '>padded menu</article>"
+        "<form class='content_article'>" + "login field " * 80 + "</form>"
+        "<article>real story body</article>"
+        "</body></html>",
+        "html.parser",
+    )
+    texts = [
+        "".join(public_http._iter_node_text_parts(node))
+        for node in public_http._selected_substantive_nodes(soup)
+    ]
+    assert texts == ["real story body"]
+
+
+def test_deeply_nested_articles_measure_only_the_outer_root(monkeypatch):
+    import lumenis.system.collector.adapters.public_http as public_http
+    from bs4 import BeautifulSoup
+
+    depth = 60
+    soup = BeautifulSoup(
+        "<html><body>" + "<article>x " * depth + "</article>" * depth + "</body></html>",
+        "html.parser",
+    )
+    measured = []
+    original = public_http._node_text_length
+
+    def counting(node):
+        measured.append(node)
+        return original(node)
+
+    monkeypatch.setattr(public_http, "_node_text_length", counting)
+    selected = public_http._selected_substantive_nodes(soup)
+    assert len(selected) == 1
+    assert len(measured) == 1
+
+
+def test_semantic_article_inside_page_level_form_is_selected():
+    import lumenis.system.collector.adapters.public_http as public_http
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<html><body><form id='aspnetForm'><article>wrapped story body</article></form></body></html>",
+        "html.parser",
+    )
+    nodes = public_http._selected_substantive_nodes(soup)
+    assert len(nodes) == 1 and nodes[0].name == "article"
+
+
+def test_multi_token_navigation_role_on_ancestor_or_descendant_is_chrome():
+    import lumenis.system.collector.adapters.public_http as public_http
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<html><body>"
+        "<div role='navigation presentation'><article>nav article menu</article></div>"
+        "<article>real story body"
+        "<div role='presentation navigation'><span>NAV_TOKEN_TEXT</span></div>"
+        "</article>"
+        "</body></html>",
+        "html.parser",
+    )
+    nodes = public_http._selected_substantive_nodes(soup)
+    assert [n.get_text(" ", strip=True).startswith("real story body") for n in nodes] == [True]
+    text = "".join(public_http._iter_node_text_parts(nodes[0]))
+    assert "NAV_TOKEN_TEXT" not in text

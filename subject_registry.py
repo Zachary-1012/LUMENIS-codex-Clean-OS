@@ -100,9 +100,32 @@ def _validate_official_source_url(source_url: Any) -> str:
             nested_queries = []
             # Both the query-decoded and once-more-decoded forms are useful
             # when a redirect value was percent-encoded twice.
-            for candidate in dict.fromkeys((value, unquote(value))):
+            # Bounded iterative decoding: a redirect may be percent-encoded
+            # several times; inspect every layer until it stops changing.
+            layers = [value]
+            for _ in range(6):
+                decoded = unquote(layers[-1])
+                if decoded == layers[-1]:
+                    break
+                layers.append(decoded)
+            else:
+                if unquote(layers[-1]) != layers[-1]:
+                    # Still encoded after the bound: it cannot be inspected,
+                    # so treat it as credential-bearing (fail closed).
+                    return True
+            for candidate in dict.fromkeys(layers):
                 try:
-                    nested_query = urlsplit(candidate).query
+                    nested_parts = urlsplit(candidate)
+                    nested_query = nested_parts.query
+                    # A nested redirect authority can carry userinfo even
+                    # when it has no query of its own.
+                    if nested_parts.netloc and "@" in nested_parts.netloc:
+                        return True
+                    # The outer URL may not carry a fragment; an encoded
+                    # nested fragment (#access_token=...) is held to the same
+                    # rule: fail closed rather than persist it as Evidence.
+                    if nested_parts.fragment:
+                        return True
                 except ValueError:
                     nested_query = ""
                 if nested_query:

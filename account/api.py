@@ -2,7 +2,7 @@
 account/api.py — 账户体系 API 蓝图
 
 统一到 /api/system/account/* 命名空间。
-包含：资料/密码/设备/成员/审批/审计/恢复/密钥/验证码/TOTP/产品保护/导航/技能
+包含：资料/密码/设备/成员/审批/审计/恢复/密钥/验证码/产品保护/导航/技能
 """
 import json
 import threading as _threading
@@ -31,10 +31,6 @@ from .authorization import (
     check_dual_domain_permission,
 )
 from .audit import log_audit, query_audit_logs, get_audit_stats
-from .totp import (
-    get_totp_status, setup_totp, confirm_totp, verify_user_totp, reset_totp,
-    TOTP_CONFIG,
-)
 from .product_protection import (
     get_protection_config, set_protection_config, check_protection_required,
 )
@@ -441,88 +437,7 @@ def api_pending_codes():
 
 
 # ──────────────────────────────────────────────
-# TOTP（ZBMP 访问保护主通道）
-# ──────────────────────────────────────────────
-
-@account_bp.route("/totp/status", methods=["GET"])
-@require_auth
-def api_totp_status():
-    """TOTP 绑定状态"""
-    status = get_totp_status(g.current_user["id"])
-    return jsonify({"ok": True, **status, "config": TOTP_CONFIG})
-
-
-@account_bp.route("/totp/setup", methods=["POST"])
-@require_auth
-def api_totp_setup():
-    """初始化 TOTP（生成种子+QR码）"""
-    data = request.get_json(silent=True) or {}
-    result = setup_totp(g.current_user["id"], account_name=data.get("account_name"))
-    return jsonify(result), 200 if result["success"] else 400
-
-
-@account_bp.route("/totp/confirm", methods=["POST"])
-@require_auth
-def api_totp_confirm():
-    """确认 TOTP 绑定"""
-    data = request.get_json(silent=True) or {}
-    result = confirm_totp(g.current_user["id"], data.get("code", ""))
-    return jsonify(result), 200 if result["success"] else 400
-
-
-@account_bp.route("/totp/verify", methods=["POST"])
-def api_totp_verify():
-    """校验 TOTP（ZBMP登录用，不需要先登录）。成功后颁发短期session。"""
-    import time as _time
-    from .security import generate_token, AUTH_CONFIG
-    from .models import get_db
-    data = request.get_json(silent=True) or {}
-    user_id = data.get("user_id")
-    if not user_id:
-        return jsonify({"error": "缺少 user_id"}), 400
-    result = verify_user_totp(int(user_id), data.get("code", ""))
-    status = result.pop("code", 200)
-    if result["success"]:
-        # 颁发短期 session（8小时，ZBMP工作区grant）
-        conn = get_db()
-        try:
-            cur = conn.execute("SELECT username, role, display_name FROM v4_users WHERE id=? AND status='active'", (int(user_id),))
-            user = cur.fetchone()
-            if user:
-                token = generate_token()
-                expires_at = _time.strftime("%Y-%m-%d %H:%M:%S",
-                    _time.localtime(_time.time() + 8 * 3600))
-                ip = request.remote_addr if request else "unknown"
-                ua = request.headers.get("User-Agent", "") if request else ""
-                conn.execute(
-                    "INSERT INTO v4_sessions (user_id, token, ip, user_agent, expires_at) VALUES (?,?,?,?,?)",
-                    (int(user_id), token, ip, ua, expires_at)
-                )
-                conn.commit()
-                result["token"] = token
-                result["expires_at"] = expires_at
-                result["user"] = {"id": int(user_id), "username": user["username"],
-                                  "role": user["role"], "display_name": user["display_name"]}
-                result["grant_type"] = "workspace"
-                result["workspace"] = "ZBMP"
-        finally:
-            conn.close()
-        log_audit("totp_verify", "security", str(user_id), "TOTP验证成功，颁发ZBMP工作区session")
-    return jsonify(result), status if result.get("success") else (status if status != 200 else 400)
-
-
-@account_bp.route("/totp/reset", methods=["POST"])
-@require_owner
-def api_totp_reset():
-    """重置 TOTP"""
-    data = request.get_json(silent=True) or {}
-    user_id = int(data.get("user_id", g.current_user["id"]))
-    result = reset_totp(user_id)
-    return jsonify(result), 200 if result["success"] else 400
-
-
-# ──────────────────────────────────────────────
-# 产品保护配置（ZBMP=TOTP / CTH=密码 / SYSTEM=二次确认）
+# 产品保护配置（ZBMP=密码 / CTH=密码 / SYSTEM=二次确认）
 # ──────────────────────────────────────────────
 
 @account_bp.route("/protection", methods=["GET"])

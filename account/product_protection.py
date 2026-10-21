@@ -2,7 +2,7 @@
 account/product_protection.py — 产品级访问保护配置
 
 按 product(ZBMP/CTH/SYSTEM) 分别存储和读取保护配置：
-- ZBMP = TOTP 动态口令（默认开）
+- ZBMP = 账号+密码登录（默认开；TOTP 已按产品决定删除）
 - CTH = 账号+密码登录（默认开）
 - SYSTEM = 敏感操作二次确认（默认开）
 
@@ -14,8 +14,8 @@ from .models import get_db
 DEFAULT_PROTECTION = {
     "ZBMP": {
         "enabled": True,
-        "method": "totp",            # TOTP 动态口令
-        "description": "进入ZBMP需输入iPhone「密码」6位动态码",
+        "method": "password",        # 账号+密码（TOTP 已删除）
+        "description": "进入ZBMP需输入账号密码",
     },
     "CTH": {
         "enabled": True,
@@ -30,7 +30,7 @@ DEFAULT_PROTECTION = {
 }
 
 VALID_PRODUCTS = ("ZBMP", "CTH", "SYSTEM")
-VALID_METHODS = ("totp", "password", "reauth", "none")
+VALID_METHODS = ("password", "reauth", "none")
 
 
 def get_protection_config(product_id: str = None) -> dict:
@@ -128,10 +128,13 @@ def check_protection_required(product_id: str) -> dict:
 
 
 def _row_to_config(row) -> dict:
+    method = row["method"]
+    if method == "totp":  # legacy rows: TOTP was removed, fall back to password
+        method = "password"
     return {
         "product_id": row["product_id"],
         "enabled": bool(row["enabled"]),
-        "method": row["method"],
+        "method": method,
         "config_json": row["config_json"],
         "updated_at": row["updated_at"],
         "description": DEFAULT_PROTECTION.get(row["product_id"], {}).get("description", ""),

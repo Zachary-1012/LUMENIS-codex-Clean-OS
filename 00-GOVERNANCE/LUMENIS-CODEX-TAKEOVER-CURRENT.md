@@ -4,6 +4,13 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-21 PR #113 — isolate key attempts from legacy accounts
+
+The existing account/auth owners distinguish trusted caller `attempt_kind="account"` from `attempt_kind="key"`; username spelling and `v4_users` existence no longer select the key flow. Both initializers add the discriminator idempotently to the existing `v4_login_attempts` table, retaining every historical row as `legacy`. Historical failures remain in conservative key cooldown calculations; ambiguous historical successes cannot reset the budget. Account-wide password lockout, per-IP/per-workspace key limits, success recovery and serialized key verification remain. No live database was migrated.
+
+Isolated regression: `python -m pytest -q -o addopts='' tests/test_auth_access_key_lockout.py tests/test_account_security_hardening.py tests/test_account_initialization.py` — **41 passed**. Concurrent legacy initialization is also covered: the additive migration suppresses only a verified duplicate-column race; read-only, locked and unrelated errors still propagate. Tests cover both recorders, both schema initialization paths, preserved legacy rows/cooldown, colliding names, actual password/access-key/workspace route success and failure, and bidirectional reset isolation. The original P1 was reproduced before repair through `login_by_key`. AI-native constitution, Shared Database authority (657 production modules) and diff whitespace checks pass. Optional `tests/test_auth_api.py` is a live-server script and could not collect because its localhost server was not running; no service was started and it is not counted as passed. Required exact-head CI/review and merge/readback remain separate; this bounded source/test repair does not claim live or whole-product acceptance.
+
+
 ## 2026-10-20 Issue #17 FIX-045 / FIX-046 — preserve EMV inputs and reject invalid route CPM
 
 The existing `emv.py` keeps source/aggregate values truthful; `ic_routes.py` applies default CPM only when the parameter is absent and rejects explicit nonnumeric, negative, nonfinite or overflow inputs before DB/EMV reads. Platform grouping now retains no-data groups and counts unavailable notes alongside amount-bearing notes, with per-platform status and coverage. Focused runs passed **34 tests** across `tests/test_ic_emv_route_validation.py` (9), `tests/test_ic_contracts_p1.py::TestIC021EMV` (15), and `tests/test_p1_gap_closure.py -k emv_platform` (10). The broader `tests/test_ic_contracts_p1.py tests/test_p1_gap_closure.py` run had **4 failures**, and the exact same four test IDs and outcomes reproduced on clean main SHA `3f6d67785752b465b5b022847cbbe75a55e1eb47`: three API smoke imports are blocked because migration refuses to overwrite the pre-existing `/tmp/backups/before_migration_v0_to_v21.db`, and the unrelated Track B test expects provider status `LEGACY` while receiving `DISABLED`. The broader result remains recorded, not represented as a passing regression. Changed-source compilation and `git diff --check` passed. Tests did not access production data or call an external service.
@@ -440,6 +447,48 @@ compilation, governance machine contract, AI-native constitution and `git diff
 real Sogou behavior, W6-owned projection, runtime and user acceptance remain
 unverified.
 
+## 2026-10-20 Review-finding repair for merged PRs #88/#90/#93/#94/#96
+
+PRs #88, #90, #93, #94 and #96 were merged with open Codex review findings;
+this repair closes them in existing owners. Credential P1s first:
+`lumenis_agg_api.py` fails closed for opaque scheme remotes
+(`https:user:pw@host`), sanitizes network-path authorities (`//user:pw@host`,
+`foo:://...`) and accepts `.`/`+` helper transports (#93);
+`subject_registry.py` rejects userinfo inside nested redirect URLs (#90).
+`historical_data_importer.py` clears rolled-back `inserted_id`/`log_id` and
+reclassifies rolled-back dedup skips as errors (#94). `data_center_api.py`
+compares text publication bounds as exact UTC instants in integer
+microseconds via `lumenis.shared.database.instants` (#96).
+`public_http.py` rejects form/navigation roots and skips nested roots before
+measuring them; `get_web_mentions` orders by exact microsecond instant across legacy/ISO values
+(#88). Regressions added in the existing test files. Offline only; runtime and
+user acceptance remain NOT_VERIFIED.
+
+## 2026-10-20 Account security repair: TOTP removed, key and unlock routes require login
+
+Product Owner decision: no TOTP and no passkey. `account/totp.py` and every
+`/api/system/account/totp/*` route are removed; ZBMP protection uses password,
+and a stored legacy `totp` method reads as password. Existing
+`v4_totp_secrets` rows are retained untouched (no silent destructive
+migration); nothing reads them. `/api/v4/api-keys*` has one registration
+(`account/compat.py`): list needs admin/owner login, generate/revoke need owner.
+`/v4/auth/workspace/unlock` refuses requests without a login (it no longer
+opens an owner session from a shared workspace key) and locks a per-IP bucket
+after the configured failure limit; only the exact reserved buckets
+`__access_key__`/`__workspace_key__` are per-IP. `/v4/auth/workspace/keys`
+listing is owner-only. `/v4/auth/login-by-key` (owner-configured
+`V4_ACCESS_KEY`, existing per-IP lockout) is unchanged. Text publication
+date bounds compare exact UTC instants in integer microseconds (offsets
+applied, no millisecond rounding, no overflow at year 1/9999).
+Workspace-key check/verify/record run in one serialized transaction with a
+per-workspace, per-IP bucket; legacy `/api/v4/api-keys*` keep operator Basic
+auth alongside account Bearer/session; reserved
+bucket names cannot be account usernames. Official source URLs reject nested
+encoded fragments; Git diagnostics accept `[user@]host:path` SCP remotes and
+fail closed when a password remains.
+Regressions: `tests/test_account_security_hardening.py` and existing test
+files. Offline only; runtime, database and user acceptance remain NOT_VERIFIED.
+
 ## 2026-10-20 Issue #17 FIX-107 / FIX-108 — pitch export and report readback
 
 The existing `scripts/pitch_export.py` sets Normal paragraph-after spacing to
@@ -737,6 +786,8 @@ Independent review of exact head `34ecc470e0dc276dd06737044f919c2edc4fe811` foun
 PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence metadata such as `has_auth_cookie` / `has_cookie` / `cookie_present` was redacted) is closed in `data_boundary.py`. Credential presence keys (`has_*`, `is_*`, `*_present`, `*_configured`, `*_available`, `*_exists` naming a cookie/token/secret/password/credential/API-key/session field) show only an exact boolean, in `sanitize_mapping` and in `sanitize_text` (JSON `true/false` and Python `True/False`, every credential class); any non-boolean value under those keys and every credential value remain `[REDACTED]`. Regressions: `tests/test_runtime_preflight.py::test_cookie_presence_metadata_stays_visible_but_values_redacted` and `::test_presence_metadata_handles_python_repr_suffix_and_all_credential_classes`. Source tests only; runtime, database and user acceptance remain not verified.
 
 2026-10-21 PR #114 follow-up: remaining review findings are repaired in the existing `data_boundary.py` owner. Text and mapping paths normalize credential-presence keys consistently; only exact JSON/Python boolean values stay visible. Non-boolean prefix/suffix values, nested containers and malformed containers are fully redacted without evaluating input. Collision-resistant held replacements preserve valid JSON and enclosing credential precedence. Focused isolated regression: `python -m pytest tests/test_runtime_preflight.py -k "not tracked_credentials_current_repo and not current_repo_preflight_has_no_blocker" -q -o addopts=''` — **83 passed, 2 deselected**. Full-module exclusions are not passes: both exact baseline tests were rerun against HEAD `79292c2800c99b4efc94cae35f539b182dc31bbd` and still fail because two pre-existing evidence JSON paths trigger the credential-path rule. No evidence was removed or allowlist weakened. Changed-source compilation, AI-native constitution and diff whitespace checks pass. This is bounded source/test evidence, not full-product or live-runtime acceptance; no production DB, external model, collection or deployment was used. Required exact-head CI and merge/readback remain independent gates.
+
+PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
 Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`

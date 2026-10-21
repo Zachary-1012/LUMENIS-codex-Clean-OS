@@ -123,7 +123,7 @@ def _git_info(repo_path: Path):
                 address = value[helper_separator + 2:]
                 valid_transport = (
                     bool(transport) and transport[0].isalpha()
-                    and all(char.isalnum() or char in "-_" for char in transport)
+                    and all(char.isalnum() or char in "-_.+" for char in transport)
                 )
                 if valid_transport:
                     address_parts = urllib.parse.urlsplit(address)
@@ -141,7 +141,37 @@ def _git_info(repo_path: Path):
                     return f"{transport}::{sanitized_address}"
                 if parsed.scheme.lower() not in {"http", "https", "ssh", "git", "file"}:
                     return None
-            if parsed.scheme:
+            # Windows drive-letter local paths (C:/repo.git, C:\\repo) parse
+            # as a one-letter scheme; they are local paths, not URLs.
+            if (isinstance(value, str) and len(value) > 2 and value[0].isascii()
+                    and value[0].isalpha() and value[1] == ":" and value[2] in "/\\"
+                    and not parsed.netloc):
+                return value
+            # Git SCP-like syntax "[user@]host:path" applies only when no slash
+            # precedes the first colon and the value is not a URL ("://").
+            # Known URL schemes keep the URL rules below. A path still holding
+            # "@" after the colon is credential-shaped: fail closed.
+            if isinstance(value, str) and "://" not in value and not value.startswith(("/", "./", "../")):
+                head, colon, scp_path = value.partition(":")
+                if (colon and head and scp_path and "/" not in head and "\\" not in head
+                        and head.lower() not in {"http", "https", "ssh", "git", "file"}):
+                    # Query/fragment-like suffixes can carry signed tokens and
+                    # are not part of an SCP path: drop them (as the URL path does).
+                    scp_path = scp_path.split("?", 1)[0].split("#", 1)[0]
+                    if "@" in scp_path or not scp_path:
+                        return None
+                    host = head.rsplit("@", 1)[-1]
+                    return f"{host}:{scp_path}" if host else None
+            if parsed.scheme or parsed.netloc:
+                # Only hierarchical URLs whose authority can be sanitized are
+                # accepted. Opaque/malformed forms (https:user:pw@host/repo)
+                # keep credential-shaped data in the path: fail closed.
+                if parsed.scheme and not parsed.netloc:
+                    if parsed.scheme.lower() == "file" and "@" not in parsed.path:
+                        return urllib.parse.urlunsplit((parsed.scheme, "", parsed.path, "", ""))
+                    return None
+                if "://" in parsed.path:
+                    return None
                 # Remove all query/fragment data: a denylist cannot recognize
                 # every signed-URL credential parameter (for example code/key).
                 authority = parsed.netloc.rsplit("@", 1)[-1]

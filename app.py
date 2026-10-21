@@ -1596,6 +1596,10 @@ def _owner_authorized_root_request():
                    for guard in current_app.before_request_funcs.get(request.blueprint, ()))
     routes = {
         'api_system_account_base': ('/api/system/account', {'GET'}),
+        # Legacy key routes: account_compat role decorators are the owner guard.
+        'account_compat.compat_api_keys_list': ('/api/v4/api-keys', {'GET'}),
+        'account_compat.compat_api_keys_generate': ('/api/v4/api-keys/generate', {'POST'}),
+        'account_compat.compat_api_keys_revoke': ('/api/v4/api-keys/revoke', {'POST'}),
         'api_zbmp_entry_status': ('/api/auth/zbmp-entry/status', {'GET'}),
         'api_domain_identity': ('/api/auth/domain-identity', {'GET'}),
         'api_zbmp_entry_unlock': ('/api/auth/zbmp-entry/unlock', {'POST'}),
@@ -7491,91 +7495,7 @@ def api_ai_resource_packs_per_call_execute():
         return jsonify({'ok': False, 'error': str(e)}), 500
 
 
-# ============ API Key 管理（v4_workspace_keys 前端接入） ============
-@app.route('/api/v4/api-keys')
-def api_v4_api_keys_list():
-    """API Key 列表"""
-    try:
-        import sqlite3
-        conn = get_repository().connect()
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        c.execute("""SELECT id, workspace, label, key_prefix, status, expires_at, last_used_at, created_at, created_by
-                     FROM v4_workspace_keys ORDER BY created_at DESC LIMIT 200""")
-        keys = [dict(row) for row in c.fetchall()]
-        c.execute("SELECT status, COUNT(*) as cnt FROM v4_workspace_keys GROUP BY status")
-        stats = {row['status']: row['cnt'] for row in c.fetchall()}
-        conn.close()
-        return jsonify({'ok': True, 'keys': keys, 'stats': stats, 'total': len(keys)})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-@app.route('/api/v4/api-keys/generate', methods=['POST'])
-def api_v4_api_keys_generate():
-    """生成新 API Key"""
-    try:
-        import os, hashlib, secrets
-        from datetime import datetime, timedelta
-        data = request.get_json(silent=True) or {}
-        label = str(data.get('label') or '').strip()
-        workspace = str(data.get('workspace') or 'ZBMP').strip()
-        expires_days = int(data.get('expires_days') or 0)  # 0=永不过期
-        if not label:
-            return jsonify({'ok': False, 'error': 'label 不能为空'}), 400
-
-        # 生成密钥
-        key_plain = 'zbmp_' + secrets.token_urlsafe(24)[:32]
-        salt = os.urandom(16).hex()
-        dk = hashlib.pbkdf2_hmac('sha256', key_plain.encode('utf-8'), bytes.fromhex(salt), 120000)
-        key_hash = f"pbkdf2$120000${salt}${dk.hex()}"
-        key_prefix = key_plain[:12] + '...'
-        expires_at = (datetime.now() + timedelta(days=expires_days)).isoformat() if expires_days > 0 else None
-
-        import sqlite3
-        conn = get_repository().connect()
-        c = conn.cursor()
-        c.execute("""INSERT INTO v4_workspace_keys
-                     (workspace, label, key_prefix, key_hash, created_by, status, expires_at, created_at)
-                     VALUES (?, ?, ?, ?, ?, 'active', ?, ?)""",
-                  (workspace, label, key_prefix, key_hash, 'Zachary', expires_at, datetime.now().isoformat()))
-        conn.commit()
-        key_id = c.lastrowid
-        conn.close()
-
-        return jsonify({
-            'ok': True,
-            'key_id': key_id,
-            'key_plain': key_plain,  # 只在生成时返回一次
-            'key_prefix': key_prefix,
-            'label': label,
-            'workspace': workspace,
-            'expires_at': expires_at,
-            'message': '请立即保存此密钥，之后无法再次查看',
-        })
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
-
-@app.route('/api/v4/api-keys/revoke', methods=['POST'])
-def api_v4_api_keys_revoke():
-    """撤销 API Key"""
-    try:
-        data = request.get_json(silent=True) or {}
-        key_id = data.get('key_id')
-        if not key_id:
-            return jsonify({'ok': False, 'error': 'key_id 不能为空'}), 400
-        import sqlite3
-        from datetime import datetime
-        conn = get_repository().connect()
-        c = conn.cursor()
-        c.execute("UPDATE v4_workspace_keys SET status='revoked' WHERE id=?", (key_id,))
-        conn.commit()
-        affected = c.rowcount
-        conn.close()
-        if affected == 0:
-            return jsonify({'ok': False, 'error': '密钥不存在'}), 404
-        return jsonify({'ok': True, 'key_id': key_id, 'status': 'revoked'})
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+# API Key 管理：唯一实现见 account/compat.py（/api/v4/api-keys*，需登录）。
 
 
 # ============ 小红书系统内二维码登录（Auth Recovery） ============

@@ -309,3 +309,34 @@ def test_partial_results_remain_partial_and_count_once(tmp_path, monkeypatch):
     assert result['task_state'] == 'PARTIAL_BLOCKED'
     assert health['current_status'] == network_adaptive.NetworkStatus.DEGRADED
     assert health['consecutive_failures'] == 1
+
+
+def test_risk_free_empty_probe_clears_scheduler_circuit(tmp_path, monkeypatch):
+    cleared = []
+    original = _run_synthetic_sync
+
+    def run(outcomes):
+        result = original(monkeypatch, tmp_path, outcomes)
+        return result
+
+    monkeypatch.setattr(bridge, 'clear_circuit', lambda: cleared.append(True))
+    # _run_synthetic_sync re-patches clear_circuit; patch the setter path instead.
+    import types
+    real_setattr = monkeypatch.setattr
+
+    def keep_counter(target, name, value, *a, **k):
+        if target is bridge and name == 'clear_circuit':
+            return real_setattr(target, name, lambda: cleared.append(True))
+        return real_setattr(target, name, value, *a, **k)
+
+    monkeypatch.setattr = keep_counter
+    try:
+        result = run([{'state': 'EMPTY', 'total': 0, 'notes': []}])
+        assert result['task_state'] == 'EMPTY'
+        assert cleared == [True]
+        cleared.clear()
+        result = run([{'state': 'EMPTY', 'total': 0, 'notes': [],
+                       'risk_info': {'is_risk': True, 'risk_type': 'captcha', 'severity': 'high'}}])
+        assert cleared == []
+    finally:
+        monkeypatch.setattr = real_setattr

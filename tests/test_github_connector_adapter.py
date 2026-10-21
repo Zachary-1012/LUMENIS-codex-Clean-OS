@@ -562,3 +562,15 @@ def test_user_health_probe_does_not_claim_repository_permission():
     result = GitHubAdapter(connector=connector).health_check()
     assert result.metadata["authorization_verification"] == "CURRENT_USER_VERIFIED"
     assert result.metadata["repository_access_verification"] == "NOT_VERIFIED"
+
+
+@pytest.mark.parametrize("flag", ["missing", None, "false", 0])
+def test_search_malformed_incomplete_flag_is_not_complete_coverage(flag):
+    def opener(request, timeout):
+        body = {"items": [{"id": 1, "full_name": "owner/allowed"}], "total_count": 1}
+        if flag != "missing":
+            body["incomplete_results"] = flag
+        return _Response(body, None)
+
+    result = _connector(opener).search_repositories_page_result("lumenis", limit=10)
+    assert result.coverage_complete is False

@@ -129,7 +129,7 @@ def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
                 break
             if not include_chrome and (
                 parent_name in excluded_tags
-                or str(parent.get("role") or "").lower() == "navigation"
+                or _has_navigation_role(parent)
             ):
                 excluded = True
                 break
@@ -145,6 +145,14 @@ def _iter_node_text_parts(node: Any, *, include_chrome: bool = False):
         first = False
 
 
+def _has_navigation_role(element: Any) -> bool:
+    """ARIA role is a space-separated token list (e.g. "navigation presentation")."""
+    get = getattr(element, "get", None)
+    if get is None:
+        return False
+    return "navigation" in str(get("role") or "").lower().split()
+
+
 def _node_text_length(node: Any) -> int:
     return sum(len(part) for part in _iter_node_text_parts(node))
 
@@ -152,10 +160,19 @@ def _node_text_length(node: Any) -> int:
 def _selected_substantive_nodes(soup: BeautifulSoup) -> list[Any]:
     """Select independent article roots before producing or retaining their text."""
     candidates: list[tuple[int, Any]] = []
+    candidate_priority: dict[int, int] = {}
     for node in soup.select(_CONTENT_SELECTORS):
-        if node.name in {"script", "style", "nav", "header", "footer", "aside"}:
+        if node.name in {"script", "style", "nav", "header", "footer", "aside", "form"}:
             continue
+        # Apply the same chrome exclusions to the root itself as to its
+        # descendants: forms and ARIA navigation regions are never content.
+        if _has_navigation_role(node):
+            continue
+        # A page-level <form> wrapper is common in server-rendered pages; only
+        # form roots are rejected, not semantic articles inside a form.
         if node.find_parent(("nav", "header", "footer", "aside")):
+            continue
+        if any(_has_navigation_role(parent) for parent in node.parents):
             continue
         labels = " ".join(str(value) for value in (
             node.get("id") or "", *(node.get("class") or []),
@@ -163,15 +180,24 @@ def _selected_substantive_nodes(soup: BeautifulSoup) -> list[Any]:
         if any(marker in labels for marker in _CHROME_MARKERS):
             continue
         semantic = node.name in {"article", "main"} or node.get("itemprop") == "articleBody" or node.get("role") == "main"
-        text_length = _node_text_length(node)
-        if not text_length or text_length > 2 * 1024 * 1024 or (not semantic and text_length < 500):
-            continue
         priority = (
             0 if node.name == "article" or node.get("itemprop") == "articleBody"
             else 1 if "content_article" in labels or node.find_parent(class_="block-text-only")
             else 2 if node.name != "main" else 3
         )
+        # Deduplicate nested roots before measuring: an accepted ancestor of
+        # equal or better priority always wins final selection, so measuring
+        # this subtree again would only repeat work (quadratic on nesting).
+        if any(
+            candidate_priority.get(id(parent), 99) <= priority
+            for parent in node.parents
+        ):
+            continue
+        text_length = _node_text_length(node)
+        if not text_length or text_length > 2 * 1024 * 1024 or (not semantic and text_length < 500):
+            continue
         candidates.append((priority, node))
+        candidate_priority[id(node)] = priority
     if not candidates:
         return []
 
