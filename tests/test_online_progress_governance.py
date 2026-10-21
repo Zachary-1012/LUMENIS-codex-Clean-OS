@@ -716,3 +716,106 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
     monkeypatch.setattr(gate, '_publication_changed_paths', changed_paths)
     gate.validate(staged=True)
     assert calls == ['index-current', 'index-paths']
+
+
+def test_clearance_archive_exact_set_is_documentary_evidence():
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    assert len(gate.CLEARANCE_EVIDENCE_SHA256) == 7
+    gate._assert_clearance_evidence_integrity()
+    for path in gate.CLEARANCE_EVIDENCE_SHA256:
+        assert gate._is_rules_only_publication_path(path)
+        assert not gate._is_product_behavior_source(path)
+    for suffix in ('other.json', 'other.py', 'other.md', 'nested/other.md'):
+        assert not gate._is_rules_only_publication_path(gate.CLEARANCE_EVIDENCE_DIRECTORY + '/' + suffix)
+    path = next(iter(gate.CLEARANCE_EVIDENCE_SHA256))
+    assert not gate._is_rules_only_publication_path(path.replace('/', '\\'))
+    assert not gate._is_rules_only_publication_path(path.replace('/round-15/', '/round-15/../round-15/'))
+
+
+def test_clearance_archive_all_members_checked_for_single_changed_receipt(tmp_path, monkeypatch):
+    import pytest
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    contents = {path: (gate.ROOT / path).read_bytes() for path in gate.CLEARANCE_EVIDENCE_SHA256}
+    for path, content in contents.items():
+        destination = tmp_path / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+    monkeypatch.setattr(gate, 'ROOT', tmp_path)
+    current_path = '00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md'
+    monkeypatch.setitem(gate.PATHS, 'takeover', tmp_path / current_path)
+    current = '\n## 1. Online reader\'s current-state snapshot\nImplementation publication state: `RULES_ONLY_PUBLICATION`\nRuntime load state: `NOT_LOADED_OR_NOT_VERIFIED`\n### Approved D1'
+    receipt = gate.CLEARANCE_EVIDENCE_DIRECTORY + '/OEVIRA_线上主线清障回执_20261021.md'
+    changed = {current_path, receipt}
+    gate._assert_current_publication_truth(current, changed_paths=changed)
+    member = gate.CLEARANCE_EVIDENCE_DIRECTORY + '/oevira_test_offline_guard.py'
+    target = tmp_path / member
+    target.write_bytes(contents[member] + b'\n# changed')
+    with pytest.raises(AssertionError, match='SHA256 mismatch'):
+        gate._assert_current_publication_truth(current, changed_paths=changed)
+    assert not gate._is_rules_only_publication_path(receipt)
+    target.unlink()
+    with pytest.raises(AssertionError, match='missing or unknown'):
+        gate._assert_current_publication_truth(current, changed_paths=changed)
+    outside = tmp_path / 'outside.py'
+    outside.write_bytes(contents[member])
+    target.symlink_to(outside)
+    with pytest.raises(AssertionError, match='symlink'):
+        gate._assert_current_publication_truth(current, changed_paths=changed)
+    target.unlink()
+    target.write_bytes(contents[member])
+    extra = tmp_path / gate.CLEARANCE_EVIDENCE_DIRECTORY / 'extra.md'
+    extra.write_text('not approved')
+    with pytest.raises(AssertionError, match='missing or unknown'):
+        gate._assert_current_publication_truth(current, changed_paths=changed)
+    extra.unlink()
+    with pytest.raises(AssertionError, match='unknown clearance evidence path'):
+        gate._assert_current_publication_truth(current, changed_paths=changed | {str(extra.relative_to(tmp_path))})
+    # A directory alias is rejected even when all bytes match.
+    directory = tmp_path / gate.CLEARANCE_EVIDENCE_DIRECTORY
+    moved = tmp_path / 'moved'
+    directory.rename(moved)
+    directory.symlink_to(moved, target_is_directory=True)
+    with pytest.raises(AssertionError, match='symlink'):
+        gate._assert_current_publication_truth(current, changed_paths=changed)
+
+
+def test_clearance_archive_allows_only_generated_guard_bytecode(tmp_path, monkeypatch):
+    import py_compile
+    import pytest
+    from scripts.audit_tools import verify_codex_takeover_governance as gate
+    for path in gate.CLEARANCE_EVIDENCE_SHA256:
+        destination = tmp_path / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((gate.ROOT / path).read_bytes())
+    monkeypatch.setattr(gate, 'ROOT', tmp_path)
+    directory = tmp_path / gate.CLEARANCE_EVIDENCE_DIRECTORY
+    # Compilation produces bytecode only; the archived guard is never imported.
+    compiled = Path(py_compile.compile(str(directory / 'oevira_test_offline_guard.py'), doraise=True))
+    py_compile.compile(str(directory / 'oevira_test_offline_guard.py'), doraise=True, optimize=1)
+    gate._assert_clearance_evidence_integrity()
+    assert not gate._is_rules_only_publication_path(str(compiled.relative_to(tmp_path)))
+    for name in ('other.cpython-312.pyc', 'oevira_test_offline_guard.py', 'oevira_test_offline_guard.cpython-x.pyc'):
+        extra = compiled.parent / name
+        extra.write_bytes(b'not admitted')
+        with pytest.raises(AssertionError, match='cache member'):
+            gate._assert_clearance_evidence_integrity()
+        extra.unlink()
+    original = compiled.read_bytes()
+    compiled.unlink()
+    outside = tmp_path / 'outside.pyc'
+    outside.write_bytes(original)
+    compiled.symlink_to(outside)
+    with pytest.raises(AssertionError, match='cache member'):
+        gate._assert_clearance_evidence_integrity()
+    compiled.unlink()
+    compiled.mkdir()
+    with pytest.raises(AssertionError, match='cache member'):
+        gate._assert_clearance_evidence_integrity()
+    compiled.rmdir()
+    compiled.write_bytes(original)
+    cache = compiled.parent
+    moved = tmp_path / 'moved-cache'
+    cache.rename(moved)
+    cache.symlink_to(moved, target_is_directory=True)
+    with pytest.raises(AssertionError, match='real directory'):
+        gate._assert_clearance_evidence_integrity()
