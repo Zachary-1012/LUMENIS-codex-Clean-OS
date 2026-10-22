@@ -147,6 +147,81 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'creation entry offers independent podcast and defers catalog reads',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _CatalogOnlyClient();
+      await tester.pumpWidget(
+        _app(CoreSh01Repository(client: client), client: client),
+      );
+      await tester.pumpAndSettle();
+      expect(client.catalogCalls, 0);
+      expect(client.screenCalls, 0);
+      expect(find.text('继续工作'), findsOneWidget);
+      expect(find.text('研究与创作工具'), findsNothing);
+      await tester.tap(find.byKey(const Key('sh01-open-podcast-editor')));
+      await tester.pumpAndSettle();
+      final editor = tester.widget<MediaProjectWorkbench>(
+        find.byType(MediaProjectWorkbench),
+      );
+      expect(editor.sharedWorkspace, isTrue);
+      expect(editor.invokingDomain, isNull);
+      expect(editor.initialOutputKind, 'audio');
+      expect(find.text('播客编辑'), findsOneWidget);
+      expect(find.text('视频剪辑'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('research entry navigates to actual materials workspace', (
+    tester,
+  ) async {
+    String? destination;
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(
+        _FakeSh01Repository(_catalog),
+        onNavigate: (value) => destination = value,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-research')));
+    await tester.pumpAndSettle();
+    expect(destination, 'SH-02');
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final locale in [
+    const Locale('zh'),
+    const Locale('en'),
+    const Locale('ko'),
+  ]) {
+    testWidgets('creation actions remain reachable at 200 percent in $locale', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _app(_FakeSh01Repository(_catalog), locale: locale, scale: 2),
+      );
+      await tester.pumpAndSettle();
+      final podcast = find.byKey(const Key('sh01-open-podcast-editor'));
+      await tester.ensureVisible(podcast);
+      await tester.tap(podcast);
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<MediaProjectWorkbench>(find.byType(MediaProjectWorkbench))
+            .initialOutputKind,
+        'audio',
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('desktop browses shared catalog and blocks unscoped Evidence', (
     tester,
   ) async {
@@ -156,6 +231,8 @@ void main() {
     final repository = CoreSh01Repository(client: client);
 
     await tester.pumpWidget(_app(repository, client: client));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-catalog')));
     await tester.pumpAndSettle();
 
     expect(client.catalogCalls, 1);
@@ -184,6 +261,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(_app(_FakeSh01Repository(_catalog)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-catalog')));
     await tester.pumpAndSettle();
 
     expect(find.text('适用产品'), findsOneWidget);
@@ -217,6 +296,8 @@ void main() {
     await tester.pumpWidget(
       _app(_FakeSh01Repository(_catalog), locale: const Locale('en')),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-catalog')));
     await tester.pumpAndSettle();
 
     expect(find.text('Research & creation tools'), findsOneWidget);
@@ -255,6 +336,8 @@ void main() {
         }),
       ),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-catalog')));
     await tester.pumpAndSettle();
     final capability = find.byKey(
       const Key('sh01-capability-shared.social_card'),
@@ -306,6 +389,8 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('sh01-open-catalog')));
+      await tester.pumpAndSettle();
 
       final capability = find.byKey(
         const Key('sh01-capability-shared.unsafe_copy'),
@@ -336,6 +421,8 @@ void main() {
 
     await tester.pumpWidget(_app(_FakeSh01Repository(_catalog)));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-catalog')));
+    await tester.pumpAndSettle();
 
     expect(find.text('PROMPT SECRET PRIVATE OUTPUT'), findsNothing);
     expect(find.text('<script>steal()</script>'), findsNothing);
@@ -353,6 +440,8 @@ void main() {
       _app(_FakeSh01Repository({..._catalog, 'skills': []})),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh01-open-catalog')));
+    await tester.pumpAndSettle();
 
     expect(find.text('当前没有可展示的研究或创作工具。'), findsOneWidget);
     expect(find.text('跨平台选题搜索'), findsNothing);
@@ -366,6 +455,8 @@ void main() {
       await tester.pumpWidget(
         _app(_FakeSh01Repository(_catalog, failure: failureCase.error)),
       );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('sh01-open-catalog')));
       await tester.pumpAndSettle();
 
       expect(find.text(failureCase.copy), findsOneWidget);
@@ -432,6 +523,7 @@ Widget _app(
   Sh01Repository repository, {
   LumenisCoreClient? client,
   Locale locale = const Locale('zh', 'CN'),
+  double scale = 1,
   String? initialWorkspaceEntry,
   String? returnScreenId,
   ValueChanged<String>? onNavigate,
@@ -445,9 +537,13 @@ Widget _app(
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(scale)),
+    child: child!,
+  ),
   home: Scaffold(
     body: Sh01Screen(
-      client: client ?? LumenisCoreClient(),
+      client: client ?? _CatalogOnlyClient(),
       repository: repository,
       initialWorkspaceEntry: initialWorkspaceEntry,
       returnScreenId: returnScreenId,
@@ -479,6 +575,26 @@ class _CatalogOnlyClient extends LumenisCoreClient {
   int screenCalls = 0;
   int detailCalls = 0;
   LumenisWorkspaceScope? manuscriptScope;
+
+  @override
+  Future<Map<String, dynamic>> listSharedAuthoredManuscripts({
+    required SharedWorkspaceScope scope,
+    int limit = 100,
+    String? cursor,
+  }) async => {'items': [], 'has_more': false, 'next_cursor': null};
+
+  @override
+  Future<Map<String, dynamic>> listContentProjects({
+    required String? domainId,
+    int limit = 20,
+    String? cursor,
+  }) async => {
+    'ok': true,
+    'publish_status': 'not_performed',
+    'status': 'empty',
+    'projects': [],
+    'next_cursor': null,
+  };
 
   @override
   Future<Map<String, dynamic>> sharedSkillsCatalog() async {

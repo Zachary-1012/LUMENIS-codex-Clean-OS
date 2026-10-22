@@ -1,0 +1,76 @@
+{
+  "captured_at": "2026-10-23T04:33:59.782535+08:00",
+  "base_main": "0fb01de20436b72da041d62e73fbbdb22930fef8",
+  "classification": "BOUNDED_CREATION_ENTRY_OPERATION_OBSERVED",
+  "full_product_acceptance": "OPEN",
+  "overall_frontend": "NOT_ACCEPTED",
+  "requirement_sources": [
+    "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#SH-01",
+    "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md#38",
+    "contracts/experience/screen-specifications/SH-01.md"
+  ],
+  "research_reuse": {
+    "path": "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/17_REA_PUBLIC_SAMPLE_RECONSTRUCTION.md",
+    "adoption": "Preserve existing task/artifact identity, scope and revision; reopening reads persisted output rather than regenerating it. Static research is not vendor runtime acceptance."
+  },
+  "source_sha256_normalized_lf": {
+    "app/lib/features/shared/sh01/sh01_screen.dart": "9420883d2f5c1baadfb88ffa426b8c2dcf042650b6644f574c8defa87913f60f",
+    "app/lib/features/shared/sh01/manuscript_editor.dart": "809d6304b0935c4c7d38fe5511a3e2e801dbe849b6c9537861956f17e6e9fa0a",
+    "app/lib/features/shared/sh01/media_project_workbench.dart": "585ea44792bd1cb525901040a0e6b700ee52ccaaefb3dc4d3515429ba33e3908",
+    "app/lib/l10n/lumenis_copy.g.dart": "bdcd0f76fad355261d9e797443e868b9d94e577e924c1349ada876199711b25d",
+    "contracts/experience/screen-specifications/SH-01.md": "5514c8d605880e89dfad3a7ac06df719b15170b0e3dc48594e5cfd788831c486"
+  },
+  "runtime": {
+    "kind": "owned isolated normal manual-workspace Core",
+    "port": 57946,
+    "boot_id": "498cb4fbe65f4b939f00e0aeb1d2e4a5",
+    "scheduler": "not_started",
+    "build_sha256": "eb72a84c69da3512756adf83f7f44edfd56818f09cb97389a3160ec80cff6407",
+    "served_bytes_match": true,
+    "production_8201_untouched": true
+  },
+  "actual_operations": [
+    "Four independent creation actions appear in the actual Web build; registry/catalog is secondary.",
+    "Podcast opens the existing Shared editor without a CTH/BMP selection and displays podcast/audio/listen copy.",
+    "Video opens the existing Shared editor in video mode.",
+    "Research action navigates to SH-02 and reads both existing imported materials.",
+    "Normal product navigation returns to creation and lists both actual manuscript versions.",
+    "Exact v1 and v2 rows reopen their saved versions. Final v2 focused editor body includes the retained revision paragraph, and save is disabled while unchanged.",
+    "Actual empty audio library is represented as no saved work returned, without fabricated projects."
+  ],
+  "artifacts": {
+    "manuscript_v1": "ART-65acd76a7efd4c8c",
+    "manuscript_v2": "ART-64f281aea3a34a48",
+    "prior_save_revision_and_restart_receipt": "00-GOVERNANCE/evidence/round-15/manuscript-continuity-20261023.json",
+    "meaning": "Prior exact saved artifacts were reopened here; no new media output or service restart is claimed by this entry-only operation."
+  },
+  "checks": {
+    "initial_affected_widget_regressions": 97,
+    "responsive_entry_regressions": 23,
+    "final_entry_and_media_widget_regressions": 91,
+    "targeted_dart_analyze": "PASS",
+    "web_release_build": "PASS 78.1s",
+    "governance_checks": "8 PASS; individual output retained locally"
+  },
+  "remaining": [
+    "Whole-product and final visual acceptance",
+    "Complete independent video/podcast creation, render, revision and restart recovery on this composition",
+    "Media summary user title and revision projection",
+    "Complete proposal/review/AI integration from existing plan",
+    "Windows/macOS/iOS device operations",
+    "Production runtime version alignment"
+  ],
+  "screenshots": {
+    "00-GOVERNANCE/evidence/round-15/creation-entry-20261023.png": "691980c30e518b87c377b46dca84879977ac13e5d6821e2ca693f5b0fdc9bb51",
+    "00-GOVERNANCE/evidence/round-15/creation-podcast-entry-20261023.png": "4a1c272450e655d808d235c3b8f8d3d2a9219a3601d19cbc421e549623150040",
+    "00-GOVERNANCE/evidence/round-15/creation-manuscript-reopen-20261023.png": "7b4309314165f6c33b2434b835900d0d0005746c44b47dbca0768709d57f0357"
+  },
+  "effects": {
+    "external_ai": false,
+    "live_collection": false,
+    "training": false,
+    "deployment": false,
+    "production_db_mutation": false
+  },
+  "publication": "Requires protected PR checks at the exact head and remote main readback; no CI result substitutes for the remaining user outcomes."
+}

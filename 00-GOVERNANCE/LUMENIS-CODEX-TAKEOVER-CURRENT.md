@@ -4,7 +4,7 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
-## 2026-10-23 Independent manuscript — actual save/revision/reopen/recovery
+## 2026-10-23 Independent creation — work entry and manuscript continuity
 
 The existing SH-01 manuscript caller now follows the server's pending task state
 and supplies the existing explicit Shared workspace scope on read/export. Server
@@ -12,6 +12,16 @@ actor, Permission, parent-version and immutable Artifact checks are unchanged.
 Unknown task states and uncertain saves keep their recovery controls instead of
 claiming completion or silently repeating execution. The editor and saved list
 show the actual saved version; read-aloud copy describes the current preview.
+
+The SH-01 entry now presents independent Research, Proposal/Document, Video and
+Podcast actions plus the existing saved-work lists; the registered Tools catalog
+is secondary. Independent actions do not inherit a selected business focus.
+Explicit domain-linked entry still preserves that context. Reopen uses the
+selected immutable Artifact and existing server validation, not regeneration.
+Podcast output and labels follow the actual audio kind. The existing complete
+plan/sketch remain requirements; this change is not final visual acceptance.
+The configured 90ms hover/focus transition is not a measured latency claim.
+See [the entry operation receipt](evidence/round-15/creation-entry-20261023.json).
 
 Normal Web operation used a user-authored research follow-up: save v1, edit and
 save v2, reopen both versions, download and inspect the exact v2 Word bytes,

@@ -62,6 +62,7 @@ class MediaProjectWorkbench extends StatefulWidget {
     this.sharedWorkspace = false,
     this.contextAvailable = true,
     this.initialOutputKind = 'video',
+    this.initialArtifactId,
     this.controller,
     this.files,
     super.key,
@@ -77,6 +78,7 @@ class MediaProjectWorkbench extends StatefulWidget {
   /// The selected creation mode for a new project. Reopened projects keep
   /// the output kind recorded by the server.
   final String initialOutputKind;
+  final String? initialArtifactId;
   final MediaProjectController? controller;
   final MediaProjectFiles? files;
 
@@ -213,6 +215,12 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           widget.client.listContentProjects(domainId: domain, cursor: cursor),
       contextKey: () => _savedContextKey,
     );
+    final artifact = widget.initialArtifactId;
+    if (artifact != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reopen(artifact);
+      });
+    }
   }
 
   String get _savedContextKey =>
@@ -258,6 +266,25 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     _sheetUpdates.dispose();
     super.dispose();
   }
+
+  bool get _isAudio =>
+      (_controllerInitialized ? _controller.version?.outputKind : null) ==
+          'audio' ||
+      (!(_controllerInitialized && _controller.version != null) &&
+          widget.initialOutputKind == 'audio');
+
+  String _editorCopy(BuildContext context, String key) => _copy(
+    context,
+    _isAudio
+        ? switch (key) {
+            'title' => 'podcast_title',
+            'rendered_preview' => 'rendered_audio',
+            'preview_empty' => 'preview_audio_empty',
+            'preview' => 'preview_audio',
+            _ => key,
+          }
+        : key,
+  );
 
   bool get _isProcessing =>
       _choosing || _retrieving || _controllerInitialized && _controller.busy;
@@ -1194,7 +1221,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _copy(context, 'title'),
+                      _editorCopy(context, 'title'),
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 12),
@@ -1420,7 +1447,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _copy(context, 'title'),
+                    _editorCopy(context, 'title'),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   Text(status, style: Theme.of(context).textTheme.bodySmall),
@@ -1607,7 +1634,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '${_copy(context, 'rendered_preview')}'
+            '${_editorCopy(context, 'rendered_preview')}'
             '${canPreview ? ' · v${version.timelineVersion} · ${_seconds(version.durationSec)} s' : ''}',
             style: theme.textTheme.labelLarge,
             maxLines: 2,
@@ -1664,9 +1691,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                       icon: const Icon(
                                         Icons.play_circle_outline_rounded,
                                       ),
-                                      label: Text(_copy(context, 'preview')),
+                                      label: Text(
+                                        _editorCopy(context, 'preview'),
+                                      ),
                                     )
-                                  : Text(_copy(context, 'preview_empty')),
+                                  : Text(_editorCopy(context, 'preview_empty')),
                             ),
                           ),
                   ),
@@ -2144,7 +2173,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                         download: false,
                         actionsSheetContext: actionsSheetContext,
                       ),
-                child: Text(_copy(context, 'preview')),
+                child: Text(_editorCopy(context, 'preview')),
               ),
               OutlinedButton(
                 key: const Key('media-version-download'),

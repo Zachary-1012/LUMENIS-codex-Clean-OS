@@ -23,6 +23,7 @@ class ManuscriptEditor extends StatefulWidget {
     this.controller,
     this.draftFiles,
     this.outputFiles,
+    this.initialArtifactId,
     super.key,
   });
 
@@ -33,6 +34,7 @@ class ManuscriptEditor extends StatefulWidget {
   final ManuscriptController? controller;
   final ManuscriptDraftFiles? draftFiles;
   final MediaProjectFiles? outputFiles;
+  final String? initialArtifactId;
 
   @override
   State<ManuscriptEditor> createState() => _ManuscriptEditorState();
@@ -167,6 +169,12 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
       _listen(section);
     }
     _controller.addListener(_changed);
+    final artifact = widget.initialArtifactId;
+    if (artifact != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _reopenArtifact(artifact);
+      });
+    }
   }
 
   @override
@@ -544,6 +552,10 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
       ),
     );
     if (chosen == null || !mounted) return;
+    await _reopenArtifact(chosen);
+  }
+
+  Future<void> _reopenArtifact(String chosen) async {
     await _controller.reopen(chosen);
     if (!mounted) return;
     final saved = _controller.savedWork;
