@@ -508,7 +508,7 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                         ListTile(
                           title: Text(item.manuscript.title),
                           subtitle: Text(
-                            item.manuscript.summary,
+                            '${_t('版本 ${item.version}', 'Version ${item.version}', '버전 ${item.version}')} · ${item.manuscript.summary}',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -795,6 +795,16 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
   );
 
   Widget _header(bool wide) {
+    final savedVersion = _controller.savedWork?.version;
+    final status = _dirty
+        ? _t('未保存修改', 'Unsaved changes', '저장하지 않은 변경')
+        : savedVersion != null
+        ? _t(
+            '已保存 · 版本 $savedVersion',
+            'Saved · Version $savedVersion',
+            '저장됨 · 버전 $savedVersion',
+          )
+        : _t('草稿', 'Draft', '초안');
     final back = IconButton(
       key: const Key('manuscript-back'),
       tooltip: _t('返回创作', 'Back to creation', '창작으로 돌아가기'),
@@ -820,9 +830,7 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    _dirty
-                        ? _t('未保存修改', 'Unsaved changes', '저장하지 않은 변경')
-                        : _t('草稿', 'Draft', '초안'),
+                    status,
                     style: Theme.of(context).textTheme.labelMedium,
                   ),
                 ),
@@ -844,7 +852,18 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
           : Row(
               children: [
                 back,
-                Expanded(child: title),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      title,
+                      Text(
+                        status,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
+                ),
                 IconButton(
                   key: const Key('manuscript-library'),
                   tooltip: _t('打开保存的文稿', 'Open saved writing', '저장한 문서 열기'),

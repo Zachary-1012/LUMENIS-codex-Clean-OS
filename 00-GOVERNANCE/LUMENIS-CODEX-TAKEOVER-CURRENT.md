@@ -4,6 +4,26 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Independent manuscript — actual save/revision/reopen/recovery
+
+The existing SH-01 manuscript caller now follows the server's pending task state
+and supplies the existing explicit Shared workspace scope on read/export. Server
+actor, Permission, parent-version and immutable Artifact checks are unchanged.
+Unknown task states and uncertain saves keep their recovery controls instead of
+claiming completion or silently repeating execution. The editor and saved list
+show the actual saved version; read-aloud copy describes the current preview.
+
+Normal Web operation used a user-authored research follow-up: save v1, edit and
+save v2, reopen both versions, download and inspect the exact v2 Word bytes,
+then restart only the owned isolated manual-workspace Core and reopen both
+versions unchanged. Original cancellation and readback failures are retained.
+See [the bounded operation receipt](evidence/round-15/manuscript-continuity-20261023.json)
+and the updated SH-01 contract. Production 8201, live collection, external AI,
+training and deployment were not changed. Full SH-01/whole-product visuals,
+proposal/review capabilities and native surface acceptance remain open under the
+existing complete plan and sketch. Required current-head PR checks, merge and
+remote readback are separate from this actual operation evidence.
+
 ## 2026-10-23 Material reading — bounded source and actual operation
 
 The retained SH-02 work now connects scoped material reading to independent
