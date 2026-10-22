@@ -557,6 +557,13 @@ final class MediaProjectSnapshot {
   final int version;
   final List<_SnapshotState> _history;
 
+  static const formatRatios = ['9:16', '16:9', '1:1', '4:5', '3:4'];
+
+  MediaProjectSnapshot setFormatRatio(String ratio) {
+    _require(formatRatios.contains(ratio), 'format ratio is unsupported');
+    return ratio == formatRatio ? this : _commit(formatRatio: ratio);
+  }
+
   /// Append freshly inspected media without rewriting any existing source.
   MediaProjectSnapshot addInspectedAsset(MediaProjectAsset asset) {
     _require(
@@ -716,10 +723,7 @@ final class MediaProjectSnapshot {
 
   void _validate() {
     _integer(version, 'version', minimum: 1);
-    _require(
-      const {'9:16', '4:5', '3:4', '16:9'}.contains(formatRatio),
-      'format ratio is unsupported',
-    );
+    _require(formatRatios.contains(formatRatio), 'format ratio is unsupported');
     _require(
       assets.isNotEmpty && tracks.isNotEmpty,
       'timeline requires assets and tracks',
@@ -1429,9 +1433,7 @@ final class MediaProjectSnapshot {
     for (final transition in candidateTransitions) {
       final fromIndex = indexes[transition.fromClip];
       final toIndex = indexes[transition.toClip];
-      if (fromIndex == null ||
-          toIndex == null ||
-          toIndex != fromIndex + 1) {
+      if (fromIndex == null || toIndex == null || toIndex != fromIndex + 1) {
         throw _invalid('TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS');
       }
       if (!seenBoundaries.add(toIndex)) {

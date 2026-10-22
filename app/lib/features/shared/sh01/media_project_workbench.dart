@@ -1633,12 +1633,48 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            '${_editorCopy(context, 'rendered_preview')}'
-            '${canPreview ? ' · v${version.timelineVersion} · ${_seconds(version.durationSec)} s' : ''}',
-            style: theme.textTheme.labelLarge,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${_editorCopy(context, 'rendered_preview')}'
+                  '${canPreview ? ' · v${version.timelineVersion} · ${_seconds(version.durationSec)} s' : ''}',
+                  style: theme.textTheme.labelLarge,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (!_isAudio && _controller.timeline != null)
+                PopupMenuButton<String>(
+                  key: const Key('media-format-ratio'),
+                  tooltip: _copy(context, 'format_ratio'),
+                  initialValue: _controller.timeline!.formatRatio,
+                  enabled: !_isBusy && _canUseCurrentContext,
+                  onSelected: (ratio) => _edit((s) => s.setFormatRatio(ratio)),
+                  itemBuilder: (_) => [
+                    for (final ratio in MediaProjectSnapshot.formatRatios)
+                      CheckedPopupMenuItem(
+                        key: Key('media-format-$ratio'),
+                        value: ratio,
+                        checked: ratio == _controller.timeline!.formatRatio,
+                        child: Text(ratio),
+                      ),
+                  ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(_controller.timeline!.formatRatio),
+                          const Icon(Icons.expand_more_rounded, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           if (available && _hasUnsavedChanges)
             Flexible(
