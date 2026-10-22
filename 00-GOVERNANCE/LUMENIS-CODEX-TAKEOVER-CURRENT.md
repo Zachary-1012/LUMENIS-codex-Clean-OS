@@ -4,6 +4,25 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Material reading — bounded source and actual operation
+
+The retained SH-02 work now binds the existing scoped Canonical/Evidence reader
+and independent Shared original-file pagination. CSV files without social-post
+columns retain every logical row, including blanks, duplicates and multiline
+cells. Current Permission and original-version checks remain mandatory. Late
+page replies cannot restore content after the reader closes. Material cards
+have bounded lift/drag/flip/return behavior with reduced-motion support.
+
+Actual normal Web operations imported a real research CSV, reopened its saved
+original after restarting only the isolated manual-workspace Core, and displayed
+all 17 logical records. No AI, scheduler, collection or production DB was used.
+This proves the bounded original-reading path, not complete research, analyzed
+results, revision, full visual upgrade or four-surface acceptance. The overall
+frontend remains NOT_ACCEPTED. The existing complete plan and SH-02 contract
+retain those obligations. The exact source/check/runtime limits are in
+[the material-reading receipt](evidence/round-15/material-reading-20261023.json).
+No unchanged CI or prior runtime acceptance is inherited by this composition.
+
 ## 2026-10-23 Runtime startup — bounded implementation and real operation
 
 The approved complete product work continues in the current single controller
@@ -915,7 +934,7 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 
 2026-10-23 current-document alignment starts from GitHub/main
 `343ec0cc10231dc38005c77feaf4e907097b974f`, independently matched to origin/main

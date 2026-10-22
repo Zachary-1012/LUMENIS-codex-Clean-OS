@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 enum Sh02ScopeMode { globalAll, focus }
 
 enum Sh02ScopeErrorKind { unavailable, denied, malformed }
@@ -167,10 +169,15 @@ class Sh02Evidence {
 }
 
 class Sh02Snapshot {
-  const Sh02Snapshot({required this.scope, required this.evidence});
+  const Sh02Snapshot({
+    required this.scope,
+    required this.evidence,
+    this.partial = false,
+  });
 
   final Sh02Scope scope;
   final List<Sh02Evidence> evidence;
+  final bool partial;
 
   factory Sh02Snapshot.fromResponse(Map<String, dynamic> response) {
     if (response['ok'] != true || response['screen'] != 'SH-02') {
@@ -188,12 +195,14 @@ class Sh02Snapshot {
     if (rawItems is! List) {
       throw const FormatException('SH-02 evidence list is unavailable.');
     }
+    final evidence = rawItems
+        .map((item) => Sh02Evidence.tryParse(item, scope: scope))
+        .whereType<Sh02Evidence>()
+        .toList(growable: false);
     return Sh02Snapshot(
       scope: scope,
-      evidence: rawItems
-          .map((item) => Sh02Evidence.tryParse(item, scope: scope))
-          .whereType<Sh02Evidence>()
-          .toList(growable: false),
+      partial: data['partial'] == true || evidence.length != rawItems.length,
+      evidence: evidence,
     );
   }
 }
@@ -297,6 +306,114 @@ class Sh02ImportedMaterial {
       excerpts: excerpts,
       limitations: limitations,
     );
+  }
+}
+
+class Sh02SourceRow {
+  const Sh02SourceRow({
+    required this.index,
+    required this.locator,
+    required this.text,
+    required this.fields,
+  });
+  final int index;
+  final Map<String, dynamic> locator;
+  final String text;
+  final List<MapEntry<String, String>> fields;
+}
+
+class Sh02SourcePage {
+  const Sh02SourcePage({
+    required this.offset,
+    required this.total,
+    required this.hasMore,
+    required this.rows,
+  });
+  final int offset;
+  final int total;
+  final bool hasMore;
+  final List<Sh02SourceRow> rows;
+
+  factory Sh02SourcePage.fromResponse(
+    Map<String, dynamic> result,
+    Sh02ImportedMaterial material,
+    int expectedOffset,
+  ) {
+    final raw = result['source_rows'];
+    final total = result['source_row_count'];
+    final hasMore = result['has_more'];
+    if (result['source_version'] != material.artifactId ||
+        result['source_sha256'] != material.sourceSha256 ||
+        result['offset'] != expectedOffset ||
+        raw is! List ||
+        total is! int ||
+        total < 0 ||
+        hasMore is! bool ||
+        raw.length > 50 ||
+        result['returned_count'] != raw.length ||
+        expectedOffset + raw.length > total ||
+        hasMore != (expectedOffset + raw.length < total) ||
+        (hasMore && raw.isEmpty)) {
+      throw const FormatException('Source page identity or coverage changed.');
+    }
+    final rows = <Sh02SourceRow>[];
+    for (var i = 0; i < raw.length; i++) {
+      final row = _asMap(raw[i]);
+      final locator = _asMap(row?['source_locator']);
+      final text = row?['raw_chunk'];
+      var record = _asMap(row?['source_record']);
+      if (row?['index'] != expectedOffset + i ||
+          text is! String ||
+          locator == null ||
+          locator.isEmpty ||
+          record == null) {
+        throw const FormatException('Source row is incomplete.');
+      }
+      if (record.isEmpty && locator['unit'] == 'parsed_table_row') {
+        record = _asMap(jsonDecode(text));
+        if (record == null) {
+          throw const FormatException('Source table is incomplete.');
+        }
+      }
+      final values = record['values'];
+      final headers = record['headers'];
+      final fields = <MapEntry<String, String>>[];
+      if (values is List) {
+        for (var column = 0; column < values.length; column++) {
+          final header = headers is List && column < headers.length
+              ? _cellValue(headers[column])
+              : '';
+          fields.add(MapEntry(header, _cellValue(values[column])));
+        }
+      }
+      rows.add(
+        Sh02SourceRow(
+          index: expectedOffset + i,
+          locator: locator,
+          text: record['text'] is String
+              ? record['text'] as String
+              : fields.isEmpty && record.isEmpty
+              ? text
+              : '',
+          fields: List.unmodifiable(fields),
+        ),
+      );
+    }
+    return Sh02SourcePage(
+      offset: expectedOffset,
+      total: total,
+      hasMore: hasMore,
+      rows: List.unmodifiable(rows),
+    );
+  }
+
+  static String _cellValue(Object? cell) {
+    final value = cell is Map ? cell['value'] : cell;
+    if (value == null) return '—';
+    if (value is Map || value is List) {
+      throw const FormatException('Source cell is not a scalar.');
+    }
+    return '$value';
   }
 }
 

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 
 import '../../../core/lumenis_icon.dart';
 
@@ -315,6 +316,15 @@ class _WorkspaceState extends State<_Workspace> {
                 _ImportPanel(viewModel: viewModel),
                 const SizedBox(height: 16),
                 _ScopeBanner(scope: snapshot.scope),
+                if (snapshot.partial)
+                  _InfoMessage(
+                    _copy(
+                      context,
+                      '部分资料暂不可用，已显示可读取的内容。',
+                      'Some materials are unavailable. Available items are shown.',
+                      '일부 자료를 사용할 수 없습니다. 읽을 수 있는 자료를 표시합니다.',
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 if (wide)
                   Row(
@@ -412,16 +422,6 @@ class _Header extends StatelessWidget {
           color: LumenisTheme.of(context).foreground,
           fontWeight: FontWeight.w600,
         ),
-      ),
-      const SizedBox(height: 6),
-      Text(
-        _copy(
-          context,
-          '按来源、时间和链路查找已核实的业务资料，并把原始来源与摘录放在同一处。',
-          'Find verified business material by source, time and lineage, with the original source beside its extract.',
-          '출처·시간·계보별로 확인된 업무 자료를 찾고 원본과 발췌 내용을 함께 확인합니다.',
-        ),
-        style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.45),
       ),
     ],
   );
@@ -562,6 +562,7 @@ class _ImportPanel extends StatelessWidget {
             _ImportedMaterialReader(
               item: opened,
               onClose: viewModel.closeImport,
+              viewModel: viewModel,
             )
           else if (viewModel.importsLoading && viewModel.recentImports.isEmpty)
             const LinearProgressIndicator(minHeight: 2)
@@ -586,11 +587,32 @@ class _ImportPanel extends StatelessWidget {
               ],
             )
           else if (viewModel.recentImports.isNotEmpty) ...[
-            for (final item in viewModel.recentImports)
-              _ImportedMaterialCard(
-                item: item,
-                onOpen: () => unawaited(viewModel.openImport(item)),
-              ),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 1100
+                    ? 3
+                    : constraints.maxWidth >= 660
+                    ? 2
+                    : 1;
+                final width =
+                    (constraints.maxWidth - (columns - 1) * 18) / columns;
+                return Wrap(
+                  spacing: 18,
+                  runSpacing: 18,
+                  children: [
+                    for (final item in viewModel.recentImports)
+                      SizedBox(
+                        width: width,
+                        child: _ImportedMaterialCard(
+                          key: ValueKey(item.artifactId),
+                          item: item,
+                          onOpen: () => unawaited(viewModel.openImport(item)),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
             if (viewModel.importsHaveMore)
               Align(
                 alignment: Alignment.centerLeft,
@@ -613,92 +635,330 @@ class _ImportPanel extends StatelessWidget {
   }
 }
 
-class _ImportedMaterialCard extends StatelessWidget {
-  const _ImportedMaterialCard({required this.item, required this.onOpen});
-
+class _ImportedMaterialCard extends StatefulWidget {
+  const _ImportedMaterialCard({
+    super.key,
+    required this.item,
+    required this.onOpen,
+  });
   final Sh02ImportedMaterial item;
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Material(
-      color: LumenisTheme.of(context).surfaceRaised,
-      borderRadius: BorderRadius.circular(11),
-      child: InkWell(
-        key: Key('sh02-import-${item.sourceSha256.substring(0, 12)}'),
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(11),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 76),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
-          decoration: BoxDecoration(
-            border: Border.all(color: LumenisTheme.of(context).line),
-            borderRadius: BorderRadius.circular(11),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.description_outlined,
-                color: LumenisTheme.of(context).shared,
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.filename,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+  State<_ImportedMaterialCard> createState() => _ImportedMaterialCardState();
+}
+
+class _ImportedMaterialCardState extends State<_ImportedMaterialCard>
+    with TickerProviderStateMixin {
+  bool _hovered = false;
+  bool _pressed = false;
+  bool _details = false;
+  Offset _tilt = Offset.zero;
+  bool _dragging = false;
+  static const _travel = 24.0;
+  static const _spring = SpringDescription(
+    mass: 1.2,
+    stiffness: 240,
+    damping: 23,
+  );
+  late final _horizontal = AnimationController.unbounded(vsync: this);
+  late final _vertical = AnimationController.unbounded(vsync: this);
+  late final _flip = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 360),
+  );
+
+  @override
+  void dispose() {
+    _horizontal.dispose();
+    _vertical.dispose();
+    _flip.dispose();
+    super.dispose();
+  }
+
+  void _release([Offset velocity = Offset.zero]) {
+    setState(() => _dragging = false);
+    for (final (controller, speed) in [
+      (_horizontal, velocity.dx),
+      (_vertical, velocity.dy),
+    ]) {
+      controller.animateWith(
+        SpringSimulation(_spring, controller.value, 0, speed.clamp(-180, 180)),
+      );
+    }
+  }
+
+  void _turn(bool reduced) {
+    setState(() => _details = !_details);
+    if (reduced) {
+      _flip.value = _details ? 1 : 0;
+    } else {
+      _flip.animateTo(_details ? 1 : 0, curve: Curves.easeInOutCubic);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LumenisTheme.of(context);
+    final item = widget.item;
+    final reduced = MediaQuery.disableAnimationsOf(context);
+    final date = DateTime.tryParse(item.createdAt)?.toLocal();
+    final stamp = date == null
+        ? item.createdAt
+        : MaterialLocalizations.of(context).formatMediumDate(date);
+    final preview = item.excerpts.isNotEmpty ? item.excerpts.first : item.text;
+    final transform = Matrix4.identity()..setEntry(3, 2, 0.001);
+    if (!reduced) {
+      transform
+        ..translateByDouble(
+          0,
+          _pressed
+              ? 1
+              : _hovered
+              ? -4
+              : 0,
+          0,
+          1,
+        )
+        ..rotateX(_tilt.dy * -0.025)
+        ..rotateY(_tilt.dx * 0.025);
+    }
+    return AnimatedBuilder(
+      animation: Listenable.merge([_horizontal, _vertical, _flip]),
+      builder: (context, _) {
+        final flipped = reduced ? _details : _flip.value >= 0.5;
+        final physical = Matrix4.copy(transform);
+        if (!reduced) {
+          physical
+            ..translateByDouble(
+              _horizontal.value.clamp(-_travel, _travel),
+              _vertical.value.clamp(-_travel, _travel) - (_dragging ? 6 : 0),
+              0,
+              1,
+            )
+            ..rotateY(math.pi * _flip.value - (flipped ? math.pi : 0));
+        }
+        return LayoutBuilder(
+          builder: (context, constraints) => MouseRegion(
+            onEnter: (_) => setState(() => _hovered = true),
+            onExit: (_) => setState(() {
+              _hovered = false;
+              _tilt = Offset.zero;
+            }),
+            onHover: reduced
+                ? null
+                : (event) => setState(
+                    () => _tilt = Offset(
+                      (event.localPosition.dx / constraints.maxWidth * 2 - 1)
+                          .clamp(-1, 1),
+                      (event.localPosition.dy / 240 * 2 - 1).clamp(-1, 1),
                     ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 4,
-                      children: [
-                        Text(
-                          _copy(
-                            context,
-                            '${item.characterCount} 字',
-                            '${item.characterCount} characters',
-                            '${item.characterCount}자',
-                          ),
-                        ),
-                        Text(
-                          _copy(
-                            context,
-                            '${item.tableCount} 个表格',
-                            '${item.tableCount} tables',
-                            '표 ${item.tableCount}개',
-                          ),
-                        ),
-                        if (item.createdAt.isNotEmpty) Text(item.createdAt),
-                      ],
+                  ),
+            child: GestureDetector(
+              onPanStart: reduced
+                  ? null
+                  : (_) {
+                      _horizontal.stop();
+                      _vertical.stop();
+                      setState(() => _dragging = true);
+                    },
+              onPanUpdate: reduced
+                  ? null
+                  : (event) {
+                      _horizontal.value =
+                          (_horizontal.value + event.delta.dx * 0.55).clamp(
+                            -_travel,
+                            _travel,
+                          );
+                      _vertical.value =
+                          (_vertical.value + event.delta.dy * 0.55).clamp(
+                            -_travel,
+                            _travel,
+                          );
+                    },
+              onPanEnd: reduced
+                  ? null
+                  : (event) => _release(event.velocity.pixelsPerSecond),
+              onPanCancel: reduced ? null : _release,
+              child: AnimatedContainer(
+                duration:
+                    reduced ||
+                        _dragging ||
+                        _flip.isAnimating ||
+                        _horizontal.isAnimating ||
+                        _vertical.isAnimating
+                    ? Duration.zero
+                    : const Duration(milliseconds: 80),
+                curve: Curves.easeOutCubic,
+                transform: physical,
+                transformAlignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: palette.surfaceRaised,
+                  border: Border.all(
+                    color: _hovered
+                        ? palette.foreground.withValues(alpha: 0.35)
+                        : palette.line,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                  boxShadow: [
+                    BoxShadow(
+                      color: palette.foreground.withValues(
+                        alpha: _hovered ? 0.10 : 0.04,
+                      ),
+                      blurRadius: _hovered ? 18 : 6,
+                      offset: Offset(0, _hovered ? 10 : 3),
                     ),
                   ],
                 ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    key: Key(
+                      'sh02-import-${item.sourceSha256.substring(0, 12)}',
+                    ),
+                    onTap: widget.onOpen,
+                    onHighlightChanged: (value) =>
+                        setState(() => _pressed = value),
+                    onFocusChange: (value) => setState(() => _hovered = value),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.description_outlined,
+                                size: 19,
+                                color: palette.shared,
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  stamp,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: palette.muted,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: _details
+                                    ? _copy(
+                                        context,
+                                        '查看摘录',
+                                        'Show extract',
+                                        '발췌 보기',
+                                      )
+                                    : _copy(
+                                        context,
+                                        '资料详情',
+                                        'Details',
+                                        '자료 정보',
+                                      ),
+                                key: Key('sh02-flip-${item.artifactId}'),
+                                onPressed: () => _turn(reduced),
+                                icon: Icon(
+                                  _details
+                                      ? Icons.subject_rounded
+                                      : Icons.info_outline_rounded,
+                                  size: 18,
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 48,
+                                  minHeight: 48,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            item.filename,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 19,
+                              height: 1.35,
+                              fontWeight: FontWeight.w500,
+                              color: palette.foreground,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          AnimatedSize(
+                            duration: reduced
+                                ? Duration.zero
+                                : const Duration(milliseconds: 180),
+                            alignment: Alignment.topLeft,
+                            child: flipped
+                                ? Text(
+                                    _copy(
+                                      context,
+                                      '${item.characterCount} 字 · ${item.tableCount} 个表格',
+                                      '${item.characterCount} characters · ${item.tableCount} tables',
+                                      '${item.characterCount}자 · 표 ${item.tableCount}개',
+                                    ),
+                                    style: TextStyle(
+                                      color: palette.muted,
+                                      height: 1.65,
+                                    ),
+                                  )
+                                : Text(
+                                    preview.isEmpty
+                                        ? _copy(
+                                            context,
+                                            '打开资料',
+                                            'Open material',
+                                            '자료 열기',
+                                          )
+                                        : preview,
+                                    maxLines: 4,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: palette.muted,
+                                      height: 1.65,
+                                    ),
+                                  ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              Text(
+                                _copy(context, '阅读', 'Read', '읽기'),
+                                style: TextStyle(color: palette.foreground),
+                              ),
+                              const Spacer(),
+                              Icon(
+                                Icons.north_east_rounded,
+                                size: 17,
+                                color: palette.foreground,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: onOpen,
-                child: Text(_copy(context, '打开', 'Open', '열기')),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    ),
-  );
+        );
+      },
+    );
+  }
 }
 
 class _ImportedMaterialReader extends StatelessWidget {
-  const _ImportedMaterialReader({required this.item, required this.onClose});
+  const _ImportedMaterialReader({
+    required this.item,
+    required this.onClose,
+    required this.viewModel,
+  });
 
   final Sh02ImportedMaterial item;
   final VoidCallback onClose;
+  final Sh02ViewModel viewModel;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -766,6 +1026,17 @@ class _ImportedMaterialReader extends StatelessWidget {
           ),
       ],
       const SizedBox(height: 12),
+      if (const {
+        'xlsx',
+        'xls',
+        'docx',
+        'doc',
+        'pdf',
+        'csv',
+      }.contains(item.filename.split('.').last.toLowerCase())) ...[
+        _OriginalRows(viewModel: viewModel),
+        const SizedBox(height: 12),
+      ],
       Text(
         _copy(context, '原文', 'Original text', '원문'),
         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -802,7 +1073,7 @@ class _ImportedMaterialReader extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              limitation,
+              _materialLimitation(context, limitation),
               style: TextStyle(
                 color: LumenisTheme.of(context).muted,
                 fontSize: 12,
@@ -812,6 +1083,145 @@ class _ImportedMaterialReader extends StatelessWidget {
       ],
     ],
   );
+}
+
+class _OriginalRows extends StatelessWidget {
+  const _OriginalRows({required this.viewModel});
+  final Sh02ViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final page = viewModel.sourcePage;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            OutlinedButton.icon(
+              key: const Key('sh02-original-rows'),
+              onPressed: viewModel.rowsLoading
+                  ? null
+                  : () => viewModel.loadSourcePage(0),
+              icon: const Icon(Icons.table_chart_outlined),
+              label: Text(_copy(context, '逐页阅读', 'Read pages', '페이지 읽기')),
+            ),
+            if (page != null)
+              Text(
+                _copy(
+                  context,
+                  '第 ${page.rows.isEmpty ? 0 : page.offset + 1}–${page.offset + page.rows.length} 条 / 共 ${page.total} 条',
+                  '${page.rows.isEmpty ? 0 : page.offset + 1}–${page.offset + page.rows.length} of ${page.total}',
+                  '${page.rows.isEmpty ? 0 : page.offset + 1}–${page.offset + page.rows.length} / ${page.total}개',
+                ),
+              ),
+          ],
+        ),
+        if (viewModel.rowsLoading) const LinearProgressIndicator(minHeight: 2),
+        if (viewModel.rowsFailed)
+          Text(
+            _copy(
+              context,
+              '此页暂时无法读取。请重新打开资料后重试。',
+              'This page is unavailable. Reopen the material and try again.',
+              '페이지를 읽을 수 없습니다. 자료를 다시 열어 시도하세요.',
+            ),
+          ),
+        if (page != null) ...[
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 460),
+            child: ListView.separated(
+              key: ValueKey(
+                '${viewModel.openedImport?.artifactId}:${page.offset}',
+              ),
+              shrinkWrap: true,
+              itemCount: page.rows.length,
+              separatorBuilder: (_, _) => const Divider(height: 28),
+              itemBuilder: (context, index) {
+                final row = page.rows[index];
+                final location = row.locator;
+                final label = [
+                  if (location['sheet_name'] is String) location['sheet_name'],
+                  if (location['row_index'] is int)
+                    _copy(
+                      context,
+                      '第 ${location['row_index']} 行',
+                      'Row ${location['row_index']}',
+                      '${location['row_index']}행',
+                    ),
+                  if (location['page_index'] is int)
+                    _copy(
+                      context,
+                      '第 ${location['page_index']} 页',
+                      'Page ${location['page_index']}',
+                      '${location['page_index']}페이지',
+                    ),
+                ].join(' · ');
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      label.isEmpty ? '${row.index + 1}' : label,
+                      style: TextStyle(color: LumenisTheme.of(context).muted),
+                    ),
+                    const SizedBox(height: 8),
+                    for (var column = 0; column < row.fields.length; column++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(
+                              width: 110,
+                              child: Text(
+                                row.fields[column].key.isEmpty
+                                    ? _copy(
+                                        context,
+                                        '第 ${column + 1} 列',
+                                        'Column ${column + 1}',
+                                        '${column + 1}열',
+                                      )
+                                    : row.fields[column].key,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SelectableText(row.fields[column].value),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (row.fields.isEmpty) SelectableText(row.text),
+                  ],
+                );
+              },
+            ),
+          ),
+          Row(
+            children: [
+              TextButton(
+                onPressed: page.offset == 0 || viewModel.rowsLoading
+                    ? null
+                    : () => viewModel.loadSourcePage(
+                        math.max(0, page.offset - 50),
+                      ),
+                child: Text(_copy(context, '上一页', 'Previous', '이전')),
+              ),
+              TextButton(
+                onPressed: !page.hasMore || viewModel.rowsLoading
+                    ? null
+                    : () => viewModel.loadSourcePage(
+                        page.offset + page.rows.length,
+                      ),
+                child: Text(_copy(context, '下一页', 'Next', '다음')),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class _ScopeBanner extends StatelessWidget {
@@ -2054,4 +2464,29 @@ String _copy(BuildContext context, String zh, String en, String ko) =>
       'en' => en,
       'ko' => ko,
       _ => zh,
+    };
+
+String _materialLimitation(BuildContext context, String value) =>
+    switch (value) {
+      'Counts describe this uploaded document only.' => _copy(
+        context,
+        '统计范围为这份资料。',
+        'Counts cover this document.',
+        '이 자료의 통계입니다.',
+      ),
+      'Excerpts are source text, not verified facts or model summaries.' =>
+        _copy(
+          context,
+          '摘录来自原文；内容真实性尚未核实。',
+          'Extracts quote the original; factual accuracy is unverified.',
+          '발췌는 원문이며 사실 여부는 확인되지 않았습니다.',
+        ),
+      'Authorship, rights and external redistribution are not established.' =>
+        _copy(
+          context,
+          '作者及转载许可尚未确认。',
+          'Authorship and redistribution permission are unconfirmed.',
+          '저자와 재배포 허가는 확인되지 않았습니다.',
+        ),
+      _ => value,
     };

@@ -715,7 +715,7 @@ def read_document_source_rows(source_ref, *, actor, scope, offset, limit,
     The route reference plus ART identity and original-byte hash pin a page set.
     Re-parsing uses the existing bounded parser; no Canonical admission or write.
     """
-    from .analyzer import extract_source_rows
+    from .analyzer import extract_document_reading_rows
     if (type(offset) is not int or not 0 <= offset <= 100000
             or type(limit) is not int or not 1 <= limit <= 100
             or not isinstance(source_version, str) or not source_version
@@ -746,7 +746,7 @@ def read_document_source_rows(source_ref, *, actor, scope, offset, limit,
             raise ValueError("DOCUMENT_SOURCE_VERSION_CHANGED")
     if parsed.metadata.get("format") not in {"excel", "word", "pdf", "csv"}:
         raise ValueError("DOCUMENT_TYPED_ROWS_UNAVAILABLE")
-    notes = extract_source_rows(parsed)
+    notes = extract_document_reading_rows(parsed)
     rows = []
     for index, note in enumerate(notes[offset:offset + limit], start=offset):
         raw = str(note.raw_chunk)
@@ -1299,11 +1299,11 @@ def read_private_document_source(artifact_id, *, actor, scope, connection=None, 
 
 def read_private_document_typed_source(artifact_id, *, actor, scope, connection=None):
     """Derive complete typed rows only from current authorized original bytes."""
-    from .analyzer import extract_source_rows
+    from .analyzer import extract_document_reading_rows
     record, parsed = _read_private_document_material(artifact_id, actor=actor, scope=scope,
                                                     connection=connection, require_current=True)
     rows = []
-    typed_rows = extract_source_rows(parsed) if parsed.metadata.get("format") in {"excel", "word", "pdf", "csv"} else []
+    typed_rows = extract_document_reading_rows(parsed) if parsed.metadata.get("format") in {"excel", "word", "pdf", "csv"} else []
     for index, note in enumerate(typed_rows):
         raw = str(note.raw_chunk)
         if hashlib.sha256(raw.encode()).hexdigest() != note.source_row_sha256:

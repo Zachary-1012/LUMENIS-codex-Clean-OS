@@ -308,11 +308,11 @@ F输出/视觉：原问题区可选业务问句、结果标题旁[保存为可�
 
 #### SH-02 当前输入、输出与验收
 
-当前源码事实：SH-02已接入单文件资料上传、SavedWork最近导入列表及保存原件独立读回；私有Shared资料仍由现有SavedWork ART-*保管，不恢复旧preview→task_id confirm→integer evidence_id流程，普通私有导入不加用途/权利表单。此有界接线不等于Evidence列表行获得scope/Permission，也未完成原文定位/分页、选择资料启动研究或完整逐份分析卡。最近列表现按服务器cursor逐页续查；未知上传不重传，失败页停止后可续查，无法解析的记录使核验显式不完整。
+当前源码事实：SH-02已接入单文件资料上传、SavedWork最近导入列表及保存原件独立读回；私有Shared资料仍由现有SavedWork ART-*保管，不恢复旧preview→task_id confirm→integer evidence_id流程，普通私有导入不加用途/权利表单。2026-10-23已补齐Evidence actor-bound scope/Permission投影及原文分页；真实CSV保存后经服务重启重开，显示17条逻辑记录。选择资料启动研究、完整逐份分析卡及整体视觉升级仍OPEN。最近列表现按服务器cursor逐页续查；未知上传不重传，失败页停止后可续查，无法解析的记录使核验显式不完整。
 
 F输入合同：当前单文件入口为`POST /api/experience/materials/documents`，multipart携带`file`与`request_id`（可选关键词沿现接口），Shared scope来自已选工作区上下文；actor、workspace与Permission由服务端解析。原字节上限8 MiB及文件名校验按当前接口显示。保存与近期记录复用SavedWork `kind=research`/ART-*：列表使用现有`GET /api/experience/saved-work?kind=research&query=Private%20uploaded%20source%20analysis&latest_only=true&limit=30[&cursor=...]`，独立重开使用`GET /api/experience/saved-work/<artifact_id>`并核对Artifact与原文件身份/hash/字节数。保存内容保持SOURCE_STATEMENT、fact_verified=false、rights UNKNOWN、canonical_admitted=false、training_eligible=false。当前客户端尚未把所选ART-*接入研究任务的source_ids；不得恢复旧整数Evidence夹具或由客户端拼来源/引用。cursor续查、失败页停止及不完整记录提示已接线；跨域/额外用途继续走原明确合同。
 
-F输出/视觉：完整目标仍是在原库旁提供[导入资料]与[最近导入]，每份卡关联原件、分析、时间和保存状态；打开原文定位/分页，并可选择真实资料发起研究且保留选择预览。当前只完成单文件导入、SavedWork近期记录和原件读回接线；原文定位/分页、选资料研究和完整逐份分析卡仍OPEN；cursor续查与失败/不完整页反馈已接线，真实运行仍须验收。目标还包括部分失败逐项说明、null与真实0分开、撤权清原文、取消零写。完整验收仍覆盖multipart→保存→独立重开→采用真实ART-*研究、部分失败/类型限制/CAS或来源变化/越权/字节篡改拒绝及原Evidence过滤/三语/焦点；端侧构建、真实Core运行和四表面验收仍OPEN。
+F输出/视觉：完整目标仍是在原库旁提供[导入资料]与[最近导入]，每份卡关联原件、分析、时间和保存状态；打开原文定位/分页，并可选择真实资料发起研究且保留选择预览。当前已接单文件导入、SavedWork近期记录、原件读回和分页；选资料研究、完整逐份分析卡、完整视觉升级及四表面仍OPEN。真实原文恢复证据与定向检查见CURRENT同版材料读取记录；cursor续查、失败/不完整页反馈保留原合同。目标还包括部分失败逐项说明、null与真实0分开、撤权清原文、取消零写。完整验收仍覆盖multipart→保存→独立重开→采用真实ART-*研究、部分失败/类型限制/CAS或来源变化/越权/字节篡改拒绝及原Evidence过滤/三语/焦点；端侧构建、真实Core运行和四表面验收仍OPEN。
 
 四表面：官网只解释公开示例与真实状态；Web/桌面在原会话、趋势、资料工作面完成操作；iOS同对象审阅/续接、来源/版本通过Sheet展开，保焦点/草稿，不把桌面压缩成手机。原创舒展布局、界面自身AIGC、三语无障碍及原200以上交互不缩减。原技术限流手控仅创始人开发者模式；业务取消/保存/确认保留。
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -6,10 +7,136 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/features/shared/sh02/sh02_repository.dart';
 import 'package:lumenis_app/features/shared/sh02/sh02_screen.dart';
 import 'package:lumenis_app/features/shared/sh02/sh02_snapshot.dart';
+import 'package:lumenis_app/features/shared/sh02/sh02_view_model.dart';
 
 import '../shared_test_support.dart';
 
 void main() {
+  for (final denied in [false, true]) {
+    test('late original page cannot restore closed content: $denied', () async {
+      final item = _importedMaterial(requestId: 'late-original-001');
+      final repository = _DelayedPageRepository(item);
+      final model = Sh02ViewModel(
+        repository: repository,
+        documentPicker: _FakeSh02DocumentPicker(null),
+      );
+      await model.openImport(item);
+      final pending = model.loadSourcePage(0);
+      model.closeImport();
+      if (denied) {
+        repository.page.completeError(
+          const LumenisCoreException('HTTP 403', statusCode: 403),
+        );
+      } else {
+        repository.page.complete(
+          Sh02SourcePage.fromResponse(
+            {
+              'source_version': item.artifactId,
+              'source_sha256': item.sourceSha256,
+              'offset': 0,
+              'returned_count': 0,
+              'source_row_count': 0,
+              'has_more': false,
+              'source_rows': [],
+            },
+            item,
+            0,
+          ),
+        );
+      }
+      await pending;
+      expect(model.openedImport, isNull);
+      expect(model.sourcePage, isNull);
+      expect(model.rowsLoading, isFalse);
+      expect(model.importOpenFailed, isFalse);
+      model.dispose();
+    });
+  }
+
+  test(
+    'original pages retain duplicate columns, zero, false and missing cells',
+    () {
+      final item = _importedMaterial(requestId: 'page-original-001');
+      final response = <String, dynamic>{
+        'source_version': item.artifactId,
+        'source_sha256': item.sourceSha256,
+        'offset': 0,
+        'returned_count': 1,
+        'source_row_count': 1,
+        'has_more': false,
+        'source_rows': [
+          {
+            'index': 0,
+            'raw_chunk': 'internal serialized source record',
+            'source_locator': {'sheet_name': '第二页', 'row_index': 2},
+            'source_record': {
+              'headers': [
+                {'value': '数量'},
+                {'value': '数量'},
+                {'value': '确认'},
+              ],
+              'values': [
+                {'value': 0},
+                {'value': null},
+                {'value': false},
+              ],
+            },
+          },
+        ],
+      };
+      final page = Sh02SourcePage.fromResponse(response, item, 0);
+      expect(page.rows.single.fields.map((cell) => cell.key), [
+        '数量',
+        '数量',
+        '确认',
+      ]);
+      expect(page.rows.single.fields.map((cell) => cell.value), [
+        '0',
+        '—',
+        'false',
+      ]);
+      expect(page.rows.single.text, isEmpty);
+      expect(
+        () => Sh02SourcePage.fromResponse(
+          {...response, 'source_sha256': 'wrong'},
+          item,
+          0,
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => Sh02SourcePage.fromResponse(
+          {...response, 'has_more': true},
+          item,
+          0,
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+
+  testWidgets(
+    'material card flips and returns after dragging without opening',
+    (tester) async {
+      final repository = _ImportingSh02Repository(pageSize: 1);
+      await tester.pumpWidget(_app(repository));
+      await tester.pumpAndSettle();
+      final card = find.byKey(const Key('sh02-import-0123456789ab'));
+      await tester.ensureVisible(card);
+      await tester.tap(find.byTooltip('资料详情'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('查看摘录'), findsOneWidget);
+      expect(repository.reopenCalls, 0);
+      await tester.drag(card, const Offset(80, 20));
+      await tester.pumpAndSettle();
+      expect(repository.reopenCalls, 0);
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+      expect(repository.reopenCalls, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('imports a document and verifies it through Shared readback', (
     tester,
   ) async {
@@ -292,7 +419,7 @@ void main() {
       await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
       await tester.pumpAndSettle();
 
-      expect(find.text('证据库'), findsOneWidget);
+      expect(find.text('资料库'), findsOneWidget);
       expect(find.text('资料空间'), findsOneWidget);
       expect(find.text('已核实的市场信号'), findsWidgets);
       expect(find.text('来源链路'), findsOneWidget);
@@ -602,7 +729,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Evidence Library'), findsOneWidget);
+    expect(find.text('Library'), findsOneWidget);
     await tester.tap(find.text('List'));
     await tester.pumpAndSettle();
     expect(find.text('Verified material'), findsOneWidget);
@@ -618,7 +745,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('증거 라이브러리'), findsOneWidget);
+    expect(find.text('자료실'), findsOneWidget);
     expect(find.text('공간'), findsOneWidget);
     expect(find.text('자료 공간'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -760,6 +887,12 @@ Widget _app(
 );
 
 class _FakeSh02Repository implements Sh02Repository {
+  @override
+  Future<Sh02SourcePage> readSourceRows(
+    Sh02ImportedMaterial item,
+    int offset,
+  ) async => throw const FormatException('No structured pages in this fixture');
+
   _FakeSh02Repository(this.response);
 
   final Map<String, dynamic> response;
@@ -804,6 +937,12 @@ class _MalformedImportPageRepository extends _FakeSh02Repository {
 }
 
 class _RecoveringSh02Repository implements Sh02Repository {
+  @override
+  Future<Sh02SourcePage> readSourceRows(
+    Sh02ImportedMaterial item,
+    int offset,
+  ) async => throw const FormatException('No structured pages in this fixture');
+
   _RecoveringSh02Repository(this.statusCode);
 
   final int statusCode;
@@ -856,6 +995,12 @@ class _FakeSh02DocumentPicker implements Sh02DocumentPicker {
 }
 
 class _ImportingSh02Repository implements Sh02Repository {
+  @override
+  Future<Sh02SourcePage> readSourceRows(
+    Sh02ImportedMaterial item,
+    int offset,
+  ) async => throw const FormatException('No structured pages in this fixture');
+
   _ImportingSh02Repository({
     this.pageCount = 1,
     this.publishOnPage = 1,
@@ -1060,4 +1205,17 @@ Map<String, dynamic> _readyResponseWithItems(int count) {
   ];
   response['data'] = data;
   return response;
+}
+
+class _DelayedPageRepository extends _FakeSh02Repository {
+  _DelayedPageRepository(this.item) : super(_readyResponse);
+  final Sh02ImportedMaterial item;
+  final page = Completer<Sh02SourcePage>();
+  @override
+  Future<Sh02ImportedMaterial> reopenImport(String artifactId) async => item;
+  @override
+  Future<Sh02SourcePage> readSourceRows(
+    Sh02ImportedMaterial item,
+    int offset,
+  ) => page.future;
 }

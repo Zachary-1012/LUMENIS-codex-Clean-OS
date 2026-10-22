@@ -117,6 +117,7 @@ abstract interface class Sh02Repository {
     required String requestId,
   });
   Future<Sh02ImportedMaterial> reopenImport(String artifactId);
+  Future<Sh02SourcePage> readSourceRows(Sh02ImportedMaterial item, int offset);
 }
 
 class CoreSh02Repository implements Sh02Repository {
@@ -174,4 +175,20 @@ class CoreSh02Repository implements Sh02Repository {
       (key, value) => MapEntry('$key', value),
     );
   }
+
+  @override
+  Future<Sh02SourcePage> readSourceRows(
+    Sh02ImportedMaterial item,
+    int offset,
+  ) async => Sh02SourcePage.fromResponse(
+    _result(
+      await _client.sharedDocumentRows(
+        artifactId: item.artifactId,
+        sourceSha256: item.sourceSha256,
+        offset: offset,
+      ),
+    ),
+    item,
+    offset,
+  );
 }

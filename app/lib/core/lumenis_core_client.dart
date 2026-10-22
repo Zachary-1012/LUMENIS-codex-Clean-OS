@@ -2102,6 +2102,33 @@ class LumenisCoreClient {
     );
   }
 
+  Future<Map<String, dynamic>> sharedDocumentRows({
+    required String artifactId,
+    required String sourceSha256,
+    required int offset,
+  }) {
+    _validateSavedWorkArtifactId(artifactId);
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(sourceSha256) ||
+        offset < 0 ||
+        offset > 100000) {
+      throw const FormatException('Invalid source page.');
+    }
+    final query = Uri(
+      queryParameters: {
+        'offset': '$offset',
+        'limit': '50',
+        'source_version': artifactId,
+        'source_sha256': sourceSha256,
+      },
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/saved-work/$artifactId?$query',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
   /// Creates an immutable report revision. Omitting citations and source
   /// adoptions asks the server to preserve and freshly reauthorize the exact
   /// parent version's original source uses.
