@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/lumenis_icon.dart';
@@ -10,6 +12,8 @@ import 'sh01_snapshot.dart';
 import 'sh01_view_model.dart';
 import 'media_project_workbench.dart';
 import 'manuscript_editor.dart';
+import 'manuscript_controller.dart';
+import 'saved_media_projects_controller.dart';
 
 String _catalogFailureCopy(String? error) => switch (error) {
   '登录已失效，请重新登录后读取。' => 'sh01.failure.auth',
@@ -158,10 +162,31 @@ class Sh01Screen extends StatefulWidget {
 class _Sh01ScreenState extends State<Sh01Screen> {
   bool _editing = false;
   bool _writing = false;
+  bool _catalog = false;
   bool _independent = true;
+  String _mediaOutputKind = 'video';
+  String _libraryKind = 'document';
+  String? _initialArtifact;
   late final Sh01ViewModel _viewModel = Sh01ViewModel(
     repository: widget.repository ?? CoreSh01Repository(client: widget.client),
   );
+  late final ManuscriptController _manuscripts = ManuscriptController(
+    client: widget.client,
+    scope: const SharedWorkspaceScope(),
+    draft: InternalPitchManuscript(
+      title: '',
+      summary: '',
+      sections: [],
+      language: 'zh',
+      authorship: 'user_supplied',
+    ),
+  );
+  late final SavedMediaProjectsController _mediaLibrary =
+      SavedMediaProjectsController(
+        loadPage: (cursor) =>
+            widget.client.listContentProjects(domainId: null, cursor: cursor),
+        contextKey: () => 'shared_workspace:${widget.contextAvailable}',
+      );
 
   @override
   void initState() {
@@ -169,25 +194,80 @@ class _Sh01ScreenState extends State<Sh01Screen> {
     _editing =
         widget.initialWorkspaceEntry == 'media' &&
         widget.returnScreenId == 'BMP-08';
-    _viewModel.refresh();
+    if (_editing) {
+      _mediaOutputKind = 'audio';
+      _independent = widget.invokingDomain == null;
+    } else {
+      unawaited(_manuscripts.list());
+    }
   }
 
-  void _leaveMediaWorkspace() {
+  @override
+  void didUpdateWidget(covariant Sh01Screen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.contextAvailable != widget.contextAvailable) {
+      _mediaLibrary.invalidate();
+      if (_libraryKind != 'document' && widget.contextAvailable) {
+        unawaited(_mediaLibrary.refresh());
+      }
+    }
+  }
+
+  void _leaveWorkspace() {
     final returnTo = widget.returnScreenId;
     final shouldReturnToPodcast =
+        _editing &&
         widget.initialWorkspaceEntry == 'media' &&
         returnTo == 'BMP-08' &&
         widget.onNavigate != null;
-    setState(() => _editing = false);
-    if (!shouldReturnToPodcast || returnTo == null) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) widget.onNavigate!(returnTo);
+    setState(() {
+      _editing = false;
+      _writing = false;
+      _initialArtifact = null;
     });
+    if (shouldReturnToPodcast && returnTo != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onNavigate!(returnTo);
+      });
+    } else {
+      _refreshLibrary();
+    }
+  }
+
+  void _openMedia(String kind, {bool independent = true, String? artifact}) {
+    setState(() {
+      _independent = independent;
+      _mediaOutputKind = kind;
+      _initialArtifact = artifact;
+      _editing = true;
+    });
+  }
+
+  void _openManuscript([String? artifact]) => setState(() {
+    _initialArtifact = artifact;
+    _writing = true;
+  });
+
+  void _refreshLibrary() {
+    if (_libraryKind == 'document') {
+      unawaited(_manuscripts.list());
+    } else {
+      unawaited(_mediaLibrary.refresh());
+    }
+  }
+
+  void _selectLibrary(String kind) {
+    setState(() => _libraryKind = kind);
+    if (kind != 'document' && !_mediaLibrary.loaded && !_mediaLibrary.busy) {
+      unawaited(_mediaLibrary.refresh());
+    }
   }
 
   @override
   void dispose() {
     _viewModel.dispose();
+    _manuscripts.dispose();
+    _mediaLibrary.dispose();
     super.dispose();
   }
 
@@ -198,102 +278,465 @@ class _Sh01ScreenState extends State<Sh01Screen> {
         _ => en,
       };
 
-  String get _mediaOutputKind =>
-      widget.initialWorkspaceEntry == 'media' &&
-          widget.returnScreenId == 'BMP-08'
-      ? 'audio'
-      : 'video';
-
   @override
-  Widget build(BuildContext context) => _writing
-      ? ManuscriptEditor(
-          client: widget.client,
-          invokingDomain: widget.invokingDomain,
-          contextAvailable: widget.contextAvailable,
-          onBack: () => setState(() => _writing = false),
-        )
-      : _editing
-      ? MediaProjectWorkbench(
-          client: widget.client,
-          invokingDomain: widget.invokingDomain,
-          sharedWorkspace: _independent && widget.invokingDomain == null,
-          contextAvailable: widget.contextAvailable,
-          initialOutputKind: _mediaOutputKind,
-          onBack: _leaveMediaWorkspace,
-        )
-      : ColoredBox(
-          color: LumenisTheme.of(context).canvas,
-          child: SafeArea(
-            child: Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                    child: Wrap(
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        OutlinedButton.icon(
-                          key: const Key('sh01-create-manuscript'),
-                          onPressed: () => setState(() {
-                            _writing = true;
-                          }),
-                          icon: const LumenisIcon(Icons.edit_document),
-                          label: Text(
-                            _copy('新建文稿', 'Write a document', '새 문서 작성'),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          key: const Key('sh01-open-video-editor'),
-                          onPressed: () => setState(() {
-                            _independent = true;
-                            _editing = true;
-                          }),
-                          icon: const LumenisIcon(
-                            Icons.video_collection_outlined,
-                          ),
-                          label: Text(
-                            context.lumenisL10n.text('sh01.media.open'),
-                          ),
-                        ),
-                        OutlinedButton.icon(
-                          key: const Key('sh01-open-linked-media'),
-                          onPressed: () => setState(() {
-                            _independent = false;
-                            _editing = true;
-                          }),
-                          icon: const LumenisIcon(Icons.folder_open_outlined),
-                          label: Text(
-                            context.lumenisL10n.text(
-                              'sh01.media.linked_workspace',
-                            ),
-                          ),
-                        ),
-                      ],
+  Widget build(BuildContext context) {
+    if (_writing) {
+      return ManuscriptEditor(
+        client: widget.client,
+        initialArtifactId: _initialArtifact,
+        contextAvailable: widget.contextAvailable,
+        onBack: _leaveWorkspace,
+      );
+    }
+    if (_editing) {
+      return MediaProjectWorkbench(
+        client: widget.client,
+        invokingDomain: _independent ? null : widget.invokingDomain,
+        sharedWorkspace: _independent,
+        contextAvailable: widget.contextAvailable,
+        initialOutputKind: _mediaOutputKind,
+        initialArtifactId: _initialArtifact,
+        onBack: _leaveWorkspace,
+      );
+    }
+    final palette = LumenisTheme.of(context);
+    return ColoredBox(
+      color: palette.canvas,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 16, 12),
+              child: Row(
+                children: [
+                  if (_catalog)
+                    IconButton(
+                      key: const Key('sh01-close-catalog'),
+                      tooltip: _copy('返回创作', 'Back to creation', '창작으로 돌아가기'),
+                      onPressed: () => setState(() => _catalog = false),
+                      icon: const LumenisIcon(Icons.arrow_back),
+                    ),
+                  Expanded(
+                    child: Text(
+                      _catalog
+                          ? _copy('工具', 'Tools', '도구')
+                          : _copy('创作', 'Create', '창작'),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: AnimatedBuilder(
-                    animation: _viewModel,
-                    builder: (context, _) => switch (_viewModel.phase) {
-                      Sh01LoadPhase.loading => const _LoadingState(),
-                      Sh01LoadPhase.failed => _FailureState(
-                        messageKey: _catalogFailureCopy(_viewModel.error),
-                        onRetry: _viewModel.refresh,
-                      ),
-                      Sh01LoadPhase.ready => _Workspace(
-                        viewModel: _viewModel,
-                        catalog: _viewModel.catalog!,
-                      ),
-                    },
-                  ),
-                ),
-              ],
+                  if (!_catalog)
+                    TextButton.icon(
+                      key: const Key('sh01-open-catalog'),
+                      onPressed: () {
+                        setState(() => _catalog = true);
+                        if (_viewModel.catalog == null) _viewModel.refresh();
+                      },
+                      icon: const LumenisIcon(Icons.widgets_outlined, size: 18),
+                      label: Text(_copy('工具', 'Tools', '도구')),
+                    ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _catalog
+                  ? AnimatedBuilder(
+                      animation: _viewModel,
+                      builder: (context, _) => switch (_viewModel.phase) {
+                        Sh01LoadPhase.loading => const _LoadingState(),
+                        Sh01LoadPhase.failed => _FailureState(
+                          messageKey: _catalogFailureCopy(_viewModel.error),
+                          onRetry: _viewModel.refresh,
+                        ),
+                        Sh01LoadPhase.ready => _Workspace(
+                          viewModel: _viewModel,
+                          catalog: _viewModel.catalog!,
+                        ),
+                      },
+                    )
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final wide =
+                            constraints.maxWidth >= 900 &&
+                            MediaQuery.textScalerOf(context).scale(16) <= 24;
+                        final launch = _launchPanel();
+                        final library = AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _manuscripts,
+                            _mediaLibrary,
+                          ]),
+                          builder: (context, _) => _library(),
+                        );
+                        if (wide) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                SizedBox(
+                                  width: 290,
+                                  child: SingleChildScrollView(child: launch),
+                                ),
+                                const SizedBox(width: 28),
+                                Expanded(child: library),
+                              ],
+                            ),
+                          );
+                        }
+                        return SingleChildScrollView(
+                          key: const PageStorageKey('sh01-creation-scroll'),
+                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              launch,
+                              const SizedBox(height: 28),
+                              library,
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _launchPanel() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Text(
+          _copy('新建', 'Start new', '새로 만들기'),
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+      ),
+      _CreationAction(
+        key: const Key('sh01-open-research'),
+        title: _copy('研究资料', 'Research', '자료 연구'),
+        icon: Icons.auto_stories_outlined,
+        color: LumenisTheme.of(context).cth,
+        onPressed: widget.onNavigate == null
+            ? null
+            : () => widget.onNavigate!('SH-02'),
+      ),
+      _CreationAction(
+        key: const Key('sh01-create-manuscript'),
+        title: _copy('提案 / 文稿', 'Proposal / document', '제안서 / 문서'),
+        icon: Icons.edit_document,
+        color: LumenisTheme.of(context).shared,
+        onPressed: () => _openManuscript(),
+      ),
+      _CreationAction(
+        key: const Key('sh01-open-video-editor'),
+        title: _copy('视频', 'Video', '영상'),
+        icon: Icons.movie_creation_outlined,
+        color: LumenisTheme.of(context).bmp,
+        onPressed: () => _openMedia('video'),
+      ),
+      _CreationAction(
+        key: const Key('sh01-open-podcast-editor'),
+        title: _copy('播客', 'Podcast', '팟캐스트'),
+        icon: Icons.mic_none_rounded,
+        color: LumenisTheme.of(context).ai,
+        onPressed: () => _openMedia('audio'),
+      ),
+      const SizedBox(height: 10),
+      TextButton.icon(
+        key: const Key('sh01-open-linked-media'),
+        onPressed: () => _openMedia('video', independent: false),
+        icon: const LumenisIcon(Icons.folder_open_outlined, size: 18),
+        label: Text(context.lumenisL10n.text('sh01.media.linked_workspace')),
+      ),
+    ],
+  );
+
+  Widget _library() {
+    final documents = _libraryKind == 'document';
+    final busy = documents ? _manuscripts.busy : _mediaLibrary.busy;
+    final error = documents ? _manuscripts.errorCode : _mediaLibrary.errorCode;
+    final rows = documents
+        ? _manuscripts.items
+        : _mediaLibrary.projects
+              .where((p) => p.outputKind == _libraryKind)
+              .toList();
+    final hasMore = documents
+        ? _manuscripts.hasMore
+        : _mediaLibrary.nextCursor != null;
+    final incomplete =
+        !documents &&
+        (_mediaLibrary.status == SavedMediaProjectsStatus.scanIncomplete ||
+            _mediaLibrary.status ==
+                SavedMediaProjectsStatus.integrityIncomplete);
+    final palette = LumenisTheme.of(context);
+    final contents = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _copy('继续工作', 'Continue working', '이어서 작업'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            IconButton(
+              key: const Key('sh01-refresh-projects'),
+              tooltip: _copy('刷新', 'Refresh', '새로 고침'),
+              onPressed: busy ? null : _refreshLibrary,
+              icon: const LumenisIcon(Icons.refresh_rounded),
+            ),
+          ],
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final (kind, label) in [
+              ('document', _copy('文稿', 'Documents', '문서')),
+              ('video', _copy('视频', 'Videos', '영상')),
+              ('audio', _copy('播客', 'Podcasts', '팟캐스트')),
+            ])
+              ChoiceChip(
+                key: Key('sh01-library-$kind'),
+                label: Text(label),
+                selected: _libraryKind == kind,
+                onSelected: (_) => _selectLibrary(kind),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (busy) const LinearProgressIndicator(minHeight: 2),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Text(
+              _copy(
+                '作品暂时无法读取，请刷新重试。',
+                'Your work could not be loaded. Please refresh to retry.',
+                '작품을 불러올 수 없습니다. 새로 고침하여 다시 시도하세요.',
+              ),
+            ),
+          )
+        else if (!busy && rows.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 36),
+            child: Text(
+              hasMore
+                  ? _copy(
+                      '这一页没有此类作品，可继续查看。',
+                      'No matching work on this page. More pages are available.',
+                      '이 페이지에 해당 작품이 없습니다. 다음 페이지를 확인할 수 있습니다.',
+                    )
+                  : _copy(
+                      '尚未读取到保存的作品。',
+                      'No saved work was returned.',
+                      '저장한 작품이 반환되지 않았습니다.',
+                    ),
+              style: TextStyle(color: palette.muted),
             ),
           ),
-        );
+        if (error == null) ...[
+          if (documents)
+            for (final item in _manuscripts.items)
+              _SavedCreationRow(
+                key: Key('sh01-saved-${item.artifactId}'),
+                title: item.manuscript.title,
+                detail:
+                    '${_copy('版本', 'Version', '버전')} ${item.version} · ${item.manuscript.summary}',
+                icon: Icons.description_outlined,
+                onPressed: () => _openManuscript(item.artifactId),
+              ),
+          if (!documents)
+            for (final item in _mediaLibrary.projects.where(
+              (p) => p.outputKind == _libraryKind,
+            ))
+              _SavedCreationRow(
+                key: Key('sh01-saved-${item.artifactId}'),
+                title: item.outputKind == 'audio'
+                    ? _copy('播客作品', 'Podcast', '팟캐스트')
+                    : _copy('视频作品', 'Video', '영상'),
+                detail: _savedDate(item.createdAt),
+                icon: item.outputKind == 'audio'
+                    ? Icons.mic_none_rounded
+                    : Icons.movie_outlined,
+                onPressed: () =>
+                    _openMedia(item.outputKind, artifact: item.artifactId),
+              ),
+        ],
+        if (incomplete)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              _copy(
+                '仍有作品尚未完成读取。',
+                'Some work has not been fully read.',
+                '일부 작품을 아직 모두 읽지 못했습니다.',
+              ),
+            ),
+          ),
+        if (hasMore && error == null)
+          TextButton(
+            onPressed: busy
+                ? null
+                : () => documents
+                      ? _manuscripts.loadMore()
+                      : _mediaLibrary.loadMore(),
+            child: Text(_copy('继续查看', 'Load more', '더 보기')),
+          ),
+      ],
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: palette.line),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final padded = Padding(
+            padding: const EdgeInsets.all(20),
+            child: contents,
+          );
+          return constraints.hasBoundedHeight
+              ? SingleChildScrollView(child: padded)
+              : padded;
+        },
+      ),
+    );
+  }
+
+  String _savedDate(String value) {
+    final date = DateTime.tryParse(value)?.toLocal();
+    if (date == null) {
+      return _copy('保存时间未知', 'Save time unknown', '저장 시간 알 수 없음');
+    }
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+class _CreationAction extends StatefulWidget {
+  const _CreationAction({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+    super.key,
+  });
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+  @override
+  State<_CreationAction> createState() => _CreationActionState();
+}
+
+class _CreationActionState extends State<_CreationAction> {
+  bool _raised = false;
+  @override
+  Widget build(BuildContext context) {
+    final palette = LumenisTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AnimatedContainer(
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 90),
+        transform: Matrix4.translationValues(
+          _raised ? 3 : 0,
+          _raised ? -2 : 0,
+          0,
+        ),
+        decoration: BoxDecoration(
+          color: palette.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _raised ? widget.color : palette.line),
+          boxShadow: [
+            BoxShadow(
+              color: palette.foreground.withValues(alpha: _raised ? .09 : .03),
+              blurRadius: _raised ? 16 : 4,
+              offset: Offset(0, _raised ? 6 : 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onPressed,
+            onHover: (value) => setState(() => _raised = value),
+            onFocusChange: (value) => setState(() => _raised = value),
+            borderRadius: BorderRadius.circular(14),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Row(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: widget.color.withValues(alpha: .10),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: LumenisIcon(
+                        widget.icon,
+                        color: widget.color,
+                        size: 25,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  const LumenisIcon(Icons.arrow_outward, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SavedCreationRow extends StatelessWidget {
+  const _SavedCreationRow({
+    required this.title,
+    required this.detail,
+    required this.icon,
+    required this.onPressed,
+    super.key,
+  });
+  final String title;
+  final String detail;
+  final IconData icon;
+  final VoidCallback onPressed;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: LumenisTheme.of(context).line),
+      ),
+      leading: LumenisIcon(icon, size: 24),
+      title: Text(title),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Text(detail, maxLines: 2, overflow: TextOverflow.ellipsis),
+      ),
+      trailing: const LumenisIcon(Icons.arrow_outward, size: 18),
+      onTap: onPressed,
+    ),
+  );
 }
 
 class _Workspace extends StatelessWidget {
