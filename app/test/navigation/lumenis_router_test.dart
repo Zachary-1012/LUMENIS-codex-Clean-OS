@@ -10,9 +10,11 @@ import 'package:lumenis_app/features/account/acc04/acc04_screen.dart';
 import 'package:lumenis_app/features/ai01/ai01_screen.dart';
 import 'package:lumenis_app/features/ai04/ai04_screen.dart';
 import 'package:lumenis_app/features/bmp01/bmp01_screen.dart';
+import 'package:lumenis_app/features/bmp08/bmp08_screen.dart';
 import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/cth/cth02/cth02_screen.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_screen.dart';
+import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
 import 'package:lumenis_app/features/shared/sh02/sh02_screen.dart';
 import 'package:lumenis_app/features/system/sys05/sys05_appearance_controller.dart';
 import 'package:lumenis_app/features/system/sys06/sys06_screen.dart';
@@ -21,6 +23,57 @@ import 'package:lumenis_app/navigation/lumenis_router.dart';
 import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
 
 void main() {
+  for (final size in const [Size(390, 960), Size(1440, 960)]) {
+    testWidgets(
+      'BMP-08 opens the independent SH-01 media workspace and returns at ${size.width}px',
+      (tester) async {
+        await tester.binding.setSurfaceSize(size);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final router = createLumenisRouter(
+          client: _RouterClient(),
+          onLocaleChanged: (_) {},
+          initialLocation: '/workspace/BMP-08',
+        );
+        addTearDown(router.dispose);
+
+        await tester.pumpWidget(_app(router));
+        await tester.pumpAndSettle();
+        expect(find.byType(Bmp08Screen), findsOneWidget);
+
+        if (size.width < 600) {
+          await tester.tap(find.text('音频').first);
+        } else {
+          await tester.tap(find.byKey(const ValueKey('podcast-audio-view')));
+        }
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('podcast-open-media-workspace')),
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('podcast-open-media-workspace')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          router.routeInformationProvider.value.uri.toString(),
+          '/workspace/SH-01?entry=media&return=BMP-08',
+        );
+        expect(find.byType(MediaProjectWorkbench), findsOneWidget);
+        expect(find.byType(Bmp08Screen), findsNothing);
+
+        await tester.tap(find.byKey(const Key('media-editor-back')));
+        await tester.pumpAndSettle();
+        expect(
+          router.routeInformationProvider.value.uri.path,
+          '/workspace/BMP-08',
+        );
+        expect(find.byType(Bmp08Screen), findsOneWidget);
+        expect(find.byType(MediaProjectWorkbench), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('root and workspace entry open the product home', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1440, 960));
     addTearDown(() => tester.binding.setSurfaceSize(null));

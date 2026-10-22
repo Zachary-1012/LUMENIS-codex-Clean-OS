@@ -2902,12 +2902,67 @@ def save_shared_work():
             actor, scope = _shared_work_actor_scope("read")
             return verify_fact_wall_claims(actor=actor, scope=scope, claims=body["verify_fact_wall_claims"])
         if "adopt_source_brief_job_id" in body:
-            if set(body) != {"adopt_source_brief_job_id", "request_id", "mode"}:
+            required = {"adopt_source_brief_job_id", "request_id", "mode"}
+            optional = {"title"}
+            approval_fields = {"confirm", "confirmed_resource"}
+            if (not required.issubset(body) or set(body) - required - optional - approval_fields
+                    or bool(set(body) & approval_fields) != approval_fields.issubset(body)):
                 raise ValueError("WORK_ADOPTION_REQUEST_INVALID")
+            if request.args:
+                raise ValueError("WORK_ADOPTION_REQUEST_INVALID")
+            if not _content_source_same_origin():
+                raise PermissionError("SOURCE_BRIEF_ADOPTION_ORIGIN_DENIED")
             from lumenis.shared.reporting.source_brief_job import adopt_domain_report
             actor, scope = _shared_work_actor_scope("write")
-            return adopt_domain_report(job_id=body["adopt_source_brief_job_id"],
-                request_id=body["request_id"], mode=body["mode"], actor=actor, target_scope=scope)
+            job_id = body["adopt_source_brief_job_id"]
+            request_id = body["request_id"]
+            mode = body["mode"]
+            title = body.get("title")
+            if "title" in body and not isinstance(title, str):
+                raise ValueError("WORK_INPUT_INVALID")
+            if not isinstance(mode, str) or mode not in {"prepare", "save", "apply", "revoke"}:
+                raise ValueError("SOURCE_BRIEF_ADOPTION_MODE_INVALID")
+            prepared = adopt_domain_report(job_id=job_id, request_id=request_id,
+                mode="prepare", actor=actor, target_scope=scope, title=title)
+            if mode == "prepare":
+                if approval_fields.intersection(body):
+                    raise ValueError("WORK_ADOPTION_REQUEST_INVALID")
+                return prepared
+            if approval_fields.issubset(body):
+                if (body["confirm"] is not True
+                        or body["confirmed_resource"] != prepared.get("resource")):
+                    raise PermissionError("SOURCE_BRIEF_ADOPTION_EXACT_CONFIRMATION_REQUIRED")
+                from lumenis.shared.reporting.saved_work import authorize_saved_work
+                from lumenis.system.security.permission import (
+                    OperationType,
+                    PermissionLevel,
+                    get_permission_gate,
+                )
+                gate = get_permission_gate()
+                if (not gate.has_permission(PermissionLevel.HUMAN_APPROVAL)
+                        or not gate.has_permission(PermissionLevel.COMMIT)):
+                    raise PermissionError("SOURCE_BRIEF_ADOPTION_MANUAL_AUTHORITY_REQUIRED")
+                context = authorize_saved_work(actor, scope, action="write")
+                resource = prepared["resource"]
+                token = gate.get_valid_approval_token(OperationType.DATA_EXPORT.value, resource, exact=True)
+                if mode == "revoke":
+                    return {"revoked": bool(token and gate.revoke_approval(token)), "resource": resource}
+                if token is None:
+                    caller = context.get("principal_ref") or "actor:" + str(context["actor_id"])
+                    token = gate.grant_approval(OperationType.DATA_EXPORT.value, resource=resource,
+                        duration_minutes=5, granted_by=caller)
+                try:
+                    return adopt_domain_report(job_id=job_id, request_id=request_id,
+                        mode="save", actor=actor, target_scope=scope, title=title)
+                except Exception:
+                    gate.revoke_approval(token)
+                    raise
+            if mode == "revoke":
+                raise PermissionError("SOURCE_BRIEF_ADOPTION_EXACT_CONFIRMATION_REQUIRED")
+            if mode == "apply":
+                raise PermissionError("SOURCE_BRIEF_ADOPTION_EXACT_CONFIRMATION_REQUIRED")
+            return adopt_domain_report(job_id=job_id, request_id=request_id,
+                mode="save", actor=actor, target_scope=scope, title=title)
         required = {"title", "markdown", "kind", "payload", "citations", "request_id"}
         allowed = required | {"work_id", "previous_artifact_id", "expected_draft_digest", "contract"}
         if not required.issubset(body) or set(body) - allowed:

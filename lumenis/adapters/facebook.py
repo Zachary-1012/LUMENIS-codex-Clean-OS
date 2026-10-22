@@ -37,6 +37,10 @@ class FacebookAdapter(BaseAdapter):
 
     _OFFICIAL_HOSTS = {"facebook.com", "www.facebook.com", "m.facebook.com"}
     _NATIVE_POST_ID = re.compile(r"[A-Za-z0-9]+")
+    _DETAIL_BODY_SELECTOR = '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+    _DETAIL_EXPANDER_SELECTOR = 'button, [role="button"]'
+    _DETAIL_EXPANDER_LABELS = frozenset({"see more", "see more…", "see more...", "查看更多", "查看全部", "显示更多"})
+    _DETAIL_EXPANDER_SCAN_LIMIT = 20
 
     _DEFAULT_UA = (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -527,7 +531,12 @@ class FacebookAdapter(BaseAdapter):
                 if not identity or identity["post_id"] != requested["post_id"]:
                     continue
                 matching_article_seen = True
-                note = self._parse_facebook_detail_article(article, page, requested["post_id"])
+                note, parse_error = self._parse_facebook_detail_article(article, page, requested["post_id"])
+                if parse_error:
+                    diagnostics = ({"post_id": requested["post_id"],
+                                    "body_status": "NATIVE_BODY_NOT_OBSERVED"}
+                                   if parse_error.startswith("DETAIL_NOT_RETURNED:") else {})
+                    return AdapterResult(success=False, error=parse_error, diagnostics=diagnostics)
                 if note and note.raw_data.get("post_id") == requested["post_id"]:
                     matching_note = note
                     break
@@ -554,99 +563,158 @@ class FacebookAdapter(BaseAdapter):
             if hb is not None:
                 hb.close()
 
-    @staticmethod
-    def _expand_detail_post_body(article) -> str:
-        """Expand only an explicit read-more control inside the exact post article."""
-        labels = {"see more", "see more…", "see more...", "查看更多", "查看全部", "显示更多"}
-        body_locator = '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
-        try:
-            body_element = article.query_selector(body_locator)
-            before = body_element.inner_text().strip() if body_element else None
-        except Exception:
-            return "BODY_NOT_AVAILABLE"
-        if not isinstance(before, str):
-            return "BODY_NOT_AVAILABLE"
-        try:
-            controls = article.query_selector_all('div[role="button"], button')
-        except Exception:
-            return "CONTROLS_UNAVAILABLE"
-        inspection_failed = False
-        expansion_attempted = False
-        for control in controls:
-            try:
-                label = control.inner_text()
-                label = " ".join(label.split()).casefold() if isinstance(label, str) else ""
-                aria = control.get_attribute("aria-label")
-                aria = " ".join(aria.split()).casefold() if isinstance(aria, str) else ""
-            except Exception:
-                inspection_failed = True
-                continue
-            if label not in labels and aria not in labels:
-                continue
-            try:
-                control.click()
-                expansion_attempted = True
-            except Exception:
-                return "EXPANSION_FAILED"
-            try:
-                expanded_element = article.query_selector(body_locator)
-                after = expanded_element.inner_text().strip() if expanded_element else None
-            except Exception:
-                inspection_failed = True
-                continue
-            # A different attachment's "See more" button is not evidence that
-            # the post body expanded. Only accept a longer native message body.
-            if isinstance(after, str) and len(after) > len(before):
-                return "EXPANDED"
-        if expansion_attempted:
-            return "EXPANSION_UNVERIFIED"
-        return "CONTROLS_UNAVAILABLE" if inspection_failed else "NO_EXPANSION_CONTROL"
+    @classmethod
+    def _detail_article_matches(cls, article, page_url: str, expected_post_id: str) -> bool:
+        page_identity = cls.observed_post_permalink(page_url)
+        article_identity = cls._post_permalink_from_card(article, page_url)
+        return bool(
+            page_identity and article_identity
+            and page_identity["post_id"] == expected_post_id
+            and article_identity["post_id"] == expected_post_id
+        )
 
-    def _parse_facebook_detail_article(self, article, page, requested_post_id: str) -> CollectedNote | None:
-        """FIX-098: observe a native body only for the exact requested post."""
-        identity = self._post_permalink_from_card(article, page.url)
-        if not identity or identity.get("post_id") != requested_post_id:
-            return None
-        expansion_state = self._expand_detail_post_body(article)
-        if expansion_state not in {"EXPANDED", "NO_EXPANSION_CONTROL"}:
-            return None
-        body_locator = '[data-ad-preview="message"], [data-ad-comet-preview="message"]'
+    @classmethod
+    def _expand_detail_post_body(cls, article, page) -> tuple[str, dict]:
+        """Expand one explicit control nested in the observed post body."""
+        observation = {"status": "NOT_OBSERVED", "label": None, "click_count": 0}
         try:
-            body_element = article.query_selector(body_locator)
+            body_element = article.query_selector(cls._DETAIL_BODY_SELECTOR)
+            before = body_element.inner_text().strip() if body_element else ""
+        except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+            return "", {**observation, "status": "BODY_READ_FAILED"}
+        if not isinstance(before, str) or not before:
+            return "", {**observation, "status": "BODY_NOT_OBSERVED"}
+        try:
+            controls = body_element.query_selector_all(cls._DETAIL_EXPANDER_SELECTOR)
+        except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+            return before, {**observation, "status": "EXPANDER_SCAN_FAILED"}
+        controls = list(controls or [])
+        if len(controls) > cls._DETAIL_EXPANDER_SCAN_LIMIT:
+            return before, {**observation, "status": "EXPANDER_SCAN_LIMIT_REACHED"}
+        for control in controls:
+            matched_label = None
+            try:
+                values = (control.inner_text(), control.get_attribute("aria-label"))
+            except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+                logger.debug("Facebook detail control label was not readable")
+                continue
+            for value in values:
+                label = " ".join(value.split()).casefold().rstrip(" .…") if isinstance(value, str) else ""
+                if len(label) <= 40 and label in cls._DETAIL_EXPANDER_LABELS:
+                    matched_label = label
+                    break
+            if matched_label is None:
+                continue
+            try:
+                control.click(timeout=2000)
+            except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+                return before, {**observation, "status": "EXPANSION_FAILED", "label": matched_label}
+            render_wait = "STATE_CHANGE_NOT_OBSERVED"
+            try:
+                changed = page.wait_for_function(
+                    "([element, before]) => !element.isConnected || element.innerText.trim() !== before",
+                    arg=[body_element, before], timeout=2000,
+                )
+                changed.dispose()
+                render_wait = "BODY_CHANGED_OR_REPLACED"
+            except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+                render_wait = "STATE_CHANGE_NOT_OBSERVED"
+            try:
+                expanded_element = article.query_selector(cls._DETAIL_BODY_SELECTOR)
+                after = expanded_element.inner_text().strip() if expanded_element else ""
+            except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+                return before, {
+                    **observation, "status": "EXPANSION_READ_FAILED", "label": matched_label,
+                    "click_count": 1, "render_wait": render_wait,
+                }
+            if isinstance(after, str) and len(after) > len(before):
+                return after, {
+                    **observation, "status": "EXPANDED", "label": matched_label,
+                    "click_count": 1, "render_wait": render_wait,
+                }
+            return before, {
+                **observation, "status": "EXPANSION_UNVERIFIED", "label": matched_label,
+                "click_count": 1, "render_wait": render_wait,
+            }
+        try:
+            article_controls = list(article.query_selector_all(cls._DETAIL_EXPANDER_SELECTOR) or [])
+        except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+            return before, {**observation, "status": "EXPANDER_SCAN_FAILED"}
+        if len(article_controls) > cls._DETAIL_EXPANDER_SCAN_LIMIT:
+            return before, {**observation, "status": "EXPANDER_SCAN_LIMIT_REACHED"}
+        for control in article_controls:
+            try:
+                values = (control.inner_text(), control.get_attribute("aria-label"))
+            except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
+                logger.debug("Facebook detail control label was not readable")
+                continue
+            for value in values:
+                label = " ".join(value.split()).casefold().rstrip(" .…") if isinstance(value, str) else ""
+                if len(label) <= 40 and label in cls._DETAIL_EXPANDER_LABELS:
+                    return before, {**observation, "status": "EXPANSION_UNVERIFIED", "label": label}
+        return before, {**observation, "status": "NO_EXPANSION_CONTROL"}
+
+    def _parse_facebook_detail_article(self, article, page, requested_post_id: str) -> tuple[CollectedNote | None, str]:
+        if not self._detail_article_matches(article, page.url, requested_post_id):
+            return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_PRE_READ_ID_MISMATCH"
+        _, expansion = self._expand_detail_post_body(article, page)
+        failure = self._page_failure_state(page)
+        if failure:
+            return None, failure
+        after_identity = self._post_permalink_from_card(article, page.url)
+        if (not after_identity or after_identity.get("post_id") != requested_post_id
+                or not self._detail_article_matches(article, page.url, requested_post_id)):
+            return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_POST_READ_ID_MISMATCH"
+        if expansion.get("status") not in {"EXPANDED", "NO_EXPANSION_CONTROL"}:
+            return None, "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
+        try:
+            body_element = article.query_selector(self._DETAIL_BODY_SELECTOR)
             native_body = body_element.inner_text().strip() if body_element else ""
-        except Exception:
+        except Exception:  # noqa: BLE001 - optional browser-driver boundary; explicit failure state
             native_body = ""
         if not native_body:
-            return None
+            return None, "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
 
         # Reuse the existing native author, time, metrics and media observations,
         # then replace the search-preview body with the exact article's visible body.
-        note = self._parse_facebook_card(article, page)
+        try:
+            note = self._parse_facebook_card(article, page)
+        except Exception as error:  # noqa: BLE001 - driver boundary; log only the error type
+            logger.debug("Facebook detail card parse failed error_type=%s", type(error).__name__)
+            note = None
         if not note or note.raw_data.get("post_id") != requested_post_id:
-            return None
+            return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_POST_ID_MISMATCH"
+        if not self._detail_article_matches(article, page.url, requested_post_id):
+            return None, "IDENTITY_MISMATCH: TARGET_ARTICLE_POST_READ_ID_MISMATCH"
+        failure = self._page_failure_state(page)
+        if failure:
+            return None, failure
         note.content = native_body
         note.title = native_body[:80].replace("\n", " ")
         raw = dict(note.raw_data or {})
+        expansion_state = expansion.get("status")
         raw.update({
             "body_kind": "NATIVE_POST_BODY",
             "body_status": "NATIVE_DETAIL_BODY_OBSERVED_COMPLETENESS_UNKNOWN",
             "body_sha256": hashlib.sha256(native_body.encode("utf-8")).hexdigest(),
-            "body_locator": body_locator,
+            "body_locator": self._DETAIL_BODY_SELECTOR,
             "body_state": ("EXPANDED_NATIVE_ARTICLE_DOM_COMPLETENESS_UNKNOWN"
                            if expansion_state == "EXPANDED"
                            else "NATIVE_ARTICLE_DOM_COMPLETENESS_UNKNOWN"),
+            "body_expansion": expansion,
+            "body_completeness": "UNKNOWN",
             "detail_post_id_status": "OBSERVED_AND_MATCHED",
             "detail_post_id_locator": "article a[href] (exact requested native id)",
             "native_identity": {
                 "post_id": requested_post_id,
                 "requested_post_id": requested_post_id,
-                "observed_post_id": identity["post_id"],
+                "observed_post_id": requested_post_id,
                 "status": "OBSERVED_MATCH",
-                "locator": identity.get("permalink_locator"),
+                "locator": after_identity.get("permalink_locator"),
             },
         })
         note.raw_data = raw
-        return note
+        return note, ""
 
     def comments(self, post_id: str, max_comments: int = 20) -> AdapterResult:
         """Facebook 评论采集（浏览器 CDP，滚动加载）。"""

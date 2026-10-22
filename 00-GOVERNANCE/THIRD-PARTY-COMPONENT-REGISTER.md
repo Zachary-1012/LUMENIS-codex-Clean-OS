@@ -55,6 +55,7 @@ The table records direct manifest entries, not every transitive dependency.
 | beautifulsoup4 | PRODUCTION | HTML parsing | Acquisition/parser adapter | VERIFY_BEFORE_RELEASE | Yes |
 | lxml | PRODUCTION | XML/HTML parsing | Parser adapter | VERIFY_BEFORE_RELEASE | Yes |
 | python-docx | PRODUCTION | DOCX generation | Report/export adapter | VERIFY_BEFORE_RELEASE | Yes |
+| python-pptx 1.0.2 | PRODUCTION | Editable PPTX export through existing SavedWork and ReportExporter | Shared Reporting; scope, source-use, immutable readback and DATA_EXPORT remain in the existing owner | MIT; verified against installed 1.0.2 distribution metadata and LICENSE on 2026-10-22 (SHA-256 `7652f271e46d0d533e9dc463f3b5fcbdcacf4d6a9c8d6b554d15efd0f37f6132`); preserve its notice in shipped packages | Yes |
 | reportlab | PRODUCTION | PDF/report generation | Report/export adapter | VERIFY_BEFORE_RELEASE | Yes |
 | playwright | PRODUCTION | Browser automation | Browser/Collector adapter boundary | VERIFY_BEFORE_RELEASE | Yes, high-cost |
 | cryptography | PRODUCTION SECURITY ADAPTER | Ed25519 training-phase verification; pinned in requirements.txt | Existing SYSTEM Security; evidence and packaging details in the bounded training signature adapter section below | VERIFY_BEFORE_RELEASE | Yes |

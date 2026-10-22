@@ -128,6 +128,40 @@ test("business questions keep a complete no-JavaScript, three-stage preview", as
   }
 });
 
+test("creative work can start independently in every locale", async () => {
+  const expected = {
+    "index.html": {
+      heading: "从自己的想法和素材开始创作。",
+      independent: "都可以独立开始",
+      optional: "可选的后续联动",
+      labels: ["提案与文稿", "视频制作", "播客制作"],
+    },
+    "en/index.html": {
+      heading: "Create from your own ideas and material.",
+      independent: "can each start on their own",
+      optional: "optional next step",
+      labels: ["Proposals &amp; writing", "Video production", "Podcast production"],
+    },
+    "ko/index.html": {
+      heading: "아이디어와 자료만으로 창작을 시작하세요.",
+      independent: "각각 독립적으로 시작할 수 있습니다",
+      optional: "선택 사항입니다",
+      labels: ["제안서와 글쓰기", "영상 제작", "팟캐스트 제작"],
+    },
+  };
+
+  for (const [path, copy] of Object.entries(expected)) {
+    const html = await page(path);
+    const section = html.match(/<section class="creation-section[\s\S]*?<\/section>/)?.[0];
+    assert.ok(section, `${path} renders the independent creation section`);
+    assert.ok(section.includes(copy.heading), `${path} localizes the heading`);
+    assert.ok(section.includes(copy.independent), `${path} says the work can start independently`);
+    assert.ok(section.includes(copy.optional), `${path} keeps domain research optional`);
+    for (const label of copy.labels) assert.ok(section.includes(label), `${path} includes ${label}`);
+    assert.equal((section.match(/class="creation-card"/g) ?? []).length, 3, `${path} renders all three creative outcomes`);
+  }
+});
+
 test("hero workspace entry is configured or honestly unavailable", async () => {
   const workspace = process.env.LUMENIS_PUBLIC_WORKSPACE_URL;
 

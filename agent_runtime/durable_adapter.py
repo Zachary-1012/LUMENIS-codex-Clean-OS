@@ -74,6 +74,73 @@ def _sanitize_checkpoint_value(value: Any, token_usage: bool = False):
     return value, False
 
 
+_PLAN_RECEIPT_FIELDS = (
+    "provider", "status", "operation", "request_id", "request_digest", "run_id",
+    "model_id", "model_revision", "recipe", "source_use_policy_sha256",
+    "source_binding_sha256", "input_revision_sha256", "source_evidence_refs",
+    "prompt_tokens", "completion_tokens", "total_tokens",
+)
+_PLAN_RECEIPT_KEYS = frozenset(_PLAN_RECEIPT_FIELDS)
+_PLAN_TOKEN_FIELDS = ("prompt_tokens", "completion_tokens", "total_tokens")
+
+
+def _validated_plan_inference_receipt(value: Any) -> dict[str, Any] | None:
+    """Accept only the bounded receipt emitted by the existing Agent Gateway."""
+    if type(value) is not dict or set(value) != _PLAN_RECEIPT_KEYS:
+        return None
+    if (value.get("provider") != "owned" or value.get("status") != "COMPLETED"
+            or value.get("operation") != "agent_plan"):
+        return None
+    for key in ("request_id", "run_id", "model_id", "model_revision", "recipe"):
+        item = value.get(key)
+        if type(item) is not str or not item.strip() or len(item) > 512:
+            return None
+    for key in ("request_digest", "source_use_policy_sha256", "source_binding_sha256",
+                "input_revision_sha256"):
+        item = value.get(key)
+        if type(item) is not str or not re.fullmatch(r"[0-9a-f]{64}", item):
+            return None
+    refs = value.get("source_evidence_refs")
+    if (type(refs) is not list or not refs or len(refs) > 128
+            or any(type(item) is not str or not item.strip() or len(item) > 512 for item in refs)):
+        return None
+    tokens = [value.get(key) for key in _PLAN_TOKEN_FIELDS]
+    if (any(type(item) is not int or item < 0 for item in tokens)
+            or value["completion_tokens"] < 1
+            or value["total_tokens"] != value["prompt_tokens"] + value["completion_tokens"]):
+        return None
+    return {key: value[key] for key in _PLAN_RECEIPT_FIELDS}
+
+
+def _sanitize_plan_snapshot(value: Any):
+    """Sanitize a plan and bind persisted token metrics to an exact Gateway receipt."""
+    if type(value) is not dict:
+        return _sanitize_checkpoint_value(value)
+    raw = dict(value)
+    receipt_raw = raw.pop("inference_receipt", None)
+    usage_raw = raw.pop("token_usage", None)
+    cleaned, sensitive = _sanitize_checkpoint_value(raw)
+    if type(cleaned) is not dict:
+        return {}, True
+
+    receipt_claimed = receipt_raw not in (None, {})
+    usage_claimed = usage_raw not in (None, {})
+    receipt = _validated_plan_inference_receipt(receipt_raw)
+    if receipt is not None:
+        expected_usage = {key: receipt[key] for key in _PLAN_TOKEN_FIELDS}
+        if usage_claimed and usage_raw != expected_usage:
+            sensitive = True
+        cleaned["inference_receipt"] = receipt
+        cleaned["token_usage"] = expected_usage
+    else:
+        if receipt_claimed or usage_claimed:
+            sensitive = True
+        if receipt_claimed:
+            cleaned.pop("inference_receipt", None)
+        cleaned["token_usage"] = {}
+    return cleaned, sensitive
+
+
 @dataclass
 class Checkpoint:
     """检查点数据。"""
@@ -316,7 +383,7 @@ class DurableExecutionAdapter:
         """
         if self._operational_admission is not None and task_id != self._operational_admission.task_id:
             raise PermissionError("TASK_OPERATIONAL_TASK_MISMATCH")
-        safe_plan, plan_sensitive = _sanitize_checkpoint_value(plan_snapshot or {})
+        safe_plan, plan_sensitive = _sanitize_plan_snapshot(plan_snapshot or {})
         context = {key: value for key, value in (context or {}).items()
                    if key in _CHECKPOINT_CONTEXT_KEYS}
         safe_context, context_sensitive = _sanitize_checkpoint_value(context)

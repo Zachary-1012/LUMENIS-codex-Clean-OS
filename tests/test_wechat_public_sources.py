@@ -136,3 +136,112 @@ def test_supported_original_url_still_reaches_original_body():
     result=WechatPublicAdapter(fetcher=fetch).detail(url)
     assert calls == [url] and result.status is CollectionStatus.SUCCESS
     assert result.items[0]['content'] == '原生完整正文'
+
+
+def test_public_article_preserves_native_media_hints_without_fetching_media():
+    from lumenis.system.collector.adapters.platform_naming import map_raw_to_normalized
+
+    html = (
+        '<div id="js_content">实际正文'
+        '<mpvideo data-vid="wx-video-1" data-src="https://media.example.test/one.mp4" '
+        'data-title="原生视频标题"></mpvideo>'
+        '<mpvoice voice_encode_fileid="wx-audio-1"></mpvoice>'
+        '<video poster="https://media.example.test/cover.jpg">'
+        '<source src="/two.mp4" type="video/mp4">'
+        '<source data-src="/lazy.mp4" type="video/webm">'
+        '</video>'
+        '<iframe src="https://mp.weixin.qq.com/embed/video"></iframe>'
+        '<iframe data-mpvid="wx-video-2" src="https://mp.weixin.qq.com/embed/native-video"></iframe>'
+        '<mp-common-videosnap data-id="finder-1" '
+        'data-url="https://media.example.test/thumbnail.jpg"></mp-common-videosnap>'
+        '<img data-src="https://media.example.test/article-image.jpg" alt="文章图片">'
+        '</div>'
+    )
+    article_url = 'https://mp.weixin.qq.com/s/native-share-path'
+    fetch_calls = []
+
+    def fetch(url):
+        fetch_calls.append(url)
+        return response(html, article_url)
+
+    result = WechatPublicAdapter(fetcher=fetch).detail(article_url)
+    assert result.status is CollectionStatus.SUCCESS
+    assert fetch_calls == [article_url]
+    item = result.items[0]
+
+    assert item is not None
+    hints = item['raw']['media_hints']
+    assert [hint['native_tag'] for hint in hints] == [
+        'mpvideo', 'mpvoice', 'video', 'source', 'source',
+        'iframe', 'iframe', 'mp-common-videosnap',
+    ]
+    assert hints[0]['media_id'] == 'wx-video-1'
+    assert hints[0]['url'] == 'https://media.example.test/one.mp4'
+    assert hints[0]['native_attributes']['data-title'] == '原生视频标题'
+    assert hints[1]['media_type'] == 'audio' and hints[1]['url'] is None
+    assert hints[2]['cover_url'] == 'https://media.example.test/cover.jpg'
+    assert hints[3]['url'] == 'https://mp.weixin.qq.com/two.mp4'
+    assert hints[3]['native_locator']['source_element_index'] == 0
+    assert hints[4]['url'] == 'https://mp.weixin.qq.com/lazy.mp4'
+    assert hints[5]['url_role'] == 'EMBED_PAGE' and hints[5]['media_type'] == 'embed'
+    assert hints[6]['media_id'] == 'wx-video-2' and hints[6]['media_type'] == 'video'
+    assert hints[7]['observed_data_url_role'] == 'UNKNOWN'
+    assert item['raw']['images'] == [{
+        'url': 'https://media.example.test/article-image.jpg',
+        'alt': '文章图片',
+    }]
+
+    normalized = map_raw_to_normalized(item['raw'], 'wechat')
+    assert normalized['raw_data']['media_hints'] == hints
+    assert normalized['media_list'][0] == item['raw']['images'][0]
+    assert len(normalized['media_list']) == len(item['raw']['images']) + len(hints)
+    assert [observation['native_tag'] for observation in normalized['media_list'][1:]] == [
+        hint['native_tag'] for hint in hints
+    ]
+    for projected, hint in zip(normalized['media_list'][1:], hints):
+        expected = dict(hint)
+        url = expected.get('url')
+        if not isinstance(url, str) or not url.strip():
+            url = expected.get('display_uri')
+        expected['url'] = url if isinstance(url, str) and url.strip() else None
+        assert projected == expected
+
+    repeated_observation = dict(item['raw'], media_hints=[*hints, item['raw']['images'][0]])
+    deduplicated = map_raw_to_normalized(repeated_observation, 'wechat')
+    assert deduplicated['media_list'] == normalized['media_list']
+    assert deduplicated['raw_data'] is repeated_observation
+
+
+@pytest.mark.parametrize('src', [
+    'javascript:alert(1)',
+    'data:video/mp4;base64,AAAA',
+    'blob:https://mp.weixin.qq.com/id',
+    'https://user:password@media.example.test/one.mp4',
+    'https://media.example.test/one.mp4?auth_key=private',
+    'https://media.example.test/one.mp4?access_token=private',
+    'https://[malformed/one.mp4',
+])
+def test_media_hint_rejects_executable_or_credential_urls(src):
+    item = parse_public_article(response(
+        f'<div id="js_content">正文<mpvideo data-vid="public-video-id" data-src="{src}"></mpvideo></div>'
+    ))
+
+    assert item is not None
+    hint = item['raw']['media_hints'][0]
+    assert hint['media_id'] == 'public-video-id' and hint['url'] is None
+    assert src not in str(hint)
+
+
+def test_media_hints_ignore_fallback_markup_and_strip_fragments():
+    item = parse_public_article(response(
+        '<div id="js_content">正文'
+        '<form><video src="https://media.example.test/form.mp4"></video></form>'
+        '<noscript><audio src="https://media.example.test/fallback.mp3"></audio></noscript>'
+        '<audio src="https://media.example.test/actual.mp3#private-fragment"></audio>'
+        '</div>'
+    ))
+
+    assert item is not None
+    hints = item['raw']['media_hints']
+    assert len(hints) == 1
+    assert hints[0]['url'] == 'https://media.example.test/actual.mp3'

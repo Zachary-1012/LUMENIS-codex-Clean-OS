@@ -18,13 +18,18 @@ Track3 修复（2026-09-06）：
 - 新增 RISK_LEVELS / SENTIMENT_LABELS 统一枚举。
 - 新增 aggregate_risk()：聚合时保留 unknown，不把未知当负面。
 """
-from subject_rules import subject_sql_and_values, SUBJECT_WORDS, SUBJECT_EXCLUDE_WORDS
-from lumenis.shared.reporting import daily as daily_report
 import logging
+
+import subject_rules
+from lumenis.shared.reporting import daily as daily_report
+from subject_rules import subject_sql_and_values
 
 # ============================================================
 # Track3：统一状态枚举（禁止 critical=high、unknown=negative）
 # ============================================================
+SUBJECT_WORDS = subject_rules.SUBJECT_WORDS
+SUBJECT_EXCLUDE_WORDS = subject_rules.SUBJECT_EXCLUDE_WORDS
+
 RISK_LEVELS = ("low", "medium", "high", "critical", "unknown")
 SENTIMENT_LABELS = ("positive", "neutral", "negative", "unknown")
 
@@ -305,8 +310,8 @@ def build_daily_report(date_str=None, *, scope=None):
 # Shared Risk Engine 执行计算，但根据 domain_id 选择对应 Policy。
 # 硬约束：不得混成一套阈值；unknown 保持 unknown；critical 独立于 high；0/0 安全。
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional as _Optional, Any as _Any
+from dataclasses import dataclass
+from typing import Any as _Any
 
 
 @dataclass(frozen=True)
@@ -316,13 +321,13 @@ class DomainRiskPolicy:
     product_id: str
     policy_version: str
     # 风险等级阈值（risk_score 区间）
-    risk_thresholds: Dict[str, float]  # {"low": max, "medium": max, "high": max, "critical": max}
+    risk_thresholds: dict[str, float]  # {"low": max, "medium": max, "high": max, "critical": max}
     # 关键词权重
-    keyword_weights: Dict[str, float]
+    keyword_weights: dict[str, float]
     # 升级规则：满足条件时自动升级
-    escalation_rules: List[Dict[str, _Any]]
+    escalation_rules: list[dict[str, _Any]]
     # 风险维度
-    risk_dimensions: List[str]
+    risk_dimensions: list[str]
     # 描述
     description: str
 
@@ -400,13 +405,13 @@ ZBMP_RISK_POLICY = DomainRiskPolicy(
     description="ZBMP 多主体平台域风险策略：侧重品牌声誉、竞品冲击、传播异常、用户负反馈和品牌危机",
 )
 
-DOMAIN_RISK_POLICIES: Dict[str, DomainRiskPolicy] = {
+DOMAIN_RISK_POLICIES: dict[str, DomainRiskPolicy] = {
     "cth": CTH_RISK_POLICY,
     "zbmp": ZBMP_RISK_POLICY,
 }
 
 
-def get_risk_policy(domain_id: _Optional[str] = None) -> DomainRiskPolicy:
+def get_risk_policy(domain_id: str | None = None) -> DomainRiskPolicy:
     """Resolve a selected business domain; unknown or system domains fail closed."""
     if domain_id is None:
         from ai_domain_context import get_current_domain
@@ -427,9 +432,10 @@ def compute_domain_risk_score(
     sentiment: str = "unknown",
     engagement: int | None = None,
     negative_count: int | None = None,
-    domain_id: _Optional[str] = None,
-    extra_keywords: _Optional[List[str]] = None,
-) -> Dict[str, _Any]:
+    domain_id: str | None = None,
+    extra_keywords: list[str] | None = None,
+    koc_count: int | None = None,
+) -> dict[str, _Any]:
     """使用域专属策略计算风险分数和等级。
 
     Shared Risk Engine 执行计算，但根据 domain_id 选择对应 Policy 的阈值和规则。
@@ -444,13 +450,21 @@ def compute_domain_risk_score(
         }
     """
     policy = get_risk_policy(domain_id)
-
+    if koc_count is not None and (type(koc_count) is not int or koc_count < 0):
+        raise ValueError("KOC_COUNT_INVALID")
+    unavailable_rules = []
+    for rule in policy.escalation_rules:
+        if rule["condition"] == "koc_count >= 3" and koc_count is None:
+            unavailable_rules.append({**rule, "unavailable_reason": "KOC_COUNT_NOT_PROVIDED"})
+        elif rule["condition"] == "competitor_mention_spike > 2x":
+            unavailable_rules.append({**rule, "unavailable_reason": "COMPARABLE_BASELINE_NOT_BOUND"})
     text_value = text.strip() if isinstance(text, str) else ""
     sentiment_value = sentiment.strip().lower() if isinstance(sentiment, str) else "unknown"
     sentiment_available = sentiment_value in {"positive", "neutral", "negative"}
     engagement_value = engagement if type(engagement) is int and engagement >= 0 else None
     negative_count_value = negative_count if type(negative_count) is int and negative_count >= 0 else None
-    data_available = bool(text_value) or sentiment_available or engagement_value is not None or negative_count_value is not None
+    data_available = (bool(text_value) or sentiment_available or engagement_value is not None
+                      or negative_count_value is not None or koc_count is not None)
     if not data_available:
         return {
             "domain_id": policy.domain_id,
@@ -461,6 +475,8 @@ def compute_domain_risk_score(
             "risk_dimensions": policy.risk_dimensions,
             "matched_keywords": [],
             "escalation_triggered": [],
+            "escalation_unavailable": unavailable_rules,
+            "calculation_version": "domain-risk/2.2",
             "data_available": False,
             "thresholds_used": dict(policy.risk_thresholds),
             "note": "No data available; risk score is unknown",
@@ -512,22 +528,8 @@ def compute_domain_risk_score(
     for rule in policy.escalation_rules:
         cond = rule["condition"]
         triggered = False
-        if cond == "negative_count >= 5" and negative_count_value is not None and negative_count_value >= 5:
+        if cond == "negative_count >= 5" and negative_count_value is not None and negative_count_value >= 5 or cond == "negative_count >= 10" and negative_count_value is not None and negative_count_value >= 10 or cond == "engagement > 10000" and engagement_value is not None and engagement_value > 10000 or cond == "engagement > 50000" and engagement_value is not None and engagement_value > 50000 or cond == "contains_discrimination" and contains_discrimination or cond == "contains_safety_issue" and contains_safety or cond == "contains_brand_crisis" and contains_brand_crisis or cond == "contains_financial_fraud" and "财务造假" in text_lower or cond == "koc_count >= 3" and koc_count is not None and koc_count >= 3:
             triggered = True
-        elif cond == "negative_count >= 10" and negative_count_value is not None and negative_count_value >= 10:
-            triggered = True
-        elif cond == "engagement > 10000" and engagement_value is not None and engagement_value > 10000:
-            triggered = True
-        elif cond == "engagement > 50000" and engagement_value is not None and engagement_value > 50000:
-            triggered = True
-        elif cond == "contains_discrimination" and contains_discrimination:
-            triggered = True
-        elif cond == "contains_safety_issue" and contains_safety:
-            triggered = True
-        elif cond == "contains_brand_crisis" and contains_brand_crisis:
-            triggered = True
-        elif cond == "koc_count >= 3" and negative_count_value is not None and negative_count_value >= 3:
-            triggered = True  # 简化：用 negative_count 近似 KOC 数量
 
         if triggered:
             escalation_triggered.append(rule)
@@ -561,6 +563,8 @@ def compute_domain_risk_score(
         "risk_dimensions": policy.risk_dimensions,
         "matched_keywords": matched_keywords,
         "escalation_triggered": escalation_triggered,
+        "escalation_unavailable": unavailable_rules,
+        "calculation_version": "domain-risk/2.2",
         "data_available": True,
         "thresholds_used": dict(thresholds),
         "note": "Dual-domain policy applied; critical independent from high; unknown preserved; 0/0 safe",
@@ -572,13 +576,14 @@ def compare_domain_risk(
     sentiment: str = "unknown",
     engagement: int | None = None,
     negative_count: int | None = None,
-) -> Dict[str, _Any]:
+    koc_count: int | None = None,
+) -> dict[str, _Any]:
     """同一条数据在 CTH 和 ZBMP 两域的风险对比。
 
     用于验证双域阈值独立性：同一条数据在两域可能风险等级不同。
     """
-    cth_result = compute_domain_risk_score(text, sentiment, engagement, negative_count, domain_id="cth")
-    zbmp_result = compute_domain_risk_score(text, sentiment, engagement, negative_count, domain_id="zbmp")
+    cth_result = compute_domain_risk_score(text, sentiment, engagement, negative_count, domain_id="cth", koc_count=koc_count)
+    zbmp_result = compute_domain_risk_score(text, sentiment, engagement, negative_count, domain_id="zbmp", koc_count=koc_count)
     return {
         "cth": cth_result,
         "zbmp": zbmp_result,
@@ -597,7 +602,7 @@ def compare_domain_risk(
     }
 
 
-def get_risk_policy_summary() -> Dict[str, _Any]:
+def get_risk_policy_summary() -> dict[str, _Any]:
     """获取双域风险策略总览（用于审计）。"""
     return {
         "cth": {
@@ -896,9 +901,7 @@ def special_report_trigger_decision(event: dict) -> dict:
 
     negative_engagement = None
     negative_engagement_problem = None
-    if sentiment_known and sentiment != canonical_metrics.SENTIMENT_NEGATIVE:
-        negative_engagement = False
-    elif engagement is not None and engagement < SPECIAL_REPORT_TRIGGER_THRESHOLD:
+    if sentiment_known and sentiment != canonical_metrics.SENTIMENT_NEGATIVE or engagement is not None and engagement < SPECIAL_REPORT_TRIGGER_THRESHOLD:
         negative_engagement = False
     elif sentiment_known and sentiment == canonical_metrics.SENTIMENT_NEGATIVE and engagement is not None:
         negative_engagement = True

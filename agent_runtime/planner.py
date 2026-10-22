@@ -26,7 +26,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
@@ -85,6 +85,8 @@ class Plan:
     outcome_contract_sha256: Optional[str] = None
     # Populated only from independently read canonical committed output receipts.
     outcome_receipt_bindings: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    # Narrow receipt from the existing typed SYSTEM Gateway; not model authority.
+    inference_receipt: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         d = asdict(self)
@@ -157,6 +159,7 @@ class Planner:
         self._default_mode = default_mode
         self._gateway_request_factory = gateway_request_factory
         self._gateway_context = {}
+        self._last_inference_receipt = {}
 
     def _get_ai_chat(self) -> Callable:
         """获取 AI 调用函数。"""
@@ -170,9 +173,15 @@ class Planner:
                 raise RuntimeError("PLANNER_AUTHORIZED_REQUEST_REQUIRED")
             request = self._gateway_request_factory(system, user, dict(self._gateway_context))
             from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
-            if type(request) is not OwnedServiceRequest:
+            if type(request) is not OwnedServiceRequest or request.operation != "agent_plan":
                 raise RuntimeError("PLANNER_TYPED_REQUEST_REQUIRED")
-            from lumenis.system.ai_gateway.owned_service import measure_owned_request, owned_service_status
+            request = replace(request, response_schema_json=json.dumps(
+                self._response_schema(self._gateway_max_steps),
+                ensure_ascii=False, sort_keys=True, allow_nan=False))
+            from lumenis.system.ai_gateway.owned_service import (
+                measure_owned_request,
+                owned_service_status,
+            )
             measured = measure_owned_request(request)
             omitted = []
             reduced = dict(self._gateway_context)
@@ -191,8 +200,11 @@ class Planner:
                 reduced["context_omissions"] = list(omitted)
                 user = self._build_user_prompt(self._gateway_goal, reduced, self._gateway_max_steps)
                 request = self._gateway_request_factory(system, user, dict(self._gateway_context))
-                if type(request) is not OwnedServiceRequest:
+                if type(request) is not OwnedServiceRequest or request.operation != "agent_plan":
                     raise RuntimeError("PLANNER_TYPED_REQUEST_REQUIRED")
+                request = replace(request, response_schema_json=json.dumps(
+                    self._response_schema(self._gateway_max_steps),
+                    ensure_ascii=False, sort_keys=True, allow_nan=False))
                 measured = measure_owned_request(request)
             if measured.get("ok") is not True:
                 raise RuntimeError(measured.get("code", "PLANNER_TOKEN_COUNT_UNAVAILABLE"))
@@ -205,15 +217,56 @@ class Planner:
             # Gateway and runtime revalidate binding, source and exact tokenizer
             # budget again before generation; this receipt is never an authority.
             result = core.run_owned_request(request, expected_binding_sha256=measured["binding_sha256"])
-            if not isinstance(result, dict) or result.get("ok") is not True:
-                raise RuntimeError((result or {}).get("code", "PLANNER_GATEWAY_UNAVAILABLE"))
+            if type(result) is not dict or result.get("ok") is not True or result.get("status") != "COMPLETED":
+                code = result.get("code") if type(result) is dict else None
+                if type(code) is not str or not re.fullmatch(r"[A-Z0-9_]{1,96}", code):
+                    code = "PLANNER_GATEWAY_UNAVAILABLE"
+                raise RuntimeError(code)
+            receipt = self._validated_inference_receipt(result)
+            if receipt is None:
+                raise RuntimeError("PLANNER_GATEWAY_RECEIPT_INVALID")
             content = result.get("analysis")
             if isinstance(content, dict):
                 content = json.dumps(content, ensure_ascii=False, allow_nan=False)
             if not isinstance(content, str) or not content.strip():
                 raise RuntimeError("PLANNER_GATEWAY_RESULT_INVALID")
-            return content, result.get("provider", "owned")
+            self._last_inference_receipt = receipt
+            return content, "owned"
         return gateway_chat
+
+    @staticmethod
+    def _validated_inference_receipt(result: Any) -> dict[str, Any] | None:
+        """Keep only the existing Gateway's verifiable, non-secret run receipt."""
+        if type(result) is not dict:
+            return None
+        fields = (
+            "provider", "status", "operation", "request_id", "request_digest", "run_id",
+            "model_id", "model_revision", "recipe", "source_use_policy_sha256",
+            "source_binding_sha256", "input_revision_sha256", "source_evidence_refs",
+            "prompt_tokens", "completion_tokens", "total_tokens",
+        )
+        receipt = {key: result.get(key) for key in fields}
+        hashes = ("request_digest", "source_use_policy_sha256", "source_binding_sha256",
+                  "input_revision_sha256")
+        if (receipt["provider"] != "owned" or receipt["status"] != "COMPLETED"
+                or receipt["operation"] != "agent_plan"
+                or result.get("ok") is not True or result.get("real_input_bound") is not True
+                or any(type(receipt[key]) is not str or not receipt[key].strip()
+                       or len(receipt[key]) > 512 for key in (
+                           "request_id", "run_id", "model_id", "model_revision", "recipe"))
+                or any(type(receipt[key]) is not str or not re.fullmatch(r"[0-9a-f]{64}", receipt[key])
+                       for key in hashes)
+                or type(receipt["source_evidence_refs"]) is not list
+                or not receipt["source_evidence_refs"]
+                or len(receipt["source_evidence_refs"]) > 128
+                or any(type(item) is not str or not item.strip() or len(item) > 512
+                       for item in receipt["source_evidence_refs"])
+                or any(type(receipt[key]) is not int or receipt[key] < 0
+                       for key in ("prompt_tokens", "completion_tokens", "total_tokens"))
+                or receipt["completion_tokens"] < 1
+                or receipt["total_tokens"] != receipt["prompt_tokens"] + receipt["completion_tokens"]):
+            return None
+        return receipt
 
     def _select_model(self, mode: PlanMode) -> str:
         # The unique Gateway owns actual user/provider/model selection. These
@@ -241,9 +294,13 @@ class Planner:
         mode = mode or self._default_mode
         model = self._select_model(mode)
         plan = Plan(goal=goal, mode=mode.value, model=model)
+        self._last_inference_receipt = {}
 
         if mode == PlanMode.RULE_BASED:
-            return self._rule_based_plan(goal, plan)
+            return self._persist_plan(self._rule_based_plan(goal, plan))
+
+        if type(max_steps) is not int or not 1 <= max_steps <= 15:
+            return self._fallback_plan(goal, plan, "PLANNER_MAX_STEPS_INVALID")
 
         try:
             self._gateway_context = dict(context or {})
@@ -262,7 +319,12 @@ class Planner:
 
             plan.context_budget = self._last_context_budget
             plan.raw_response = content or ""
-            plan.token_usage = self._extract_token_usage()
+            plan.inference_receipt = dict(self._last_inference_receipt)
+            plan.token_usage = {key: plan.inference_receipt[key] for key in (
+                "prompt_tokens", "completion_tokens", "total_tokens")
+                if key in plan.inference_receipt}
+            if plan.inference_receipt:
+                plan.model = plan.inference_receipt["model_id"]
 
             if not content:
                 return self._fallback_plan(goal, plan, "AI returned empty response")
@@ -275,16 +337,47 @@ class Planner:
             plan.is_fallback = False
 
         except Exception as e:
-            return self._fallback_plan(goal, plan, f"AI planning failed: {str(e)[:200]}")
+            code = getattr(e, "code", None) or str(e)
+            reason = code if type(code) is str and re.fullmatch(r"[A-Z0-9_]{1,96}", code) else (
+                f"AI planning failed: {type(e).__name__}")
+            plan.inference_receipt = dict(self._last_inference_receipt)
+            if plan.inference_receipt:
+                plan.token_usage = {key: plan.inference_receipt[key] for key in (
+                    "prompt_tokens", "completion_tokens", "total_tokens")}
+                plan.model = plan.inference_receipt["model_id"]
+            return self._fallback_plan(goal, plan, reason)
 
-        # 持久化
-        if self._persist_func:
+        return self._persist_plan(plan)
+
+    def _persist_plan(self, plan: Plan) -> Plan:
+        if self._persist_func is not None:
             try:
                 self._persist_func(plan)
             except Exception:
-                pass
-
+                plan.steps = []
+                plan.is_fallback = True
+                plan.fallback_reason = "PLANNING_PERSISTENCE_FAILED"
         return plan
+
+    @staticmethod
+    def _response_schema(max_steps: int) -> dict[str, Any]:
+        return {
+            "type": "object", "required": ["steps"], "additionalProperties": False,
+            "properties": {"steps": {
+                "type": "array", "minItems": 1, "maxItems": max_steps,
+                "items": {
+                    "type": "object", "additionalProperties": False,
+                    "required": ["action", "tool", "params", "expected_output", "risk_level"],
+                    "properties": {
+                        "action": {"type": "string", "minLength": 1},
+                        "tool": {"type": "string", "minLength": 1},
+                        "params": {"type": "object"},
+                        "expected_output": {"type": "string", "minLength": 1},
+                        "risk_level": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+                    },
+                },
+            }},
+        }
 
     def _build_user_prompt(
         self,
@@ -310,37 +403,46 @@ class Planner:
         if not json_str:
             return []
 
+        from lumenis.system.ai_gateway.owned_service import (
+            OwnedServiceBlocked,
+            _strict_json,
+        )
         try:
-            data = json.loads(json_str)
-        except json.JSONDecodeError:
+            data = _strict_json(json_str)
+            json.dumps(data, ensure_ascii=False, allow_nan=False)
+        except (OwnedServiceBlocked, ValueError, TypeError):
             return []
-
-        raw_steps = data.get("steps", [])
-        if not isinstance(raw_steps, list):
+        if type(data) is not dict or set(data) != {"steps"}:
             return []
-
+        raw_steps = data["steps"]
+        if type(raw_steps) is not list or not 1 <= len(raw_steps) <= max_steps:
+            return []
         steps = []
-        for i, raw in enumerate(raw_steps[:max_steps]):
-            if not isinstance(raw, dict):
-                continue
+        for i, raw in enumerate(raw_steps):
+            if (type(raw) is not dict
+                    or set(raw) != {"action", "tool", "params", "expected_output", "risk_level"}
+                    or any(type(raw[key]) is not str or not raw[key].strip()
+                           for key in ("action", "tool", "expected_output"))
+                    or type(raw["params"]) is not dict
+                    or type(raw["risk_level"]) is not str
+                    or raw["risk_level"] not in {"low", "medium", "high", "critical"}):
+                return []
             step = PlanStep(
                 index=i,
-                action=str(raw.get("action", "")).strip(),
-                tool=str(raw.get("tool", "")).strip(),
-                params=raw.get("params", {}) if isinstance(raw.get("params"), dict) else {},
-                expected_output=str(raw.get("expected_output", "")).strip(),
-                risk_level=str(raw.get("risk_level", "low")).lower(),
+                action=raw["action"],
+                tool=raw["tool"],
+                params=raw["params"],
+                expected_output=raw["expected_output"],
+                risk_level=raw["risk_level"],
             )
-            if step.risk_level not in ("low", "medium", "high", "critical"):
-                step.risk_level = "low"
-            if step.action:  # 至少要有 action
-                steps.append(step)
-
+            steps.append(step)
         return steps
 
     @staticmethod
     def _extract_json(text: str) -> Optional[str]:
         """从文本中提取 JSON 字符串。"""
+        if type(text) is not str:
+            return None
         # 尝试直接解析
         try:
             json.loads(text)
@@ -348,36 +450,43 @@ class Planner:
         except json.JSONDecodeError:
             pass
 
-        # 尝试提取第一个 {...} 块
-        match = re.search(r'\{[\s\S]*\}', text)
-        if match:
-            candidate = match.group(0)
-            try:
-                json.loads(candidate)
-                return candidate
-            except json.JSONDecodeError:
-                pass
-
-        # 尝试提取 ```json ... ``` 块
-        match = re.search(r'```json\s*([\s\S]*?)\s*```', text)
-        if match:
-            candidate = match.group(1).strip()
-            try:
-                json.loads(candidate)
-                return candidate
-            except json.JSONDecodeError:
-                pass
-
-        return None
+        # One balanced top-level object only: never recover a nested fragment
+        # from malformed output or guess between multiple model responses.
+        candidates = []
+        start, depth, quoted, escaped = None, 0, False, False
+        for index, character in enumerate(text):
+            if depth and quoted:
+                if escaped:
+                    escaped = False
+                elif character == "\\":
+                    escaped = True
+                elif character == '"':
+                    quoted = False
+                continue
+            if depth and character == '"':
+                quoted = True
+            elif character == "{":
+                if depth == 0:
+                    start = index
+                depth += 1
+            elif character == "}" and depth:
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start:index + 1]
+                    try:
+                        json.loads(candidate)
+                        candidates.append(candidate)
+                    except json.JSONDecodeError:
+                        pass
+        return candidates[0] if len(candidates) == 1 and depth == 0 else None
 
     def _fallback_plan(self, goal: str, plan: Plan, reason: str) -> Plan:
-        """降级规划：单步直接执行。"""
+        """规划不可用；保留完整目标，不合成可执行动作。"""
         plan.is_fallback = True
         plan.fallback_reason = reason
         plan.context_budget = getattr(self, "_last_context_budget", None)
-        # A missing/invalid model response is not a generic executable action.
         plan.steps = []
-        return plan
+        return self._persist_plan(plan)
 
     def _rule_based_plan(self, goal: str, plan: Plan) -> Plan:
         """规则规划（不调用 AI）。"""

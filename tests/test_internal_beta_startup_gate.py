@@ -360,3 +360,68 @@ def test_stopped_scheduler_does_not_start_another_tick(monkeypatch):
     ))
     monkeypatch.setattr(app, 'datetime', SimpleNamespace(now=forbidden))
     app.scheduler_loop()
+
+
+def _guard_manual_core_startup_effects(monkeypatch):
+    effects = []
+    blocked_modules = {
+        'cdp_helper', 'auto_recovery', 'system_guardian', 'runtime_guardian',
+    }
+
+    def guarded_import(name, *args, **kwargs):
+        if name in blocked_modules or name.startswith('lumenis.shared.learning'):
+            effects.append(f'import:{name}')
+            raise AssertionError(f'manual Core must not start optional service: {name}')
+        return _original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, '__import__', guarded_import)
+    monkeypatch.setattr(
+        app.threading, 'Thread',
+        lambda *_args, **_kwargs: effects.append('thread') or SimpleNamespace(
+            start=lambda: effects.append('thread.start')),
+    )
+    return effects
+
+
+def test_manual_core_runs_preflight_and_skips_platform_and_automated_services(monkeypatch):
+    monkeypatch.setattr(app, 'INTERNAL_BETA_SAFE_STARTUP', False)
+    monkeypatch.setenv('ZBC_GUARDIAN_ENABLED', '1')
+    effects = _guard_manual_core_startup_effects(monkeypatch)
+    calls = []
+    report = {'overall': 'pass'}
+    monkeypatch.setattr(
+        app.runtime_preflight, 'run_preflight',
+        lambda: calls.append('preflight') or report,
+    )
+    monkeypatch.setattr(
+        app.runtime_preflight, 'format_summary',
+        lambda value: calls.append(('summary', value)) or 'summary',
+    )
+
+    assert app._start_optional_runtime_services(False, no_scheduler=True) is False
+    assert calls == ['preflight', ('summary', report)]
+    assert effects == []
+
+
+def test_manual_core_propagates_preflight_failure_without_optional_services(monkeypatch):
+    monkeypatch.setattr(app, 'INTERNAL_BETA_SAFE_STARTUP', False)
+    monkeypatch.setenv('ZBC_GUARDIAN_ENABLED', '1')
+    effects = _guard_manual_core_startup_effects(monkeypatch)
+    calls = []
+
+    def fail_enforced_preflight():
+        calls.append('preflight')
+        raise SystemExit(3)
+
+    monkeypatch.setattr(app.runtime_preflight, 'run_preflight', fail_enforced_preflight)
+    monkeypatch.setattr(
+        app.runtime_preflight, 'format_summary',
+        lambda _value: calls.append('summary') or 'summary',
+    )
+
+    with pytest.raises(SystemExit) as error:
+        app._start_optional_runtime_services(False, no_scheduler=True)
+
+    assert error.value.code == 3
+    assert calls == ['preflight']
+    assert effects == []

@@ -1013,12 +1013,12 @@ def _verified_content_source(
         declaration = validate_media_license(metadata["media_license"], asset_sha256=metadata["asset"]["sha256"])
         if declaration is None or _media_license_digest(declaration) != metadata["media_license_sha256"]:
             raise LocalArtifactError("CONTENT_MEDIA_LICENSE_INTEGRITY_FAILED")
-        digest = hashlib.sha256()
-        with zipfile.ZipFile(candidate, "r") as archive, archive.open(media_filename) as media:
-            for chunk in iter(lambda: media.read(1024 * 1024), b""):
-                digest.update(chunk)
-        if digest.hexdigest() != metadata["asset"]["sha256"]:
-            raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    digest = hashlib.sha256()
+    with zipfile.ZipFile(candidate, "r") as archive, archive.open(media_filename) as media:
+        for chunk in iter(lambda: media.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if digest.hexdigest() != metadata["asset"]["sha256"]:
+        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
     if record.get("media_type") != "application/zip":
         raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
     _authorize_content_project(actor, action=action, **scope)
@@ -1705,7 +1705,7 @@ def stage_timeline_artifact(
     render_result: Optional[Mapping[str, Any]] = None
     package_created = False
     try:
-        with tempfile.TemporaryDirectory(prefix="content-project-",dir=root) as work_dir:
+        with tempfile.TemporaryDirectory(prefix="content-project-") as work_dir:
             rendered_path = Path(work_dir) / media_name
             from lumenis.shared.content_creation.rendering import render_timeline, subtitle_documents
 

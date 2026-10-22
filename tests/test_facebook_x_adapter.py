@@ -353,6 +353,62 @@ def test_main_facebook_adapter_constructs_search_and_detail_results():
     assert search.items[0]["likes"] is None
 
 
+def test_main_facebook_adapter_never_promotes_unverified_detail_preview_to_native_body():
+    from types import SimpleNamespace
+
+    from lumenis.system.collector.adapters.facebook import FacebookAdapter
+
+    url = "https://www.facebook.com/page/posts/123456789"
+
+    def note(body, raw_fields):
+        return SimpleNamespace(
+            raw_data={"post_id": "123456789", **raw_fields},
+            title="Post", content=body, author_id="page-1", author="Brand",
+            publish_date="", url=url, likes=None, comments=None, collects=None, shares=None,
+        )
+
+    class Backend:
+        detail_note = None
+
+        def search(self, _keyword, *, max_results):
+            return SimpleNamespace(
+                success=True,
+                notes=[note("Search preview", {"body_kind": "SEARCH_PREVIEW",
+                                                "body_status": "SEARCH_PREVIEW_ONLY"})],
+                raw_count=1, error="",
+            )
+
+        def detail(self, _content_id):
+            return SimpleNamespace(success=True, notes=[self.detail_note], raw_count=1, error="")
+
+    backend = Backend()
+    adapter = FacebookAdapter(backend=backend)
+    backend.detail_note = note("Search preview returned by detail", {
+        "body_kind": "SEARCH_PREVIEW", "body_status": "SEARCH_PREVIEW_ONLY",
+        "detail_post_id_status": "OBSERVED_AND_MATCHED",
+    })
+    unverified = adapter.search("brand")
+    detail = unverified.items[0]["raw"]["detail_observation"]
+    assert detail["status"] == "DETAIL_NOT_RETURNED"
+    assert detail["observed_body_kind"] == "SEARCH_PREVIEW"
+    assert detail["body"] is None
+    assert detail["preview_text"] == "Search preview returned by detail"
+    assert unverified.items[0]["content"] == ""
+    assert unverified.metadata["detail"]["failed"] == 1
+
+    backend.detail_note = note("Verified native body", {
+        "body_kind": "NATIVE_POST_BODY",
+        "body_status": "NATIVE_DETAIL_BODY_OBSERVED_COMPLETENESS_UNKNOWN",
+        "detail_post_id_status": "OBSERVED_AND_MATCHED",
+    })
+    verified = adapter.search("brand")
+    detail = verified.items[0]["raw"]["detail_observation"]
+    assert detail["status"] == "SUCCESS"
+    assert detail["body_kind"] == "NATIVE_POST_BODY"
+    assert detail["body"] == verified.items[0]["content"] == "Verified native body"
+    assert verified.metadata["detail"]["succeeded"] == 1
+
+
 def _facebook_detail_result(monkeypatch, article, final_url="https://www.facebook.com/page/posts/123456789"):
     from lumenis.adapters.facebook import FacebookAdapter
 
@@ -361,6 +417,7 @@ def _facebook_detail_result(monkeypatch, article, final_url="https://www.faceboo
     page.locator.return_value.inner_text.return_value = ""
     page.query_selector_all.return_value = [article]
     page.goto.return_value = None
+    article.detail_page = page
     worker = MagicMock()
     worker.new_page.return_value = page
     with patch("lumenis.adapters.human_browser.HumanBrowser", return_value=worker), \
@@ -380,6 +437,9 @@ class _FacebookTextNode:
     def get_attribute(self, name):
         return self.href if name == "href" else None
 
+    def query_selector_all(self, _selector):
+        return []
+
 
 class _FacebookDetailArticle:
     def __init__(self, body, preview, *, read_more=True, unrelated_read_more=False, post_id="123456789"):
@@ -392,15 +452,19 @@ class _FacebookDetailArticle:
         self.button = _FacebookTextNode("See more")
         self.button.click = self._expand
         self.unrelated_button = _FacebookTextNode("See more")
-        self.unrelated_button.click = lambda: None
+        self.unrelated_clicked = False
+        self.unrelated_button.click = lambda **_kwargs: setattr(self, "unrelated_clicked", True)
 
-    def _expand(self):
+    def _expand(self, **_kwargs):
         self.expanded = True
+        redirect_url = getattr(self, "redirect_url", None)
+        if redirect_url:
+            self.detail_page.url = redirect_url
 
     def query_selector_all(self, selector):
         if 'a[href*="/posts/"]' in selector:
             return [self.anchor]
-        if selector == 'div[role="button"], button':
+        if selector in {'button, [role="button"]', 'div[role="button"], button'}:
             return ([self.unrelated_button] if self.unrelated_read_more else []) + (
                 [self.button] if self.read_more else []
             )
@@ -408,8 +472,13 @@ class _FacebookDetailArticle:
 
     def query_selector(self, selector):
         if selector == '[data-ad-preview="message"], [data-ad-comet-preview="message"]':
-            return (_FacebookTextNode(self.body if self.expanded else self.preview)
-                    if self.body or self.expanded else None)
+            if not (self.body or self.expanded):
+                return None
+            node = _FacebookTextNode(self.body if self.expanded else self.preview)
+            node.query_selector_all = lambda value: (
+                [self.button] if value == 'button, [role="button"]' and self.read_more else []
+            )
+            return node
         if selector == '[data-ad-preview="message"], .x1iorvi4, .x1pi30zi':
             return _FacebookTextNode(self.body if self.expanded else self.preview)
         return None
@@ -436,6 +505,15 @@ def test_fix_098_facebook_detail_expands_and_binds_native_body_to_exact_post(mon
     assert "Truncated search preview" not in note.content
 
 
+def test_fix_098_facebook_rechecks_page_identity_after_body_expansion(monkeypatch):
+    article = _FacebookDetailArticle("Native post body", "Truncated preview")
+    article.redirect_url = "https://www.facebook.com/page/posts/999999999"
+    result = _facebook_detail_result(monkeypatch, article)
+    assert result.success is False
+    assert result.error == "IDENTITY_MISMATCH: TARGET_ARTICLE_POST_READ_ID_MISMATCH"
+    assert result.notes == []
+
+
 def test_fix_098_facebook_ignores_unrelated_expander_and_checks_message_growth(monkeypatch):
     body = "Native post paragraph. " * 30 + "Full final paragraph."
     article = _FacebookDetailArticle(
@@ -444,17 +522,20 @@ def test_fix_098_facebook_ignores_unrelated_expander_and_checks_message_growth(m
     result = _facebook_detail_result(monkeypatch, article)
     assert result.success is True
     assert article.expanded is True
+    assert article.unrelated_clicked is False
     assert result.notes[0].content == body
 
 
-def test_fix_098_facebook_rejects_unrelated_expander_without_body_growth(monkeypatch):
+def test_fix_098_facebook_does_not_click_unrelated_expander(monkeypatch):
     article = _FacebookDetailArticle(
         "Native post body stays truncated", "Truncated preview…",
         read_more=False, unrelated_read_more=True,
     )
     result = _facebook_detail_result(monkeypatch, article)
     assert result.success is False
+    assert article.unrelated_clicked is False
     assert result.error == "DETAIL_NOT_RETURNED: NATIVE_POST_BODY_NOT_OBSERVED"
+    assert result.diagnostics["body_status"] == "NATIVE_BODY_NOT_OBSERVED"
     assert result.notes == []
 
 

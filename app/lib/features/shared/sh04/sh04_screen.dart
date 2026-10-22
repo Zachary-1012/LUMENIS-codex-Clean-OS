@@ -182,7 +182,7 @@ class _Sh04ScreenState extends State<Sh04Screen> {
     final viewModel = _viewModel;
     final generation = viewModel.readGeneration;
     final formats = _exportFiles.canSaveFile
-        ? const ['md', 'txt', 'docx', 'pdf', 'xlsx']
+        ? const ['md', 'txt', 'docx', 'pdf', 'xlsx', 'pptx']
         : const ['md', 'txt'];
     final format = await showDialog<String>(
       context: context,

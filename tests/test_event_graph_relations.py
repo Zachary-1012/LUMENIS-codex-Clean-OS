@@ -35,6 +35,46 @@ def test_dictionaries_complete():
     assert set(RELATION_TYPES) == {'trigger', 'derive', 'follow', 'parallel'}
 
 
+def test_missing_event_time_stays_unknown():
+    from event_graph import BrandEvent, _parse_dt
+
+    event = BrandEvent('marketing_event', '未提供发生时间')
+    assert event.event_time is None
+    assert _parse_dt(event.event_time) is None
+
+
+def test_relation_confidence_zero_survives_database_reload(graph):
+    first = graph.create_event('marketing_event', '显式零置信度关系源',
+                               event_time='2026-08-01 09:00:00')
+    second = graph.create_event('propagation_event', '显式零置信度关系目标',
+                                event_time='2026-08-01 10:00:00')
+    relation = graph.add_relation(first.event_id, second.event_id, 'parallel',
+                                  confidence=0.0, persist=True)
+    assert relation is not None
+
+    graph.load_from_db()
+
+    loaded = next(item for item in graph.relations
+                  if item.source_event.event_id == first.event_id
+                  and item.target_event.event_id == second.event_id)
+    assert loaded.confidence == 0.0
+
+
+def test_rebuild_removes_old_automatic_edges_from_event_adjacency(graph):
+    first = _mk(graph, 'propagation_event', '品牌活动启动', '2026-08-01 09:00:00')
+    _mk(graph, 'propagation_event', '品牌活动讨论', '2026-08-01 10:00:00')
+
+    graph.infer_and_link_relations(persist=False)
+    assert len(first.relations) == 1
+    old_relation = first.relations[0]
+
+    graph.infer_and_link_relations(persist=False)
+
+    assert len(first.relations) == 1
+    assert first.relations[0] is not old_relation
+    assert graph.relations == [first.relations[0]]
+
+
 def test_derive_parallel_and_no_fabrication(graph):
     e1 = _mk(graph, 'marketing_event', '方所闭店公告', '2026-08-01 09:00:00')
     e2 = _mk(graph, 'propagation_event', '方所闭店后续讨论', '2026-08-03 09:00:00')  # 48h>并行窗

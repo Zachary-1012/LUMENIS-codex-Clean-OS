@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -6,10 +7,212 @@ import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/bmp03/bmp03_repository.dart';
 import 'package:lumenis_app/features/bmp03/bmp03_screen.dart';
 import 'package:lumenis_app/features/bmp03/bmp03_snapshot.dart';
+import 'package:lumenis_app/features/bmp03/bmp03_view_model.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import '../shared/bmp_scope_test_support.dart';
 
 void main() {
+  test(
+    'absent and malformed metrics remain unknown while explicit zero stays zero',
+    () {
+      for (final value in [null, 'unknown', -1, 101, double.nan]) {
+        final row = {..._signal('SIG-ONE', '有来源的资讯'), 'momentum': value};
+        final signal = Bmp03Snapshot.fromResponse(
+          _response(signals: [row]),
+        ).signals.single;
+        expect(signal.momentum, isNull);
+        expect(signal.confidence, 82);
+        expect(signal.summary, isNotNull);
+      }
+
+      final missingBoth = {
+        ..._signal('SIG-MISSING', '指标待补充'),
+        'confidence': null,
+        'momentum': null,
+      };
+      final missing = Bmp03Snapshot.fromResponse(
+        _response(signals: [missingBoth]),
+      ).signals.single;
+      expect(missing.confidence, isNull);
+      expect(missing.momentum, isNull);
+
+      final zero = Bmp03Snapshot.fromResponse(
+        _response(
+          signals: [_signal('SIG-ZERO', '实际为零', confidence: 0, momentum: 0)],
+        ),
+      ).signals.single;
+      expect(zero.confidence, 0);
+      expect(zero.momentum, 0);
+
+      final legacy = {..._signal('SIG-LEGACY', '旧字段'), 'momentum_score': 43}
+        ..remove('momentum');
+      expect(Bmp03Signal.fromJson(legacy)!.momentum, 43);
+      expect(
+        Bmp03Signal.fromJson({...legacy, 'momentum': null})!.momentum,
+        isNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'mobile reading restores filtered row, scroll and keyboard focus',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final rows = List.generate(22, (i) => _signal('SIG-$i', '资讯 $i'));
+      rows.add({
+        ..._signal('SIG-RISK', '其他分类'),
+        'kind': 'risk',
+        'kind_label': {'zh-CN': '风险', 'en': 'Risk', 'ko': '위험'},
+      });
+      await tester.pumpWidget(_app(_FakeRepository(_response(signals: rows))));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilterChip, '机会'));
+      await tester.pumpAndSettle();
+
+      final browse = tester
+          .widget<SingleChildScrollView>(
+            find.byKey(const PageStorageKey('bmp03-browse')),
+          )
+          .controller!;
+      browse.jumpTo(browse.position.maxScrollExtent);
+      await tester.pumpAndSettle();
+      final oldOffset = browse.offset;
+      final row = find.byKey(const Key('bmp03-signal-SIG-21'));
+      final rowFocus = tester.widget<InkWell>(row).focusNode!;
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('bmp03-brief-return')), findsOneWidget);
+      expect(find.byKey(const PageStorageKey('bmp03-browse')), findsNothing);
+      expect(find.byType(SelectableText), findsOneWidget);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('bmp03-brief-return')), findsNothing);
+      expect(browse.offset, closeTo(oldOffset, .1));
+      expect(rowFocus.hasFocus, isTrue);
+      expect(
+        tester
+            .widget<FilterChip>(find.widgetWithText(FilterChip, '机会'))
+            .selected,
+        isTrue,
+      );
+      expect(find.byKey(const Key('bmp03-signal-SIG-RISK')), findsNothing);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('bmp03-brief-return')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('bmp03-brief-return')));
+      await tester.pumpAndSettle();
+      expect(rowFocus.hasFocus, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final locale in [
+    const Locale('zh', 'CN'),
+    const Locale('en'),
+    const Locale('ko'),
+  ]) {
+    testWidgets(
+      'short viewport and large text keep reading and return reachable ${locale.languageCode}',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(360, 560));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        final row = {
+          ..._signal('SIG-ONE', '市场材料 / Market material'),
+          'summary': List.filled(
+            18,
+            '一段需要完整阅读的材料。 A source paragraph.',
+          ).join('\n'),
+          'momentum': null,
+        };
+        await tester.pumpWidget(
+          _app(
+            _FakeRepository(_response(signals: [row])),
+            locale: locale,
+            textScale: 2,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('bmp03-signal-SIG-ONE')));
+        await tester.pumpAndSettle();
+
+        final brief = tester
+            .widget<SingleChildScrollView>(
+              find.byKey(const Key('bmp03-brief-scroll')),
+            )
+            .controller!;
+        brief.jumpTo(brief.position.maxScrollExtent);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('bmp03-brief-return')).hitTestable(),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            locale.languageCode == 'zh'
+                ? '未提供'
+                : locale.languageCode == 'ko'
+                ? '제공되지 않음'
+                : 'Not provided',
+          ),
+          findsOneWidget,
+        );
+        await tester.tap(find.byKey(const Key('bmp03-brief-return')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('bmp03-signal-SIG-ONE')), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets('a denied replacement scope clears the previously opened brief', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(_FakeRepository(_response(signals: [_signal('SIG-ONE', '旧范围内容')]))),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('bmp03-signal-SIG-ONE')));
+    await tester.pumpAndSettle();
+
+    final denied = _response(signals: [_signal('SIG-ONE', '不应显示')]);
+    denied['focus_binding'] = {'read_allowed': false};
+    await tester.pumpWidget(_app(_FakeRepository(denied)));
+    await tester.pumpAndSettle();
+    expect(find.text('旧范围内容'), findsNothing);
+    expect(find.text('不应显示'), findsNothing);
+    expect(find.byType(SelectableText), findsNothing);
+    expect(find.byKey(const Key('bmp03-brief-return')), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('filtering keeps the selected signal inside the visible set', () async {
+    final viewModel = Bmp03ViewModel(
+      repository: _FakeRepository(
+        _response(
+          signals: [
+            _signal('SIG-OPPORTUNITY', '机会'),
+            {..._signal('SIG-RISK', '风险'), 'kind': 'risk'},
+          ],
+        ),
+      ),
+    );
+    addTearDown(viewModel.dispose);
+    await viewModel.refresh();
+    viewModel.selectSignal('SIG-OPPORTUNITY');
+    viewModel.setKindFilter('risk');
+    expect(viewModel.selectedSignalId, 'SIG-RISK');
+    expect(viewModel.selectedSignal!.id, 'SIG-RISK');
+    viewModel.setKindFilter('absent');
+    expect(viewModel.selectedSignalId, isNull);
+    expect(viewModel.selectedSignal, isNull);
+  });
+
   test('market signals stay inside the selected BrandFocus', () {
     final snapshot = Bmp03Snapshot.fromResponse(
       _response(
@@ -187,10 +390,20 @@ void main() {
   });
 }
 
-Widget _app(Bmp03Repository repository) {
+Widget _app(
+  Bmp03Repository repository, {
+  Locale locale = const Locale('zh', 'CN'),
+  double textScale = 1,
+}) {
   return MaterialApp(
     theme: LumenisTheme.dark,
-    locale: const Locale('zh', 'CN'),
+    locale: locale,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(textScaler: TextScaler.linear(textScale)),
+      child: child!,
+    ),
     supportedLocales: LumenisLocalizations.supportedLocales,
     localizationsDelegates: const [
       LumenisLocalizations.delegate,
@@ -248,8 +461,8 @@ Map<String, dynamic> _signal(
   String id,
   String title, {
   String scopeId = 'BRAND-ONE',
-  num confidence = 82,
-  num momentum = 74,
+  num? confidence = 82,
+  num? momentum = 74,
   Map<String, String>? kindLabel,
 }) {
   return {

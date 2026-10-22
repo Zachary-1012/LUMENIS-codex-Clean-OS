@@ -123,6 +123,194 @@ const _sharedWorkspaceScopeHeaders = <String, String>{
   'X-Lumenis-Workspace-Scope': '{"scope_kind":"shared_workspace","version":1}',
 };
 
+sealed class LumenisWorkspaceScope {
+  const LumenisWorkspaceScope();
+
+  Map<String, Object?> toJson();
+  Map<String, String> toQueryParameters();
+  Map<String, String> get requestHeaders;
+}
+
+/// Exact CTH/BMP context for an explicitly domain-linked manuscript.
+class InternalPitchScope extends LumenisWorkspaceScope {
+  const InternalPitchScope({
+    required this.domainId,
+    required this.subjectId,
+    required this.brandFocusId,
+    required this.globalScope,
+  });
+
+  final String domainId;
+  final String? subjectId;
+  final String? brandFocusId;
+  final bool globalScope;
+
+  Map<String, Object?> _validated() {
+    final suppliedDomain = domainId.trim().toUpperCase();
+    final domain = suppliedDomain == 'ZBMP' ? 'BMP' : suppliedDomain;
+    final subject = subjectId?.trim();
+    final brand = brandFocusId?.trim();
+    final validFocus =
+        !globalScope &&
+        ((domain == 'CTH' &&
+                subject != null &&
+                subject.isNotEmpty &&
+                brand == null) ||
+            (domain == 'BMP' &&
+                subject == null &&
+                brand != null &&
+                brand.isNotEmpty));
+    final validGlobal = globalScope && subject == null && brand == null;
+    if ((domain != 'CTH' && domain != 'BMP') || (!validFocus && !validGlobal)) {
+      throw const FormatException('Internal pitch scope is invalid.');
+    }
+    for (final value in [subject, brand].whereType<String>()) {
+      if (value.length > 240 || RegExp(r'[\x00-\x1f\x7f]').hasMatch(value)) {
+        throw const FormatException('Internal pitch scope is invalid.');
+      }
+    }
+    return {
+      'domain_id': domain == 'BMP' ? 'bmp' : 'cth',
+      'subject_id': subject,
+      'brand_focus_id': brand,
+      'global_scope': globalScope,
+    };
+  }
+
+  @override
+  Map<String, Object?> toJson() => _validated();
+
+  @override
+  Map<String, String> toQueryParameters() =>
+      _validated().map((key, value) => MapEntry(key, value?.toString() ?? ''));
+
+  @override
+  Map<String, String> get requestHeaders => const {};
+}
+
+/// The independent Shared workspace discriminator; identity and Permission
+/// are resolved by Core and are never supplied by this client.
+final class SharedWorkspaceScope extends LumenisWorkspaceScope {
+  const SharedWorkspaceScope();
+
+  @override
+  Map<String, Object?> toJson() => const {
+    'scope_kind': 'shared_workspace',
+    'version': 1,
+  };
+
+  @override
+  Map<String, String> toQueryParameters() => const {};
+
+  @override
+  Map<String, String> get requestHeaders => _sharedWorkspaceScopeHeaders;
+}
+
+class InternalPitchSection {
+  const InternalPitchSection({required this.heading, required this.body});
+
+  final String heading;
+  final String body;
+
+  Map<String, String> toJson() => {'heading': heading, 'body': body};
+}
+
+class InternalPitchManuscript {
+  InternalPitchManuscript({
+    required this.title,
+    required this.summary,
+    required List<InternalPitchSection> sections,
+    required this.language,
+    required this.authorship,
+  }) : sections = List.unmodifiable(sections);
+
+  final String title;
+  final String summary;
+  final List<InternalPitchSection> sections;
+  final String language;
+  final String authorship;
+
+  Map<String, Object?> toJson() {
+    if (title.trim().isEmpty ||
+        title.runes.length > 300 ||
+        summary.trim().isEmpty ||
+        sections.isEmpty ||
+        sections.length > 64 ||
+        !const {'zh', 'en', 'ko'}.contains(language) ||
+        !const {'user_supplied', 'assisted'}.contains(authorship)) {
+      throw const FormatException('Internal pitch manuscript is invalid.');
+    }
+    for (final section in sections) {
+      if (section.heading.trim().isEmpty || section.body.trim().isEmpty) {
+        throw const FormatException('Internal pitch section is invalid.');
+      }
+    }
+    return {
+      'title': title,
+      'summary': summary,
+      'sections': sections.map((section) => section.toJson()).toList(),
+      'language': language,
+      'authorship': authorship,
+    };
+  }
+}
+
+class InternalPitchRevision {
+  const InternalPitchRevision({
+    this.workId,
+    this.previousArtifactId,
+    this.expectedDraftDigest,
+  });
+
+  final String? workId;
+  final String? previousArtifactId;
+  final String? expectedDraftDigest;
+
+  Map<String, Object?> toJson() {
+    if (workId != null && !RegExp(r'^WORK-[0-9a-f]{24}$').hasMatch(workId!)) {
+      throw const FormatException('Internal pitch work ID is invalid.');
+    }
+    if (previousArtifactId != null &&
+        !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(previousArtifactId!)) {
+      throw const FormatException(
+        'Internal pitch parent artifact ID is invalid.',
+      );
+    }
+    if (expectedDraftDigest != null &&
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(expectedDraftDigest!)) {
+      throw const FormatException('Internal pitch draft digest is invalid.');
+    }
+    if (previousArtifactId != null &&
+        (workId == null || expectedDraftDigest == null)) {
+      throw const FormatException(
+        'An internal pitch revision requires its saved parent.',
+      );
+    }
+    if (expectedDraftDigest != null && previousArtifactId == null) {
+      throw const FormatException('A draft digest requires a parent artifact.');
+    }
+    return {
+      if (workId != null) 'work_id': workId,
+      if (previousArtifactId != null)
+        'previous_artifact_id': previousArtifactId,
+      if (expectedDraftDigest != null)
+        'expected_draft_digest': expectedDraftDigest,
+    };
+  }
+}
+
+class InternalPitchFile {
+  const InternalPitchFile({
+    required this.bytes,
+    required this.filename,
+    required this.mediaType,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String mediaType;
+}
+
 class LumenisBrowserFrame {
   const LumenisBrowserFrame({
     required this.bytes,
@@ -451,9 +639,7 @@ class LumenisCoreClient {
     if (response['ok'] != true ||
         response['contract'] != 'lumenis.context.v1' ||
         response['selection_only'] != true) {
-      throw const FormatException(
-        'Invalid OEVIRA context selection contract.',
-      );
+      throw const FormatException('Invalid OEVIRA context selection contract.');
     }
     final rawContext = response['context'];
     if (rawContext is! Map) {
@@ -508,6 +694,176 @@ class LumenisCoreClient {
     );
   }
 
+  Future<Map<String, dynamic>> listAiConversations({
+    int limit = 30,
+    int offset = 0,
+  }) {
+    if (limit < 1 || limit > 100 || offset < 0) {
+      throw ArgumentError('Invalid AI conversation page.');
+    }
+    final query = Uri(
+      queryParameters: {'limit': '$limit', 'offset': '$offset'},
+    ).query;
+    return _request(
+      'GET',
+      '/v4/ai/conversations?$query',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> createAiConversation({String title = ''}) {
+    if (title.length > 512 || RegExp(r'[\x00-\x1f\x7f]').hasMatch(title)) {
+      throw const FormatException('Invalid AI conversation title.');
+    }
+    return _request(
+      'POST',
+      '/v4/ai/conversations',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {'title': title},
+    );
+  }
+
+  Future<Map<String, dynamic>> readAiConversation(
+    String conversationId, {
+    int afterSequence = 0,
+    int limit = 30,
+  }) {
+    _validateAiConversationId(conversationId);
+    if (afterSequence < 0 || limit < 1 || limit > 100) {
+      throw ArgumentError('Invalid AI conversation page.');
+    }
+    final query = Uri(
+      queryParameters: {'after_sequence': '$afterSequence', 'limit': '$limit'},
+    ).query;
+    return _request(
+      'GET',
+      '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}?$query',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> appendAiConversationTurn({
+    required String conversationId,
+    required String text,
+    required String idempotencyKey,
+    required int expectedRevision,
+  }) {
+    _validateAiConversationId(conversationId);
+    _validateAiConversationIdempotencyKey(idempotencyKey);
+    if (text.trim().isEmpty || expectedRevision < 1) {
+      throw const FormatException('Invalid AI conversation turn.');
+    }
+    return _request(
+      'POST',
+      '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}/turns',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'text': text,
+        'idempotency_key': idempotencyKey,
+        'expected_revision': expectedRevision,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> attachAiConversationTask({
+    required String conversationId,
+    required String taskId,
+    required String idempotencyKey,
+    required int expectedRevision,
+  }) {
+    _validateAiConversationId(conversationId);
+    _validateAiConversationIdempotencyKey(idempotencyKey);
+    if (taskId.isEmpty ||
+        taskId.length > 256 ||
+        RegExp(r'[\x00-\x1f\x7f]').hasMatch(taskId) ||
+        expectedRevision < 1) {
+      throw const FormatException('Invalid AI conversation task reference.');
+    }
+    return _request(
+      'POST',
+      '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}/tasks',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'task_id': taskId,
+        'idempotency_key': idempotencyKey,
+        'expected_revision': expectedRevision,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> respondToAiConversationTurn({
+    required String conversationId,
+    required String turnId,
+    required String idempotencyKey,
+    required int expectedRevision,
+    bool retryConfirmed = false,
+  }) {
+    _validateAiConversationId(conversationId);
+    _validateAiConversationTurnId(turnId);
+    _validateAiConversationIdempotencyKey(idempotencyKey);
+    if (expectedRevision < 1) {
+      throw const FormatException('Invalid AI conversation revision.');
+    }
+    return _request(
+      'POST',
+      '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}/turns/${Uri.encodeComponent(turnId)}/respond',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      connectionTimeout: const Duration(minutes: 2),
+      payload: {
+        'idempotency_key': idempotencyKey,
+        'expected_revision': expectedRevision,
+        if (retryConfirmed) 'retry_confirmed': true,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> interruptAiConversationResponse({
+    required String conversationId,
+    required String turnId,
+    required int expectedRevision,
+  }) {
+    _validateAiConversationId(conversationId);
+    _validateAiConversationTurnId(turnId);
+    if (expectedRevision < 1) {
+      throw const FormatException('Invalid AI conversation revision.');
+    }
+    return _request(
+      'POST',
+      '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}/turns/${Uri.encodeComponent(turnId)}/respond',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'operation': 'interrupt',
+        'expected_revision': expectedRevision,
+        'confirmed': true,
+      },
+    );
+  }
+
+  static void _validateAiConversationId(String value) {
+    if (!RegExp(r'^conv_[a-f0-9]{32}$').hasMatch(value)) {
+      throw const FormatException('Invalid AI conversation ID.');
+    }
+  }
+
+  static void _validateAiConversationTurnId(String value) {
+    if (!RegExp(r'^turn_[a-f0-9]{32}$').hasMatch(value)) {
+      throw const FormatException('Invalid AI conversation turn ID.');
+    }
+  }
+
+  static void _validateAiConversationIdempotencyKey(String value) {
+    if (!RegExp(r'^[A-Za-z0-9_.:-]{1,128}$').hasMatch(value)) {
+      throw const FormatException('Invalid AI conversation idempotency key.');
+    }
+  }
+
   Future<Map<String, dynamic>> startSourceBriefTask({
     required String domainId,
     int limit = 30,
@@ -559,6 +915,87 @@ class LumenisCoreClient {
       '/api/experience/reports/source-brief/jobs/${Uri.encodeComponent(jobId)}',
       operationContext: _contentContext(domainId),
       connectionTimeout: const Duration(seconds: 30),
+    );
+  }
+
+  Future<Map<String, dynamic>> saveSourceBriefResult({
+    required String domainId,
+    required String jobId,
+    required String requestId,
+    required String title,
+  }) {
+    _validateSourceBriefJobId(jobId);
+    _validateSavedWorkRequestId(requestId);
+    if (title.trim().isEmpty || title.length > 300) {
+      throw const FormatException('Invalid source brief SavedWork title.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/reports/source-brief/jobs/${Uri.encodeComponent(jobId)}/save',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {'request_id': requestId, 'title': title},
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
+  Future<Map<String, dynamic>> reopenSourceBriefSavedWork({
+    required String domainId,
+    required String artifactId,
+  }) {
+    _validateSavedWorkArtifactId(artifactId);
+    return _request(
+      'GET',
+      '/api/experience/saved-work/$artifactId',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      connectionTimeout: const Duration(seconds: 30),
+    );
+  }
+
+  /// Prepares or explicitly saves a SourceBrief into the independent Shared
+  /// workspace through the existing SavedWork owner. The server resolves the
+  /// actor, target Shared scope, source evidence and exact DATA_EXPORT effect.
+  Future<Map<String, dynamic>> adoptSourceBriefToShared({
+    required String jobId,
+    required String requestId,
+    required String mode,
+    String? title,
+    bool confirm = false,
+    String? confirmedResource,
+  }) {
+    _validateSourceBriefJobId(jobId);
+    _validateSavedWorkRequestId(requestId);
+    if (!const {'prepare', 'save', 'apply', 'revoke'}.contains(mode)) {
+      throw ArgumentError.value(mode, 'mode');
+    }
+    if (title != null &&
+        (title.trim().isEmpty || title.length > 300)) {
+      throw const FormatException('Invalid shared research title.');
+    }
+    final needsConfirmation = mode == 'apply' || mode == 'revoke';
+    if (needsConfirmation != confirm ||
+        needsConfirmation != (confirmedResource != null) ||
+        (confirmedResource != null &&
+            (confirmedResource.trim().isEmpty || confirmedResource.length > 4096))) {
+      throw const FormatException('Invalid shared report confirmation.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/saved-work',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'adopt_source_brief_job_id': jobId,
+        'request_id': requestId,
+        'mode': mode,
+        'title': ?title,
+        if (needsConfirmation) ...{
+          'confirm': true,
+          'confirmed_resource': confirmedResource,
+        },
+      },
+      connectionTimeout: const Duration(seconds: 60),
     );
   }
 
@@ -646,8 +1083,9 @@ class LumenisCoreClient {
   /// An explicit null selects the existing independent Shared workspace.
   /// Business context is never merged into this actor-free wire scope; Core
   /// still authorizes the current workspace, source uses and every effect.
-  Map<String, String> _mediaContentContext(String? domainId) =>
-      domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId);
+  Map<String, String> _mediaContentContext(String? domainId) => domainId == null
+      ? _sharedWorkspaceScopeHeaders
+      : _contentContext(domainId);
 
   Future<Map<String, dynamic>> inspectContentMedia({
     required String? domainId,
@@ -795,19 +1233,29 @@ class LumenisCoreClient {
   }) {
     final context = _contentContext('BMP');
     if (context['X-Lumenis-Context-Mode'] != 'FOCUS' ||
-        context['X-Subject-ID'] != subjectId || sourceEventId <= 0 ||
-        !const {'brand_event', 'product_event', 'industry_event'}.contains(category) ||
+        context['X-Subject-ID'] != subjectId ||
+        sourceEventId <= 0 ||
+        !const {
+          'brand_event',
+          'product_event',
+          'industry_event',
+        }.contains(category) ||
         !RegExp(r'^[A-Za-z0-9_-]{8,128}$').hasMatch(requestId) ||
-        (confirmedResource != null && !RegExp(
-          r'^propagation-classification:v1:[a-f0-9]{64}$',
-        ).hasMatch(confirmedResource))) {
+        (confirmedResource != null &&
+            !RegExp(
+              r'^propagation-classification:v1:[a-f0-9]{64}$',
+            ).hasMatch(confirmedResource))) {
       throw const FormatException('Classification context or preview changed.');
     }
-    return _request('POST', '/api/experience/propagation/classify',
+    return _request(
+      'POST',
+      '/api/experience/propagation/classify',
       operationContext: context,
       payload: {
-        'source_event_id': sourceEventId, 'category': category,
-        'request_id': requestId, 'confirm': confirmedResource != null,
+        'source_event_id': sourceEventId,
+        'category': category,
+        'request_id': requestId,
+        'confirm': confirmedResource != null,
         'confirmed_resource': ?confirmedResource,
       },
     );
@@ -955,39 +1403,70 @@ class LumenisCoreClient {
 
   /// Existing podcast SavedWork owner. A null domain explicitly selects the
   /// independent Shared workspace; BMP retains its current exact context.
-  Future<Map<String, dynamic>> listPodcastWork({String? domainId, String? cursor}) {
-    if (cursor != null && (cursor.isEmpty || cursor.length > 4096 ||
-        RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor))) {
+  Future<Map<String, dynamic>> listPodcastWork({
+    String? domainId,
+    String? cursor,
+  }) {
+    if (cursor != null &&
+        (cursor.isEmpty ||
+            cursor.length > 4096 ||
+            RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor))) {
       throw const FormatException('Invalid SavedWork cursor.');
     }
-    final query = Uri(queryParameters: {
-      'kind': 'podcast_episode', 'latest_only': 'true', 'limit': '30',
-      'cursor': ?cursor,
-    }).query;
-    return _request('GET', '/api/experience/saved-work?$query',
-      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
-      requestHeaders: const {'Cache-Control': 'no-store'});
+    final query = Uri(
+      queryParameters: {
+        'kind': 'podcast_episode',
+        'latest_only': 'true',
+        'limit': '30',
+        'cursor': ?cursor,
+      },
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/saved-work?$query',
+      operationContext: domainId == null
+          ? _sharedWorkspaceScopeHeaders
+          : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
   }
 
-  Future<Map<String, dynamic>> reopenPodcastWork(String artifactId, {String? domainId}) {
+  Future<Map<String, dynamic>> reopenPodcastWork(
+    String artifactId, {
+    String? domainId,
+  }) {
     _validateSavedWorkArtifactId(artifactId);
-    return _request('GET', '/api/experience/saved-work/$artifactId',
-      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
-      requestHeaders: const {'Cache-Control': 'no-store'});
+    return _request(
+      'GET',
+      '/api/experience/saved-work/$artifactId',
+      operationContext: domainId == null
+          ? _sharedWorkspaceScopeHeaders
+          : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
   }
 
   Future<Map<String, dynamic>> savePodcastWork({
-    required Map<String, Object?> body, String? domainId,
+    required Map<String, Object?> body,
+    String? domainId,
   }) {
     _validateSavedWorkRequestId(body['request_id'] as String);
     _validateSavedWorkArtifactId(body['previous_artifact_id'] as String);
     if (body['kind'] != 'podcast_episode' ||
-        !RegExp(r'^[0-9a-f]{64}$').hasMatch(body['expected_draft_digest'] as String)) {
+        !RegExp(
+          r'^[0-9a-f]{64}$',
+        ).hasMatch(body['expected_draft_digest'] as String)) {
       throw const FormatException('Invalid podcast revision.');
     }
-    return _request('POST', '/api/experience/saved-work', payload: body,
-      operationContext: domainId == null ? _sharedWorkspaceScopeHeaders : _contentContext(domainId),
-      requestHeaders: const {'Cache-Control': 'no-store'});
+    return _request(
+      'POST',
+      '/api/experience/saved-work',
+      payload: body,
+      operationContext: domainId == null
+          ? _sharedWorkspaceScopeHeaders
+          : _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
   }
 
   /// Reads the existing Shared SavedWork registry for Browser-authored notes.
@@ -1094,6 +1573,316 @@ class LumenisCoreClient {
     );
   }
 
+  Future<Map<String, dynamic>> prepareInternalPitch({
+    required LumenisWorkspaceScope scope,
+    required InternalPitchManuscript manuscript,
+    required String requestId,
+    InternalPitchRevision? revision,
+  }) async {
+    _validateSavedWorkRequestId(requestId);
+    final response = await _request(
+      'POST',
+      '/api/experience/creation/internal-pitches',
+      withContext: false,
+      requestHeaders: scope.requestHeaders,
+      payload: {
+        'scope': scope.toJson(),
+        'manuscript': manuscript.toJson(),
+        'request_id': requestId,
+        'profile': 'authored-manuscript/v4',
+        ...(revision?.toJson() ?? const <String, Object?>{}),
+      },
+    );
+    return _internalPitchResult(response);
+  }
+
+  Future<Map<String, dynamic>> readInternalPitch({
+    required String taskId,
+    required LumenisWorkspaceScope scope,
+  }) async {
+    _validateInternalPitchTaskId(taskId);
+    final query = Uri(queryParameters: scope.toQueryParameters()).query;
+    final response = await _request(
+      'GET',
+      '/api/experience/creation/internal-pitches/${Uri.encodeComponent(taskId)}${query.isEmpty ? '' : '?$query'}',
+      withContext: false,
+      requestHeaders: scope.requestHeaders,
+      connectionTimeout: const Duration(seconds: 30),
+    );
+    return _internalPitchResult(response, expectedTaskId: taskId);
+  }
+
+  Future<Map<String, dynamic>> runInternalPitch({
+    required String taskId,
+    required LumenisWorkspaceScope scope,
+  }) => _internalPitchAction(taskId, 'run', scope);
+
+  Future<Map<String, dynamic>> cancelInternalPitch({
+    required String taskId,
+    required LumenisWorkspaceScope scope,
+  }) => _internalPitchAction(taskId, 'cancel', scope);
+
+  Future<Map<String, dynamic>> _internalPitchAction(
+    String taskId,
+    String action,
+    LumenisWorkspaceScope scope,
+  ) async {
+    _validateInternalPitchTaskId(taskId);
+    final response = await _request(
+      'POST',
+      '/api/experience/creation/internal-pitches/${Uri.encodeComponent(taskId)}/$action',
+      withContext: false,
+      requestHeaders: scope.requestHeaders,
+      payload: {'scope': scope.toJson()},
+      connectionTimeout: const Duration(seconds: 30),
+    );
+    return _internalPitchResult(response, expectedTaskId: taskId);
+  }
+
+  Future<InternalPitchFile> exportInternalPitch({
+    required String taskId,
+    required LumenisWorkspaceScope scope,
+  }) async {
+    _validateInternalPitchTaskId(taskId);
+    final query = Uri(queryParameters: scope.toQueryParameters()).query;
+    final path =
+        '/api/experience/creation/internal-pitches/${Uri.encodeComponent(taskId)}/export${query.isEmpty ? '' : '?$query'}';
+    final response = await sendLumenisBinaryRequest(
+      LumenisTransportRequest(
+        method: 'GET',
+        uri: _uri(path),
+        headers: {
+          ...scope.requestHeaders,
+          'Accept':
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'Cache-Control': 'no-store',
+        },
+        connectionTimeout: const Duration(seconds: 45),
+        followRedirects: false,
+      ),
+      maxBytes: 32 * 1024 * 1024,
+    );
+    if (response.statusCode != 200) {
+      throw _internalPitchExportFailure(response);
+    }
+    const mediaType =
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    final actualType = response.contentType
+        ?.split(';')
+        .first
+        .trim()
+        .toLowerCase();
+    if (actualType != mediaType || response.bytes.isEmpty) {
+      throw const FormatException('Internal pitch export is not a DOCX file.');
+    }
+    return InternalPitchFile(
+      bytes: response.bytes,
+      filename: 'document.docx',
+      mediaType: mediaType,
+    );
+  }
+
+  Future<Map<String, dynamic>> listAuthoredManuscripts({
+    required String domainId,
+    int limit = 100,
+    String? cursor,
+  }) async {
+    _validateSavedWorkPage(limit, cursor);
+    final query = Uri(
+      queryParameters: {'kind': 'report', 'limit': '$limit', 'cursor': ?cursor},
+    ).query;
+    final response = await _request(
+      'GET',
+      '/api/experience/saved-work?$query',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      connectionTimeout: const Duration(seconds: 30),
+    );
+    return _authoredManuscriptPage(_savedWorkResult(response));
+  }
+
+  Future<Map<String, dynamic>> listSharedAuthoredManuscripts({
+    required SharedWorkspaceScope scope,
+    int limit = 100,
+    String? cursor,
+  }) async {
+    _validateSavedWorkPage(limit, cursor);
+    final response = await listSharedSavedWork(
+      limit: limit,
+      cursor: cursor,
+      kind: 'report',
+    );
+    return _authoredManuscriptPage(_savedWorkResult(response));
+  }
+
+  Future<Map<String, dynamic>> reopenSavedManuscript({
+    required String domainId,
+    required String artifactId,
+  }) async {
+    _validateSavedWorkArtifactId(artifactId);
+    final response = await _request(
+      'GET',
+      '/api/experience/saved-work/$artifactId',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      connectionTimeout: const Duration(seconds: 30),
+    );
+    return _requireAuthoredManuscript(_savedWorkResult(response));
+  }
+
+  Future<Map<String, dynamic>> reopenSharedSavedManuscript({
+    required SharedWorkspaceScope scope,
+    required String artifactId,
+  }) async {
+    _validateSavedWorkArtifactId(artifactId);
+    return _requireAuthoredManuscript(
+      _savedWorkResult(await reopenSharedSavedWork(artifactId)),
+    );
+  }
+
+  static void _validateSavedWorkPage(int limit, String? cursor) {
+    if (limit < 1 ||
+        limit > 100 ||
+        (cursor != null &&
+            (cursor.isEmpty ||
+                cursor.length > 4096 ||
+                RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor)))) {
+      throw const FormatException('Invalid SavedWork page.');
+    }
+  }
+
+  static Map<String, dynamic> _savedWorkResult(Map<String, dynamic> response) {
+    final result = response['result'];
+    if (response['ok'] != true || result is! Map<String, dynamic>) {
+      throw const FormatException('SavedWork response is invalid.');
+    }
+    return result;
+  }
+
+  static Map<String, dynamic> _authoredManuscriptPage(
+    Map<String, dynamic> result,
+  ) {
+    final rows = result['items'];
+    if (rows is! List) {
+      throw const FormatException('SavedWork list response is invalid.');
+    }
+    final manuscripts = <Map<String, dynamic>>[];
+    for (final value in rows) {
+      if (value is! Map<String, dynamic>) {
+        throw const FormatException('SavedWork item is invalid.');
+      }
+      final document = value['document'];
+      if (document is! Map<String, dynamic>) {
+        throw const FormatException('SavedWork document is invalid.');
+      }
+      if (_isAuthoredManuscriptV4(document['contract'])) {
+        final payload = document['payload'];
+        if (payload is! Map<String, dynamic> ||
+            payload['manuscript'] is! Map<String, dynamic> ||
+            payload['truth_state'] is! Map<String, dynamic>) {
+          throw const FormatException(
+            'Authored manuscript payload is invalid.',
+          );
+        }
+        manuscripts.add(value);
+      }
+    }
+    return {
+      ...result,
+      'items': List<Map<String, dynamic>>.unmodifiable(manuscripts),
+    };
+  }
+
+  static Map<String, dynamic> _requireAuthoredManuscript(
+    Map<String, dynamic> result,
+  ) {
+    final document = result['document'];
+    if (document is! Map<String, dynamic> ||
+        !_isAuthoredManuscriptV4(document['contract'])) {
+      throw const FormatException(
+        'SavedWork artifact is not authored-manuscript/v4.',
+      );
+    }
+    final payload = document['payload'];
+    if (payload is! Map<String, dynamic> ||
+        payload['manuscript'] is! Map<String, dynamic> ||
+        payload['truth_state'] is! Map<String, dynamic>) {
+      throw const FormatException('Authored manuscript payload is invalid.');
+    }
+    return result;
+  }
+
+  static bool _isAuthoredManuscriptV4(Object? value) {
+    if (value is! Map ||
+        value['id'] != 'lumenis.internal-pitch' ||
+        value['version'] != '4') {
+      return false;
+    }
+    final paths = value['required_payload_paths'];
+    return paths is List &&
+        paths.length == 2 &&
+        paths[0] == 'manuscript' &&
+        paths[1] == 'truth_state';
+  }
+
+  static Map<String, dynamic> _internalPitchResult(
+    Map<String, dynamic> response, {
+    String? expectedTaskId,
+  }) {
+    final result = response['result'];
+    if (response['ok'] != true ||
+        response['contract'] != 'lumenis.internal-pitch.v1' ||
+        result is! Map<String, dynamic>) {
+      throw const FormatException(
+        'Internal pitch response contract is invalid.',
+      );
+    }
+    final taskId = result['task_id'];
+    final state = result['state'];
+    if (taskId is! String ||
+        !_isInternalPitchTaskId(taskId) ||
+        (expectedTaskId != null && taskId != expectedTaskId) ||
+        state is! String ||
+        state.isEmpty ||
+        !result.containsKey('error') ||
+        (result['error'] != null && result['error'] is! String)) {
+      throw const FormatException('Internal pitch task response is invalid.');
+    }
+    return result;
+  }
+
+  static bool _isInternalPitchTaskId(String value) =>
+      RegExp(r'^task-pitch-[0-9a-f]{24}$').hasMatch(value);
+
+  static void _validateInternalPitchTaskId(String value) {
+    if (!_isInternalPitchTaskId(value)) {
+      throw const FormatException('Invalid internal pitch task ID.');
+    }
+  }
+
+  static LumenisCoreException _internalPitchExportFailure(
+    LumenisBinaryTransportResponse response,
+  ) {
+    String? code;
+    try {
+      final decoded = jsonDecode(utf8.decode(response.bytes));
+      if (decoded is Map &&
+          (decoded['code'] is String || decoded['error_code'] is String)) {
+        final candidate = (decoded['code'] ?? decoded['error_code']) as String;
+        if (RegExp(r'^[A-Z][A-Z_0-9]{0,99}$').hasMatch(candidate)) {
+          code = candidate;
+        }
+      }
+    } on FormatException {
+      // Keep the HTTP status when Core returns a non-JSON error response.
+    }
+    return LumenisCoreException(
+      'Internal pitch export was not returned.',
+      statusCode: response.statusCode,
+      errorCode: code,
+    );
+  }
+
   /// Reads user-authored reports from the independent Shared workspace.
   /// This deliberately never inherits the selected CTH/BMP business context;
   /// the server resolves the actor and checks Shared Permission on every call.
@@ -1115,11 +1904,7 @@ class LumenisCoreClient {
       throw const FormatException('Invalid SavedWork cursor.');
     }
     final query = Uri(
-      queryParameters: {
-        'kind': kind,
-        'limit': '$limit',
-        'cursor': ?cursor,
-      },
+      queryParameters: {'kind': kind, 'limit': '$limit', 'cursor': ?cursor},
     ).query;
     return _request(
       'GET',
@@ -1212,7 +1997,7 @@ class LumenisCoreClient {
     required String format,
   }) async {
     _validateSavedWorkArtifactId(artifactId);
-    if (!const {'md', 'txt', 'docx', 'pdf', 'xlsx'}.contains(format)) {
+    if (!const {'md', 'txt', 'docx', 'pdf', 'xlsx', 'pptx'}.contains(format)) {
       throw ArgumentError.value(format, 'format');
     }
     final expectedMediaType = switch (format) {
@@ -1223,6 +2008,8 @@ class LumenisCoreClient {
       'pdf' => 'application/pdf',
       'xlsx' =>
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'pptx' =>
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       _ => throw ArgumentError.value(format, 'format'),
     };
     final uri = _uri(

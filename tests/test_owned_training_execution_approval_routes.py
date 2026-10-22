@@ -4,6 +4,8 @@ import pytest
 from tests.test_owned_training_phase_http_v2 import phase_http, strict_permission_mode, BASE_HEADERS, TASK_URL, _db_snapshot
 from lumenis.system.security import permission as p
 
+pytestmark = pytest.mark.usefixtures("strict_permission_mode")
+
 URL = '/api/experience/owned-training/execution-approvals'
 
 def body(case, confirm=False, resource=None):

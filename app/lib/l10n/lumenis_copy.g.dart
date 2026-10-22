@@ -89,7 +89,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "action.scope": "影响范围",
     "action.target": "目标对象",
     "action.permission": "所需权限",
-    "action.prototype_notice": "原型仅演示确认交互，不会真实调用后端；真实执行由 Codex 按 Action Contract 接入。",
+    "action.prototype_notice":
+        "原型仅演示确认交互，不会真实调用后端；真实执行由 Codex 按 Action Contract 接入。",
     "action.not_wired_to_backend": "原型动作：尚未连接后端（按 Action Contract 待 Codex 接入）",
     "selector.subject": "当前主体",
     "selector.brand": "当前品牌",
@@ -398,6 +399,58 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "ai01.file.opened": "已打开本地草稿，尚未提交。当前内容不会发送或启动分析。",
     "ai01.file.downloaded": "已交给浏览器下载，请在下载记录中确认文件。后续修改需再次保存。",
     "ai01.file.saved": "文本草稿已保存。后续修改需再次保存；尚未提交分析。",
+    "ai01.conversation.open": "对话",
+    "ai01.conversation.title": "对话",
+    "ai01.conversation.new": "新对话",
+    "ai01.conversation.list": "对话列表",
+    "ai01.conversation.empty": "从一段对话开始",
+    "ai01.conversation.empty_list": "还没有对话。",
+    "ai01.conversation.untitled": "新对话",
+    "ai01.conversation.archived": "已归档",
+    "ai01.conversation.load_more": "加载更多",
+    "ai01.conversation.check": "核对本次状态",
+    "ai01.conversation.input_hint": "输入消息",
+    "ai01.conversation.send": "发送",
+    "ai01.conversation.no_messages": "这段对话还没有消息。",
+    "ai01.conversation.you": "你",
+    "ai01.conversation.reply": "回复",
+    "ai01.conversation.task": "关联任务",
+    "ai01.conversation.status": "状态",
+    "ai01.conversation.task_unavailable": "任务当前不可访问。",
+    "ai01.conversation.task_attached": "已关联任务。",
+    "ai01.conversation.content_unavailable": "内容暂不可用。",
+    "ai01.conversation.state.reserved": "回复待核",
+    "ai01.conversation.state.unavailable": "暂不可用",
+    "ai01.conversation.state.failed": "回复未完成",
+    "ai01.conversation.state.interrupted": "已记录中断",
+    "ai01.conversation.waiting": "正在处理，结果尚未返回。",
+    "ai01.conversation.no_reply": "尚未获得回复。",
+    "ai01.conversation.interrupted_unknown": "已记录中断，原请求结果仍未知。",
+    "ai01.conversation.attach_task": "关联当前分析任务",
+    "ai01.conversation.issue.authentication": "登录状态需要重新确认。",
+    "ai01.conversation.issue.permission": "当前账号无权访问此对话。",
+    "ai01.conversation.issue.conflict": "对话状态已更新，请重新读取后继续。",
+    "ai01.conversation.issue.invalid": "消息或请求格式无效。",
+    "ai01.conversation.issue.server": "服务暂时不可用。",
+    "ai01.conversation.issue.offline": "暂时无法连接服务。",
+    "ai01.conversation.issue.unknown": "结果暂时无法确认。请核对，不会自动重复请求。",
+    "ai01.conversation.issue.create_unknown":
+        "新对话创建结果暂时无法确认。请刷新列表后检查，不会自动重复创建。",
+    "ai01.conversation.create_again.title": "上次创建结果仍未确认",
+    "ai01.conversation.create_again.detail": "上次的新对话可能已经创建。继续会再建一个新对话；请确认后继续。",
+    "ai01.conversation.create_again.confirm": "仍然新建",
+    "ai01.conversation.issue.append_unknown": "消息是否已保存尚未确认。请先核对；不会自动重复保存或请求回复。",
+    "ai01.conversation.issue.interrupted_unknown": "已记录中断，外部请求是否停止仍未知。",
+    "ai01.conversation.retry.action": "再次请求",
+    "ai01.conversation.retry.title": "再次请求回复？",
+    "ai01.conversation.retry.detail": "这会发起一次新的回复请求。原回复结果不会被覆盖；继续前请先确认。",
+    "ai01.conversation.retry.confirm": "确认再次请求",
+    "ai01.conversation.append.retry": "安全重试保存",
+    "ai01.conversation.respond.action": "请求回复",
+    "ai01.conversation.interrupt.action": "记录中断",
+    "ai01.conversation.interrupt.title": "记录中断？",
+    "ai01.conversation.interrupt.detail": "这会更新对话状态，但不能保证已发出的服务请求停止。原结果仍可能未知。",
+    "ai01.conversation.interrupt.confirm": "确认记录中断",
     "ai01.file.copied": "草稿已复制，可粘贴到你选择的位置。",
     "ai01.file.working": "正在处理草稿…",
     "ai01.evidence.title": "业务资料依据",
@@ -537,7 +590,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "workspace.route.unavailable.title": "无法打开该工作区页面",
     "workspace.route.unavailable.detail": "该地址尚未映射到当前寰意工作区。已保持数据、权限与执行边界不变。",
     "workspace.capability.browser_unavailable.title": "内置浏览暂不可用",
-    "workspace.capability.browser_unavailable.detail": "当前工作区尚未接通浏览页面。你可以返回继续原来的工作。",
+    "workspace.capability.browser_unavailable.detail":
+        "当前工作区尚未接通浏览页面。你可以返回继续原来的工作。",
     "workspace.route.return": "返回工作区",
     "cth08.title": "案例库 / 案例分析 / 知识库",
     "cth08.eyebrow": "商业运营 · 案例工作台",
@@ -752,7 +806,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.import": "导入素材",
     "sh01.media.importing": "正在导入所选文件…",
     "sh01.media.invalid": "请检查片段范围、音轨和淡入淡出时长。",
-    "sh01.media.invoking_domain_required": "当前全局视图没有指定本次调用的业务域。入口需明确传入 CTH 或 BMP；这不会设置品牌焦点或授予权限。",
+    "sh01.media.invoking_domain_required":
+        "当前全局视图没有指定本次调用的业务域。入口需明确传入 CTH 或 BMP；这不会设置品牌焦点或授予权限。",
     "sh01.media.later": "后移",
     "sh01.media.muted": "静音",
     "sh01.media.native_preview": "当前客户端未接通内嵌播放，可下载查看。",
@@ -877,7 +932,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.replacement_transition_blocked": "此工程含转场，暂不能替换镜头",
     "sh01.media.batch_preview": "预览全部调整",
     "sh01.media.batch_adopt": "采用调整",
-    "sh01.media.batch_preview_description": "请核对下列待应用片段调整。采用只更新当前草稿，可一次撤销；不会渲染或保存版本。",
+    "sh01.media.batch_preview_description":
+        "请核对下列待应用片段调整。采用只更新当前草稿，可一次撤销；不会渲染或保存版本。",
     "sh01.media.batch_unsupported": "请先在对应片段中应用或取消待处理的音轨选择、素材替换或拆分调整。所有草稿均已保留。",
     "sh01.media.batch_stale": "草稿或访问权限已变化，请重新预览调整。",
     "sh01.media.batch_inspecting": "正在检查调整…",
@@ -941,41 +997,56 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "risk.level.high": "High",
     "risk.level.critical": "Critical",
     "state.empty_true": "Nothing here yet",
-    "state.empty_true_d": "There is genuinely no record in this scope. Adjust scope or create one.",
+    "state.empty_true_d":
+        "There is genuinely no record in this scope. Adjust scope or create one.",
     "state.empty_notcollected": "Not collected",
-    "state.empty_notcollected_d": "Collection is not configured yet — the value is not zero, it has not started.",
+    "state.empty_notcollected_d":
+        "Collection is not configured yet — the value is not zero, it has not started.",
     "state.empty_filter": "No matches",
-    "state.empty_filter_d": "Nothing matches the current filters. Loosen or clear filters.",
+    "state.empty_filter_d":
+        "Nothing matches the current filters. Loosen or clear filters.",
     "state.empty_permission": "No access",
-    "state.empty_permission_d": "Your role lacks read permission under this Subject/Scope. Request access.",
+    "state.empty_permission_d":
+        "Your role lacks read permission under this Subject/Scope. Request access.",
     "state.error": "Load error",
-    "state.error_d": "Could not read data. Retry; if it persists, contact admin with the Trace ID.",
+    "state.error_d":
+        "Could not read data. Retry; if it persists, contact admin with the Trace ID.",
     "state.offline": "You are offline",
-    "state.offline_d": "Network/runtime connection lost. Showing the last confirmed local cache.",
+    "state.offline_d":
+        "Network/runtime connection lost. Showing the last confirmed local cache.",
     "state.blocked": "Blocked by policy",
-    "state.blocked_d": "Blocked by a permission/security boundary. Higher authorization or approval required.",
+    "state.blocked_d":
+        "Blocked by a permission/security boundary. Higher authorization or approval required.",
     "state.loading": "Loading",
     "state.loading_d": "Reading confirmed data along the evidence chain…",
     "state.updating": "Updating",
-    "state.updating_d": "Showing the last confirmed version while fetching the newest values; it will replace automatically.",
+    "state.updating_d":
+        "Showing the last confirmed version while fetching the newest values; it will replace automatically.",
     "state.partial": "Partially available",
-    "state.partial_d": "Only some sources returned. Missing parts are marked explicitly, never backfilled silently.",
+    "state.partial_d":
+        "Only some sources returned. Missing parts are marked explicitly, never backfilled silently.",
     "state.stale": "Possibly stale",
-    "state.stale_d": "Data passed its freshness threshold. Treat conclusions as indicative; refresh or wait for update.",
+    "state.stale_d":
+        "Data passed its freshness threshold. Treat conclusions as indicative; refresh or wait for update.",
     "state.degraded": "Degraded mode",
-    "state.degraded_d": "Some capabilities are degraded. Core reads remain available; non-critical features may be limited.",
+    "state.degraded_d":
+        "Some capabilities are degraded. Core reads remain available; non-critical features may be limited.",
     "state.permission_denied": "Permission denied",
-    "state.permission_denied_d": "Your role cannot view this object. Request Subject/Scope authorization.",
+    "state.permission_denied_d":
+        "Your role cannot view this object. Request Subject/Scope authorization.",
     "action.confirm_title": "Confirm action",
     "action.scope": "Scope",
     "action.target": "Target",
     "action.permission": "Permission required",
-    "action.prototype_notice": "Prototype confirms interaction only; it never calls a backend. Codex wires real execution per the Action Contract.",
-    "action.not_wired_to_backend": "Prototype action: backend not wired (Codex to connect per Action Contract)",
+    "action.prototype_notice":
+        "Prototype confirms interaction only; it never calls a backend. Codex wires real execution per the Action Contract.",
+    "action.not_wired_to_backend":
+        "Prototype action: backend not wired (Codex to connect per Action Contract)",
     "selector.subject": "Current Subject",
     "selector.brand": "Current Brand",
     "selector.switch": "Switch subject",
-    "subject.switched": "Working subject switched (view context only; data ownership unchanged)",
+    "subject.switched":
+        "Working subject switched (view context only; data ownership unchanged)",
     "status.running": "Running",
     "status.warning": "Warning",
     "status.error": "Error",
@@ -1054,7 +1125,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "nav.mobile.system": "Settings",
     "shell.connected": "Service connected",
     "shell.pending": "Connection status unconfirmed",
-    "shell.cth.directory_context": "Business subjects · current focus unchanged",
+    "shell.cth.directory_context":
+        "Business subjects · current focus unchanged",
     "shell.cth.subject_missing": "Business subject name unavailable",
     "shell.cth.subject_named": "Business subject: {name}",
     "shell.bmp.brand_missing": "Brand name unavailable",
@@ -1070,10 +1142,12 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "shell.current_object": "Current work context",
     "shell.product_unconfirmed": "Product scope unconfirmed",
     "shell.product_named": "Product scope: {product}",
-    "shell.context_rule": "Changing pages changes only what you view; it does not change the current business subject or brand.",
+    "shell.context_rule":
+        "Changing pages changes only what you view; it does not change the current business subject or brand.",
     "shell.subjects.heading": "Available business subjects · {count}",
     "shell.subjects.empty": "No business subjects are available to browse.",
-    "shell.subjects.unavailable": "The subject list is unavailable. Open the subject directory for details.",
+    "shell.subjects.unavailable":
+        "The subject list is unavailable. Open the subject directory for details.",
     "shell.subjects.additional": "{count} more business subjects",
     "shell.subject.unnamed": "Business subject name unavailable",
     "shell.locale.tooltip": "Interface language",
@@ -1084,17 +1158,24 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth01.retry": "Retry",
     "cth01.loading": "Loading business subject and operating activity",
     "cth01.subject_unavailable": "Information for this scope is unavailable",
-    "cth01.context_unavailable": "The current business subject is unavailable. Refresh and try again.",
+    "cth01.context_unavailable":
+        "The current business subject is unavailable. Refresh and try again.",
     "cth01.operation_unavailable": "Operating information is unavailable",
     "cth01.connection_retry": "Check the connection and try again.",
-    "cth01.login_required": "This content cannot be opened right now. You can retry reading it or return and try again later.",
+    "cth01.login_required":
+        "This content cannot be opened right now. You can retry reading it or return and try again later.",
     "cth01.access_unavailable": "This content is not accessible.",
-    "cth01.connection_unavailable": "Unable to connect. Check your network and try again.",
-    "cth01.generic_unavailable": "Operating information is unavailable. Try again later.",
-    "cth01.summary": "Operating information for the current business subject appears here.",
+    "cth01.connection_unavailable":
+        "Unable to connect. Check your network and try again.",
+    "cth01.generic_unavailable":
+        "Operating information is unavailable. Try again later.",
+    "cth01.summary":
+        "Operating information for the current business subject appears here.",
     "cth01.refresh": "Refresh data",
-    "cth01.scope.complete": "Returned measures are available; trend and source details are not.",
-    "cth01.scope.partial": "Some measures are unavailable. Missing values are never shown as zero.",
+    "cth01.scope.complete":
+        "Returned measures are available; trend and source details are not.",
+    "cth01.scope.partial":
+        "Some measures are unavailable. Missing values are never shown as zero.",
     "cth01.metrics.heading": "Operating measures",
     "cth01.metrics.detail": "Only measures returned for this view are shown",
     "cth01.metric.negative_voice": "Online negative records",
@@ -1112,41 +1193,55 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth01.activity.detail": "Recent changes for the current business subject",
     "cth01.signal.time_missing": "Time not provided",
     "cth01.signal.detail_heading": "Activity details",
-    "cth01.signal.detail_description": "Review the event time, risk level and summary",
+    "cth01.signal.detail_description":
+        "Review the event time, risk level and summary",
     "cth01.field.time": "Time",
     "cth01.field.not_provided": "Not provided",
     "cth01.field.severity": "Risk level",
     "cth01.field.summary": "Summary",
     "cth01.field.tags": "Tags",
-    "cth01.source.unavailable": "Verifiable source information is not available yet.",
+    "cth01.source.unavailable":
+        "Verifiable source information is not available yet.",
     "cth01.signal.return": "Return to activity",
     "cth01.summary.heading": "Today's key measures",
-    "cth01.summary.detail": "Today's operations for the current business subject",
+    "cth01.summary.detail":
+        "Today's operations for the current business subject",
     "cth01.summary.risk_index": "Risk index",
     "cth01.summary.health_score": "Business subject health score",
     "cth01.summary.risk_content": "Medium / high-risk content",
-    "cth01.summary.note": "Risk records cover today's data, not all operating events.",
-    "cth01.summary.unavailable": "Today's operating measures are unavailable. Refresh later.",
+    "cth01.summary.note":
+        "Risk records cover today's data, not all operating events.",
+    "cth01.summary.unavailable":
+        "Today's operating measures are unavailable. Refresh later.",
     "cth01.risks.heading": "Risk records",
     "cth01.risks.detail": "Operating records that need attention",
-    "cth01.risks.unavailable": "Risk information is unavailable. Refresh later.",
+    "cth01.risks.unavailable":
+        "Risk information is unavailable. Refresh later.",
     "cth01.risks.score": "Risk score {score}",
     "cth01.trend.unavailable_title": "14-day trend unavailable",
-    "cth01.trend.unavailable_detail": "Daily gaps cannot be distinguished from true zero values yet, so the trend is not shown.",
+    "cth01.trend.unavailable_detail":
+        "Daily gaps cannot be distinguished from true zero values yet, so the trend is not shown.",
     "cth01.evidence.unavailable_title": "Source details unavailable",
-    "cth01.evidence.unavailable_detail": "The relationship between activity and its original information is not verified, so sources are not shown.",
+    "cth01.evidence.unavailable_detail":
+        "The relationship between activity and its original information is not verified, so sources are not shown.",
     "cth01.activity.empty.title": "No operating activity",
-    "cth01.activity.empty.detail": "There is no operating activity to show right now.",
-    "cth01.activity.not_collected.title": "Operating activity has not been collected",
-    "cth01.activity.not_collected.detail": "No operating activity information is available yet.",
-    "cth01.activity.offline.title": "Operating activity is temporarily unavailable",
+    "cth01.activity.empty.detail":
+        "There is no operating activity to show right now.",
+    "cth01.activity.not_collected.title":
+        "Operating activity has not been collected",
+    "cth01.activity.not_collected.detail":
+        "No operating activity information is available yet.",
+    "cth01.activity.offline.title":
+        "Operating activity is temporarily unavailable",
     "cth01.activity.offline.detail": "Check the connection and try again.",
     "cth01.activity.stale.title": "No recent operating activity",
     "cth01.activity.stale.detail": "Refresh to confirm the latest information.",
     "cth01.activity.partial.title": "No operating activity can be shown",
-    "cth01.activity.partial.detail": "Some information is unavailable. Refresh later.",
+    "cth01.activity.partial.detail":
+        "Some information is unavailable. Refresh later.",
     "cth01.activity.blocked.title": "Operating activity cannot be viewed",
-    "cth01.activity.blocked.detail": "Check the current account and business subject, then try again.",
+    "cth01.activity.blocked.detail":
+        "Check the current account and business subject, then try again.",
     "cth01.activity.error.title": "Operating activity is unavailable",
     "cth01.activity.error.detail": "Refresh later.",
     "cth01.severity.critical": "Critical risk",
@@ -1159,9 +1254,11 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth03.scope.summary": "View collected content within the current scope.",
     "cth03.recent_count": "Recent records",
     "cth03.sources.heading": "Source channels",
-    "cth03.sources.detail": "View available source status. Select a source to filter the records below.",
+    "cth03.sources.detail":
+        "View available source status. Select a source to filter the records below.",
     "cth03.stream.heading": "Collected records",
-    "cth03.stream.detail": "Records may include historical content. Publication times come from the source; missing times are labeled.",
+    "cth03.stream.detail":
+        "Records may include historical content. Publication times come from the source; missing times are labeled.",
     "cth03.page_read_time.label": "Page read time",
     "cth03.publication_time.label": "Source publication time",
     "cth03.time.not_provided": "Not provided",
@@ -1171,24 +1268,35 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth03.source.unknown": "Source unknown",
     "context.mode.global_all": "All accessible scope",
     "context.mode.focus": "Focused scope",
-    "context.screen_binding_unavailable": "This page is not yet connected to the selected scope. Existing information will not be presented as if it belonged to that scope.",
+    "context.screen_binding_unavailable":
+        "This page is not yet connected to the selected scope. Existing information will not be presented as if it belonged to that scope.",
     "context.error.auth_required": "Verify your access and try again.",
-    "context.error.authorization_unavailable": "Access services are unavailable. Try again later.",
-    "context.error.invalid_selection": "The selected scope could not be identified. Select it again.",
-    "context.error.permission_denied": "This account cannot view the selected scope.",
-    "context.error.subject_unavailable": "The selected subject is unavailable. Select another one.",
-    "context.error.registry_unavailable": "The subject list is unavailable. Try again later.",
+    "context.error.authorization_unavailable":
+        "Access services are unavailable. Try again later.",
+    "context.error.invalid_selection":
+        "The selected scope could not be identified. Select it again.",
+    "context.error.permission_denied":
+        "This account cannot view the selected scope.",
+    "context.error.subject_unavailable":
+        "The selected subject is unavailable. Select another one.",
+    "context.error.registry_unavailable":
+        "The subject list is unavailable. Try again later.",
     "context.error.unavailable": "This scope is unavailable. Try again later.",
     "context.selector.open": "Choose a view scope",
     "context.selector.loading": "Loading accessible subjects",
-    "context.selector.scope_note": "Selection changes the current view only; it does not grant access.",
+    "context.selector.scope_note":
+        "Selection changes the current view only; it does not grant access.",
     "context.selector.search_hint": "Search subjects or brands",
-    "context.selector.empty": "No matching entries in this list. You can select only accessible listed subjects.",
-    "context.selector.directory_unavailable": "The subject list is unavailable.",
-    "context.selector.select_failed": "Could not change the selected scope. Try again later.",
+    "context.selector.empty":
+        "No matching entries in this list. You can select only accessible listed subjects.",
+    "context.selector.directory_unavailable":
+        "The subject list is unavailable.",
+    "context.selector.select_failed":
+        "Could not change the selected scope. Try again later.",
     "shell.context.unavailable": "View scope unavailable",
     "context.selector.close": "Close scope selector",
-    "context.selector.no_domains": "No readable subject scope is available for this account.",
+    "context.selector.no_domains":
+        "No readable subject scope is available for this account.",
     "context.selector.loading_subjects": "Loading available subjects…",
     "context.selector.retry": "Try again",
     "context.selector.selected": "Current viewing scope",
@@ -1196,70 +1304,99 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "launch.connecting.title": "OEVIRA",
     "launch.connecting.detail": "Connecting to your workspace…",
     "launch.access_denied.title": "Access is unavailable",
-    "launch.access_denied.detail": "Check the current access scope and try again.",
+    "launch.access_denied.detail":
+        "Check the current access scope and try again.",
     "launch.service_unavailable.title": "Workspace is not connected",
-    "launch.service_unavailable.detail": "The workspace could not be reached. Check the connection and try again.",
+    "launch.service_unavailable.detail":
+        "The workspace could not be reached. Check the connection and try again.",
     "launch.retry": "Reconnect",
     "bmp01.eyebrow": "BMP · Brand & Market",
     "bmp01.title": "Brand & Market overview",
-    "bmp01.subtitle": "Stay close to brand movement, competitor signals and customer attention.",
+    "bmp01.subtitle":
+        "Stay close to brand movement, competitor signals and customer attention.",
     "bmp01.focus.eyebrow": "Brand focus",
     "bmp01.focus.global": "GLOBAL / ALL",
     "bmp01.focus.selected": "Current focus: {name}",
     "bmp01.focus.unavailable": "Brand name unavailable",
     "bmp01.focus.empty.title": "No brand information to show",
-    "bmp01.focus.empty.detail": "Brand performance is not available yet. Confirmed brand and market signals will appear here when ready.",
+    "bmp01.focus.empty.detail":
+        "Brand performance is not available yet. Confirmed brand and market signals will appear here when ready.",
     "bmp01.market.eyebrow": "Brand market movement",
     "bmp01.market.ready.title": "Brand market information is not open yet",
-    "bmp01.market.ready.detail": "The current range has no confirmed brand-market data. Results from another range will not be shown as this brand.",
+    "bmp01.market.ready.detail":
+        "The current range has no confirmed brand-market data. Results from another range will not be shown as this brand.",
     "bmp01.market.global.title": "No brand focus selected",
-    "bmp01.market.global.detail": "The view is GLOBAL / ALL. Choose and confirm a brand before brand performance or competitor data is shown.",
-    "bmp01.market.not_collected.title": "Brand market data is not collected yet",
-    "bmp01.market.not_collected.detail": "Brand performance, competitor movement and market change will appear when the data is available.",
+    "bmp01.market.global.detail":
+        "The view is GLOBAL / ALL. Choose and confirm a brand before brand performance or competitor data is shown.",
+    "bmp01.market.not_collected.title":
+        "Brand market data is not collected yet",
+    "bmp01.market.not_collected.detail":
+        "Brand performance, competitor movement and market change will appear when the data is available.",
     "bmp01.market.blocked.title": "Brand market information is unavailable",
-    "bmp01.market.blocked.detail": "Refresh and try again. Unconfirmed brand information is kept out of this view.",
+    "bmp01.market.blocked.detail":
+        "Refresh and try again. Unconfirmed brand information is kept out of this view.",
     "bmp01.refresh": "Refresh data",
     "bmp01.metrics.label": "Brand-market metrics",
     "bmp01.retry": "Retry",
     "bmp01.loading": "Loading brand market information",
-    "bmp01.failure.auth.title": "Brand market information cannot be opened right now",
-    "bmp01.failure.auth.detail": "You can retry reading it or return and try again later.",
-    "bmp01.failure.permission.title": "Brand market information is not accessible",
-    "bmp01.failure.permission.detail": "This content cannot be read on the current page.",
+    "bmp01.failure.auth.title":
+        "Brand market information cannot be opened right now",
+    "bmp01.failure.auth.detail":
+        "You can retry reading it or return and try again later.",
+    "bmp01.failure.permission.title":
+        "Brand market information is not accessible",
+    "bmp01.failure.permission.detail":
+        "This content cannot be read on the current page.",
     "bmp01.failure.offline.title": "Unable to connect",
     "bmp01.failure.offline.detail": "Check the connection and try again.",
     "bmp01.failure.server.title": "Brand market information unavailable",
     "bmp01.failure.server.detail": "Try again later.",
     "ai01.eyebrow": "AI assistant",
     "ai01.title": "What would you like to work on?",
-    "ai01.subtitle": "Bring a business question. Gather sources, shape a decision, create a deliverable.",
+    "ai01.subtitle":
+        "Bring a business question. Gather sources, shape a decision, create a deliverable.",
     "ai01.context.label": "Optional focus",
-    "ai01.context.detail": "You can start without selecting a business or brand. A focus only narrows the current task.",
-    "ai01.unbound": "The full AI service state has not been received; unconfirmed information is never filled with examples.",
+    "ai01.context.detail":
+        "You can start without selecting a business or brand. A focus only narrows the current task.",
+    "ai01.unbound":
+        "The full AI service state has not been received; unconfirmed information is never filled with examples.",
     "ai01.draft.title": "Describe your task",
     "ai01.focus.open": "Expand editor",
     "ai01.focus.return": "Return to task",
-    "ai01.focus.notice": "Edits stay in this draft. Returning does not save or submit it.",
+    "ai01.focus.notice":
+        "Edits stay in this draft. Returning does not save or submit it.",
     "ai01.focus.localOnly": "Draft only",
     "ai01.draft.badge": "Never sent automatically",
     "ai01.draft.hint": "Describe the question to analyze.",
     "ai01.suggestions.title": "Suggested analysis questions",
-    "ai01.blocked_reason": "The AI service state has not been read yet, so submission is unavailable.",
+    "ai01.blocked_reason":
+        "The AI service state has not been read yet, so submission is unavailable.",
     "ai01.submit": "Start analysis",
-    "ai01.draft.notice": "Draft not submitted. Save the text before closing or changing scope.",
+    "ai01.draft.notice":
+        "Draft not submitted. Save the text before closing or changing scope.",
     "ai01.submit.blocked.empty": "Enter a task before starting analysis.",
-    "ai01.submit.blocked.too_long": "The task is longer than 4000 characters. Shorten it before submitting.",
-    "ai01.submit.blocked.submitted": "This text was already submitted. Edit it before submitting again.",
+    "ai01.submit.blocked.too_long":
+        "The task is longer than 4000 characters. Shorten it before submitting.",
+    "ai01.submit.blocked.submitted":
+        "This text was already submitted. Edit it before submitting again.",
     "ai01.submit.blocked.submitting": "Submitting. Please wait.",
     "ai01.submit.sending": "Submitting the analysis task…",
-    "ai01.submit.completed": "Analysis completed. The result is derived content and does not replace business data or Evidence.",
-    "ai01.submit.not_completed": "Analysis did not complete and produced no analysis result.",
-    "ai01.submit.pending_approval": "This operation needs approval and has not run.",
-    "ai01.submit.denied": "You do not have permission for this analysis. Nothing was executed.",
-    "ai01.submit.invalid": "The task is not valid and was not executed. Edit it and submit again.",
-    "ai01.submit.auth": "The service connection authorization expired. Nothing was executed.",
-    "ai01.submit.failed": "The service failed and it cannot be confirmed whether the task ran. Check before deciding to submit again.",
-    "ai01.submit.unknown": "It cannot be confirmed whether the analysis ran. It will not be retried automatically. Check before deciding to submit again.",
+    "ai01.submit.completed":
+        "Analysis completed. The result is derived content and does not replace business data or Evidence.",
+    "ai01.submit.not_completed":
+        "Analysis did not complete and produced no analysis result.",
+    "ai01.submit.pending_approval":
+        "This operation needs approval and has not run.",
+    "ai01.submit.denied":
+        "You do not have permission for this analysis. Nothing was executed.",
+    "ai01.submit.invalid":
+        "The task is not valid and was not executed. Edit it and submit again.",
+    "ai01.submit.auth":
+        "The service connection authorization expired. Nothing was executed.",
+    "ai01.submit.failed":
+        "The service failed and it cannot be confirmed whether the task ran. Check before deciding to submit again.",
+    "ai01.submit.unknown":
+        "It cannot be confirmed whether the analysis ran. It will not be retried automatically. Check before deciding to submit again.",
     "ai01.submit.status_label": "Service status",
     "ai01.submit.execution_id": "Execution ID",
     "ai01.submit.audit_id": "Audit ID",
@@ -1270,34 +1407,115 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "ai01.file.save": "Save text draft",
     "ai01.file.copy": "Copy draft",
     "ai01.file.replaceTitle": "Replace the current draft?",
-    "ai01.file.replaceDetail": "The file will replace the current text. Unsaved edits will be lost; cancel to save them first.",
+    "ai01.file.replaceDetail":
+        "The file will replace the current text. Unsaved edits will be lost; cancel to save them first.",
     "ai01.file.keep": "Keep current text",
     "ai01.file.replace": "Open and replace",
-    "ai01.file.invalid": "Choose a UTF-8 text file, up to 4000 characters and 64 KB. Your current draft is preserved.",
-    "ai01.file.failed": "The operation did not finish. Your draft is preserved; retry or copy the text.",
-    "ai01.file.changed": "The draft changed and was not replaced. Open the file again.",
-    "ai01.file.opened": "Local draft opened and not submitted. Its text will not be sent or start analysis.",
-    "ai01.file.downloaded": "Handed to the browser for download. Confirm the file in Downloads; save later edits again.",
-    "ai01.file.saved": "Text draft saved. Save later edits again; analysis has not been submitted.",
+    "ai01.file.invalid":
+        "Choose a UTF-8 text file, up to 4000 characters and 64 KB. Your current draft is preserved.",
+    "ai01.file.failed":
+        "The operation did not finish. Your draft is preserved; retry or copy the text.",
+    "ai01.file.changed":
+        "The draft changed and was not replaced. Open the file again.",
+    "ai01.file.opened":
+        "Local draft opened and not submitted. Its text will not be sent or start analysis.",
+    "ai01.file.downloaded":
+        "Handed to the browser for download. Confirm the file in Downloads; save later edits again.",
+    "ai01.file.saved":
+        "Text draft saved. Save later edits again; analysis has not been submitted.",
+    "ai01.conversation.open": "Conversations",
+    "ai01.conversation.title": "Conversations",
+    "ai01.conversation.new": "New conversation",
+    "ai01.conversation.list": "Conversation list",
+    "ai01.conversation.empty": "Start a conversation",
+    "ai01.conversation.empty_list": "There are no conversations yet.",
+    "ai01.conversation.untitled": "New conversation",
+    "ai01.conversation.archived": "Archived",
+    "ai01.conversation.load_more": "Load more",
+    "ai01.conversation.check": "Check this request",
+    "ai01.conversation.input_hint": "Write a message",
+    "ai01.conversation.send": "Send",
+    "ai01.conversation.no_messages":
+        "There are no messages in this conversation yet.",
+    "ai01.conversation.you": "You",
+    "ai01.conversation.reply": "Reply",
+    "ai01.conversation.task": "Linked task",
+    "ai01.conversation.status": "Status",
+    "ai01.conversation.task_unavailable":
+        "This task is not currently accessible.",
+    "ai01.conversation.task_attached": "Task linked.",
+    "ai01.conversation.content_unavailable":
+        "This content is not available right now.",
+    "ai01.conversation.state.reserved": "Reply needs checking",
+    "ai01.conversation.state.unavailable": "Unavailable",
+    "ai01.conversation.state.failed": "Reply did not complete",
+    "ai01.conversation.state.interrupted": "Interruption recorded",
+    "ai01.conversation.waiting":
+        "The request is still being processed; no result has been returned.",
+    "ai01.conversation.no_reply": "No reply was returned.",
+    "ai01.conversation.interrupted_unknown":
+        "Interruption was recorded; the original result is still unknown.",
+    "ai01.conversation.attach_task": "Link current analysis task",
+    "ai01.conversation.issue.authentication":
+        "Please confirm your sign-in again.",
+    "ai01.conversation.issue.permission":
+        "This account cannot access the conversation.",
+    "ai01.conversation.issue.conflict":
+        "The conversation changed. Read it again before continuing.",
+    "ai01.conversation.issue.invalid": "The message or request is not valid.",
+    "ai01.conversation.issue.server": "The service is temporarily unavailable.",
+    "ai01.conversation.issue.offline":
+        "The service cannot be reached right now.",
+    "ai01.conversation.issue.unknown":
+        "The result is not confirmed. Check it first; no request will be repeated automatically.",
+    "ai01.conversation.issue.create_unknown":
+        "The new conversation may or may not have been created. Refresh the list to check; it will not be created again automatically.",
+    "ai01.conversation.create_again.title":
+        "The previous creation is unconfirmed",
+    "ai01.conversation.create_again.detail":
+        "The previous conversation may already exist. Continuing will create another one. Confirm to continue.",
+    "ai01.conversation.create_again.confirm": "Create another",
+    "ai01.conversation.issue.append_unknown":
+        "It is not yet confirmed whether this message was saved. Check first; saving or requesting a reply will not be repeated automatically.",
+    "ai01.conversation.issue.interrupted_unknown":
+        "Interruption was recorded, but whether the external request stopped is unknown.",
+    "ai01.conversation.retry.action": "Request again",
+    "ai01.conversation.retry.title": "Request another reply?",
+    "ai01.conversation.retry.detail":
+        "This sends a new reply request. The previous result will not be overwritten. Confirm before continuing.",
+    "ai01.conversation.retry.confirm": "Confirm request",
+    "ai01.conversation.append.retry": "Retry saving safely",
+    "ai01.conversation.respond.action": "Request a reply",
+    "ai01.conversation.interrupt.action": "Record interruption",
+    "ai01.conversation.interrupt.title": "Record an interruption?",
+    "ai01.conversation.interrupt.detail":
+        "This updates the conversation state, but cannot guarantee that a request already sent to a service has stopped. Its result may remain unknown.",
+    "ai01.conversation.interrupt.confirm": "Confirm interruption",
     "ai01.file.copied": "Draft copied. Paste it wherever you choose.",
     "ai01.file.working": "Working on the draft…",
     "ai01.evidence.title": "Business material",
-    "ai01.evidence.detail": "Verifiable business material totals are not connected to this page, so no totals are shown.",
-    "ai01.evidence.trace": "Business material lookup and record details are not connected to this page, so no material records are shown.",
+    "ai01.evidence.detail":
+        "Verifiable business material totals are not connected to this page, so no totals are shown.",
+    "ai01.evidence.trace":
+        "Business material lookup and record details are not connected to this page, so no material records are shown.",
     "ai01.providers.title": "Model service status",
     "ai01.providers.empty": "No model service status has been received.",
     "ai01.executions.title": "Recent analysis",
-    "ai01.executions.detail": "Recent analysis history is not connected to this page, so no history is shown.",
+    "ai01.executions.detail":
+        "Recent analysis history is not connected to this page, so no history is shown.",
     "ai01.disclosure.evidence": "Business material",
     "ai01.disclosure.providers": "Model service status",
     "ai01.disclosure.executions": "Recent analysis",
-    "ai01.truth": "AI organizes and advises; business data, source material, access range and conclusions remain in their own records.",
+    "ai01.truth":
+        "AI organizes and advises; business data, source material, access range and conclusions remain in their own records.",
     "ai01.loading": "Reading AI service status",
     "ai01.retry": "Read again",
     "ai01.failure.auth.title": "AI service status cannot be opened right now",
-    "ai01.failure.auth.detail": "You can retry reading it or return and try again later.",
+    "ai01.failure.auth.detail":
+        "You can retry reading it or return and try again later.",
     "ai01.failure.permission.title": "AI service status is not accessible",
-    "ai01.failure.permission.detail": "This content cannot be read on the current page.",
+    "ai01.failure.permission.detail":
+        "This content cannot be read on the current page.",
     "ai01.failure.offline.title": "AI service cannot connect",
     "ai01.failure.offline.detail": "Check the connection and try again.",
     "ai01.failure.server.title": "AI service status cannot be read",
@@ -1311,17 +1529,21 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "ai01.inspector.hide": "Hide business material",
     "sh01.eyebrow": "Research & creation",
     "sh01.title": "Research & creation tools",
-    "sh01.subtitle": "Browse research and content tools shared by commerce operations and brand-market work; a listing describes purpose, not current availability.",
+    "sh01.subtitle":
+        "Browse research and content tools shared by commerce operations and brand-market work; a listing describes purpose, not current availability.",
     "sh01.refresh": "Read capability catalog again",
     "sh01.charter.eyebrow": "Shared capabilities",
     "sh01.charter.title": "Shared content & creation",
-    "sh01.charter.detail": "These services support commerce operations and brand-market workflows without replacing their business subjects, brand material or conclusions.",
+    "sh01.charter.detail":
+        "These services support commerce operations and brand-market workflows without replacing their business subjects, brand material or conclusions.",
     "sh01.charter.products": "Available to",
-    "sh01.charter.note": "Select a tool to see its purpose, supported content and instructions.",
+    "sh01.charter.note":
+        "Select a tool to see its purpose, supported content and instructions.",
     "sh01.index.title": "Tool list",
     "sh01.index.empty": "No research or creation tools are available to show.",
     "sh01.detail.empty": "There are no tools to inspect in this catalog.",
-    "sh01.detail.select": "Select a tool to see its purpose and supported content.",
+    "sh01.detail.select":
+        "Select a tool to see its purpose and supported content.",
     "sh01.detail.title": "Tool description",
     "sh01.detail.info": "Usage information",
     "sh01.detail.provider": "Capability context",
@@ -1331,15 +1553,20 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.detail.permission": "Can handle",
     "sh01.detail.risk": "Operation risk",
     "sh01.detail.limit": "Usage limit",
-    "sh01.detail.note": "This describes the tool. Open its business workflow to see available actions and results.",
+    "sh01.detail.note":
+        "This describes the tool. Open its business workflow to see available actions and results.",
     "sh01.evidence.title": "Business material is hidden",
-    "sh01.evidence.detail": "Displayable material for this scope is not available yet, so counts and history are not shown.",
+    "sh01.evidence.detail":
+        "Displayable material for this scope is not available yet, so counts and history are not shown.",
     "sh01.loading": "Reading research and creation tools",
     "sh01.failure.title": "Tool catalog unavailable",
     "sh01.failure.retry": "Read tool catalog again",
-    "sh01.failure.auth": "The tool catalog could not be read for this request. Try again.",
-    "sh01.failure.permission": "The current scope cannot access the tool catalog. Try again.",
-    "sh01.failure.offline": "The tool catalog cannot connect. Check the network and try again.",
+    "sh01.failure.auth":
+        "The tool catalog could not be read for this request. Try again.",
+    "sh01.failure.permission":
+        "The current scope cannot access the tool catalog. Try again.",
+    "sh01.failure.offline":
+        "The tool catalog cannot connect. Check the network and try again.",
     "sh01.failure.other": "Tool catalog data is unavailable. Try again later.",
     "sh01.category.research": "Research",
     "sh01.category.content": "Content creation",
@@ -1358,30 +1585,37 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.risk.high": "High",
     "sh01.risk.unknown": "Not specified",
     "sh01.limit.read_only": "Reads material; does not change originals",
-    "sh01.limit.no_external_write": "Does not submit directly to external platforms",
+    "sh01.limit.no_external_write":
+        "Does not submit directly to external platforms",
     "sh01.limit.approval": "Requires review before action",
     "sh01.limit.audit": "For review only",
     "sh01.limit.unknown": "Not specified in the catalog",
     "sys01.eyebrow": "System operations",
     "sys01.title": "Runtime status",
-    "sys01.subtitle": "Background work, failed queue records and service protections",
+    "sys01.subtitle":
+        "Background work, failed queue records and service protections",
     "sys01.loading": "Reading system runtime status",
     "sys01.retry": "Check again",
     "sys01.failure.auth.title": "System status cannot be opened right now",
-    "sys01.failure.auth.detail": "You can retry reading it or return and try again later.",
+    "sys01.failure.auth.detail":
+        "You can retry reading it or return and try again later.",
     "sys01.failure.permission.title": "System status is not accessible",
-    "sys01.failure.permission.detail": "This content cannot be read on the current page.",
+    "sys01.failure.permission.detail":
+        "This content cannot be read on the current page.",
     "sys01.failure.offline.title": "System service unavailable",
-    "sys01.failure.offline.detail": "The current runtime status cannot be read. Check the connection and try again.",
+    "sys01.failure.offline.detail":
+        "The current runtime status cannot be read. Check the connection and try again.",
     "sys01.failure.response.title": "Runtime status unavailable",
-    "sys01.failure.response.detail": "The system cannot provide a valid status right now. Try again later.",
+    "sys01.failure.response.detail":
+        "The system cannot provide a valid status right now. Try again later.",
     "sys01.status.overall": "Overall system status",
     "sys01.status.confirmed": "This runtime check is complete",
     "sys01.status.unavailable": "The overall system status cannot be confirmed",
     "sys01.status.partial": "Partial data",
     "sys01.status.current": "Current status",
     "sys01.counts.title": "Background work and failed queue",
-    "sys01.counts.detail": "Only confirmed counts are shown; unavailable values are marked separately.",
+    "sys01.counts.detail":
+        "Only confirmed counts are shown; unavailable values are marked separately.",
     "sys01.count.total": "Background processes",
     "sys01.count.failed": "Failed background processes",
     "sys01.count.dlq": "Failed queue records",
@@ -1395,7 +1629,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sys01.unavailable.current": "Currently unavailable",
     "sys01.unavailable.not_provided": "Not provided",
     "sys01.source.title": "Source and sample time",
-    "sys01.source.detail": "Reads the current status whenever the page opens or refreshes",
+    "sys01.source.detail":
+        "Reads the current status whenever the page opens or refreshes",
     "sys01.source.source": "Status source",
     "sys01.source.monitoring": "System runtime monitor",
     "sys01.source.runtime": "Runtime service status",
@@ -1406,8 +1641,10 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sys01.source.boundary": "Access boundary",
     "sys01.source.read_only": "Read only; runtime state is not changed",
     "sys01.source.no_observation": "No observation is available",
-    "sys01.source.observation_ready": "The current status observation was received",
-    "sys01.source.observation_unavailable": "The runtime observation cannot be confirmed",
+    "sys01.source.observation_ready":
+        "The current status observation was received",
+    "sys01.source.observation_unavailable":
+        "The runtime observation cannot be confirmed",
     "sys01.guardrail.inspect": "Inspect recovery and call protection",
     "sys01.guardrail.partial": "Some service states cannot be confirmed",
     "sys01.refresh.tooltip": "Refresh runtime status",
@@ -1416,13 +1653,17 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sys01.state.unhealthy": "Unhealthy",
     "sys01.state.stopped": "Stopped",
     "workspace.route.unavailable.title": "This workspace page cannot be opened",
-    "workspace.route.unavailable.detail": "This address is not mapped to the current OEVIRA Workspace. Data, permission and execution boundaries remain unchanged.",
-    "workspace.capability.browser_unavailable.title": "Browsing is not available yet",
-    "workspace.capability.browser_unavailable.detail": "This workspace is not connected to the browser page yet. Return to continue your work.",
+    "workspace.route.unavailable.detail":
+        "This address is not mapped to the current OEVIRA Workspace. Data, permission and execution boundaries remain unchanged.",
+    "workspace.capability.browser_unavailable.title":
+        "Browsing is not available yet",
+    "workspace.capability.browser_unavailable.detail":
+        "This workspace is not connected to the browser page yet. Return to continue your work.",
     "workspace.route.return": "Return to workspace",
     "cth08.title": "Cases · Analysis · Knowledge",
     "cth08.eyebrow": "Commercial Operations · Case workspace",
-    "cth08.summary": "A case keeps its facts, decisions and outcomes together. Reviewed knowledge stays separate.",
+    "cth08.summary":
+        "A case keeps its facts, decisions and outcomes together. Reviewed knowledge stays separate.",
     "cth08.scope.global_all": "GLOBAL / ALL",
     "cth08.scope.focused": "Focused subject",
     "cth08.action.new_case": "New case",
@@ -1430,12 +1671,17 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth08.action.retry": "Try again",
     "cth08.loading": "Reading the case workspace",
     "cth08.blocked.title": "Case workspace is not available",
-    "cth08.blocked.detail": "The current view is waiting for an authorized scope and verified source trail. No case data is shown.",
-    "cth08.error.generic": "Case information is temporarily unavailable. Try again later.",
-    "cth08.error.auth": "Your access could not be confirmed. Try again after access is restored.",
+    "cth08.blocked.detail":
+        "The current view is waiting for an authorized scope and verified source trail. No case data is shown.",
+    "cth08.error.generic":
+        "Case information is temporarily unavailable. Try again later.",
+    "cth08.error.auth":
+        "Your access could not be confirmed. Try again after access is restored.",
     "cth08.state.empty": "No cases are available in this scope.",
-    "cth08.state.not_collected": "Case lifecycle records have not been connected yet.",
-    "cth08.state.partial": "Some case records could not be verified and remain hidden.",
+    "cth08.state.not_collected":
+        "Case lifecycle records have not been connected yet.",
+    "cth08.state.partial":
+        "Some case records could not be verified and remain hidden.",
     "cth08.cases.heading": "Case flow",
     "cth08.timeline.heading": "Case timeline",
     "cth08.knowledge.heading": "Verified knowledge",
@@ -1460,17 +1706,22 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth08.timeline.state.blocked": "Unavailable",
     "cth09.title": "Risk Center & Decision Board",
     "cth09.eyebrow": "Commercial Operations · Risk and decision",
-    "cth09.summary": "Read the basis of a risk before deciding what may happen next.",
+    "cth09.summary":
+        "Read the basis of a risk before deciding what may happen next.",
     "cth09.scope.global_all": "GLOBAL / ALL",
     "cth09.scope.focused": "Focused subject",
     "cth09.action.retry": "Try again",
     "cth09.loading": "Reading risks and decisions",
     "cth09.blocked.title": "Risk and decision data is not available",
-    "cth09.blocked.detail": "The current scope or source trail is not verified. No risk or decision rows are shown.",
-    "cth09.error.generic": "Risk and decision data is temporarily unavailable. Try again later.",
-    "cth09.error.auth": "Your access could not be confirmed. Try again after access is restored.",
+    "cth09.blocked.detail":
+        "The current scope or source trail is not verified. No risk or decision rows are shown.",
+    "cth09.error.generic":
+        "Risk and decision data is temporarily unavailable. Try again later.",
+    "cth09.error.auth":
+        "Your access could not be confirmed. Try again after access is restored.",
     "cth09.state.empty": "No risks or decisions are available in this scope.",
-    "cth09.state.not_collected": "Risk or decision records have not been connected yet.",
+    "cth09.state.not_collected":
+        "Risk or decision records have not been connected yet.",
     "cth09.state.partial": "Some rows could not be verified and remain hidden.",
     "cth09.risks.heading": "Risk register",
     "cth09.decisions.heading": "Decision ledger",
@@ -1478,8 +1729,10 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth09.risk.none": "No verified risk is available.",
     "cth09.decision.none": "No decision record is available.",
     "cth09.source.none": "No trusted source is attached.",
-    "cth09.action.unavailable": "Action is not executable in the current workspace",
-    "cth09.action.unavailable_detail": "Execution, safety and result checks are not all bound.",
+    "cth09.action.unavailable":
+        "Action is not executable in the current workspace",
+    "cth09.action.unavailable_detail":
+        "Execution, safety and result checks are not all bound.",
     "cth09.action.clear_selection": "Clear selection",
     "cth09.risk.critical": "Critical",
     "cth09.risk.high": "High",
@@ -1493,7 +1746,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth09.decision.state.unknown": "State pending",
     "cth10.title": "Reports · Weekly · Evidence",
     "cth10.eyebrow": "Commercial Operations · Reports and briefs",
-    "cth10.summary": "A report keeps its scope, method, source trail and next outcome visible.",
+    "cth10.summary":
+        "A report keeps its scope, method, source trail and next outcome visible.",
     "cth10.scope.global_all": "GLOBAL / ALL",
     "cth10.scope.focused": "Focused subject",
     "cth10.action.retry": "Try again",
@@ -1502,12 +1756,17 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth10.action.unavailable": "This action is not available yet",
     "cth10.loading": "Reading reports and weekly briefs",
     "cth10.blocked.title": "Report data is not available",
-    "cth10.blocked.detail": "The current scope or source trail is not verified. No report rows are shown.",
-    "cth10.error.generic": "Report information is temporarily unavailable. Try again later.",
-    "cth10.error.auth": "Your access could not be confirmed. Try again after access is restored.",
+    "cth10.blocked.detail":
+        "The current scope or source trail is not verified. No report rows are shown.",
+    "cth10.error.generic":
+        "Report information is temporarily unavailable. Try again later.",
+    "cth10.error.auth":
+        "Your access could not be confirmed. Try again after access is restored.",
     "cth10.state.empty": "No reports are available in this scope.",
-    "cth10.state.not_collected": "Report material has not been connected, so a brief cannot be generated.",
-    "cth10.state.partial": "Some report material could not be verified and remains hidden.",
+    "cth10.state.not_collected":
+        "Report material has not been connected, so a brief cannot be generated.",
+    "cth10.state.partial":
+        "Some report material could not be verified and remains hidden.",
     "cth10.outline": "Storyboard",
     "cth10.report_list": "Reports",
     "cth10.preview": "Artifact preview",
@@ -1541,14 +1800,16 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "workflow.settings": "Settings & checks",
     "workflow.account": "Account & workspace",
     "appearance.title": "Appearance & wallpaper",
-    "appearance.deviceOnly": "Saved only on this device. Wallpaper is never uploaded.",
+    "appearance.deviceOnly":
+        "Saved only on this device. Wallpaper is never uploaded.",
     "appearance.mode.frosted": "Frosted",
     "appearance.mode.wallpaper": "Wallpaper",
     "appearance.mode.desktop": "Desktop blur",
     "appearance.mode.white": "White",
     "appearance.mode.black": "Black",
     "appearance.mode.solid": "Custom color",
-    "appearance.desktopUnavailable": "Desktop blur is available in the desktop app. Choose a wallpaper here.",
+    "appearance.desktopUnavailable":
+        "Desktop blur is available in the desktop app. Choose a wallpaper here.",
     "appearance.chooseWallpaper": "Choose wallpaper",
     "appearance.removeWallpaper": "Remove wallpaper",
     "appearance.wallpaperLimit": "PNG, JPEG or WebP, up to 3 MB.",
@@ -1558,25 +1819,35 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "appearance.darkGlass": "Dark glass",
     "appearance.blur": "Background blur",
     "appearance.panelOpacity": "Content opacity",
-    "appearance.restoreFailed": "Your previous appearance could not be restored. Defaults are shown.",
-    "appearance.saveFailed": "Appearance was not saved. Device storage may be unavailable or full. Try again.",
-    "appearance.invalidImage": "Choose a valid image up to 3 MB and 8192 pixels per side.",
-    "appearance.chooseFailed": "The selected image could not be read. Choose it again.",
+    "appearance.restoreFailed":
+        "Your previous appearance could not be restored. Defaults are shown.",
+    "appearance.saveFailed":
+        "Appearance was not saved. Device storage may be unavailable or full. Try again.",
+    "appearance.invalidImage":
+        "Choose a valid image up to 3 MB and 8192 pixels per side.",
+    "appearance.chooseFailed":
+        "The selected image could not be read. Choose it again.",
     "appearance.saving": "Saving on this device…",
     "appearance.remembered": "Appearance is remembered on this device.",
-    "appearance.previewOnly": "Preview only. This may not persist after reopening.",
-    "appearance.nativeFailed": "System blur is unavailable. In-app frosting is shown.",
+    "appearance.previewOnly":
+        "Preview only. This may not persist after reopening.",
+    "appearance.nativeFailed":
+        "System blur is unavailable. In-app frosting is shown.",
     "appearance.compact": "Compact layout",
     "appearance.reduceMotion": "Reduce motion",
-    "appearance.nativeResetFailed": "The system background could not be reset. Switch appearance to retry.",
+    "appearance.nativeResetFailed":
+        "The system background could not be reset. Switch appearance to retry.",
     "appearance.uiFontSize": "Workspace base text size",
     "appearance.uiFontSizeValue": "{size} px",
     "appearance.uiFontSizePreview": "Appearance preview",
     "appearance.uiFontSizeSample": "OEVIRA · text size sample",
-    "ai01.local.available": "You can still open, edit, and copy a task draft on this device.",
+    "ai01.local.available":
+        "You can still open, edit, and copy a task draft on this device.",
     "appearance.resetLocal": "Reset local appearance",
-    "appearance.resetLocalComplete": "Local appearance preferences were cleared. Defaults are active.",
-    "appearance.resetLocalFailed": "Local appearance preferences could not be fully cleared. Try again.",
+    "appearance.resetLocalComplete":
+        "Local appearance preferences were cleared. Defaults are active.",
+    "appearance.resetLocalFailed":
+        "Local appearance preferences could not be fully cleared. Try again.",
     "bmp02.filters.clear": "Clear filters",
     "appearance.presets": "Preset wallpapers",
     "appearance.preset.crimson": "Crimson sunset",
@@ -1584,15 +1855,19 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.actions": "Versions and actions",
     "sh01.media.add": "Add clip",
     "sh01.media.apply": "Apply changes",
-    "sh01.media.approval_cancelled": "Import cancelled. No source was added; the existing draft is unchanged.",
+    "sh01.media.approval_cancelled":
+        "Import cancelled. No source was added; the existing draft is unchanged.",
     "sh01.media.approval_confirm": "Confirm and import selected file",
     "sh01.media.approval_confirmation_id": "Confirmation ID",
-    "sh01.media.approval_expired": "This confirmation expired. No file was imported. Choose the file again to request a new confirmation.",
+    "sh01.media.approval_expired":
+        "This confirmation expired. No file was imported. Choose the file again to request a new confirmation.",
     "sh01.media.approval_expiry": "Confirmation expires: {expiry}",
     "sh01.media.approval_file": "File: {name} ({size} bytes)",
     "sh01.media.approval_hash": "File SHA-256 (confirmed by Core):",
-    "sh01.media.approval_pending": "Media import requires approval; no source has been added yet.",
-    "sh01.media.approval_purpose": "This saves the file only as a content draft in the current scope. It will not be published, and its rights status remains unknown.",
+    "sh01.media.approval_pending":
+        "Media import requires approval; no source has been added yet.",
+    "sh01.media.approval_purpose":
+        "This saves the file only as a content draft in the current scope. It will not be published, and its rights status remains unknown.",
     "sh01.media.approval_resource": "Resource",
     "sh01.media.approval_scope": "Current scope: {scope}",
     "sh01.media.approval_subject_id": "Subject ID",
@@ -1604,14 +1879,17 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.caption": "Add caption",
     "sh01.media.caption_text": "Caption text",
     "sh01.media.choose": "Choose video or audio",
-    "sh01.media.choose_business_purpose_body": "Create independently, or link this edit to commerce operations or brand marketing.",
+    "sh01.media.choose_business_purpose_body":
+        "Create independently, or link this edit to commerce operations or brand marketing.",
     "sh01.media.independent_workspace": "Independent work",
     "sh01.media.linked_workspace": "Business-linked work",
     "sh01.media.close": "Close",
-    "sh01.media.context": "The viewing scope changed. Return to the original scope to continue.",
+    "sh01.media.context":
+        "The viewing scope changed. Return to the original scope to continue.",
     "sh01.media.delete": "Remove clip",
     "sh01.media.demo": "Export as a demo. I understand rights are unverified.",
-    "sh01.media.denied": "This action is currently unavailable. Your draft is retained.",
+    "sh01.media.denied":
+        "This action is currently unavailable. Your draft is retained.",
     "sh01.media.discard": "Discard unexported changes?",
     "sh01.media.discard_confirm": "Discard changes",
     "sh01.media.download": "Download project",
@@ -1625,28 +1903,35 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.exporting": "Exporting. Your draft is retained…",
     "sh01.media.fade_in": "Fade in (s)",
     "sh01.media.fade_out": "Fade out (s)",
-    "sh01.media.failure": "The operation did not complete. Your draft and exported versions are retained.",
-    "sh01.media.focus_required": "The current business scope could not be confirmed. Return and reopen the editor.",
+    "sh01.media.failure":
+        "The operation did not complete. Your draft and exported versions are retained.",
+    "sh01.media.focus_required":
+        "The current business scope could not be confirmed. Return and reopen the editor.",
     "sh01.media.focus_scope": "Selected subject scope",
     "sh01.media.gain": "Volume",
     "sh01.media.global_all": "Global view",
     "sh01.media.import": "Import media",
     "sh01.media.importing": "Importing the selected file…",
     "sh01.media.invalid": "Check clip range, stream and fade durations.",
-    "sh01.media.invoking_domain_required": "Global view does not specify this invocation's business domain. The entry point must explicitly provide CTH or BMP; this does not set a brand focus or grant permission.",
+    "sh01.media.invoking_domain_required":
+        "Global view does not specify this invocation's business domain. The entry point must explicitly provide CTH or BMP; this does not set a brand focus or grant permission.",
     "sh01.media.later": "Move later",
     "sh01.media.muted": "Muted",
-    "sh01.media.native_preview": "Inline playback is not connected on this client. Download to view.",
+    "sh01.media.native_preview":
+        "Inline playback is not connected on this client. Download to view.",
     "sh01.media.open": "Open video editor",
     "sh01.media.position": "Timeline position (s)",
     "sh01.media.preview": "Preview export",
     "sh01.media.preview_empty": "Export to preview the rendered media.",
     "sh01.media.properties": "Clip settings",
     "sh01.media.purpose_bmp": "Purpose: create content for Brand and Market.",
-    "sh01.media.purpose_cth": "Purpose: create video content for Commerce Operations.",
-    "sh01.media.purpose_shared": "Purpose: create an independent video or audio work.",
+    "sh01.media.purpose_cth":
+        "Purpose: create video content for Commerce Operations.",
+    "sh01.media.purpose_shared":
+        "Purpose: create an independent video or audio work.",
     "sh01.media.relink": "Relink original media",
-    "sh01.media.relink_hint": "The export is viewable. Select the matching originals to resume editing.",
+    "sh01.media.relink_hint":
+        "The export is viewable. Select the matching originals to resume editing.",
     "sh01.media.reopen": "Reopen",
     "sh01.media.rights": "Rights unverified · Demo only",
     "sh01.media.saved": "Version created, not published",
@@ -1658,27 +1943,34 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.split": "Split at position",
     "sh01.media.split_position": "Split position (source seconds)",
     "sh01.media.stream": "Audio stream",
-    "sh01.media.subtitle": "Start with your media. Edit and export a version you can revise.",
+    "sh01.media.subtitle":
+        "Start with your media. Edit and export a version you can revise.",
     "sh01.media.timeline": "Timeline",
-    "sh01.media.timeout": "Export completion is unknown. Check the result before submitting again.",
+    "sh01.media.timeout":
+        "Export completion is unknown. Check the result before submitting again.",
     "sh01.media.title": "Video editing",
     "sh01.media.undo": "Undo",
     "sh01.media.versions": "Exported versions",
     "sh01.media.video": "Video",
-    "sh01.media.no_changes": "Make an edit before saving a new version. Your current work is kept.",
+    "sh01.media.no_changes":
+        "Make an edit before saving a new version. Your current work is kept.",
     "sh01.media.recover_sources": "Read media again",
     "sh01.media.voiceover": "Voiceover",
-    "sh01.media.web_import": "Web file import is not connected yet. Use the local workbench.",
+    "sh01.media.web_import":
+        "Web file import is not connected yet. Use the local workbench.",
     "sh01.media.open_saved": "Open saved work",
     "sh01.media.saved_reference": "Work reference",
-    "sh01.media.saved_reference_hint": "Enter the work reference retained after export.",
+    "sh01.media.saved_reference_hint":
+        "Enter the work reference retained after export.",
     "sh01.media.saved_reference_invalid": "Enter a valid work reference.",
-    "sh01.media.saved_reference_keep": "Keep this reference to reopen and continue editing later.",
+    "sh01.media.saved_reference_keep":
+        "Keep this reference to reopen and continue editing later.",
     "sh01.media.copy_reference": "Copy work reference",
     "sh01.media.copied_reference": "Work reference copied",
     "sh01.media.saved_empty": "No saved work in the current scope.",
     "sh01.media.saved_loading": "Loading saved work…",
-    "sh01.media.saved_partial": "Only verified work is shown. Continue searching or reload.",
+    "sh01.media.saved_partial":
+        "Only verified work is shown. Continue searching or reload.",
     "sh01.media.saved_failed": "Saved work could not be loaded. Try again.",
     "sh01.media.saved_refresh": "Reload",
     "sh01.media.saved_more": "Find more",
@@ -1691,16 +1983,20 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.player.mute": "Mute",
     "sh01.media.player.unmute": "Unmute",
     "sh01.media.player.seek": "Playback position",
-    "sh01.media.player.failure": "This version could not be played. Retry, or download it to view.",
+    "sh01.media.player.failure":
+        "This version could not be played. Retry, or download it to view.",
     "sh01.media.player.retry": "Retry playback",
     "sh01.media.player.releasing": "Closing the previous playback…",
-    "sh01.media.player.cleanup_failure": "Temporary playback files could not be removed. Close playback and try again.",
+    "sh01.media.player.cleanup_failure":
+        "Temporary playback files could not be removed. Close playback and try again.",
     "sh01.media.rendered_preview": "Exported video",
-    "sh01.media.previous_render": "This is the previous export. Export a new version to see draft changes.",
+    "sh01.media.previous_render":
+        "This is the previous export. Export a new version to see draft changes.",
     "sh01.media.versions_export": "Versions & export",
     "sh01.media.sound_settings": "Sound",
     "sh01.media.clip_operations": "Clip operations",
-    "sh01.media.apply_before_split": "Apply the current changes before splitting this clip.",
+    "sh01.media.apply_before_split":
+        "Apply the current changes before splitting this clip.",
     "sh01.media.timeline_zoom": "Timeline zoom",
     "sh01.media.timeline_fit": "Fit sequence",
     "sh01.media.timeline_size": "Timeline area size",
@@ -1711,13 +2007,16 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "shared.read_aloud.play": "Play",
     "shared.read_aloud.stop": "Stop",
     "shared.read_aloud.status.checking": "Checking installed voices…",
-    "shared.read_aloud.status.unavailable": "Local read aloud is unavailable on this platform.",
-    "shared.read_aloud.status.noLocalVoice": "No installed local voice is available for this language.",
+    "shared.read_aloud.status.unavailable":
+        "Local read aloud is unavailable on this platform.",
+    "shared.read_aloud.status.noLocalVoice":
+        "No installed local voice is available for this language.",
     "shared.read_aloud.status.starting": "Preparing to read aloud…",
     "shared.read_aloud.status.playing": "Reading aloud…",
     "shared.read_aloud.status.paused": "Reading is paused.",
     "shared.read_aloud.status.completed": "Reading completed.",
-    "shared.read_aloud.status.failed": "Reading failed. Check the device voice settings and try again.",
+    "shared.read_aloud.status.failed":
+        "Reading failed. Check the device voice settings and try again.",
     "shared.read_aloud.status.ready": "Ready to preview.",
     "shared.read_aloud.locale.zhCn": "Chinese (Simplified)",
     "shared.read_aloud.locale.enUs": "English (United States)",
@@ -1725,10 +2024,14 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "shared.read_aloud.rate.slow": "Slow · 0.75×",
     "shared.read_aloud.rate.normal": "Standard · 1.0×",
     "shared.read_aloud.rate.fast": "Fast · 1.25×",
-    "shared.read_aloud.purpose.sourceBrief": "Research text preview using a local voice. No audio is generated or saved.",
-    "shared.read_aloud.purpose.podcastScript": "Podcast script read aloud is a preview, not final podcast audio.",
-    "shared.read_aloud.purpose.videoCaption": "Video caption read aloud is a preview, not video voiceover.",
-    "shared.read_aloud.purpose.savedPreview": "Saved output text preview. The output is not changed or regenerated.",
+    "shared.read_aloud.purpose.sourceBrief":
+        "Research text preview using a local voice. No audio is generated or saved.",
+    "shared.read_aloud.purpose.podcastScript":
+        "Podcast script read aloud is a preview, not final podcast audio.",
+    "shared.read_aloud.purpose.videoCaption":
+        "Video caption read aloud is a preview, not video voiceover.",
+    "shared.read_aloud.purpose.savedPreview":
+        "Saved output text preview. The output is not changed or regenerated.",
     "shell.connecting": "Connecting",
     "shell.offline": "Service offline",
     "shell.auth_unavailable": "Connection authorization expired",
@@ -1743,24 +2046,36 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.overlay_end": "End (seconds)",
     "sh01.media.overlay_invalid": "Enter text and a valid start and end time.",
     "sh01.media.overlay_delete": "Remove text",
-    "sh01.media.apply_before_export": "Apply or cancel the changes in Properties before exporting.",
-    "sh01.media.apply_before_undo": "Apply or cancel the changes in Properties before undoing the timeline.",
+    "sh01.media.apply_before_export":
+        "Apply or cancel the changes in Properties before exporting.",
+    "sh01.media.apply_before_undo":
+        "Apply or cancel the changes in Properties before undoing the timeline.",
     "sh01.media.replace_source": "Replace source",
     "sh01.media.replacement_source": "New source",
-    "sh01.media.replacement_range": "Keep {duration} s · Source {start}–{end} s",
+    "sh01.media.replacement_range":
+        "Keep {duration} s · Source {start}–{end} s",
     "sh01.media.replacement_apply": "Apply replacement",
-    "sh01.media.replacement_empty": "Import another compatible video or audio source first",
-    "sh01.media.replacement_short": "The new source is too short to preserve the clip duration; adjust its start or choose another source",
-    "sh01.media.replacement_invalid": "Check the source, start time, and audio selection",
-    "sh01.media.apply_before_replace": "Apply or cancel the current adjustments first",
+    "sh01.media.replacement_empty":
+        "Import another compatible video or audio source first",
+    "sh01.media.replacement_short":
+        "The new source is too short to preserve the clip duration; adjust its start or choose another source",
+    "sh01.media.replacement_invalid":
+        "Check the source, start time, and audio selection",
+    "sh01.media.apply_before_replace":
+        "Apply or cancel the current adjustments first",
     "sh01.media.cancel_adjustment": "Cancel adjustments",
-    "sh01.media.replacement_audio_missing": "This source has no audio, so the clip will remain silent",
-    "sh01.media.replacement_transition_blocked": "This project contains transitions; clip replacement is unavailable",
+    "sh01.media.replacement_audio_missing":
+        "This source has no audio, so the clip will remain silent",
+    "sh01.media.replacement_transition_blocked":
+        "This project contains transitions; clip replacement is unavailable",
     "sh01.media.batch_preview": "Preview all adjustments",
     "sh01.media.batch_adopt": "Adopt adjustments",
-    "sh01.media.batch_preview_description": "Review the pending clip adjustments below. Adoption changes this draft only, as one undo step. It does not render or save a version.",
-    "sh01.media.batch_unsupported": "Apply or cancel pending stream, replacement, or split changes with their clip controls first. All drafts are retained.",
-    "sh01.media.batch_stale": "The draft or access changed. Preview the adjustments again.",
+    "sh01.media.batch_preview_description":
+        "Review the pending clip adjustments below. Adoption changes this draft only, as one undo step. It does not render or save a version.",
+    "sh01.media.batch_unsupported":
+        "Apply or cancel pending stream, replacement, or split changes with their clip controls first. All drafts are retained.",
+    "sh01.media.batch_stale":
+        "The draft or access changed. Preview the adjustments again.",
     "sh01.media.batch_inspecting": "Checking adjustments…",
   },
   "ko": {
@@ -1846,13 +2161,16 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "state.degraded": "저하 모드",
     "state.degraded_d": "일부 역량이 저하되었습니다. 핵심 읽기는 유효하며 비핵심 기능은 제한될 수 있습니다.",
     "state.permission_denied": "권한 없음",
-    "state.permission_denied_d": "현재 역할은 이 객체를 볼 수 없습니다. Subject/Scope 권한을 요청하세요.",
+    "state.permission_denied_d":
+        "현재 역할은 이 객체를 볼 수 없습니다. Subject/Scope 권한을 요청하세요.",
     "action.confirm_title": "조치 확인",
     "action.scope": "영향 범위",
     "action.target": "대상",
     "action.permission": "필요 권한",
-    "action.prototype_notice": "프로토타입은 확인 상호작용만 보여주며 백엔드를 호출하지 않습니다. 실제 실행은 Codex가 Action Contract로 연결합니다.",
-    "action.not_wired_to_backend": "프로토타입 동작: 백엔드 미연결 (Action Contract에 따라 Codex 연결 필요)",
+    "action.prototype_notice":
+        "프로토타입은 확인 상호작용만 보여주며 백엔드를 호출하지 않습니다. 실제 실행은 Codex가 Action Contract로 연결합니다.",
+    "action.not_wired_to_backend":
+        "프로토타입 동작: 백엔드 미연결 (Action Contract에 따라 Codex 연결 필요)",
     "selector.subject": "현재 주체",
     "selector.brand": "현재 브랜드",
     "selector.switch": "주체 전환",
@@ -1968,7 +2286,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth01.context_unavailable": "현재 사업 주체를 사용할 수 없습니다. 새로고침 후 다시 시도하세요.",
     "cth01.operation_unavailable": "운영 정보를 사용할 수 없습니다",
     "cth01.connection_retry": "연결을 확인하고 다시 시도하세요.",
-    "cth01.login_required": "현재 콘텐츠를 지금 열 수 없습니다. 다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.",
+    "cth01.login_required":
+        "현재 콘텐츠를 지금 열 수 없습니다. 다시 읽기를 시도하거나 돌아간 뒤 나중에 다시 시도할 수 있습니다.",
     "cth01.access_unavailable": "현재 콘텐츠에 접근할 수 없습니다.",
     "cth01.connection_unavailable": "연결할 수 없습니다. 네트워크를 확인하고 다시 시도하세요.",
     "cth01.generic_unavailable": "운영 정보를 사용할 수 없습니다. 나중에 다시 시도하세요.",
@@ -2015,7 +2334,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth01.trend.unavailable_title": "14일 추세를 사용할 수 없습니다",
     "cth01.trend.unavailable_detail": "일별 누락과 실제 0을 구분할 수 없어 현재 추세를 표시하지 않습니다.",
     "cth01.evidence.unavailable_title": "출처 정보를 사용할 수 없습니다",
-    "cth01.evidence.unavailable_detail": "활동과 원본 정보의 연결이 확인되지 않아 출처를 표시하지 않습니다.",
+    "cth01.evidence.unavailable_detail":
+        "활동과 원본 정보의 연결이 확인되지 않아 출처를 표시하지 않습니다.",
     "cth01.activity.empty.title": "운영 활동 없음",
     "cth01.activity.empty.detail": "현재 표시할 운영 활동이 없습니다.",
     "cth01.activity.not_collected.title": "운영 활동이 수집되지 않았습니다",
@@ -2042,7 +2362,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth03.sources.heading": "출처 채널",
     "cth03.sources.detail": "확인 가능한 출처 상태를 표시합니다. 출처를 선택하면 아래 기록을 필터링합니다.",
     "cth03.stream.heading": "수집된 기록",
-    "cth03.stream.detail": "과거 콘텐츠가 포함될 수 있습니다. 게시 시각은 출처에서 제공하며, 없는 경우 별도로 표시합니다.",
+    "cth03.stream.detail":
+        "과거 콘텐츠가 포함될 수 있습니다. 게시 시각은 출처에서 제공하며, 없는 경우 별도로 표시합니다.",
     "cth03.page_read_time.label": "페이지 조회 시각",
     "cth03.publication_time.label": "출처 게시 시각",
     "cth03.time.not_provided": "제공되지 않음",
@@ -2052,9 +2373,11 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth03.source.unknown": "출처 알 수 없음",
     "context.mode.global_all": "접근 가능한 전체 범위",
     "context.mode.focus": "집중 범위",
-    "context.screen_binding_unavailable": "이 페이지는 아직 선택한 범위의 데이터와 연결되지 않았습니다. 기존 정보를 해당 범위의 결과인 것처럼 표시하지 않습니다.",
+    "context.screen_binding_unavailable":
+        "이 페이지는 아직 선택한 범위의 데이터와 연결되지 않았습니다. 기존 정보를 해당 범위의 결과인 것처럼 표시하지 않습니다.",
     "context.error.auth_required": "접근 권한을 확인한 후 다시 시도하세요.",
-    "context.error.authorization_unavailable": "접근 서비스를 사용할 수 없습니다. 나중에 다시 시도하세요.",
+    "context.error.authorization_unavailable":
+        "접근 서비스를 사용할 수 없습니다. 나중에 다시 시도하세요.",
     "context.error.invalid_selection": "선택한 범위를 확인할 수 없습니다. 다시 선택하세요.",
     "context.error.permission_denied": "현재 계정은 선택한 범위를 볼 수 없습니다.",
     "context.error.subject_unavailable": "선택한 주체를 사용할 수 없습니다. 다른 주체를 선택하세요.",
@@ -2079,7 +2402,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "launch.access_denied.title": "현재 접근을 사용할 수 없습니다",
     "launch.access_denied.detail": "현재 접근 범위를 확인한 후 다시 시도하세요.",
     "launch.service_unavailable.title": "작업 공간에 연결되지 않았습니다",
-    "launch.service_unavailable.detail": "작업 공간에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.",
+    "launch.service_unavailable.detail":
+        "작업 공간에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.",
     "launch.retry": "다시 연결",
     "bmp01.eyebrow": "BMP · 브랜드 & 마켓",
     "bmp01.title": "브랜드 & 마켓 개요",
@@ -2089,16 +2413,21 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "bmp01.focus.selected": "현재 초점: {name}",
     "bmp01.focus.unavailable": "브랜드 이름을 사용할 수 없습니다",
     "bmp01.focus.empty.title": "표시할 브랜드 정보가 없습니다",
-    "bmp01.focus.empty.detail": "아직 브랜드 성과를 표시할 수 없습니다. 확인된 브랜드 및 시장 신호가 준비되면 여기에 표시됩니다.",
+    "bmp01.focus.empty.detail":
+        "아직 브랜드 성과를 표시할 수 없습니다. 확인된 브랜드 및 시장 신호가 준비되면 여기에 표시됩니다.",
     "bmp01.market.eyebrow": "브랜드 시장 흐름",
     "bmp01.market.ready.title": "브랜드 시장 정보가 아직 열리지 않았습니다",
-    "bmp01.market.ready.detail": "현재 범위에서 확인된 브랜드 시장 데이터가 없습니다. 다른 범위의 결과를 이 브랜드의 결과로 표시하지 않습니다.",
+    "bmp01.market.ready.detail":
+        "현재 범위에서 확인된 브랜드 시장 데이터가 없습니다. 다른 범위의 결과를 이 브랜드의 결과로 표시하지 않습니다.",
     "bmp01.market.global.title": "관심 브랜드가 선택되지 않았습니다",
-    "bmp01.market.global.detail": "현재 보기는 GLOBAL / ALL입니다. 브랜드 성과나 경쟁 데이터를 보려면 브랜드를 선택하고 확인하세요.",
+    "bmp01.market.global.detail":
+        "현재 보기는 GLOBAL / ALL입니다. 브랜드 성과나 경쟁 데이터를 보려면 브랜드를 선택하고 확인하세요.",
     "bmp01.market.not_collected.title": "브랜드 시장 데이터가 아직 수집되지 않았습니다",
-    "bmp01.market.not_collected.detail": "데이터를 사용할 수 있게 되면 브랜드 성과, 경쟁 흐름과 시장 변화가 표시됩니다.",
+    "bmp01.market.not_collected.detail":
+        "데이터를 사용할 수 있게 되면 브랜드 성과, 경쟁 흐름과 시장 변화가 표시됩니다.",
     "bmp01.market.blocked.title": "브랜드 시장 정보를 사용할 수 없습니다",
-    "bmp01.market.blocked.detail": "새로고침 후 다시 시도하세요. 확인되지 않은 브랜드 정보는 표시하지 않습니다.",
+    "bmp01.market.blocked.detail":
+        "새로고침 후 다시 시도하세요. 확인되지 않은 브랜드 정보는 표시하지 않습니다.",
     "bmp01.refresh": "데이터 새로고침",
     "bmp01.metrics.label": "브랜드 시장 지표",
     "bmp01.retry": "다시 시도",
@@ -2130,7 +2459,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "ai01.draft.notice": "초안은 제출되지 않았습니다. 닫거나 범위를 변경하기 전에 텍스트를 저장하세요.",
     "ai01.submit.blocked.empty": "분석을 시작하기 전에 작업 내용을 입력하세요.",
     "ai01.submit.blocked.too_long": "작업 내용이 4000자를 넘습니다. 줄인 뒤 제출하세요.",
-    "ai01.submit.blocked.submitted": "이 내용은 이미 제출되었습니다. 내용을 수정해야 다시 제출할 수 있습니다.",
+    "ai01.submit.blocked.submitted":
+        "이 내용은 이미 제출되었습니다. 내용을 수정해야 다시 제출할 수 있습니다.",
     "ai01.submit.blocked.submitting": "제출 중입니다. 잠시 기다려 주세요.",
     "ai01.submit.sending": "분석 작업을 제출하는 중…",
     "ai01.submit.completed": "분석이 완료되었습니다. 결과는 파생 내용이며 업무 자료나 증거를 대체하지 않습니다.",
@@ -2140,7 +2470,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "ai01.submit.invalid": "작업 내용이 올바르지 않아 실행되지 않았습니다. 수정한 뒤 다시 제출하세요.",
     "ai01.submit.auth": "서비스 연결 권한이 만료되어 실행되지 않았습니다.",
     "ai01.submit.failed": "서비스 오류로 실행 여부를 확인할 수 없습니다. 확인한 뒤 다시 제출할지 결정하세요.",
-    "ai01.submit.unknown": "분석이 실행되었는지 확인할 수 없으며 자동으로 재시도하지 않습니다. 확인한 뒤 다시 제출할지 결정하세요.",
+    "ai01.submit.unknown":
+        "분석이 실행되었는지 확인할 수 없으며 자동으로 재시도하지 않습니다. 확인한 뒤 다시 제출할지 결정하세요.",
     "ai01.submit.status_label": "서비스 응답 상태",
     "ai01.submit.execution_id": "실행 ID",
     "ai01.submit.audit_id": "감사 ID",
@@ -2151,20 +2482,82 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "ai01.file.save": "텍스트 초안 저장",
     "ai01.file.copy": "초안 복사",
     "ai01.file.replaceTitle": "현재 초안을 바꿀까요?",
-    "ai01.file.replaceDetail": "파일 내용으로 현재 텍스트를 바꿉니다. 저장하지 않은 수정은 사라집니다. 먼저 저장하려면 취소하세요.",
+    "ai01.file.replaceDetail":
+        "파일 내용으로 현재 텍스트를 바꿉니다. 저장하지 않은 수정은 사라집니다. 먼저 저장하려면 취소하세요.",
     "ai01.file.keep": "현재 내용 유지",
     "ai01.file.replace": "열고 바꾸기",
     "ai01.file.invalid": "4000자, 64 KB 이하의 UTF-8 텍스트 파일을 선택하세요. 현재 초안은 유지됩니다.",
     "ai01.file.failed": "작업을 완료하지 못했습니다. 초안은 유지됩니다. 다시 시도하거나 텍스트를 복사하세요.",
     "ai01.file.changed": "초안이 변경되어 바꾸지 않았습니다. 파일을 다시 열어 주세요.",
     "ai01.file.opened": "로컬 초안을 열었으며 아직 제출되지 않았습니다. 이 내용은 전송되거나 분석을 시작하지 않습니다.",
-    "ai01.file.downloaded": "브라우저에 다운로드를 전달했습니다. 다운로드 목록에서 파일을 확인하고 이후 수정은 다시 저장하세요.",
+    "ai01.file.downloaded":
+        "브라우저에 다운로드를 전달했습니다. 다운로드 목록에서 파일을 확인하고 이후 수정은 다시 저장하세요.",
     "ai01.file.saved": "텍스트 초안을 저장했습니다. 이후 수정은 다시 저장하세요. 분석은 제출하지 않았습니다.",
+    "ai01.conversation.open": "대화",
+    "ai01.conversation.title": "대화",
+    "ai01.conversation.new": "새 대화",
+    "ai01.conversation.list": "대화 목록",
+    "ai01.conversation.empty": "대화를 시작하세요",
+    "ai01.conversation.empty_list": "아직 대화가 없습니다.",
+    "ai01.conversation.untitled": "새 대화",
+    "ai01.conversation.archived": "보관됨",
+    "ai01.conversation.load_more": "더 보기",
+    "ai01.conversation.check": "요청 상태 확인",
+    "ai01.conversation.input_hint": "메시지 입력",
+    "ai01.conversation.send": "보내기",
+    "ai01.conversation.no_messages": "아직 메시지가 없습니다.",
+    "ai01.conversation.you": "나",
+    "ai01.conversation.reply": "답변",
+    "ai01.conversation.task": "연결된 작업",
+    "ai01.conversation.status": "상태",
+    "ai01.conversation.task_unavailable": "현재 이 작업에 접근할 수 없습니다.",
+    "ai01.conversation.task_attached": "작업이 연결되었습니다.",
+    "ai01.conversation.content_unavailable": "지금은 이 내용을 사용할 수 없습니다.",
+    "ai01.conversation.state.reserved": "답변 확인 필요",
+    "ai01.conversation.state.unavailable": "사용할 수 없음",
+    "ai01.conversation.state.failed": "답변이 완료되지 않음",
+    "ai01.conversation.state.interrupted": "중단 기록됨",
+    "ai01.conversation.waiting": "요청을 처리 중이며 결과가 아직 반환되지 않았습니다.",
+    "ai01.conversation.no_reply": "답변을 받지 못했습니다.",
+    "ai01.conversation.interrupted_unknown": "중단을 기록했지만 원래 결과는 아직 알 수 없습니다.",
+    "ai01.conversation.attach_task": "현재 분석 작업 연결",
+    "ai01.conversation.issue.authentication": "로그인 상태를 다시 확인해 주세요.",
+    "ai01.conversation.issue.permission": "현재 계정은 이 대화에 접근할 수 없습니다.",
+    "ai01.conversation.issue.conflict": "대화가 변경되었습니다. 계속하기 전에 다시 읽어 주세요.",
+    "ai01.conversation.issue.invalid": "메시지 또는 요청 형식이 올바르지 않습니다.",
+    "ai01.conversation.issue.server": "서비스를 일시적으로 사용할 수 없습니다.",
+    "ai01.conversation.issue.offline": "지금은 서비스에 연결할 수 없습니다.",
+    "ai01.conversation.issue.unknown":
+        "결과를 확인할 수 없습니다. 먼저 상태를 확인하며 자동으로 다시 요청하지 않습니다.",
+    "ai01.conversation.issue.create_unknown":
+        "새 대화가 생성되었는지 확인할 수 없습니다. 목록을 새로 고쳐 확인하며 자동으로 다시 만들지 않습니다.",
+    "ai01.conversation.create_again.title": "이전 생성 결과가 확인되지 않았습니다",
+    "ai01.conversation.create_again.detail":
+        "이전 대화가 이미 생성되었을 수 있습니다. 계속하면 새 대화가 하나 더 생성됩니다. 계속하려면 확인해 주세요.",
+    "ai01.conversation.create_again.confirm": "새 대화 추가 생성",
+    "ai01.conversation.issue.append_unknown":
+        "메시지가 저장되었는지 아직 확인할 수 없습니다. 먼저 확인하며 자동으로 저장하거나 답변을 요청하지 않습니다.",
+    "ai01.conversation.issue.interrupted_unknown":
+        "중단을 기록했지만 외부 요청이 중지되었는지는 알 수 없습니다.",
+    "ai01.conversation.retry.action": "다시 요청",
+    "ai01.conversation.retry.title": "답변을 다시 요청할까요?",
+    "ai01.conversation.retry.detail":
+        "새 답변 요청이 전송됩니다. 이전 결과를 덮어쓰지 않습니다. 계속하기 전에 확인해 주세요.",
+    "ai01.conversation.retry.confirm": "다시 요청 확인",
+    "ai01.conversation.append.retry": "안전하게 저장 다시 시도",
+    "ai01.conversation.respond.action": "답변 요청",
+    "ai01.conversation.interrupt.action": "중단 기록",
+    "ai01.conversation.interrupt.title": "중단을 기록할까요?",
+    "ai01.conversation.interrupt.detail":
+        "대화 상태는 바뀌지만 이미 전송된 서비스 요청이 중지된다고 보장할 수는 없습니다. 결과는 계속 알 수 없을 수 있습니다.",
+    "ai01.conversation.interrupt.confirm": "중단 기록 확인",
     "ai01.file.copied": "초안을 복사했습니다. 원하는 곳에 붙여넣으세요.",
     "ai01.file.working": "초안 처리 중…",
     "ai01.evidence.title": "업무 자료",
-    "ai01.evidence.detail": "검증 가능한 업무 자료 집계 기능이 이 페이지에 아직 연결되지 않아 합계를 표시하지 않습니다.",
-    "ai01.evidence.trace": "업무 자료 검색과 기록 상세가 이 페이지에 아직 연결되지 않아 자료 기록을 표시하지 않습니다.",
+    "ai01.evidence.detail":
+        "검증 가능한 업무 자료 집계 기능이 이 페이지에 아직 연결되지 않아 합계를 표시하지 않습니다.",
+    "ai01.evidence.trace":
+        "업무 자료 검색과 기록 상세가 이 페이지에 아직 연결되지 않아 자료 기록을 표시하지 않습니다.",
     "ai01.providers.title": "모델 서비스 상태",
     "ai01.providers.empty": "받은 모델 서비스 상태가 없습니다.",
     "ai01.executions.title": "최근 분석",
@@ -2192,11 +2585,13 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "ai01.inspector.hide": "업무 자료 접기",
     "sh01.eyebrow": "연구 & 크리에이션",
     "sh01.title": "연구 & 크리에이션 도구",
-    "sh01.subtitle": "커머스 운영과 브랜드 마켓에서 함께 쓰는 연구 및 콘텐츠 도구를 확인합니다. 목록은 목적을 설명할 뿐 현재 사용 가능함을 뜻하지 않습니다.",
+    "sh01.subtitle":
+        "커머스 운영과 브랜드 마켓에서 함께 쓰는 연구 및 콘텐츠 도구를 확인합니다. 목록은 목적을 설명할 뿐 현재 사용 가능함을 뜻하지 않습니다.",
     "sh01.refresh": "역량 목록 다시 읽기",
     "sh01.charter.eyebrow": "공유 역량",
     "sh01.charter.title": "공유 콘텐츠 및 크리에이션",
-    "sh01.charter.detail": "이 서비스는 커머스 운영과 브랜드 마켓의 업무 흐름을 돕지만 사업 주체, 브랜드 자료와 결론을 대신하지 않습니다.",
+    "sh01.charter.detail":
+        "이 서비스는 커머스 운영과 브랜드 마켓의 업무 흐름을 돕지만 사업 주체, 브랜드 자료와 결론을 대신하지 않습니다.",
     "sh01.charter.products": "사용 가능 제품",
     "sh01.charter.note": "도구를 선택하면 용도, 지원 콘텐츠와 사용 방법을 볼 수 있습니다.",
     "sh01.index.title": "도구 목록",
@@ -2297,9 +2692,11 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sys01.state.unhealthy": "이상",
     "sys01.state.stopped": "중지됨",
     "workspace.route.unavailable.title": "이 워크스페이스 페이지를 열 수 없습니다",
-    "workspace.route.unavailable.detail": "이 주소는 현재 OEVIRA Workspace에 연결되어 있지 않습니다. 데이터, 권한 및 실행 경계는 변경되지 않습니다.",
+    "workspace.route.unavailable.detail":
+        "이 주소는 현재 OEVIRA Workspace에 연결되어 있지 않습니다. 데이터, 권한 및 실행 경계는 변경되지 않습니다.",
     "workspace.capability.browser_unavailable.title": "아직 브라우저를 사용할 수 없습니다",
-    "workspace.capability.browser_unavailable.detail": "현재 작업 공간은 아직 브라우저 페이지에 연결되지 않았습니다. 돌아가서 작업을 계속할 수 있습니다.",
+    "workspace.capability.browser_unavailable.detail":
+        "현재 작업 공간은 아직 브라우저 페이지에 연결되지 않았습니다. 돌아가서 작업을 계속할 수 있습니다.",
     "workspace.route.return": "워크스페이스로 돌아가기",
     "cth08.title": "케이스·분석·지식베이스",
     "cth08.eyebrow": "커머스 운영 · 케이스 작업공간",
@@ -2311,7 +2708,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth08.action.retry": "다시 시도",
     "cth08.loading": "케이스 작업공간을 읽는 중",
     "cth08.blocked.title": "케이스 작업공간을 사용할 수 없습니다",
-    "cth08.blocked.detail": "현재 화면에는 승인된 범위와 확인된 근거 흐름이 필요합니다. 케이스 자료를 표시하지 않습니다.",
+    "cth08.blocked.detail":
+        "현재 화면에는 승인된 범위와 확인된 근거 흐름이 필요합니다. 케이스 자료를 표시하지 않습니다.",
     "cth08.error.generic": "케이스 정보를 지금 읽을 수 없습니다. 잠시 후 다시 시도해 주세요.",
     "cth08.error.auth": "접근 권한을 확인할 수 없습니다. 접근이 복구된 후 다시 시도해 주세요.",
     "cth08.state.empty": "이 범위에는 확인할 케이스가 없습니다.",
@@ -2347,7 +2745,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "cth09.action.retry": "다시 시도",
     "cth09.loading": "위험과 의사결정을 읽는 중",
     "cth09.blocked.title": "위험 및 의사결정 자료를 사용할 수 없습니다",
-    "cth09.blocked.detail": "현재 범위 또는 근거 흐름을 확인할 수 없습니다. 위험과 의사결정 자료를 표시하지 않습니다.",
+    "cth09.blocked.detail":
+        "현재 범위 또는 근거 흐름을 확인할 수 없습니다. 위험과 의사결정 자료를 표시하지 않습니다.",
     "cth09.error.generic": "위험 및 의사결정 자료를 지금 읽을 수 없습니다. 잠시 후 다시 시도해 주세요.",
     "cth09.error.auth": "접근 권한을 확인할 수 없습니다. 접근이 복구된 후 다시 시도해 주세요.",
     "cth09.state.empty": "이 범위에는 처리할 위험이나 의사결정이 없습니다.",
@@ -2429,7 +2828,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "appearance.mode.white": "흰색",
     "appearance.mode.black": "검정",
     "appearance.mode.solid": "사용자 색상",
-    "appearance.desktopUnavailable": "데스크톱 앱에서만 데스크톱 흐림을 사용할 수 있습니다. 여기서는 배경화면을 선택하세요.",
+    "appearance.desktopUnavailable":
+        "데스크톱 앱에서만 데스크톱 흐림을 사용할 수 있습니다. 여기서는 배경화면을 선택하세요.",
     "appearance.chooseWallpaper": "배경화면 선택",
     "appearance.removeWallpaper": "배경화면 삭제",
     "appearance.wallpaperLimit": "PNG, JPEG 또는 WebP, 최대 3 MB.",
@@ -2465,15 +2865,18 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.actions": "버전 및 작업",
     "sh01.media.add": "클립 추가",
     "sh01.media.apply": "변경 적용",
-    "sh01.media.approval_cancelled": "가져오기가 취소되었습니다. 소스는 추가되지 않았고 기존 초안은 유지됩니다.",
+    "sh01.media.approval_cancelled":
+        "가져오기가 취소되었습니다. 소스는 추가되지 않았고 기존 초안은 유지됩니다.",
     "sh01.media.approval_confirm": "확인 후 선택한 파일 가져오기",
     "sh01.media.approval_confirmation_id": "확인 ID",
-    "sh01.media.approval_expired": "확인 시간이 만료되어 파일을 가져오지 않았습니다. 새 확인을 받으려면 파일을 다시 선택하세요.",
+    "sh01.media.approval_expired":
+        "확인 시간이 만료되어 파일을 가져오지 않았습니다. 새 확인을 받으려면 파일을 다시 선택하세요.",
     "sh01.media.approval_expiry": "확인 만료: {expiry}",
     "sh01.media.approval_file": "파일: {name} ({size}바이트)",
     "sh01.media.approval_hash": "파일 SHA-256 (Core 확인):",
     "sh01.media.approval_pending": "미디어 가져오기는 승인이 필요하며 아직 소스가 추가되지 않았습니다.",
-    "sh01.media.approval_purpose": "이 파일은 현재 범위의 콘텐츠 초안으로만 저장됩니다. 공개 게시되지 않으며 권리 상태는 여전히 알 수 없습니다.",
+    "sh01.media.approval_purpose":
+        "이 파일은 현재 범위의 콘텐츠 초안으로만 저장됩니다. 공개 게시되지 않으며 권리 상태는 여전히 알 수 없습니다.",
     "sh01.media.approval_resource": "리소스",
     "sh01.media.approval_scope": "현재 범위: {scope}",
     "sh01.media.approval_subject_id": "주체 ID",
@@ -2485,7 +2888,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.caption": "자막 추가",
     "sh01.media.caption_text": "자막 내용",
     "sh01.media.choose": "동영상 또는 오디오 선택",
-    "sh01.media.choose_business_purpose_body": "독립 작품을 만들거나 이번 편집을 커머스 운영 또는 브랜드 마케팅에 연결하세요.",
+    "sh01.media.choose_business_purpose_body":
+        "독립 작품을 만들거나 이번 편집을 커머스 운영 또는 브랜드 마케팅에 연결하세요.",
     "sh01.media.independent_workspace": "독립 작품",
     "sh01.media.linked_workspace": "업무 연계 작품",
     "sh01.media.close": "닫기",
@@ -2514,7 +2918,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.import": "미디어 가져오기",
     "sh01.media.importing": "선택한 파일을 가져오는 중…",
     "sh01.media.invalid": "클립 범위, 스트림 및 페이드 시간을 확인하세요.",
-    "sh01.media.invoking_domain_required": "전체 보기에는 이번 호출의 업무 도메인이 지정되지 않았습니다. 진입점에서 CTH 또는 BMP를 명시해야 하며, 이는 브랜드 포커스나 권한을 부여하지 않습니다.",
+    "sh01.media.invoking_domain_required":
+        "전체 보기에는 이번 호출의 업무 도메인이 지정되지 않았습니다. 진입점에서 CTH 또는 BMP를 명시해야 하며, 이는 브랜드 포커스나 권한을 부여하지 않습니다.",
     "sh01.media.later": "뒤로 이동",
     "sh01.media.muted": "음소거",
     "sh01.media.native_preview": "이 클라이언트의 내장 재생이 연결되지 않았습니다. 다운로드하여 확인하세요.",
@@ -2575,7 +2980,8 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.player.failure": "이 버전을 재생할 수 없습니다. 다시 시도하거나 다운로드하여 확인하세요.",
     "sh01.media.player.retry": "재생 다시 시도",
     "sh01.media.player.releasing": "이전 재생을 종료하는 중…",
-    "sh01.media.player.cleanup_failure": "임시 재생 파일을 삭제하지 못했습니다. 재생을 종료한 후 다시 시도하세요.",
+    "sh01.media.player.cleanup_failure":
+        "임시 재생 파일을 삭제하지 못했습니다. 재생을 종료한 후 다시 시도하세요.",
     "sh01.media.rendered_preview": "내보낸 영상",
     "sh01.media.previous_render": "이전에 내보낸 영상입니다. 초안 변경 사항을 보려면 새 버전을 내보내세요.",
     "sh01.media.versions_export": "버전 및 내보내기",
@@ -2606,10 +3012,13 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "shared.read_aloud.rate.slow": "느리게 · 0.75×",
     "shared.read_aloud.rate.normal": "표준 · 1.0×",
     "shared.read_aloud.rate.fast": "빠르게 · 1.25×",
-    "shared.read_aloud.purpose.sourceBrief": "로컬 음성을 사용하는 조사 자료 미리 듣기입니다. 오디오를 만들거나 저장하지 않습니다.",
-    "shared.read_aloud.purpose.podcastScript": "팟캐스트 대본 미리 듣기이며 최종 팟캐스트 오디오가 아닙니다.",
+    "shared.read_aloud.purpose.sourceBrief":
+        "로컬 음성을 사용하는 조사 자료 미리 듣기입니다. 오디오를 만들거나 저장하지 않습니다.",
+    "shared.read_aloud.purpose.podcastScript":
+        "팟캐스트 대본 미리 듣기이며 최종 팟캐스트 오디오가 아닙니다.",
     "shared.read_aloud.purpose.videoCaption": "영상 자막 미리 듣기이며 영상 음성 더빙이 아닙니다.",
-    "shared.read_aloud.purpose.savedPreview": "저장된 결과 텍스트 미리 듣기입니다. 결과를 수정하거나 다시 생성하지 않습니다.",
+    "shared.read_aloud.purpose.savedPreview":
+        "저장된 결과 텍스트 미리 듣기입니다. 결과를 수정하거나 다시 생성하지 않습니다.",
     "shell.connecting": "연결 중",
     "shell.offline": "서비스 연결 끊김",
     "shell.auth_unavailable": "연결 승인 만료",
@@ -2631,16 +3040,20 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.replacement_range": "{duration}초 유지 · 원본 {start}–{end}초",
     "sh01.media.replacement_apply": "교체 적용",
     "sh01.media.replacement_empty": "먼저 호환되는 다른 동영상 또는 오디오 소스를 가져오세요",
-    "sh01.media.replacement_short": "새 소스가 클립 길이를 유지하기에 너무 짧습니다. 시작점을 조정하거나 다른 소스를 선택하세요",
+    "sh01.media.replacement_short":
+        "새 소스가 클립 길이를 유지하기에 너무 짧습니다. 시작점을 조정하거나 다른 소스를 선택하세요",
     "sh01.media.replacement_invalid": "소스, 시작 시간 및 오디오 선택을 확인하세요",
     "sh01.media.apply_before_replace": "먼저 현재 조정을 적용하거나 취소하세요",
     "sh01.media.cancel_adjustment": "조정 취소",
     "sh01.media.replacement_audio_missing": "이 소스에는 오디오가 없어 클립은 무음으로 유지됩니다",
-    "sh01.media.replacement_transition_blocked": "이 프로젝트에는 전환 효과가 있어 클립 교체를 사용할 수 없습니다",
+    "sh01.media.replacement_transition_blocked":
+        "이 프로젝트에는 전환 효과가 있어 클립 교체를 사용할 수 없습니다",
     "sh01.media.batch_preview": "모든 조정 미리 보기",
     "sh01.media.batch_adopt": "조정 적용",
-    "sh01.media.batch_preview_description": "아래의 보류 중인 클립 조정을 확인하세요. 적용은 현재 초안만 변경하며 한 번에 실행 취소할 수 있습니다. 렌더링하거나 버전을 저장하지 않습니다.",
-    "sh01.media.batch_unsupported": "먼저 해당 클립에서 대기 중인 오디오 스트림 선택, 소스 교체 또는 분할 변경을 적용하거나 취소하세요. 모든 초안은 유지됩니다.",
+    "sh01.media.batch_preview_description":
+        "아래의 보류 중인 클립 조정을 확인하세요. 적용은 현재 초안만 변경하며 한 번에 실행 취소할 수 있습니다. 렌더링하거나 버전을 저장하지 않습니다.",
+    "sh01.media.batch_unsupported":
+        "먼저 해당 클립에서 대기 중인 오디오 스트림 선택, 소스 교체 또는 분할 변경을 적용하거나 취소하세요. 모든 초안은 유지됩니다.",
     "sh01.media.batch_stale": "초안이나 접근 권한이 변경되었습니다. 조정을 다시 미리 보세요.",
     "sh01.media.batch_inspecting": "조정 확인 중…",
   },

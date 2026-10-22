@@ -69,6 +69,8 @@ source existence does not establish runtime or screen acceptance.
 | Inspect task | `GET /api/experience/reports/source-brief/tasks/<task_id>` | Envelope `task`; keep `task_id` and `job_id` distinct. `pending/running/succeeded/failed/interrupted` are actual execution states. |
 | Resume interrupted task | `POST /api/experience/reports/source-brief/tasks/<task_id>/resume` | Body exactly `{}`; a new request revalidates current principal, exact scope, Permission and effect boundary before execution/commit. HTTP 202 remains admission. |
 | Reopen saved result | `GET /api/experience/reports/source-brief/jobs/<job_id>` | Envelope `result`; canonical `daily_reports` readback rechecks actor, scope, source selection, Evidence and hashes. Never substitute an in-memory request or the legacy aggregate. |
+| Save as editable research | `POST /api/experience/reports/source-brief/jobs/<job_id>/save` | Body exactly `{request_id,title}`. The server reopens the job under the current actor/scope and generates the SavedWork text, source reference and payload. The client reuses one request ID for uncertain retries and accepts success only after exact artifact/version/scope linkage and a separate SavedWork readback. |
+| Reopen saved research | `GET /api/experience/saved-work/<artifact_id>` | Reopens the committed `research` artifact through the existing SavedWork reader with the same CTH/BMP context. Verify artifact ID/hash, title, request ID, source job/hash and scope before showing the saved text. Permission or source-reference failure remains an explicit unavailable state. |
 
 CoreClient sends `X-Domain-Id: CTH`, `X-Product-Id: CTH` and explicit
 `X-Lumenis-Context-Mode: GLOBAL_ALL/FOCUS`; focused requests have the exact
@@ -77,6 +79,15 @@ select context; they do not grant Permission. The Core resolves the sealed local
 workspace principal or authenticated actor, canonical registry and module `reports`
 read/write scope, then requires `REPORT_GENERATE` Permission/effect/audit before
 task admission, execution and artifact commit.
+
+Saving is an explicit user action after a verified SourceBrief result. The
+client sends no markdown, actor identity, citations or scope override: the
+existing save route derives the research document from the immutable job and
+its current source/review state. It then independently reopens the SavedWork
+artifact under the same context. A newly saved result is editable through the
+existing SavedWork revision contract; this does not mutate or append to the
+immutable SourceBrief job. The interface reports a save only after both the
+save receipt and the independent readback agree.
 
 On success, read `job_state`, `artifact_outcome`, `source_brief.records`,
 `business_analysis.state`, `operator_review`, `evaluation` and `review_status`
@@ -298,12 +309,12 @@ Web保研究→业务→结果深链与原Shared返回锚点；Desktop并读方�
 界面AIGC可按目标建议比较列和结果解释顺序，金额、单位、未知、引用与审批控件仍固定真实数据；用户锁定的方案列/人工观察不被重写。价值是看清选择依据、执行证据和效果未知，必要时能修正而不丢历史。
 生成式界面根据目标与真实比较字段提议原创方案对照和分阶段成果揭示，未执行区保空态文本而非庆祝动画；不同业务问题可用不同原生表/局部图解/证据阅读构成。用户冻结当前比较列，任何重新构图不改变已选择方案、金额、批准或结果。
 
-## 2026-10-18 恢复候选后的当前接口接续（F待执行）
+## 2026-10-22 SourceBrief 保存与共享成果接线
 
-当前静态事实：backend start已接business_question，Dart VM仍拒非空问句；已有任务重开/恢复/busy反馈继续保留。当前backend保存为同原scope研究成果，不能把它宣称为旧候选无条件跨域采用到Shared。
+可选业务问题沿现有 SourceBrief start contract 传给后端。完成任务后先独立读回并核验来源简报，再提供同域保存/成果历史、原版本重开，以及基于明确父版本和 expected hash 的不可变修订。修订冲突或结果未知时保留原草稿与稳定 request ID；不得覆盖旧版本或因迟到响应清空用户后续输入。
 
-F输入合同：原`POST /api/experience/reports/source-brief/start`按当前白名单接可选business_question（4–1500字符）及source_ids/research/reference，202只是任务准入。job完成后独立读回；`POST /api/experience/reports/source-brief/jobs/<job_id>/save`严格body`{request_id,title}`，服务端重读job/来源/hash/当前review，输出`{ok:true,result:<SavedWork>}`，kind=research，保原scope/media_scope。保当前SavedWork返回的身份、version/hash并通过其原重开接口读回；客户端不能自改scope取得跨域权限。连接断开先核同request_id结果，不盲重复写。
+跨域保存复用现有 `POST /api/experience/saved-work` 和 Shared SavedWork owner。prepare 只返回服务端核验的目标标题、精确资源、引用数、来源数和绑定；界面展示这些内容并等待用户明确确认。apply 使用同一个 request ID 和 `confirmed_resource`，不接收客户端 actor、scope、正文、引用或 Permission token。服务端重读来源、权益和当前范围并完成精确导出审批；保存后通过 `GET /api/experience/saved-work/<artifact_id>` 独立重开、比对 artifact/hash/版本/范围/来源绑定。原 CTH/BMP 来源简报保持不变，不对外发布。连接结果未知时用同一 request ID/resource 幂等重试，再读回既有成果，不创建重复版本。
 
-F输出/视觉：原问题区提供可选业务问句，结果标题旁[保存为可编辑研究成果]→标题/目标范围预览→[取消][确认保存]；保存中/已读回/冲突/来源变化/撤权各就地表达。历史任务选择恢复保原问题/资料/定位，技术编号仅兼容。验收非空问句实际传到现Owner、202不冒完成、保存独立重开/撤权清旧/重复请求幂等/乱序返回不串任务；无AI确定性结果与增强状态按实际method分别显示。前端接线及四端运行仍OPEN。
+界面使用普通业务语言说明另存到共享成果、来源与引用数量、保存后的打开位置及不对外发布；不展示内部任务编号、资源令牌或算法说明。弹出确认期间当前 scope、简报任务或简报版本改变时立即关闭确认；撤权、旧资源、来源变化、读回不一致和网络失败均保持未完成并允许安全恢复。
 
-本段校准旧current断言，历史验收不改写。源码/字段以现Owner为准，静态对齐不升级IMPLEMENTED/ACCEPTED。执行集合Codex、Zack、阿康；F是模块归属，不派个人。
+实现范围为 SourceBrief VM/Panel、现有 CoreClient、三语文案及本屏同域历史/修订/跨域采用接线。该有界源码结果不构成完整 CTH-10 视觉、四端运行或全产品用户验收；适用的当前构建和真实用户操作证据仍按实际执行状态单独记录。

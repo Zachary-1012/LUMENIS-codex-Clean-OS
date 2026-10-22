@@ -84,7 +84,7 @@ def aggregate_brand_observations(
     observed_count = len(normalized)
 
     if observed_count == 0:
-        state = "NOT_COLLECTED"
+        state = "NOT_COLLECTED" if complete_scan else "PARTIAL"
     else:
         sentiment_complete = sentiment["unknown"] == 0
         risk_complete = _known_complete(

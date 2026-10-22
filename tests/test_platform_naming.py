@@ -58,6 +58,21 @@ def test_other_platform_aliases():
     assert normalize_platform("微博") == "weibo"
 
 
+def test_wechat_media_hints_reach_existing_media_projection_without_inference():
+    raw = {
+        "source_platform": "wechat",
+        "images": [{"url": "https://mmbiz.qpic.cn/a.jpg", "alt": "cover"}],
+        "media_hints": [{"url": "https://mmbiz.qpic.cn/a.jpg", "alt": "cover"},
+                        {"type": "video", "url": ""}],
+    }
+    projected = map_raw_to_normalized(raw, "wechat")
+    assert projected["media_list"] == [
+        {"url": "https://mmbiz.qpic.cn/a.jpg", "alt": "cover"},
+        {"type": "video", "url": None},
+    ]
+    assert projected["raw_data"] is raw
+
+
 def test_unknown_returns_none_not_fake():
     # 未登记标识必须返回 None（显式未知），禁止编造默认平台
     assert normalize_platform("unknown_xxx") is None

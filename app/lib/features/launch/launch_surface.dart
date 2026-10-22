@@ -12,6 +12,8 @@ class LaunchSurface extends StatefulWidget {
   const LaunchSurface({
     required this.client,
     this.initialScreenId = LumenisWorkspaceRoutes.rootScreenId,
+    this.initialWorkspaceEntry,
+    this.returnScreenId,
     this.onScreenSelected,
     this.onLocaleChanged,
     super.key,
@@ -19,6 +21,8 @@ class LaunchSurface extends StatefulWidget {
 
   final LumenisCoreClient client;
   final String initialScreenId;
+  final String? initialWorkspaceEntry;
+  final String? returnScreenId;
   final ValueChanged<String>? onScreenSelected;
   final ValueChanged<Locale?>? onLocaleChanged;
 
@@ -190,6 +194,8 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
           subjects: const [],
           subjectDirectoryMessage: null,
           initialScreenId: widget.initialScreenId,
+          initialWorkspaceEntry: widget.initialWorkspaceEntry,
+          returnScreenId: widget.returnScreenId,
           onScreenSelected: widget.onScreenSelected,
           onLocaleChanged: widget.onLocaleChanged,
           onRetryRuntime: switch (_runtime['state']) {

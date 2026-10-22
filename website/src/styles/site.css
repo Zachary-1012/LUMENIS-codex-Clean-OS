@@ -770,6 +770,129 @@ input:focus-visible {
   background: var(--paper);
 }
 
+.creation-section {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, #f3f0e8, #edf2ee 58%, #f4f0ec);
+}
+
+.creation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.creation-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: clamp(1.25rem, 2.2vw, 2rem);
+  border: 1px solid rgba(71, 88, 78, 0.16);
+  border-radius: 1.35rem;
+  background: rgba(255, 254, 251, 0.76);
+  box-shadow: 0 16px 36px rgba(45, 65, 56, 0.07);
+}
+
+.creation-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.painted-icon {
+  display: block;
+  width: clamp(3.6rem, 6vw, 5rem);
+  height: auto;
+  overflow: visible;
+}
+
+.creation-card__index,
+.creation-card__name,
+.creation-card__ledger dt,
+.creation-card__steps span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
+
+.creation-card__name {
+  margin: 1.1rem 0 0.45rem;
+  letter-spacing: 0.04em;
+}
+
+.creation-card h3 {
+  max-width: 24ch;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.3rem, 2vw, 1.9rem);
+  font-weight: 560;
+  line-height: 1.22;
+  text-wrap: balance;
+}
+
+.creation-card__description,
+.creation-card__detail {
+  color: var(--ink-soft);
+  line-height: 1.65;
+}
+
+.creation-card__description {
+  margin: 0.8rem 0 0;
+}
+
+.creation-card__ledger {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.2rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+
+.creation-card__ledger div {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: 0.6rem;
+}
+
+.creation-card__ledger dt,
+.creation-card__ledger dd {
+  margin: 0;
+}
+
+.creation-card__ledger dd {
+  color: var(--ink);
+  font-size: 0.88rem;
+}
+
+.creation-card__steps {
+  display: grid;
+  gap: 0.45rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.creation-card__steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  color: var(--ink-soft);
+  font-size: 0.86rem;
+}
+
+.creation-card__detail {
+  margin: auto 0 0;
+  padding-top: 1rem;
+  font-size: 0.84rem;
+}
+
+.creation-note {
+  max-width: 76ch;
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .domain-split {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1947,6 +2070,10 @@ input:focus-visible {
 }
 
 @media (max-width: 1120px) {
+  .creation-grid {
+    grid-template-columns: 1fr;
+  }
+
   .hero__inner {
     grid-template-columns: minmax(0, 1fr) minmax(290px, 0.85fr);
     gap: 3rem;

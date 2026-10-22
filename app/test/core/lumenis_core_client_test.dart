@@ -6,111 +6,251 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 
 void main() {
-
-  test('media confirmation accepts exact Shared resource without widening its schema', () {
-    final value = <String, Object?>{
-      'confirmation_id': 'CONF-shared',
-      'resource': 'content-source-import:shared-workspace:v1:${'a' * 64}',
-      'expires_at': '2027-01-01T00:00:00Z',
-      'filename': 'voice.wav', 'size_bytes': 2, 'body_sha256': 'b' * 64,
-    };
-    expect(ContentSourceConfirmation.tryParse(value)?.resource, value['resource']);
-    expect(ContentSourceConfirmation.tryParse({...value,
-      'resource': 'content-source-import:v1:${'a' * 64}'}), isNotNull);
-    for (final resource in [
-      'content-source-import:SHARED:v1:${'a' * 64}',
-      'content-source-import:shared-workspace:v2:${'a' * 64}',
-      'content-source-import:shared-workspace:v1:${'a' * 63}',
-    ]) {
-      expect(ContentSourceConfirmation.tryParse({...value, 'resource': resource}), isNull);
-    }
-  });
-
-
-  test('independent media actions never inherit focused business headers', () async {
-    final server = await _CoreStub.start(contextResponses: [
-      _contextEnvelope('FOCUS', domainId: 'CTH', subjectId: 'shop-1'),
-    ]);
-    addTearDown(server.close);
-    final client = LumenisCoreClient(baseUrl: server.baseUrl);
-    await client.selectContext(domainId: 'CTH', subjectId: 'shop-1');
-    await client.inspectContentMedia(domainId: null, assetRefs: ['ART-source']);
-    await client.inspectContentEditBatch(domainId: null, assetRefs: ['ART-source'],
-      timeline: {'version': 1}, commands: [], expectedVersion: 1);
-    await client.importContentSource(domainId: null, filename: 'voice.wav',
-      bytes: Uint8List.fromList([1, 2]));
-    await client.confirmContentSource(domainId: null,
-      confirmationId: 'CONF-shared', confirmed: true);
-    await client.exportContentProject(domainId: null, assetRefs: ['ART-source'],
-      timeline: {'version': 1}, outputKind: 'audio');
-    await client.listContentProjects(domainId: null);
-    await client.reopenContentProject(domainId: null, artifactId: 'ART-contract');
-    await client.contentProjectFile(domainId: null,
-      artifactId: 'ART-contract', package: true);
-    final requests = server.requests.skip(1).toList();
-    expect(requests, hasLength(8));
-    for (final request in requests) {
-      expect(request.workspaceScope,
-        '{"scope_kind":"shared_workspace","version":1}');
-      expect(request.contextMode, isNull);
-      expect(request.domainId, isNull);
-      expect(request.subjectId, isNull);
-      expect(request.headers['x-product-id'], isNull);
-      expect(request.headers['x-brand-focus-id'], isNull);
-      expect(request.authorization, isNull);
-    }
-    // Selecting Shared neither changes the business view nor expands its grant.
-    expect(client.currentContextEnvelope!['context']['domain_id'], 'CTH');
-    final count = server.requests.length;
-    expect(() => client.inspectContentMedia(domainId: 'SHARED', assetRefs: ['ART-source']),
-      throwsFormatException);
-    expect(() => client.inspectContentMedia(domainId: 'BMP', assetRefs: ['ART-source']),
-      throwsA(isA<LumenisCoreException>().having(
-        (error) => error.errorCode, 'errorCode', 'CONTENT_CONTEXT_MISMATCH')));
-    expect(server.requests.length, count);
-  });
-
-  for (final status in [HttpStatus.unauthorized, HttpStatus.forbidden]) {
-    test('independent media HTTP $status is not retried or domain-fallbacked', () async {
-      final server = await _CoreStub.start(fileStatus: status);
+  test(
+    'SourceBrief SavedWork uses its scoped save and canonical readback routes',
+    () async {
+      final server = await _CoreStub.start(
+        contextResponses: [_contextEnvelope('GLOBAL_ALL')],
+      );
       addTearDown(server.close);
       final client = LumenisCoreClient(baseUrl: server.baseUrl);
-      await expectLater(client.contentProjectFile(domainId: null,
-        artifactId: 'ART-contract', package: true),
-        throwsA(isA<LumenisCoreException>().having(
-          (error) => error.statusCode, 'statusCode', status)));
-      expect(server.requests, hasLength(1));
-      expect(server.requests.single.workspaceScope,
-        '{"scope_kind":"shared_workspace","version":1}');
-      expect(server.requests.single.domainId, isNull);
-      expect(server.requests.single.authorization, isNull);
-    });
+      await client.settingsContext();
+
+      final saved = await client.saveSourceBriefResult(
+        domainId: 'CTH',
+        jobId: 'brief-0123456789abcdef0123456789abcdef',
+        requestId: 'sourcebrief-request-01',
+        title: '来源简报',
+      );
+      final reopened = await client.reopenSourceBriefSavedWork(
+        domainId: 'CTH',
+        artifactId: 'ART-0123456789abcdef',
+      );
+
+      expect(saved['ok'], isTrue);
+      expect(reopened['ok'], isTrue);
+      final saveRequest = server.requests.singleWhere(
+        (request) => request.path.endsWith('/save'),
+      );
+      expect(saveRequest.method, 'POST');
+      expect(saveRequest.path, contains('/source-brief/jobs/'));
+      expect(jsonDecode(saveRequest.body!) as Map<String, dynamic>, {
+        'request_id': 'sourcebrief-request-01',
+        'title': '来源简报',
+      });
+      expect(saveRequest.contextMode, 'GLOBAL_ALL');
+      expect(saveRequest.domainId, 'CTH');
+      expect(saveRequest.headers['x-product-id'], 'CTH');
+      final reopenRequest = server.requests.singleWhere(
+        (request) =>
+            request.method == 'GET' &&
+            request.path == '/api/experience/saved-work/ART-0123456789abcdef',
+      );
+      expect(reopenRequest.contextMode, 'GLOBAL_ALL');
+      expect(reopenRequest.domainId, 'CTH');
+      expect(reopenRequest.headers['cache-control'], 'no-store');
+    },
+  );
+
+  test(
+    'media confirmation accepts exact Shared resource without widening its schema',
+    () {
+      final value = <String, Object?>{
+        'confirmation_id': 'CONF-shared',
+        'resource': 'content-source-import:shared-workspace:v1:${'a' * 64}',
+        'expires_at': '2027-01-01T00:00:00Z',
+        'filename': 'voice.wav',
+        'size_bytes': 2,
+        'body_sha256': 'b' * 64,
+      };
+      expect(
+        ContentSourceConfirmation.tryParse(value)?.resource,
+        value['resource'],
+      );
+      expect(
+        ContentSourceConfirmation.tryParse({
+          ...value,
+          'resource': 'content-source-import:v1:${'a' * 64}',
+        }),
+        isNotNull,
+      );
+      for (final resource in [
+        'content-source-import:SHARED:v1:${'a' * 64}',
+        'content-source-import:shared-workspace:v2:${'a' * 64}',
+        'content-source-import:shared-workspace:v1:${'a' * 63}',
+      ]) {
+        expect(
+          ContentSourceConfirmation.tryParse({...value, 'resource': resource}),
+          isNull,
+        );
+      }
+    },
+  );
+
+  test(
+    'independent media actions never inherit focused business headers',
+    () async {
+      final server = await _CoreStub.start(
+        contextResponses: [
+          _contextEnvelope('FOCUS', domainId: 'CTH', subjectId: 'shop-1'),
+        ],
+      );
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+      await client.selectContext(domainId: 'CTH', subjectId: 'shop-1');
+      await client.inspectContentMedia(
+        domainId: null,
+        assetRefs: ['ART-source'],
+      );
+      await client.inspectContentEditBatch(
+        domainId: null,
+        assetRefs: ['ART-source'],
+        timeline: {'version': 1},
+        commands: [],
+        expectedVersion: 1,
+      );
+      await client.importContentSource(
+        domainId: null,
+        filename: 'voice.wav',
+        bytes: Uint8List.fromList([1, 2]),
+      );
+      await client.confirmContentSource(
+        domainId: null,
+        confirmationId: 'CONF-shared',
+        confirmed: true,
+      );
+      await client.exportContentProject(
+        domainId: null,
+        assetRefs: ['ART-source'],
+        timeline: {'version': 1},
+        outputKind: 'audio',
+      );
+      await client.listContentProjects(domainId: null);
+      await client.reopenContentProject(
+        domainId: null,
+        artifactId: 'ART-contract',
+      );
+      await client.contentProjectFile(
+        domainId: null,
+        artifactId: 'ART-contract',
+        package: true,
+      );
+      final requests = server.requests.skip(1).toList();
+      expect(requests, hasLength(8));
+      for (final request in requests) {
+        expect(
+          request.workspaceScope,
+          '{"scope_kind":"shared_workspace","version":1}',
+        );
+        expect(request.contextMode, isNull);
+        expect(request.domainId, isNull);
+        expect(request.subjectId, isNull);
+        expect(request.headers['x-product-id'], isNull);
+        expect(request.headers['x-brand-focus-id'], isNull);
+        expect(request.authorization, isNull);
+      }
+      // Selecting Shared neither changes the business view nor expands its grant.
+      expect(client.currentContextEnvelope!['context']['domain_id'], 'CTH');
+      final count = server.requests.length;
+      expect(
+        () => client.inspectContentMedia(
+          domainId: 'SHARED',
+          assetRefs: ['ART-source'],
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => client.inspectContentMedia(
+          domainId: 'BMP',
+          assetRefs: ['ART-source'],
+        ),
+        throwsA(
+          isA<LumenisCoreException>().having(
+            (error) => error.errorCode,
+            'errorCode',
+            'CONTENT_CONTEXT_MISMATCH',
+          ),
+        ),
+      );
+      expect(server.requests.length, count);
+    },
+  );
+
+  for (final status in [HttpStatus.unauthorized, HttpStatus.forbidden]) {
+    test(
+      'independent media HTTP $status is not retried or domain-fallbacked',
+      () async {
+        final server = await _CoreStub.start(fileStatus: status);
+        addTearDown(server.close);
+        final client = LumenisCoreClient(baseUrl: server.baseUrl);
+        await expectLater(
+          client.contentProjectFile(
+            domainId: null,
+            artifactId: 'ART-contract',
+            package: true,
+          ),
+          throwsA(
+            isA<LumenisCoreException>().having(
+              (error) => error.statusCode,
+              'statusCode',
+              status,
+            ),
+          ),
+        );
+        expect(server.requests, hasLength(1));
+        expect(
+          server.requests.single.workspaceScope,
+          '{"scope_kind":"shared_workspace","version":1}',
+        );
+        expect(server.requests.single.domainId, isNull);
+        expect(server.requests.single.authorization, isNull);
+      },
+    );
   }
 
-  test('batch preview uses existing READ inspect scope and exact command envelope', () async {
-    final server = await _CoreStub.start(contextResponses: [_contextEnvelope('GLOBAL_ALL')]);
-    addTearDown(server.close);
-    final client = LumenisCoreClient(baseUrl: server.baseUrl);
-    await client.settingsContext();
-    final timeline = <String, dynamic>{'version': 4};
-    final commands = <Map<String, dynamic>>[{
-      'op': 'trim', 'clip_id': 'CLIP-stable', 'source_in': 0.0, 'source_out': 3.0,
-    }];
-    await client.inspectContentEditBatch(domainId: 'BMP', assetRefs: ['ART-source'],
-      timeline: timeline, commands: commands, expectedVersion: 4);
-    final request = server.requests.last;
-    expect(request.method, 'POST');
-    expect(request.path, '/api/experience/shared-skills/shared.content_project/inspect');
-    expect(request.domainId, 'BMP');
-    expect(request.authorization, isNull);
-    expect(jsonDecode(request.body!), {
-      'action_type': 'READ',
-      'input': {
-        'asset_refs': ['ART-source'], 'timeline': timeline,
-        'edit_batch': {'commands': commands, 'expected_version': 4},
-      },
-    });
-  });
+  test(
+    'batch preview uses existing READ inspect scope and exact command envelope',
+    () async {
+      final server = await _CoreStub.start(
+        contextResponses: [_contextEnvelope('GLOBAL_ALL')],
+      );
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+      await client.settingsContext();
+      final timeline = <String, dynamic>{'version': 4};
+      final commands = <Map<String, dynamic>>[
+        {
+          'op': 'trim',
+          'clip_id': 'CLIP-stable',
+          'source_in': 0.0,
+          'source_out': 3.0,
+        },
+      ];
+      await client.inspectContentEditBatch(
+        domainId: 'BMP',
+        assetRefs: ['ART-source'],
+        timeline: timeline,
+        commands: commands,
+        expectedVersion: 4,
+      );
+      final request = server.requests.last;
+      expect(request.method, 'POST');
+      expect(
+        request.path,
+        '/api/experience/shared-skills/shared.content_project/inspect',
+      );
+      expect(request.domainId, 'BMP');
+      expect(request.authorization, isNull);
+      expect(jsonDecode(request.body!), {
+        'action_type': 'READ',
+        'input': {
+          'asset_refs': ['ART-source'],
+          'timeline': timeline,
+          'edit_batch': {'commands': commands, 'expected_version': 4},
+        },
+      });
+    },
+  );
 
   test(
     'reads the open workspace without fetching or forwarding Core credentials',
@@ -201,6 +341,32 @@ void main() {
     expect(
       (revisionBody['edits'] as List).map((edit) => edit['pointer']).toList(),
       ['/title', '/markdown'],
+    );
+  });
+
+  test('Shared SavedWork accepts only a guarded PPTX export response', () async {
+    final server = await _CoreStub.start();
+    addTearDown(server.close);
+    final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+    final file = await client.exportSharedSavedWork(
+      artifactId: 'ART-0123456789abcdef',
+      format: 'pptx',
+    );
+
+    expect(file.filename, 'ART-0123456789abcdef.pptx');
+    expect(
+      file.mediaType,
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    );
+    expect(file.bytes, [0x50, 0x4b, 0x03, 0x04]);
+    expect(
+      server.requests.single.path,
+      '/api/experience/saved-work/ART-0123456789abcdef/export?format=pptx',
+    );
+    expect(
+      server.requests.single.workspaceScope,
+      '{"scope_kind":"shared_workspace","version":1}',
     );
   });
 
@@ -697,18 +863,32 @@ class _CoreStub {
       ),
     );
 
+    if (request.uri.path.startsWith(
+          '/api/experience/reports/source-brief/jobs/',
+        ) &&
+        request.method == 'POST' &&
+        request.uri.path.endsWith('/save')) {
+      await _reply(request, HttpStatus.ok, const {'ok': true, 'result': {}});
+      return;
+    }
     if (request.uri.path.startsWith('/api/experience/saved-work')) {
       if (request.uri.path.endsWith('/export')) {
+        final isPptx = request.uri.queryParameters['format'] == 'pptx';
         request.response
           ..statusCode = HttpStatus.ok
-          ..headers.contentType = ContentType(
-            'text',
-            'markdown',
-            charset: 'utf-8',
+          ..headers.set(
+            HttpHeaders.contentTypeHeader,
+            isPptx
+                ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                : 'text/markdown; charset=utf-8',
           )
           ..headers.set('X-Source-Artifact-ID', 'ART-0123456789abcdef')
           ..headers.set('X-Content-SHA256', List.filled(64, 'b').join())
-          ..add(utf8.encode('Shared report export'));
+          ..add(
+            isPptx
+                ? [0x50, 0x4b, 0x03, 0x04]
+                : utf8.encode('Shared report export'),
+          );
         await request.response.close();
         return;
       }
@@ -732,7 +912,8 @@ class _CoreStub {
       return;
     }
 
-    if (path == '/api/experience/shared-skills/shared.content_project/inspect') {
+    if (path ==
+        '/api/experience/shared-skills/shared.content_project/inspect') {
       await _reply(request, HttpStatus.ok, const {'ok': true});
       return;
     }
@@ -755,7 +936,9 @@ class _CoreStub {
     // the real isolated Python import/edit/export/reopen regression.
     if (request.uri.path.startsWith('/api/experience/content-projects') ||
         request.uri.path.startsWith('/api/experience/content-sources') ||
-        request.uri.path.startsWith('/api/experience/content-source-confirmations')) {
+        request.uri.path.startsWith(
+          '/api/experience/content-source-confirmations',
+        )) {
       await _reply(request, HttpStatus.ok, const {'ok': true});
       return;
     }

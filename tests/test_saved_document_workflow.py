@@ -50,7 +50,7 @@ def workspace(tmp_path, monkeypatch):
 
 def _source(workspace, *, filename="source.txt", source_url="https://www.swireproperties.com/"):
     path = workspace["root"] / filename
-    path.write_text("Original source line\nRepeated line\nRepeated line\n", encoding="utf-8")
+    path.write_bytes(b"Original source line\nRepeated line\nRepeated line\n")
     provenance = {"source_url": source_url, "published_at": None,
                   "captured_at": "2026-10-02T01:00:00Z", "rights": "public-reference-only",
                   "title": "Generated parser fixture"}

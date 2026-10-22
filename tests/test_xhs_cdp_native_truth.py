@@ -49,6 +49,61 @@ def test_labeled_display_metric_preserves_zero_and_units(value, expected):
     assert worker.parse_count(value) == expected
 
 
+def test_human_search_submits_only_after_exact_field_readback(monkeypatch):
+    calls = []
+
+    class SearchBox:
+        value = ""
+        def fill(self, value, timeout):
+            calls.append(("fill", value, timeout))
+            self.value = value
+        def input_value(self, timeout):
+            calls.append(("read", timeout))
+            return self.value
+        def press(self, key, timeout):
+            calls.append(("press", key, timeout))
+
+    monkeypatch.setattr(worker, "_find_first", lambda *args, **kwargs: SearchBox())
+    monkeypatch.setattr(worker, "log", lambda *_args, **_kwargs: None)
+    worker.human_search_keyword(object(), "品牌活动")
+    assert calls == [("fill", "品牌活动", 6000), ("read", 6000), ("press", "Enter", 6000)]
+
+
+def test_human_search_does_not_submit_when_field_readback_differs(monkeypatch):
+    class SearchBox:
+        def fill(self, value, timeout):
+            pass
+        def input_value(self, timeout):
+            return "wrong"
+        def press(self, *_args, **_kwargs):
+            raise AssertionError("query must not be submitted")
+
+    monkeypatch.setattr(worker, "_find_first", lambda *args, **kwargs: SearchBox())
+    with pytest.raises(RuntimeError, match="SEARCH_INPUT_VALUE_MISMATCH"):
+        worker.human_search_keyword(object(), "品牌活动")
+
+
+def test_xhs_search_diagnostics_bound_untrusted_counts_and_require_timestamp_zone():
+    from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+
+    projected = XiaohongshuAdapter._safe_search_diagnostics({
+        "version": "xhs-search-state-v1",
+        "observations": [{
+            "phase": "search_ready", "observed_at": "2026-10-22T10:00:00",
+            "selector_counts": {"section.note-item": 1_000_001, "a.cover": 3},
+            "note_link_count": 10**30, "body_character_count": 12,
+            "loading_element_count": 0,
+        }],
+    })
+    row = projected["observations"][0]
+    assert "observed_at" not in row
+    assert row["selector_counts"] == {
+        "section.note-item": None, "a.cover": 3, ".feeds-container": None,
+    }
+    assert row["note_link_count"] is None
+    assert row["body_character_count"] == 12
+
+
 def test_zero_note_metrics_are_not_replaced_by_comment_likes():
     detail = {'engage': {'like_raw': '0', 'collect_raw': '0', 'comment_raw': '0'},
               'all_counts': ['17', '23', '88'], 'comment_list': [{'likes_raw': '88'}]}

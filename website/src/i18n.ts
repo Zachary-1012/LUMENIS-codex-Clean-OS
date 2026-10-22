@@ -13,6 +13,7 @@ export const copy = {
     },
     navigation: [
       { href: "#structure", label: "产品结构" },
+      { href: "#creation", label: "独立创作" },
       { href: "#scenarios", label: "使用情境" },
       { href: "#demo", label: "示意体验" },
       { href: "#access", label: "访问方式" },
@@ -263,6 +264,7 @@ export const copy = {
     },
     navigation: [
       { href: "#structure", label: "Product structure" },
+      { href: "#creation", label: "Create independently" },
       { href: "#scenarios", label: "Use cases" },
       { href: "#demo", label: "Illustrative demo" },
       { href: "#access", label: "Ways to access" },
@@ -514,6 +516,7 @@ export const copy = {
     },
     navigation: [
       { href: "#structure", label: "제품 구조" },
+      { href: "#creation", label: "독립 창작" },
       { href: "#scenarios", label: "사용 맥락" },
       { href: "#demo", label: "예시 보기" },
       { href: "#access", label: "이용 방법" },

@@ -776,3 +776,77 @@ def test_audiovisual_shared_path_reuses_saved_work_owner(workspace):
     assert saved["scope"] == args["scope"]
     assert saved["work"]["document"]["payload"]["audiovisual_plan"]["input"] == args["shot_plan"]
     assert saved["work"]["document"]["context"]["scope_kind"] == "shared_workspace"
+
+
+@pytest.mark.parametrize("language,body", [
+    ("zh", "这是用户自己的文稿。保留未修改的段落。"),
+    ("en", "This is the user's own manuscript. Keep unchanged paragraphs."),
+    ("ko", "사용자가 직접 작성한 원고입니다. 수정하지 않은 문단은 유지합니다."),
+])
+def test_authored_v4_shared_workspace_save_revise_reopen_list_and_export(workspace, client, language, body):
+    ws = workspace
+    scope = {"scope_kind": "shared_workspace", "version": 1}
+    args = http_input(ws)
+    args.pop("shot_plan")
+    args.update(profile=pitch.AUTHORING_PROFILE, scope=scope, request_id="authored-shared-0001")
+    args["manuscript"]["title"] = "Independent manuscript"
+    args["manuscript"]["language"] = language
+    args["manuscript"]["sections"] = [{"heading": "Draft", "body": body},
+                                        {"heading": "Retained", "body": "Keep this section."}]
+
+    prepared = client.post(PREFIX, json=args)
+    assert prepared.status_code == 202, prepared.get_json()
+    task_id = prepared.get_json()["result"]["task_id"]
+    completed = client.post(PREFIX + "/" + task_id + "/run", json={"scope": scope})
+    assert completed.status_code == 200, completed.get_json()
+    result = completed.get_json()["result"]
+    first = result["work"]["document"]
+    receipt = result["action_receipt"]
+    assert first["contract"] == pitch.AUTHORING_CONTRACT
+    assert first["payload"]["truth_state"]["source_admission"] == "USER_AUTHORED_CONTENT"
+    assert first["payload"]["truth_state"]["external_fact_verification"] == "NOT_INFERRED_FROM_AUTHORSHIP"
+    assert first["payload"]["truth_state"]["citation_admission"] == "NO_SIGNED_QUOTE"
+    assert "input_manifest" not in first["payload"] and "shot_plan" not in first["payload"]
+    assert first["citations"] == []
+
+    listed = work.search_work(actor=ws["actor"], scope=scope, query="Independent manuscript")
+    assert any(item["document"]["work_id"] == first["work_id"] for item in listed["items"])
+    reopened = work.reopen_work(receipt["artifact_id"], actor=ws["actor"], scope=scope)
+    assert reopened["document"] == first
+    saved_docx = work.export_work(receipt["artifact_id"], actor=ws["actor"], scope=scope, format="docx")
+    assert body in [paragraph.text for paragraph in Document(io.BytesIO(saved_docx["content"])).paragraphs]
+    exported = client.get(PREFIX + "/" + task_id + "/export", query_string={
+        "scope_kind": "shared_workspace", "version": "1"})
+    assert exported.status_code == 200
+    assert body in [paragraph.text for paragraph in Document(io.BytesIO(exported.data)).paragraphs]
+
+    revised_args = copy.deepcopy(args)
+    revised_args.update(request_id="authored-shared-0002", work_id=first["work_id"],
+                        previous_artifact_id=receipt["artifact_id"],
+                        expected_draft_digest=first["draft_digest"])
+    revised_args["manuscript"]["sections"][0]["body"] += " Revised."
+    revised_prepared = client.post(PREFIX, json=revised_args)
+    assert revised_prepared.status_code == 202, revised_prepared.get_json()
+    revised_id = revised_prepared.get_json()["result"]["task_id"]
+    revised_response = client.post(PREFIX + "/" + revised_id + "/run", json={"scope": scope})
+    assert revised_response.status_code == 200, revised_response.get_json()
+    revised = revised_response.get_json()["result"]
+    assert revised["action_receipt"]["version"] == 2
+    assert revised["action_receipt"]["parent_artifact_id"] == receipt["artifact_id"]
+    assert revised["action_receipt"]["parent_sha256"] == receipt["sha256"]
+    assert revised["work"]["document"]["payload"]["manuscript"]["sections"][1] == args["manuscript"]["sections"][1]
+    old = client.get(PREFIX + "/" + task_id, query_string={"scope_kind": "shared_workspace", "version": "1"})
+    assert old.status_code == 200
+    assert old.get_json()["result"]["action_receipt"] == receipt
+
+
+@pytest.mark.parametrize("extra", ["shot_plan", "input_manifest", "upstream_ref"])
+def test_authored_v4_rejects_mixed_source_or_media_inputs_before_task(workspace, extra):
+    args = arguments(workspace)
+    args.pop("shot_plan")
+    args.update(profile=pitch.AUTHORING_PROFILE)
+    args[extra] = {"forged": True}
+    with pytest.raises(ValueError, match="INTERNAL_PITCH_PROFILE_INVALID"):
+        pitch.prepare_internal_pitch(**args)
+    assert workspace["repo"].query_one("SELECT COUNT(*) FROM ai_task")[0] == 0
+    assert count(workspace) == 0

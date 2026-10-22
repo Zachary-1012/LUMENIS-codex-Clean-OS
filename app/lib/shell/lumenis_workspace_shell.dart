@@ -60,6 +60,8 @@ Widget buildLumenisWorkspaceScreen({
   bool contextAvailable = true,
   ValueChanged<String>? onNavigate,
   String? lastOpenedScreenId,
+  String? workspaceEntry,
+  String? returnScreenId,
   TextEditingController? taskDraftController,
   String? taskScopeLabel,
 }) {
@@ -125,11 +127,17 @@ Widget buildLumenisWorkspaceScreen({
     'BMP-05' => Bmp05Screen(client: client),
     'BMP-06' => Bmp06Screen(client: client),
     'BMP-07' => Bmp07Screen(client: client),
-    'BMP-08' => Bmp08Screen(client: client),
+    'BMP-08' => Bmp08Screen(client: client, onNavigate: onNavigate),
     'BMP-09' => Bmp09Screen(client: client),
     'BMP-10' => Bmp10Screen(client: client),
     'BMP-11' => Bmp11Screen(client: client),
-    'SH-01' => Sh01Screen(client: client, contextAvailable: contextAvailable),
+    'SH-01' => Sh01Screen(
+      client: client,
+      contextAvailable: contextAvailable,
+      initialWorkspaceEntry: workspaceEntry,
+      returnScreenId: returnScreenId,
+      onNavigate: onNavigate,
+    ),
     'SH-02' => Sh02Screen(client: client),
     'SH-03' => Sh03Screen(client: client),
     'SH-04' => Sh04Screen(client: client),
@@ -155,6 +163,8 @@ class LumenisWorkspaceShell extends StatefulWidget {
     this.contextEnvelope,
     this.subjectDirectoryMessage,
     this.initialScreenId = LumenisWorkspaceRoutes.rootScreenId,
+    this.initialWorkspaceEntry,
+    this.returnScreenId,
     this.onScreenSelected,
     this.onLocaleChanged,
     this.onRetryRuntime,
@@ -167,6 +177,8 @@ class LumenisWorkspaceShell extends StatefulWidget {
   final Map<String, dynamic>? contextEnvelope;
   final String? subjectDirectoryMessage;
   final String initialScreenId;
+  final String? initialWorkspaceEntry;
+  final String? returnScreenId;
   final ValueChanged<String>? onScreenSelected;
   final ValueChanged<Locale?>? onLocaleChanged;
   final VoidCallback? onRetryRuntime;
@@ -189,6 +201,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   bool _hasConfirmedFocusRecoveryHint = false;
   final _localLeaveGuard = LumenisLeaveGuard();
   int _editorScopeRevision = 0;
+  String? _localWorkspaceEntry;
+  String? _localReturnScreenId;
   var _taskDraftController = TextEditingController();
   String _taskDraftScope = 'GLOBAL_ALL::';
 
@@ -407,6 +421,13 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         shouldAdoptCurrentEnvelope &&
         _fingerprintFor(currentEnvelope) != _contextFingerprint;
     setState(() {
+      if (previousScreenId == 'BMP-08' && screenId == 'SH-01') {
+        _localWorkspaceEntry = 'media';
+        _localReturnScreenId = 'BMP-08';
+      } else {
+        _localWorkspaceEntry = null;
+        _localReturnScreenId = null;
+      }
       if (shouldAdoptCurrentEnvelope) {
         _alignTaskDraftScope(currentEnvelope);
         _contextEnvelope = currentEnvelope;
@@ -426,15 +447,27 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     if (notifyRoute) widget.onScreenSelected?.call(screenId);
   }
 
-  Widget _screen() => buildLumenisWorkspaceScreen(
-    screenId: _activeScreen.value,
-    client: widget.client,
-    contextAvailable: _contextEnvelope != null,
-    onNavigate: _activateScreen,
-    lastOpenedScreenId: _lastOpenedScreen.value,
-    taskDraftController: _taskDraftController,
-    taskScopeLabel: _contextLabel(),
-  );
+  Widget _screen() {
+    final isSharedMediaEntry =
+        _activeScreen.value == 'SH-01' &&
+        ((widget.initialWorkspaceEntry == 'media' &&
+                widget.returnScreenId == 'BMP-08') ||
+            (_localWorkspaceEntry == 'media' &&
+                _localReturnScreenId == 'BMP-08'));
+    return buildLumenisWorkspaceScreen(
+      screenId: _activeScreen.value,
+      client: widget.client,
+      contextAvailable: _contextEnvelope != null,
+      onNavigate: _activateScreen,
+      lastOpenedScreenId: _lastOpenedScreen.value,
+      workspaceEntry: isSharedMediaEntry ? 'media' : null,
+      returnScreenId: isSharedMediaEntry
+          ? widget.returnScreenId ?? _localReturnScreenId
+          : null,
+      taskDraftController: _taskDraftController,
+      taskScopeLabel: _contextLabel(),
+    );
+  }
 
   Widget _screenTransition() {
     final reduceMotion =
@@ -463,7 +496,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       },
       child: KeyedSubtree(
         key: ValueKey(
-          '${_activeScreen.value}:${_activeScreen.value == 'SH-01' ? _editorScopeRevision : _contextFingerprint}',
+          '${_activeScreen.value}:${_activeScreen.value == 'SH-01' ? _editorScopeRevision : _contextFingerprint}:${_activeScreen.value == 'SH-01' ? widget.initialWorkspaceEntry ?? _localWorkspaceEntry : null}:${_activeScreen.value == 'SH-01' ? widget.returnScreenId ?? _localReturnScreenId : null}',
         ),
         child: _screen(),
       ),

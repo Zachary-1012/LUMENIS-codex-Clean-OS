@@ -535,6 +535,10 @@ class AgentLoop:
             ))
             result.plan = plan.to_dict()
             self._current_plan = plan
+            if self._is_cancelled():
+                sm.cancel(reason="external cancellation before tool formation")
+                result.status = "cancelled"
+                return self._finalize(result, sm)
             if not resuming:
                 self._current_cost += self._estimate_plan_cost(plan)
                 plan.outcome_contract_sha256 = self._evaluator.form_outcome_contract(task_id)

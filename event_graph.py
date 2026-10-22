@@ -165,7 +165,7 @@ class BrandEvent:
         self.event_type = event_type
         self.event_type_name = EVENT_TYPES.get(event_type, event_type)
         self.title = title
-        self.event_time = event_time or _now()
+        self.event_time = event_time if str(event_time or '').strip() else None
         self.source = source
         self.description = description
         self.status = status
@@ -354,7 +354,7 @@ class EventGraph:
                         target_event=target,
                         relation_type=rrow['relation_type'],
                         evidence=rrow['evidence'] or '',
-                        confidence=rrow['confidence'] or 0.5,
+                        confidence=rrow['confidence'],
                         created_at=rrow['created_at'],
                     )
                     source.relations.append(relation)
@@ -496,7 +496,7 @@ class EventGraph:
 
                 title = (row['title'] or '未命名事件')[:200]
                 summary = (row['summary'] or '')[:500]
-                event_time = row['event_date'] or row['first_seen'] or row['last_seen'] or _now()
+                event_time = row['event_date']
 
                 # 根据风险等级判断事件类型
                 is_negative = row['negative_confirmed'] == 1
@@ -524,6 +524,9 @@ class EventGraph:
                         'mention_count': row['mention_count'],
                         'source_count': row['source_count'],
                         'fact_status': row['fact_status'],
+                        'first_seen': row['first_seen'],
+                        'last_seen': row['last_seen'],
+                        'event_type_basis': 'risk_rule',
                     },
                     source_event_id=row['id'],
                 )
@@ -557,6 +560,9 @@ class EventGraph:
             before = len(self.relations)
             self.relations = [r for r in self.relations
                               if not str(r.evidence or '').startswith(AUTO_REL_PREFIX)]
+            for event in self.events.values():
+                event.relations = [r for r in event.relations
+                                   if not str(r.evidence or '').startswith(AUTO_REL_PREFIX)]
             dropped = before - len(self.relations)
             if persist:
                 with get_repository().transaction() as conn:

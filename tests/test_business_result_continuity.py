@@ -136,6 +136,31 @@ def test_domain_save_replay_creation_inheritance_and_budget_revision(business):
     assert json.loads(ws["work"].export_work(second["saved_work"]["artifact"]["artifact_id"], actor=ws["actor"], scope=ws["scope"])["content"])["version"] == 2
 
 
+def test_derived_analysis_reopen_reports_canonical_snapshot_changes_without_rewriting_it(business):
+    ws = business
+    source_id = ws["current"]["options"][0]["source_ids"][0]
+    fields = ("canonical_id", "source_id", "source_platform", "subject_id", "brand_focus_id",
+              "publish_datetime", "captured_at", "sentiment", "risk_level",
+              "engagement_likes", "engagement_comments", "engagement_collects", "engagement_shares")
+    with ws["repo"].connection(read_only=True, wal=False) as connection:
+        original = ws["service"]._canonical_source(connection, source_id, ws["domain_scope"])
+        snapshot = {key: original.get(key) for key in fields}
+        analysis = {"version": ws["service"].CURRENT_ANALYSIS_VERSION,
+                    "question_result": {"business_report": {"canonical_inputs": [snapshot]}}}
+        assert ws["service"]._analysis_input_status(connection, analysis, ws["domain_scope"]) is None
+
+    with ws["repo"].transaction() as connection:
+        connection.execute("UPDATE canonical_data SET engagement_likes=? WHERE source_id=? AND product_id=? AND domain_id=?",
+                           ((original.get("engagement_likes") or 0) + 1, source_id,
+                            ws["domain_scope"]["product_id"], ws["domain_scope"]["domain_id"]))
+    with ws["repo"].connection(read_only=True, wal=False) as connection:
+        status = ws["service"]._analysis_input_status(connection, analysis, ws["domain_scope"])
+
+    assert status == {"state": "CURRENT_INPUTS_CHANGED", "affected_source_ids": [source_id],
+                      "snapshot_immutable": True, "adoption_required": True}
+    assert snapshot["engagement_likes"] == original.get("engagement_likes")
+
+
 def test_source_withdrawal_adopts_new_input_without_rewriting_old_artifact(business):
     ws = business
     first = save(ws)["saved_work"]

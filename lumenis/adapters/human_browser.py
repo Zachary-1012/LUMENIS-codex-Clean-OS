@@ -21,9 +21,11 @@ nodriver、SeleniumBase 等的共识）：
 线程模型：playwright sync_api 需在工作线程内独立创建实例，HumanBrowser
 作为上下文管理器在单次采集任务内创建与释放。
 """
+import ipaddress
 import logging
 import os
 import random
+import re
 import socket
 import time
 from dataclasses import dataclass
@@ -32,6 +34,53 @@ from typing import Optional
 from urllib.parse import urlsplit
 
 logger = logging.getLogger(__name__)
+
+_LEGACY_IPV4_LITERAL = re.compile(
+    r"(?:0[xX][0-9a-fA-F]+|[0-9]+)(?:\.(?:0[xX][0-9a-fA-F]+|[0-9]+)){0,3}\Z"
+)
+
+
+def _is_local_browser_host(host: str | None) -> bool:
+    """Recognize canonical and legacy loopback aliases without doing DNS."""
+    normalized = str(host or "").strip().lower().rstrip(".")
+    if not normalized:
+        return False
+    if (normalized in {"localhost", "localhost.localdomain"}
+            or normalized.endswith(".localhost")):
+        return True
+    try:
+        address = ipaddress.ip_address(normalized)
+    except ValueError:
+        if not _LEGACY_IPV4_LITERAL.fullmatch(normalized):
+            return False
+        try:
+            address = ipaddress.ip_address(socket.inet_aton(normalized))
+        except OSError:
+            # An invalid numeric address is treated as local and then fails the
+            # registered-profile check, instead of reaching an unowned endpoint.
+            return True
+    mapped = getattr(address, "ipv4_mapped", None)
+    return bool(
+        address.is_loopback
+        or address.is_unspecified
+        or (mapped and (mapped.is_loopback or mapped.is_unspecified))
+    )
+
+
+def _parse_browser_endpoint(endpoint: str):
+    """Parse a credential-free HTTP(S) endpoint without resolving its host."""
+    try:
+        parsed = urlsplit(str(endpoint or "").strip())
+        port = parsed.port
+    except ValueError:
+        return None
+    if (parsed.scheme not in {"http", "https"} or not parsed.hostname
+            or parsed.username is not None or parsed.password is not None
+            or parsed.netloc.endswith(":")):
+        return None
+    if port is not None and not 1 <= port <= 65535:
+        return None
+    return parsed, port or (443 if parsed.scheme == "https" else 80)
 
 
 # ============================================================
@@ -104,11 +153,11 @@ def is_cdp_open(host: str = "127.0.0.1", port: int | None = None,
 
 def is_cdp_url_open(cdp_url: str, timeout: float = 1.0) -> bool:
     """Check only TCP reachability for an explicitly configured worker URL."""
+    endpoint = _parse_browser_endpoint(cdp_url)
+    if endpoint is None:
+        return False
+    parsed, port = endpoint
     try:
-        parsed = urlsplit(str(cdp_url or "").strip())
-        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-            return False
-        port = parsed.port or (443 if parsed.scheme == "https" else 80)
         with socket.create_connection((parsed.hostname, port), timeout=timeout):
             return True
     except Exception:
@@ -806,11 +855,10 @@ class HumanBrowser:
                 self._context = None
                 self._owned_pages = []
                 return
-            parsed = urlsplit(self.cdp_url)
-            if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.hostname.lower() not in {
-                    "127.0.0.1", "localhost", "::1"}:
+            endpoint = _parse_browser_endpoint(self.cdp_url)
+            if endpoint is None or not _is_local_browser_host(endpoint[0].hostname):
                 raise PermissionError("HUMAN_INTERACTIVE_WORKER_IDENTITY_UNAVAILABLE")
-            self.port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            _, self.port = endpoint
             if self.port in {9222, 9223}:
                 raise PermissionError("REGISTERED_WORKER_ENDPOINT_REQUIRED")
             import cdp_helper
@@ -852,12 +900,13 @@ class HumanBrowser:
             self.port = int(worker["port"])
             self.cdp_url = str(worker["endpoint"])
             self.browser = "edge"
-        parsed = urlsplit(self.cdp_url)
-        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        endpoint = _parse_browser_endpoint(self.cdp_url)
+        if endpoint is None:
             raise RuntimeError("configured browser worker endpoint is invalid")
-        local = parsed.hostname.lower() in {"127.0.0.1", "localhost", "::1"}
+        parsed, endpoint_port = endpoint
+        local = _is_local_browser_host(parsed.hostname)
         if local:
-            self.port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            self.port = endpoint_port
             if self.port == 9222:
                 raise RuntimeError("PROTECTED_PROFILE_FORBIDDEN")
             if self.port == 9223:

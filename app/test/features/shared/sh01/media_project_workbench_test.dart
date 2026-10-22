@@ -14,27 +14,43 @@ import 'package:lumenis_app/features/shared/sh01/media_project_files.dart';
 import 'package:lumenis_app/features/shared/sh01/media_preview.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_snapshot.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
-import 'package:lumenis_app/features/system/sys02/sys_system_foundation.dart' show WaitingFeedback;
+import 'package:lumenis_app/features/system/sys02/sys_system_foundation.dart'
+    show WaitingFeedback;
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 import 'package:lumenis_app/navigation/lumenis_leave_guard.dart';
 
 // Contract fixture only; real backend behavior is covered by TC02 Python tests.
 MediaProjectSnapshot _batchFixture(
-  MediaProjectSnapshot snapshot, List<Map<String, dynamic>> commands,
+  MediaProjectSnapshot snapshot,
+  List<Map<String, dynamic>> commands,
 ) {
   var current = snapshot;
   for (final command in commands) {
     final id = command['clip_id'] as String;
     current = switch (command['op']) {
-      'trim' => current.trimClip(id,
+      'trim' => current.trimClip(
+        id,
         sourceIn: (command['source_in'] as num).toDouble(),
-        sourceOut: (command['source_out'] as num).toDouble()),
-      'move_audio_clip' => current.moveAudioClip(id,
-        timelineStart: (command['timeline_start'] as num).toDouble()),
-      'audio_mix' => current.setAudioMix(id, MediaProjectAudioMix.fromJson(
-        command['mix'], clipDuration: current.tracks.expand((t) => t.clips)
-            .firstWhere((c) => c.clipId == id).durationSec)),
-      'split' => current.splitClip(id, atSec: (command['at_sec'] as num).toDouble()),
+        sourceOut: (command['source_out'] as num).toDouble(),
+      ),
+      'move_audio_clip' => current.moveAudioClip(
+        id,
+        timelineStart: (command['timeline_start'] as num).toDouble(),
+      ),
+      'audio_mix' => current.setAudioMix(
+        id,
+        MediaProjectAudioMix.fromJson(
+          command['mix'],
+          clipDuration: current.tracks
+              .expand((t) => t.clips)
+              .firstWhere((c) => c.clipId == id)
+              .durationSec,
+        ),
+      ),
+      'split' => current.splitClip(
+        id,
+        atSec: (command['at_sec'] as num).toDouble(),
+      ),
       _ => throw const FormatException('Unsupported fixture command'),
     };
   }
@@ -42,17 +58,24 @@ MediaProjectSnapshot _batchFixture(
 }
 
 Map<String, dynamic> _batchResponse(
-  MediaProjectSnapshot base, MediaProjectSnapshot candidate, List<String>? refs,
+  MediaProjectSnapshot base,
+  MediaProjectSnapshot candidate,
+  List<String>? refs,
 ) => {
   'ok': true,
   'assets': base.assets.map((asset) => asset.toJson()).toList(),
   'source_artifact_refs': refs ?? <String>[],
-  'rights_state': 'unknown', 'external_fetch': false,
+  'rights_state': 'unknown',
+  'external_fetch': false,
   'edit_batch': {
-    'state': 'preview', 'base_version': base.version,
-    'base_digest': 'a' * 64, 'timeline_digest': 'b' * 64,
-    'timeline': candidate.toJson(), 'persisted': false,
-    'export_performed': false, 'approval_required': true,
+    'state': 'preview',
+    'base_version': base.version,
+    'base_digest': 'a' * 64,
+    'timeline_digest': 'b' * 64,
+    'timeline': candidate.toJson(),
+    'persisted': false,
+    'export_performed': false,
+    'approval_required': true,
     'undo_scope': 'session_per_operation_not_persisted',
   },
 };
@@ -80,11 +103,18 @@ class _Client extends LumenisCoreClient {
     batchCommands = commands;
     await pendingBatch?.future;
     if (batchFailureCode != null) {
-      throw LumenisCoreException('private batch diagnostic',
-        statusCode: 403, errorCode: batchFailureCode);
+      throw LumenisCoreException(
+        'private batch diagnostic',
+        statusCode: 403,
+        errorCode: batchFailureCode,
+      );
     }
-    final base = MediaProjectSnapshot.fromJson(timeline,
-      inspectedAssets: (timeline['assets'] as List).map(MediaProjectAsset.fromJson));
+    final base = MediaProjectSnapshot.fromJson(
+      timeline,
+      inspectedAssets: (timeline['assets'] as List).map(
+        MediaProjectAsset.fromJson,
+      ),
+    );
     expect(expectedVersion, base.version);
     return _batchResponse(base, _batchFixture(base, commands), assetRefs);
   }
@@ -109,6 +139,7 @@ class _Client extends LumenisCoreClient {
   final importedBytes = <List<int>>[];
   Map<String, dynamic>? contextEnvelope;
   List<String>? exportedRefs;
+  String? exportedOutputKind;
   Map<String, dynamic>? savedExport;
   String? reopenedReference;
   String? reopenFailure;
@@ -194,7 +225,8 @@ class _Client extends LumenisCoreClient {
         errorCode: 'CONTENT_SOURCE_APPROVAL_REQUIRED',
         sourceConfirmation: ContentSourceConfirmation(
           confirmationId: 'CONF-widget',
-          resource: confirmationResource ??
+          resource:
+              confirmationResource ??
               'content-source-import:${domainId == null ? 'shared-workspace:' : ''}v1:${'b' * 64}',
           expiresAt: DateTime.now().add(confirmationLifetime),
           filename: confirmationFilename ?? filename,
@@ -248,6 +280,7 @@ class _Client extends LumenisCoreClient {
   }) async {
     exports++;
     exportedRefs = assetRefs;
+    exportedOutputKind = outputKind;
     await pendingExport?.future;
     final failureCode = exportFailureCode;
     if (failureCode != null) {
@@ -311,7 +344,9 @@ class _Client extends LumenisCoreClient {
         if (savedExport != null)
           {
             'artifact_id': 'ART-version',
-            'output_kind': 'video',
+            'output_kind':
+                ((savedExport!['result'] as Map)['project']
+                    as Map)['output_kind'],
             'created_at': '2026-10-02 09:00:00',
             'updated_at': '2026-10-02 09:00:00',
             'status': 'staged',
@@ -374,6 +409,7 @@ Widget _app(
   double scale = 1,
   EdgeInsets viewInsets = EdgeInsets.zero,
   bool contextAvailable = true,
+  String initialOutputKind = 'video',
   LumenisLeaveGuard? guard,
   VoidCallback? onBack,
   MediaProjectFiles? files,
@@ -388,8 +424,9 @@ Widget _app(
     GlobalCupertinoLocalizations.delegate,
   ],
   builder: (context, child) => MediaQuery(
-    data: MediaQuery.of(context)
-        .copyWith(textScaler: TextScaler.linear(scale), viewInsets: viewInsets),
+    data: MediaQuery.of(
+      context,
+    ).copyWith(textScaler: TextScaler.linear(scale), viewInsets: viewInsets),
     child: child!,
   ),
   home: guard == null
@@ -399,6 +436,7 @@ Widget _app(
           invokingDomain: invokingDomain,
           sharedWorkspace: sharedWorkspace,
           contextAvailable: contextAvailable,
+          initialOutputKind: initialOutputKind,
           onBack: onBack,
           files: files ?? _Files(),
         )
@@ -410,6 +448,7 @@ Widget _app(
             invokingDomain: invokingDomain,
             sharedWorkspace: sharedWorkspace,
             contextAvailable: contextAvailable,
+            initialOutputKind: initialOutputKind,
             onBack: onBack,
             files: files ?? _Files(),
           ),
@@ -422,6 +461,7 @@ Widget _workbenchHome(
   String? invokingDomain,
   required bool sharedWorkspace,
   required bool contextAvailable,
+  required String initialOutputKind,
   VoidCallback? onBack,
   required MediaProjectFiles files,
 }) => Scaffold(
@@ -431,6 +471,7 @@ Widget _workbenchHome(
     sharedWorkspace: sharedWorkspace,
     controller: controller,
     contextAvailable: contextAvailable,
+    initialOutputKind: initialOutputKind,
     files: files,
     onBack: onBack ?? () {},
   ),
@@ -495,10 +536,28 @@ void main() {
   });
   tearDown(() => controller.dispose());
 
+  Future<void> prepareAudioProject() async {
+    client.asset
+      ..['filename'] = 'voice.wav'
+      ..['media_kind'] = 'audio'
+      ..['has_video'] = false;
+    await controller.importFile('voice.wav', Uint8List.fromList([1]));
+    controller.edit(
+      (snapshot) => snapshot
+          .addAudioTrack('voiceover', audioRole: 'voiceover')
+          .addClip(
+            snapshot.assets.single.assetId,
+            trackId: 'voiceover',
+            sourceOut: 8,
+          ),
+    );
+  }
+
   Future<void> prepareBatch(WidgetTester tester) async {
     await _prepareEditableProject(client, controller);
-    controller.edit((s) => s.addClip(s.assets.single.assetId,
-      trackId: 'video', sourceOut: 8));
+    controller.edit(
+      (s) => s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 8),
+    );
     await tester.binding.setSurfaceSize(const Size(1440, 1100));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(client, controller));
@@ -506,10 +565,13 @@ void main() {
   }
 
   Finder sourceEnd() => find.byWidgetPredicate(
-    (w) => w is TextField && w.decoration?.labelText == '素材终点（秒）');
+    (w) => w is TextField && w.decoration?.labelText == '素材终点（秒）',
+  );
 
   Future<void> draftBoth(WidgetTester tester) async {
-    final ids = controller.timeline!.tracks.single.clips.map((c) => c.clipId).toList();
+    final ids = controller.timeline!.tracks.single.clips
+        .map((c) => c.clipId)
+        .toList();
     for (var i = 0; i < ids.length; i++) {
       final clip = find.byKey(ValueKey('media-clip-${ids[i]}'));
       await tester.ensureVisible(clip);
@@ -531,39 +593,77 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsNothing);
   }
 
-  testWidgets('multi-clip drafts preview cancel adopt and undo through existing inspector', (tester) async {
-    await prepareBatch(tester);
-    final base = controller.timeline!;
-    await draftBoth(tester);
-    await previewBatch(tester);
-    expect(client.batchCalls, 1);
-    expect(client.batchCommands, hasLength(2));
-    expect(controller.timeline, same(base));
-    expect(client.exports, 0);
-    expect(find.byKey(const Key('media-batch-preview-dialog')), findsOneWidget);
-    expect(tester.widget<OutlinedButton>(find.byKey(const Key('media-batch-preview'))).onPressed, isNull);
-    expect(tester.widget<FilledButton>(find.byKey(const Key('media-batch-adopt'))).onPressed, isNotNull);
-    expect(tester.widget<TextButton>(find.byKey(const Key('media-batch-cancel'))).onPressed, isNotNull);
-    await tester.tap(find.byKey(const Key('media-batch-cancel')));
-    await tester.pumpAndSettle();
-    expect(controller.timeline, same(base));
-    expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
-    expect(tester.widget<OutlinedButton>(find.byKey(const Key('media-batch-preview'))).onPressed, isNotNull);
-    await previewBatch(tester);
-    await tester.tap(find.byKey(const Key('media-batch-adopt')));
-    await tester.pumpAndSettle();
-    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [6, 7]);
-    expect(client.exports, 0);
-    final undo = find.byKey(const Key('media-toolbar-undo'));
-    await tester.ensureVisible(undo);
-    await tester.tap(undo);
-    await tester.pumpAndSettle();
-    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [8, 8]);
-    expect(controller.timeline!.canUndo, isTrue);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'multi-clip drafts preview cancel adopt and undo through existing inspector',
+    (tester) async {
+      await prepareBatch(tester);
+      final base = controller.timeline!;
+      await draftBoth(tester);
+      await previewBatch(tester);
+      expect(client.batchCalls, 1);
+      expect(client.batchCommands, hasLength(2));
+      expect(controller.timeline, same(base));
+      expect(client.exports, 0);
+      expect(
+        find.byKey(const Key('media-batch-preview-dialog')),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('media-batch-preview')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<FilledButton>(find.byKey(const Key('media-batch-adopt')))
+            .onPressed,
+        isNotNull,
+      );
+      expect(
+        tester
+            .widget<TextButton>(find.byKey(const Key('media-batch-cancel')))
+            .onPressed,
+        isNotNull,
+      );
+      await tester.tap(find.byKey(const Key('media-batch-cancel')));
+      await tester.pumpAndSettle();
+      expect(controller.timeline, same(base));
+      expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('media-batch-preview')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+      await previewBatch(tester);
+      await tester.tap(find.byKey(const Key('media-batch-adopt')));
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [
+        6,
+        7,
+      ]);
+      expect(client.exports, 0);
+      final undo = find.byKey(const Key('media-toolbar-undo'));
+      await tester.ensureVisible(undo);
+      await tester.tap(undo);
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [
+        8,
+        8,
+      ]);
+      expect(controller.timeline!.canUndo, isTrue);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('batch denial retains every pending field and supports retry', (tester) async {
+  testWidgets('batch denial retains every pending field and supports retry', (
+    tester,
+  ) async {
     await prepareBatch(tester);
     await draftBoth(tester);
     final base = controller.timeline;
@@ -580,25 +680,34 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('a changed split draft blocks batch without dropping adjustments', (tester) async {
-    await prepareBatch(tester);
-    await draftBoth(tester);
-    final field = find.byWidgetPredicate((w) =>
-      w is TextField && w.decoration?.labelText == '分割位置（素材秒）');
-    final operations = find.byKey(const Key('media-clip-operations'));
-    await tester.ensureVisible(operations);
-    await tester.tap(operations);
-    await tester.pumpAndSettle();
-    await tester.enterText(field, '3');
-    tester.testTextInput.hide();
-    await tester.pumpAndSettle();
-    await previewBatch(tester);
-    expect(client.batchCalls, 0);
-    expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
-    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [8, 8]);
-  });
+  testWidgets(
+    'a changed split draft blocks batch without dropping adjustments',
+    (tester) async {
+      await prepareBatch(tester);
+      await draftBoth(tester);
+      final field = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == '分割位置（素材秒）',
+      );
+      final operations = find.byKey(const Key('media-clip-operations'));
+      await tester.ensureVisible(operations);
+      await tester.tap(operations);
+      await tester.pumpAndSettle();
+      await tester.enterText(field, '3');
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      await previewBatch(tester);
+      expect(client.batchCalls, 0);
+      expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
+      expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [
+        8,
+        8,
+      ]);
+    },
+  );
 
-  testWidgets('a newer draft while preview awaits cannot be adopted', (tester) async {
+  testWidgets('a newer draft while preview awaits cannot be adopted', (
+    tester,
+  ) async {
     await prepareBatch(tester);
     await draftBoth(tester);
     client.pendingBatch = Completer<void>();
@@ -613,144 +722,205 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('media-batch-preview-dialog')), findsNothing);
     expect(tester.widget<TextField>(sourceEnd()).controller!.text, '5');
-    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [8, 8]);
+    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [
+      8,
+      8,
+    ]);
   });
 
-  testWidgets('context invalidation disables an already visible adoption', (tester) async {
+  testWidgets('context invalidation disables an already visible adoption', (
+    tester,
+  ) async {
     await prepareBatch(tester);
     await draftBoth(tester);
     await previewBatch(tester);
     controller.quarantineDraftSources();
     controller.selectClip(controller.selectedClipId);
     await tester.pumpAndSettle();
-    final adopt = tester.widget<FilledButton>(find.byKey(const Key('media-batch-adopt')));
+    final adopt = tester.widget<FilledButton>(
+      find.byKey(const Key('media-batch-adopt')),
+    );
     expect(adopt.onPressed, isNull);
     await tester.tap(find.byKey(const Key('media-batch-cancel')));
     await tester.pumpAndSettle();
     expect(client.exports, 0);
   });
 
-  testWidgets('video reflow preserves pending clip edits without treating hidden position as intent', (tester) async {
-    await prepareBatch(tester);
-    final ids = controller.timeline!.tracks.single.clips.map((c) => c.clipId).toList();
-    final second = find.byKey(ValueKey('media-clip-${ids.last}'));
-    await tester.ensureVisible(second);
-    await tester.tap(second);
-    await tester.pumpAndSettle();
-    await tester.enterText(sourceEnd(), '7');
-    tester.testTextInput.hide();
-    final first = find.byKey(ValueKey('media-clip-${ids.first}'));
-    await tester.ensureVisible(first);
-    await tester.tap(first);
-    await tester.pumpAndSettle();
-    await tester.enterText(sourceEnd(), '6');
-    tester.testTextInput.hide();
-    final apply = find.text('应用调整');
-    await tester.ensureVisible(apply);
-    await tester.tap(apply);
-    await tester.pumpAndSettle();
-    expect(controller.timeline!.tracks.single.clips.last.timelineStart, 6);
-    await tester.ensureVisible(second);
-    await tester.tap(second);
-    await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
-    await previewBatch(tester);
-    expect(client.batchCalls, 1);
-    expect(client.batchCommands!.map((c) => c['op']), ['trim']);
-    await tester.tap(find.byKey(const Key('media-batch-adopt')));
-    await tester.pumpAndSettle();
-    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [6, 7]);
-    expect(controller.timeline!.tracks.single.clips.last.timelineStart, 6);
-  });
+  testWidgets(
+    'video reflow preserves pending clip edits without treating hidden position as intent',
+    (tester) async {
+      await prepareBatch(tester);
+      final ids = controller.timeline!.tracks.single.clips
+          .map((c) => c.clipId)
+          .toList();
+      final second = find.byKey(ValueKey('media-clip-${ids.last}'));
+      await tester.ensureVisible(second);
+      await tester.tap(second);
+      await tester.pumpAndSettle();
+      await tester.enterText(sourceEnd(), '7');
+      tester.testTextInput.hide();
+      final first = find.byKey(ValueKey('media-clip-${ids.first}'));
+      await tester.ensureVisible(first);
+      await tester.tap(first);
+      await tester.pumpAndSettle();
+      await tester.enterText(sourceEnd(), '6');
+      tester.testTextInput.hide();
+      final apply = find.text('应用调整');
+      await tester.ensureVisible(apply);
+      await tester.tap(apply);
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips.last.timelineStart, 6);
+      await tester.ensureVisible(second);
+      await tester.tap(second);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
+      await previewBatch(tester);
+      expect(client.batchCalls, 1);
+      expect(client.batchCommands!.map((c) => c['op']), ['trim']);
+      await tester.tap(find.byKey(const Key('media-batch-adopt')));
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [
+        6,
+        7,
+      ]);
+      expect(controller.timeline!.tracks.single.clips.last.timelineStart, 6);
+    },
+  );
 
-  testWidgets('pending stream selection is preserved and blocks partial batch adoption', (tester) async {
-    await prepareBatch(tester);
-    await draftBoth(tester);
-    final sound = find.byKey(const Key('media-sound-settings'));
-    await tester.ensureVisible(sound);
-    await tester.tap(sound);
-    await tester.pumpAndSettle();
-    final stream = find.byWidgetPredicate((w) => w is DropdownButtonFormField<int>);
-    await tester.ensureVisible(stream);
-    await tester.tap(stream);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('静音').last);
-    await tester.pumpAndSettle();
-    await previewBatch(tester);
-    expect(client.batchCalls, 0);
-    expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
-    expect(controller.timeline!.tracks.single.clips.last.audioRole, 'original');
-    expect(find.text('静音'), findsOneWidget);
-  });
+  testWidgets(
+    'pending stream selection is preserved and blocks partial batch adoption',
+    (tester) async {
+      await prepareBatch(tester);
+      await draftBoth(tester);
+      final sound = find.byKey(const Key('media-sound-settings'));
+      await tester.ensureVisible(sound);
+      await tester.tap(sound);
+      await tester.pumpAndSettle();
+      final stream = find.byWidgetPredicate(
+        (w) => w is DropdownButtonFormField<int>,
+      );
+      await tester.ensureVisible(stream);
+      await tester.tap(stream);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('静音').last);
+      await tester.pumpAndSettle();
+      await previewBatch(tester);
+      expect(client.batchCalls, 0);
+      expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
+      expect(
+        controller.timeline!.tracks.single.clips.last.audioRole,
+        'original',
+      );
+      expect(find.text('静音'), findsOneWidget);
+    },
+  );
 
-  testWidgets('pending replacement on another clip is never discarded by batch', (tester) async {
-    await prepareBatch(tester);
-    final ids = controller.timeline!.tracks.single.clips.map((c) => c.clipId).toList();
-    final replace = find.byKey(const Key('media-replace-source'));
-    await tester.ensureVisible(replace);
-    await tester.tap(replace);
-    await tester.pumpAndSettle();
-    final other = find.byKey(ValueKey('media-clip-${ids.last}'));
-    await tester.ensureVisible(other);
-    await tester.tap(other);
-    await tester.pumpAndSettle();
-    await tester.enterText(sourceEnd(), '7');
-    tester.testTextInput.hide();
-    await tester.pumpAndSettle();
-    await previewBatch(tester);
-    expect(client.batchCalls, 0);
-    final first = find.byKey(ValueKey('media-clip-${ids.first}'));
-    await tester.ensureVisible(first);
-    await tester.tap(first);
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('media-replacement-cancel')), findsOneWidget);
-    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [8, 8]);
-  });
+  testWidgets(
+    'pending replacement on another clip is never discarded by batch',
+    (tester) async {
+      await prepareBatch(tester);
+      final ids = controller.timeline!.tracks.single.clips
+          .map((c) => c.clipId)
+          .toList();
+      final replace = find.byKey(const Key('media-replace-source'));
+      await tester.ensureVisible(replace);
+      await tester.tap(replace);
+      await tester.pumpAndSettle();
+      final other = find.byKey(ValueKey('media-clip-${ids.last}'));
+      await tester.ensureVisible(other);
+      await tester.tap(other);
+      await tester.pumpAndSettle();
+      await tester.enterText(sourceEnd(), '7');
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      await previewBatch(tester);
+      expect(client.batchCalls, 0);
+      final first = find.byKey(ValueKey('media-clip-${ids.first}'));
+      await tester.ensureVisible(first);
+      await tester.tap(first);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-replacement-cancel')), findsOneWidget);
+      expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [
+        8,
+        8,
+      ]);
+    },
+  );
 
-  testWidgets('inspector retains field identity and focus when dirty controls appear', (tester) async {
+  testWidgets(
+    'inspector retains field identity and focus when dirty controls appear',
+    (tester) async {
+      await _prepareEditableProject(client, controller);
+      controller.selectClip(
+        controller.timeline!.tracks.single.clips.single.clipId,
+      );
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      final endField = sourceEnd();
+      await tester.ensureVisible(endField);
+      await tester.showKeyboard(endField);
+      final editable = find.descendant(
+        of: endField,
+        matching: find.byType(EditableText),
+      );
+      final state = tester.state<EditableTextState>(editable);
+      expect(state.widget.focusNode.hasFocus, isTrue);
+      expect(find.byKey(const Key('media-apply-before-replace')), findsNothing);
+      await tester.enterText(endField, '7');
+      await tester.pump();
+      expect(
+        find.byKey(const Key('media-apply-before-replace')),
+        findsOneWidget,
+      );
+      expect(
+        identical(tester.state<EditableTextState>(editable), state),
+        isTrue,
+      );
+      expect(state.widget.focusNode.hasFocus, isTrue);
+      expect(tester.widget<TextField>(endField).controller!.text, '7');
+      await tester.enterText(endField, '6');
+      await tester.pump();
+      expect(
+        identical(tester.state<EditableTextState>(editable), state),
+        isTrue,
+      );
+      expect(state.widget.focusNode.hasFocus, isTrue);
+      expect(tester.widget<TextField>(endField).controller!.text, '6');
+      expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
+      expect(client.batchCalls, 0);
+      expect(client.exports, 0);
+    },
+  );
+
+  testWidgets('audio range position and fades use ordered batch commands', (
+    tester,
+  ) async {
     await _prepareEditableProject(client, controller);
-    controller.selectClip(controller.timeline!.tracks.single.clips.single.clipId);
-    await tester.binding.setSurfaceSize(const Size(1440, 1100));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(_app(client, controller));
-    await tester.pumpAndSettle();
-    final endField = sourceEnd();
-    await tester.ensureVisible(endField);
-    await tester.showKeyboard(endField);
-    final editable = find.descendant(of: endField, matching: find.byType(EditableText));
-    final state = tester.state<EditableTextState>(editable);
-    expect(state.widget.focusNode.hasFocus, isTrue);
-    expect(find.byKey(const Key('media-apply-before-replace')), findsNothing);
-    await tester.enterText(endField, '7');
-    await tester.pump();
-    expect(find.byKey(const Key('media-apply-before-replace')), findsOneWidget);
-    expect(identical(tester.state<EditableTextState>(editable), state), isTrue);
-    expect(state.widget.focusNode.hasFocus, isTrue);
-    expect(tester.widget<TextField>(endField).controller!.text, '7');
-    await tester.enterText(endField, '6');
-    await tester.pump();
-    expect(identical(tester.state<EditableTextState>(editable), state), isTrue);
-    expect(state.widget.focusNode.hasFocus, isTrue);
-    expect(tester.widget<TextField>(endField).controller!.text, '6');
-    expect(controller.timeline!.tracks.single.clips.single.sourceOut, 8);
-    expect(client.batchCalls, 0);
-    expect(client.exports, 0);
-  });
-
-  testWidgets('audio range position and fades use ordered batch commands', (tester) async {
-    await _prepareEditableProject(client, controller);
-    controller.edit((s) => s.addAudioTrack('voice', audioRole: 'voiceover')
-      .addClip(s.assets.single.assetId, trackId: 'voice', sourceOut: 8,
-        audioRole: 'voiceover', audioStreamIndex: 0));
+    controller.edit(
+      (s) => s
+          .addAudioTrack('voice', audioRole: 'voiceover')
+          .addClip(
+            s.assets.single.assetId,
+            trackId: 'voice',
+            sourceOut: 8,
+            audioRole: 'voiceover',
+            audioStreamIndex: 0,
+          ),
+    );
     final id = controller.timeline!.tracks.last.clips.single.clipId;
-    controller.edit((s) => s.setAudioMix(id, const MediaProjectAudioMix(fadeInSec: 4)));
+    controller.edit(
+      (s) => s.setAudioMix(id, const MediaProjectAudioMix(fadeInSec: 4)),
+    );
     controller.selectClip(id);
     await tester.binding.setSurfaceSize(const Size(1440, 1100));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(_app(client, controller));
     await tester.pumpAndSettle();
     Finder field(String label) => find.byWidgetPredicate(
-      (w) => w is TextField && w.decoration?.labelText == label);
+      (w) => w is TextField && w.decoration?.labelText == label,
+    );
     await tester.enterText(sourceEnd(), '3');
     await tester.enterText(field('时间线位置（秒）'), '1');
     final sound = find.byKey(const Key('media-sound-settings'));
@@ -763,68 +933,98 @@ void main() {
     tester.testTextInput.hide();
     await tester.pumpAndSettle();
     await previewBatch(tester);
-    expect(client.batchCommands!.map((c) => c['op']), ['audio_mix', 'trim', 'move_audio_clip']);
+    expect(client.batchCommands!.map((c) => c['op']), [
+      'audio_mix',
+      'trim',
+      'move_audio_clip',
+    ]);
     await tester.tap(find.byKey(const Key('media-batch-adopt')));
     await tester.pumpAndSettle();
     final clip = controller.timeline!.tracks.last.clips.single;
     expect(clip.sourceOut, 3);
     expect(clip.timelineStart, 1);
     expect(clip.audioMix.toJson(), {
-      'volume': .5, 'fade_in_sec': 1.0, 'fade_out_sec': 1.0, 'ducking': false,
+      'volume': .5,
+      'fade_in_sec': 1.0,
+      'fade_out_sec': 1.0,
+      'ducking': false,
     });
     expect(client.exports, 0);
   });
 
-  testWidgets('audio range position and fades retain draft across staged input frames', (tester) async {
-    await _prepareEditableProject(client, controller);
-    controller.edit((s) => s.addAudioTrack('voice', audioRole: 'voiceover')
-      .addClip(s.assets.single.assetId, trackId: 'voice', sourceOut: 8,
-        audioRole: 'voiceover', audioStreamIndex: 0));
-    final id = controller.timeline!.tracks.last.clips.single.clipId;
-    controller.edit((s) => s.setAudioMix(id, const MediaProjectAudioMix(fadeInSec: 4)));
-    controller.selectClip(id);
-    await tester.binding.setSurfaceSize(const Size(1440, 1100));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(_app(client, controller));
-    await tester.pumpAndSettle();
-    Finder field(String label) => find.byWidgetPredicate(
-      (w) => w is TextField && w.decoration?.labelText == label);
-    expect(controller.timeline!.tracks.last.clips.single.timelineStart, 0);
-    await tester.enterText(sourceEnd(), '3');
-    await tester.pump();
-    final position = field('时间线位置（秒）');
-    await tester.ensureVisible(position);
-    await tester.enterText(position, '1');
-    await tester.pump();
-    expect(tester.widget<TextField>(position).controller!.text, '1');
-    final sound = find.byKey(const Key('media-sound-settings'));
-    await tester.ensureVisible(sound);
-    await tester.tap(sound);
-    await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(position).controller!.text, '1');
-    await tester.enterText(field('音量'), '0.5');
-    await tester.pump();
-    await tester.enterText(field('淡入（秒）'), '1');
-    await tester.pump();
-    await tester.enterText(field('淡出（秒）'), '1');
-    await tester.pump();
-    expect(tester.widget<TextField>(position).controller!.text, '1');
-    tester.testTextInput.hide();
-    await tester.pumpAndSettle();
-    await previewBatch(tester);
-    expect(client.batchCommands!.map((c) => c['op']), ['audio_mix', 'trim', 'move_audio_clip']);
-    await tester.tap(find.byKey(const Key('media-batch-adopt')));
-    await tester.pumpAndSettle();
-    final clip = controller.timeline!.tracks.last.clips.single;
-    expect(clip.sourceOut, 3);
-    expect(clip.timelineStart, 1);
-    expect(clip.audioMix.toJson(), {
-      'volume': .5, 'fade_in_sec': 1.0, 'fade_out_sec': 1.0, 'ducking': false,
-    });
-    expect(client.exports, 0);
-  });
+  testWidgets(
+    'audio range position and fades retain draft across staged input frames',
+    (tester) async {
+      await _prepareEditableProject(client, controller);
+      controller.edit(
+        (s) => s
+            .addAudioTrack('voice', audioRole: 'voiceover')
+            .addClip(
+              s.assets.single.assetId,
+              trackId: 'voice',
+              sourceOut: 8,
+              audioRole: 'voiceover',
+              audioStreamIndex: 0,
+            ),
+      );
+      final id = controller.timeline!.tracks.last.clips.single.clipId;
+      controller.edit(
+        (s) => s.setAudioMix(id, const MediaProjectAudioMix(fadeInSec: 4)),
+      );
+      controller.selectClip(id);
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      Finder field(String label) => find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == label,
+      );
+      expect(controller.timeline!.tracks.last.clips.single.timelineStart, 0);
+      await tester.enterText(sourceEnd(), '3');
+      await tester.pump();
+      final position = field('时间线位置（秒）');
+      await tester.ensureVisible(position);
+      await tester.enterText(position, '1');
+      await tester.pump();
+      expect(tester.widget<TextField>(position).controller!.text, '1');
+      final sound = find.byKey(const Key('media-sound-settings'));
+      await tester.ensureVisible(sound);
+      await tester.tap(sound);
+      await tester.pumpAndSettle();
+      expect(tester.widget<TextField>(position).controller!.text, '1');
+      await tester.enterText(field('音量'), '0.5');
+      await tester.pump();
+      await tester.enterText(field('淡入（秒）'), '1');
+      await tester.pump();
+      await tester.enterText(field('淡出（秒）'), '1');
+      await tester.pump();
+      expect(tester.widget<TextField>(position).controller!.text, '1');
+      tester.testTextInput.hide();
+      await tester.pumpAndSettle();
+      await previewBatch(tester);
+      expect(client.batchCommands!.map((c) => c['op']), [
+        'audio_mix',
+        'trim',
+        'move_audio_clip',
+      ]);
+      await tester.tap(find.byKey(const Key('media-batch-adopt')));
+      await tester.pumpAndSettle();
+      final clip = controller.timeline!.tracks.last.clips.single;
+      expect(clip.sourceOut, 3);
+      expect(clip.timelineStart, 1);
+      expect(clip.audioMix.toJson(), {
+        'volume': .5,
+        'fade_in_sec': 1.0,
+        'fade_out_sec': 1.0,
+        'ducking': false,
+      });
+      expect(client.exports, 0);
+    },
+  );
 
-  testWidgets('closing the narrow inspector suppresses a late preview dialog', (tester) async {
+  testWidgets('closing the narrow inspector suppresses a late preview dialog', (
+    tester,
+  ) async {
     await prepareBatch(tester);
     await draftBoth(tester);
     await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -843,7 +1043,10 @@ void main() {
     expect(find.byKey(const Key('media-close-layer')), findsNothing);
     await _openPropertiesForField(tester, button);
     expect(tester.widget<TextField>(sourceEnd()).controller!.text, '7');
-    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [8, 8]);
+    expect(controller.timeline!.tracks.single.clips.map((c) => c.sourceOut), [
+      8,
+      8,
+    ]);
     expect(tester.takeException(), isNull);
   });
 
@@ -907,41 +1110,36 @@ void main() {
     },
   );
 
-  testWidgets(
-    'empty source replacement offers a localized import action',
-    (tester) async {
-      await _prepareEditableProject(client, controller);
-      await tester.binding.setSurfaceSize(const Size(1440, 1100));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+  testWidgets('empty source replacement offers a localized import action', (
+    tester,
+  ) async {
+    await _prepareEditableProject(client, controller);
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      const locales = <(Locale, String)>[
-        (Locale('zh', 'CN'), '导入素材'),
-        (Locale('en'), 'Import media'),
-        (Locale('ko'), '미디어 가져오기'),
-      ];
-      for (final (locale, expectedLabel) in locales) {
-        await tester.pumpWidget(_app(client, controller, locale: locale));
-        final replaceButton = find.byKey(const Key('media-replace-source'));
-        await _openPropertiesForField(tester, replaceButton);
-        await tester.ensureVisible(replaceButton);
-        await tester.tap(replaceButton);
-        await tester.pumpAndSettle();
+    const locales = <(Locale, String)>[
+      (Locale('zh', 'CN'), '导入素材'),
+      (Locale('en'), 'Import media'),
+      (Locale('ko'), '미디어 가져오기'),
+    ];
+    for (final (locale, expectedLabel) in locales) {
+      await tester.pumpWidget(_app(client, controller, locale: locale));
+      final replaceButton = find.byKey(const Key('media-replace-source'));
+      await _openPropertiesForField(tester, replaceButton);
+      await tester.ensureVisible(replaceButton);
+      await tester.tap(replaceButton);
+      await tester.pumpAndSettle();
 
-        final importButton = find.byKey(
-          const Key('media-replacement-import'),
-        );
-        expect(importButton, findsOneWidget);
-        expect(find.text(expectedLabel), findsOneWidget);
-        expect(find.text('sh01.media.import'), findsNothing);
-        expect(tester.takeException(), isNull);
+      final importButton = find.byKey(const Key('media-replacement-import'));
+      expect(importButton, findsOneWidget);
+      expect(find.text(expectedLabel), findsOneWidget);
+      expect(find.text('sh01.media.import'), findsNothing);
+      expect(tester.takeException(), isNull);
 
-        await tester.tap(
-          find.byKey(const Key('media-replacement-cancel')),
-        );
-        await tester.pumpAndSettle();
-      }
-    },
-  );
+      await tester.tap(find.byKey(const Key('media-replacement-cancel')));
+      await tester.pumpAndSettle();
+    }
+  });
 
   testWidgets(
     'open saved-work dialog clears a completed list on available scope change',
@@ -1169,54 +1367,58 @@ void main() {
     },
   );
 
+  testWidgets(
+    'GLOBAL_ALL independent choice imports without a business domain',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      client.contextEnvelope = {
+        'contract': 'lumenis.context.v1',
+        'selection_only': true,
+        'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
+      };
+      await tester.pumpWidget(_app(client, null));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-workspace-shared')), findsOneWidget);
+      expect(client.importCalls, 0);
+      await tester.tap(find.byKey(const Key('media-workspace-shared')));
+      await tester.pumpAndSettle();
+      expect(find.text('独立作品'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('media-import')));
+      await tester.pumpAndSettle();
+      expect(client.importCalls, 1);
+      expect(client.lastImportDomain, isNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-  testWidgets('GLOBAL_ALL independent choice imports without a business domain', (tester) async {
-    await tester.binding.setSurfaceSize(const Size(1440, 1000));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    client.contextEnvelope = {
-      'contract': 'lumenis.context.v1', 'selection_only': true,
-      'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
-    };
-    await tester.pumpWidget(_app(client, null));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('media-workspace-shared')), findsOneWidget);
-    expect(client.importCalls, 0);
-    await tester.tap(find.byKey(const Key('media-workspace-shared')));
-    await tester.pumpAndSettle();
-    expect(find.text('独立作品'), findsOneWidget);
-    await tester.tap(find.byKey(const Key('media-import')));
-    await tester.pumpAndSettle();
-    expect(client.importCalls, 1);
-    expect(client.lastImportDomain, isNull);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('GLOBAL_ALL offers independent creation alongside business purposes', (
-    tester,
-  ) async {
-    client.contextEnvelope = {
-      'contract': 'lumenis.context.v1',
-      'selection_only': true,
-      'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
-    };
-    await tester.pumpWidget(_app(client, null));
-    await tester.pumpAndSettle();
-    expect(find.text('选择独立作品，或将本次剪辑关联到商业运营、品牌市场。'), findsOneWidget);
-    expect(find.text('商业运营'), findsOneWidget);
-    expect(find.text('品牌市场'), findsOneWidget);
-    expect(find.byKey(const Key('media-import')), findsNothing);
-    expect(client.importCalls, 0);
-    await tester.tap(find.byKey(const Key('media-domain-cth')));
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
-    await tester.tap(find.byKey(const Key('media-open-sources')));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const Key('media-import')), findsOneWidget);
-    await tester.tap(find.byKey(const Key('media-import')));
-    await tester.pumpAndSettle();
-    expect(client.lastImportDomain, 'CTH');
-    expect(client.importCalls, 1);
-  });
+  testWidgets(
+    'GLOBAL_ALL offers independent creation alongside business purposes',
+    (tester) async {
+      client.contextEnvelope = {
+        'contract': 'lumenis.context.v1',
+        'selection_only': true,
+        'context': {'mode': 'GLOBAL_ALL', 'subject_id': null},
+      };
+      await tester.pumpWidget(_app(client, null));
+      await tester.pumpAndSettle();
+      expect(find.text('选择独立作品，或将本次剪辑关联到商业运营、品牌市场。'), findsOneWidget);
+      expect(find.text('商业运营'), findsOneWidget);
+      expect(find.text('品牌市场'), findsOneWidget);
+      expect(find.byKey(const Key('media-import')), findsNothing);
+      expect(client.importCalls, 0);
+      await tester.tap(find.byKey(const Key('media-domain-cth')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('media-open-sources')));
+      await tester.tap(find.byKey(const Key('media-open-sources')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-import')), findsOneWidget);
+      await tester.tap(find.byKey(const Key('media-import')));
+      await tester.pumpAndSettle();
+      expect(client.lastImportDomain, 'CTH');
+      expect(client.importCalls, 1);
+    },
+  );
 
   testWidgets(
     'GLOBAL purpose choices scroll at 320 pixels and 200 percent text',
@@ -1285,9 +1487,7 @@ void main() {
       domain: null,
     );
     client.approvalRequired = true;
-    await tester.pumpWidget(
-      _app(client, controller, sharedWorkspace: true),
-    );
+    await tester.pumpWidget(_app(client, controller, sharedWorkspace: true));
     await tester.tap(find.byKey(const Key('media-import')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -1316,7 +1516,9 @@ void main() {
         expect(find.textContaining('不会公开发布'), findsOneWidget);
         expect(find.textContaining('品牌市场'), findsNothing);
         expect(find.textContaining('不应出现在独立确认中'), findsNothing);
-        await tester.tap(find.byKey(const Key('media-import-technical-details')));
+        await tester.tap(
+          find.byKey(const Key('media-import-technical-details')),
+        );
         await tester.pump(const Duration(milliseconds: 300));
         expect(find.textContaining('SUBJECT-not-shared'), findsNothing);
         expect(
@@ -1390,12 +1592,14 @@ void main() {
       (tester) async {
         await openSharedApproval(tester);
         if (availabilityOnly) {
-          await tester.pumpWidget(_app(
-            client,
-            controller,
-            sharedWorkspace: true,
-            contextAvailable: false,
-          ));
+          await tester.pumpWidget(
+            _app(
+              client,
+              controller,
+              sharedWorkspace: true,
+              contextAvailable: false,
+            ),
+          );
         } else {
           client.contextEnvelope = {
             'context': {'mode': 'GLOBAL_ALL'},
@@ -1433,12 +1637,14 @@ void main() {
         expect(client.confirmedImport, isTrue);
         expect(client.importCalls, 1);
         if (availabilityOnly) {
-          await tester.pumpWidget(_app(
-            client,
-            controller,
-            sharedWorkspace: true,
-            contextAvailable: false,
-          ));
+          await tester.pumpWidget(
+            _app(
+              client,
+              controller,
+              sharedWorkspace: true,
+              contextAvailable: false,
+            ),
+          );
         } else {
           client.contextEnvelope = {
             'context': {'mode': 'GLOBAL_ALL'},
@@ -1771,12 +1977,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
-    expect(
-      find.text(
-        '版权状态尚未核实；导出不代表获准发布。',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('版权状态尚未核实；导出不代表获准发布。'), findsOneWidget);
     expect(find.byKey(const Key('media-rights-unknown')), findsOneWidget);
     expect(find.byType(CheckboxListTile), findsNothing);
     client.pendingExport = Completer<void>();
@@ -1801,6 +2002,60 @@ void main() {
           .onPressed,
       isNull,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('audio creation entry exports as an audio project', (
+    tester,
+  ) async {
+    client.successfulExport = true;
+    await prepareAudioProject();
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(client, controller, initialOutputKind: 'audio'),
+    );
+    await tester.pumpAndSettle();
+
+    final workbench = tester.widget<MediaProjectWorkbench>(
+      find.byType(MediaProjectWorkbench),
+    );
+    expect(workbench.initialOutputKind, 'audio');
+    await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
+    await tester.tap(find.byKey(const Key('media-export')));
+    await tester.pumpAndSettle();
+
+    expect(client.exportedOutputKind, 'audio');
+    expect(controller.version?.outputKind, 'audio');
+    expect(
+      ((client.savedExport!['result'] as Map)['project'] as Map)['output_kind'],
+      'audio',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('reopened audio project keeps its kind on a later export', (
+    tester,
+  ) async {
+    client.successfulExport = true;
+    await prepareAudioProject();
+    await controller.export(outputKind: 'audio');
+    await controller.reopen('ART-version');
+    expect(controller.version?.outputKind, 'audio');
+    controller.edit(
+      (snapshot) => snapshot.addAudioTrack('bgm', audioRole: 'bgm'),
+    );
+
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    await _openActionsForTarget(tester, find.byKey(const Key('media-export')));
+    await tester.tap(find.byKey(const Key('media-export')));
+    await tester.pumpAndSettle();
+
+    expect(client.exportedOutputKind, 'audio');
+    expect(controller.version?.outputKind, 'audio');
     expect(tester.takeException(), isNull);
   });
 

@@ -394,6 +394,77 @@ class TestTaskEngine:
         assert result["status"] == TaskStatus.CANCELLED.value
         assert result["error"] == "test cancel"
 
+    @pytest.mark.parametrize(
+        ("context", "expected_code"),
+        [
+            pytest.param(
+                {"execution_mode": "agent_zero_gui",
+                 "execution_schema": "lumenis.computer-execution-request/v1"},
+                "GENERAL_OS_EXECUTION_WITHDRAWN", id="withdrawn-general-os-execution",
+            ),
+            pytest.param({}, "INTERNAL_BROWSER_TASK_BINDING_NOT_BOUND", id="unbound-product-browser"),
+        ],
+    )
+    def test_browser_execution_fails_closed_without_worker(self, engine, monkeypatch, context, expected_code):
+        from agent_runtime import agent_zero_gui_executor
+
+        monkeypatch.setattr(
+            agent_zero_gui_executor, "get_agent_zero_gui_executor",
+            lambda: pytest.fail("browser execution must not start an external worker"),
+        )
+        result = engine._execute_browser({"task_id": "browser-task-1234", "context": context}, "open")
+
+        assert result["status"] == "unavailable"
+        assert result["error"] == result["failure_code"] == expected_code
+        assert result["external_submission"] is False
+        assert result.get("status") != "planned"
+        assert "requires_manual_browser" not in result
+
+    def test_historical_agent_zero_outcome_is_never_externally_verified(self, engine, monkeypatch):
+        from agent_runtime import agent_zero_gui_executor
+
+        monkeypatch.setattr(
+            agent_zero_gui_executor, "get_agent_zero_gui_executor",
+            lambda: pytest.fail("withdrawn GUI outcome must not contact its worker"),
+        )
+        task = {"context": {"execution_mode": "agent_zero_gui",
+                             "execution_schema": "lumenis.computer-execution-request/v1"}}
+
+        verified, reason = engine._verify_owner_outcome(
+            task, {"executor": "agent_zero_gui", "error": "outcome not independently read back"}
+        )
+
+        assert verified is False
+        assert reason == "GENERAL_OS_EXECUTION_WITHDRAWN"
+
+    def test_cancel_with_prior_gui_attempt_preserves_unknown_without_worker_contact(self, engine, monkeypatch):
+        from contextlib import nullcontext
+
+        from agent_runtime import agent_zero_gui_executor
+
+        task = {
+            "task_id": "gui-task-12345678", "status": TaskStatus.RUNNING.value,
+            "parameters": {agent_zero_gui_executor.AGENT_ZERO_TASK_RECORD: {
+                "state": "submitted", "upstream_task_id": "historic-worker-task",
+            }},
+        }
+        traces = []
+        monkeypatch.setattr(engine, "_agent_zero_task_lock", lambda _task_id: nullcontext())
+        monkeypatch.setattr(engine, "_db_get_task", lambda _task_id: task)
+        monkeypatch.setattr(engine, "_db_update_task", lambda _task_id, **values: task.update(values))
+        monkeypatch.setattr(engine, "_db_add_step", lambda *_args, **_kwargs: None)
+        monkeypatch.setattr(engine, "_db_add_trace", lambda *args, **kwargs: traces.append((args, kwargs)))
+        monkeypatch.setattr(
+            agent_zero_gui_executor, "get_agent_zero_gui_executor",
+            lambda: pytest.fail("cancellation must not contact a withdrawn worker"),
+        )
+
+        result = engine._cancel_agent_zero_task(task["task_id"], "user cancelled")
+
+        assert result["status"] == TaskStatus.UNKNOWN.value
+        assert result["error"] == "GENERAL_OS_EXECUTION_WITHDRAWN"
+        assert traces[-1][1]["metadata"] == {"external_contact": "NOT_ATTEMPTED"}
+
     def test_approve_task(self, engine):
         created = engine.create_task("帮我发布一条笔记")
         engine.parse_task(created["task_id"])  # → awaiting_approval

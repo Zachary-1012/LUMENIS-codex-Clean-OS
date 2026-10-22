@@ -122,6 +122,28 @@ def test_backfill_route_has_no_legacy_child_process_binding():
     assert 'subprocess.run' not in source
 
 
+def test_missing_note_text_does_not_become_neutral_or_low_risk():
+    content_type, sentiment, risk, quality = campaign._classify_note({}, False)
+
+    assert content_type == 'UGC'
+    assert sentiment == 'unknown'
+    assert risk == 'unknown'
+    assert quality == 'search_only'
+
+
+def test_sentiment_analyzer_failure_stays_unknown(monkeypatch):
+    original_import = builtins.__import__
+
+    def unavailable(name, *args, **kwargs):
+        if name == 'canonical_data':
+            raise ImportError('isolated failure')
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, '__import__', unavailable)
+    assert campaign._classify_note({'title': '有标题但分析器不可用'}, False) == (
+        'UGC', 'unknown', 'unknown', 'search_only')
+
+
 class _RouteCursor:
     def __init__(self, row=None):
         self._row = row

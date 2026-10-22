@@ -34,11 +34,50 @@ def command(ws, job, mode='prepare', request='adopt-domain-report-001', **extra)
     return ws['api'].post(URL,headers=ws.get('shared_headers',SHARED),json={'adopt_source_brief_job_id':job,'request_id':request,'mode':mode,**extra})
 
 
+def test_exact_user_confirmation_applies_and_reopens_shared_adoption(request):
+    from lumenis.system.security.permission import PermissionLevel
+
+    ws=request.getfixturevalue("research");report,_,_=domain_report(ws)
+    title='广州市场来源简报'
+    prepared=command(ws,report['job_id'],title=title)
+    assert prepared.status_code==200,prepared.get_json()
+    preview=prepared.get_json()['result']
+    assert preview['title']==title and preview['operation']=='data_export'
+    assert report['job_id'] not in preview['title']
+    with ws['repo'].connection() as con:
+        before=con.execute('SELECT COUNT(*) FROM lumenis_shared_artifacts').fetchone()[0]
+
+    confirmation={'confirm':True,'confirmed_resource':preview['resource'],'title':title}
+    blocked=command(ws,report['job_id'],'apply',**confirmation)
+    assert blocked.status_code==403
+    ws['gate'].grant_permission(PermissionLevel.HUMAN_APPROVAL)
+    denied=command(ws,report['job_id'],'apply',**{**confirmation,'confirm':False})
+    assert denied.status_code==403
+    changed_title=command(ws,report['job_id'],'apply',**{**confirmation,'title':'Another title'})
+    assert changed_title.status_code==403
+    with ws['repo'].connection() as con:
+        assert con.execute('SELECT COUNT(*) FROM lumenis_shared_artifacts').fetchone()[0]==before
+
+    response=command(ws,report['job_id'],'apply',**confirmation)
+    assert response.status_code==200,response.get_json()
+    saved=response.get_json()['result'];artifact_id=saved['artifact']['artifact_id']
+    assert saved['document']['title']==title
+    reopened=ws['api'].get(URL+'/'+artifact_id,headers=SHARED)
+    assert reopened.status_code==200,reopened.get_json()
+    assert reopened.get_json()['result']['document']['title']==title
+    replay=command(ws,report['job_id'],'apply',**confirmation)
+    assert replay.status_code==200 and replay.get_json()['result']['replayed'] is True
+    revoked=command(ws,report['job_id'],'revoke',**confirmation)
+    assert revoked.status_code==200 and revoked.get_json()['result']['revoked'] is True
+    assert ws['api'].get(URL+'/'+artifact_id,headers=SHARED).status_code==200
+
+
 @pytest.mark.parametrize('domain',['CTH','BMP'])
 def test_explicit_adoption_reopen_revision_and_revocation(research, domain):
     ws=research;report,rows,_=domain_report(ws,domain)
     prepared=command(ws,report['job_id']);assert prepared.status_code==200,prepared.get_json()
     resource=prepared.get_json()['result']['resource']
+    assert report['job_id'] not in prepared.get_json()['result']['title']
     assert command(ws,report['job_id'],'save').status_code!=200
     ws['gate'].grant_approval('data_export',resource='*',granted_by='synthetic-owner')
     assert command(ws,report['job_id'],'save').status_code!=200

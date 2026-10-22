@@ -5,6 +5,19 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 
 enum SourceBriefPhase { idle, loading, ready, failed }
 
+enum SourceBriefSavedWorkState { idle, saving, saved, reopened, failed }
+
+enum SourceBriefHistoryState { idle, loading, loaded, failed }
+
+enum SourceBriefSharedAdoptionState {
+  idle,
+  preparing,
+  prepared,
+  applying,
+  reopened,
+  failed,
+}
+
 enum SourceBriefTaskState {
   unknown,
   pending,
@@ -210,6 +223,127 @@ final class SourceBriefResult {
   final SourceBriefAnalysisSample? analysisSample;
 }
 
+final class SourceBriefSavedWork {
+  const SourceBriefSavedWork({
+    required this.artifactId,
+    required this.sha256,
+    required this.workId,
+    required this.version,
+    required this.title,
+    required this.markdown,
+    required this.requestId,
+    required this.sourceBriefJobId,
+    required this.sourceBriefHash,
+    this.parentArtifactId,
+    this.parentSha256,
+  });
+
+  final String artifactId;
+  final String sha256;
+  final String workId;
+  final int version;
+  final String title;
+  final String markdown;
+  final String requestId;
+  final String sourceBriefJobId;
+  final String sourceBriefHash;
+  final String? parentArtifactId;
+  final String? parentSha256;
+}
+
+final class SourceBriefRevisionDraft {
+  const SourceBriefRevisionDraft({
+    required this.title,
+    required this.reason,
+    required this.markdown,
+  });
+
+  final String title;
+  final String reason;
+  final String markdown;
+}
+
+final class SourceBriefSharedAdoptionPreview {
+  const SourceBriefSharedAdoptionPreview({
+    required this.requestId,
+    required this.jobId,
+    required this.sourceBriefHash,
+    required this.sourceScopeKey,
+    required this.title,
+    required this.resource,
+    required this.displayedCitations,
+    required this.guardedSourceCount,
+  });
+
+  final String requestId;
+  final String jobId;
+  final String sourceBriefHash;
+  final String sourceScopeKey;
+  final String title;
+  final String resource;
+  final int displayedCitations;
+  final int guardedSourceCount;
+}
+
+final class SourceBriefSharedSavedWork {
+  const SourceBriefSharedSavedWork({
+    required this.artifactId,
+    required this.sha256,
+    required this.title,
+    required this.markdown,
+    required this.requestId,
+    required this.replayed,
+  });
+
+  final String artifactId;
+  final String sha256;
+  final String title;
+  final String markdown;
+  final String requestId;
+  final bool replayed;
+}
+
+final class _PendingSourceBriefSharedAdoption {
+  const _PendingSourceBriefSharedAdoption({
+    required this.requestId,
+    required this.jobId,
+    required this.sourceBriefHash,
+    required this.sourceScopeKey,
+    required this.binding,
+    this.title,
+    this.preview,
+  });
+
+  final String requestId;
+  final String jobId;
+  final String sourceBriefHash;
+  final String sourceScopeKey;
+  final Map<String, Object?> binding;
+  final String? title;
+  final SourceBriefSharedAdoptionPreview? preview;
+}
+
+final class _PendingSourceBriefRevision {
+  const _PendingSourceBriefRevision({
+    required this.parentArtifactId,
+    required this.parentSha256,
+    required this.requestId,
+    required this.draft,
+  });
+
+  final String parentArtifactId;
+  final String parentSha256;
+  final String requestId;
+  final SourceBriefRevisionDraft draft;
+
+  bool matches(SourceBriefSavedWork parent, SourceBriefRevisionDraft value) =>
+      parentArtifactId == parent.artifactId &&
+      parentSha256 == parent.sha256 &&
+      draft.title == value.title &&
+      draft.reason == value.reason &&
+      draft.markdown == value.markdown;
+}
+
 class SourceBriefViewModel extends ChangeNotifier {
   SourceBriefViewModel({required this.client, this.domainId = 'CTH'}) {
     if (domainId != 'CTH' && domainId != 'BMP') {
@@ -236,6 +370,56 @@ class SourceBriefViewModel extends ChangeNotifier {
   String? statisticsTaskId;
   String? _statisticsJobId;
   Map<String, Object?>? sourceStatistics;
+  SourceBriefSavedWorkState _savedWorkState = SourceBriefSavedWorkState.idle;
+  SourceBriefErrorKind? _savedWorkErrorKind;
+  String? _savedWorkArtifactId;
+  String? _savedWorkSha256;
+  String? _savedWorkTitle;
+  String? _savedWorkMarkdown;
+  String? _pendingSaveRequestId;
+  String? _pendingSaveTitle;
+  String? _pendingSaveJobId;
+  String? _pendingSaveArtifactHash;
+  static int _saveRequestSequence = 0;
+  final List<SourceBriefSavedWork> _savedHistory = [];
+  SourceBriefHistoryState _savedHistoryState = SourceBriefHistoryState.idle;
+  SourceBriefErrorKind? _savedHistoryErrorKind;
+  SourceBriefSavedWork? _openedHistoryWork;
+  String? _savedHistoryCursor;
+  bool _savedHistoryHasMore = false;
+  bool _savedHistoryVerificationComplete = true;
+  int? _savedHistoryUnverifiedCount;
+  _PendingSourceBriefRevision? _pendingRevision;
+  _PendingSourceBriefSharedAdoption? _pendingSharedAdoption;
+  SourceBriefSharedAdoptionState _sharedAdoptionState =
+      SourceBriefSharedAdoptionState.idle;
+  SourceBriefErrorKind? _sharedAdoptionErrorKind;
+  SourceBriefSharedSavedWork? _sharedAdoptedWork;
+
+  SourceBriefSavedWorkState get savedWorkState => _savedWorkState;
+  SourceBriefErrorKind? get savedWorkErrorKind => _savedWorkErrorKind;
+  String? get savedWorkMarkdown => _savedWorkMarkdown;
+  String? get savedWorkTitle => _savedWorkTitle;
+  List<SourceBriefSavedWork> get savedHistory =>
+      List.unmodifiable(_savedHistory);
+  SourceBriefHistoryState get savedHistoryState => _savedHistoryState;
+  SourceBriefErrorKind? get savedHistoryErrorKind => _savedHistoryErrorKind;
+  SourceBriefSavedWork? get openedHistoryWork => _openedHistoryWork;
+  bool get savedHistoryHasMore => _savedHistoryHasMore;
+  bool get savedHistoryVerificationComplete =>
+      _savedHistoryVerificationComplete;
+  int? get savedHistoryUnverifiedCount => _savedHistoryUnverifiedCount;
+  SourceBriefSharedAdoptionState get sharedAdoptionState =>
+      _sharedAdoptionState;
+  SourceBriefErrorKind? get sharedAdoptionErrorKind => _sharedAdoptionErrorKind;
+  SourceBriefSharedAdoptionPreview? get sharedAdoptionPreview =>
+      _pendingSharedAdoption?.preview;
+  SourceBriefSharedSavedWork? get sharedAdoptedWork => _sharedAdoptedWork;
+  SourceBriefRevisionDraft? pendingRevisionDraftFor(
+    SourceBriefSavedWork parent,
+  ) => _pendingRevision?.matches(parent, _pendingRevision!.draft) == true
+      ? _pendingRevision!.draft
+      : null;
   Future<void> analyseSources({String? taskId}) async {
     if (_disposed || _busy) return;
     final jobId = _result?.jobId ?? _jobId;
@@ -344,6 +528,842 @@ class SourceBriefViewModel extends ChangeNotifier {
     } catch (error) {
       _fail(operation, _errorFor(error), fresh: fresh);
     }
+  }
+
+  Future<void> saveAsEditableResearch({required String title}) async {
+    final sourceResult = _result;
+    final selection = _selection;
+    if (_disposed || _busy || sourceResult == null || selection == null) {
+      return;
+    }
+    if (_savedWorkState == SourceBriefSavedWorkState.saved &&
+        _pendingSaveJobId == sourceResult.jobId &&
+        _pendingSaveArtifactHash == sourceResult.artifactHash) {
+      return;
+    }
+    if (_pendingSaveJobId != sourceResult.jobId ||
+        _pendingSaveArtifactHash != sourceResult.artifactHash) {
+      _resetSavedWorkState();
+    }
+    final normalizedTitle = title.trim();
+    if (normalizedTitle.isEmpty || normalizedTitle.length > 300) {
+      _savedWorkState = SourceBriefSavedWorkState.failed;
+      _savedWorkErrorKind = SourceBriefErrorKind.invalidResponse;
+      notifyListeners();
+      return;
+    }
+    _pendingSaveJobId = sourceResult.jobId;
+    _pendingSaveArtifactHash = sourceResult.artifactHash;
+    _pendingSaveTitle ??= normalizedTitle;
+    _pendingSaveRequestId ??= _newSourceBriefSaveRequestId();
+    final operation = _beginOperation(preserveResult: true);
+    _savedWorkState = SourceBriefSavedWorkState.saving;
+    _savedWorkErrorKind = null;
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) {
+      _finishSavedWorkContextFailure(operation);
+      return;
+    }
+    if (fresh.scopeChanged || !fresh.selection.matches(sourceResult.scope)) {
+      _savedWorkErrorKind = SourceBriefErrorKind.contextChanged;
+      _savedWorkState = SourceBriefSavedWorkState.failed;
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    if (!_contextStillCurrent(fresh, operation)) return;
+    final latest = _result;
+    if (latest == null ||
+        latest.jobId != sourceResult.jobId ||
+        latest.artifactHash != sourceResult.artifactHash) {
+      _savedWorkErrorKind = SourceBriefErrorKind.contextChanged;
+      _savedWorkState = SourceBriefSavedWorkState.failed;
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    try {
+      final saveResponse = await client.saveSourceBriefResult(
+        domainId: _domainId,
+        jobId: sourceResult.jobId,
+        requestId: _pendingSaveRequestId!,
+        title: _pendingSaveTitle!,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (saveResponse['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(saveResponse));
+      }
+      final saved = _validatedSavedWork(
+        saveResponse['result'],
+        expectedResult: sourceResult,
+        expectedTitle: _pendingSaveTitle!,
+        expectedRequestId: _pendingSaveRequestId!,
+      );
+      final reopenResponse = await client.reopenSourceBriefSavedWork(
+        domainId: _domainId,
+        artifactId: saved.artifactId,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (reopenResponse['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(reopenResponse));
+      }
+      final reopened = _validatedSavedWork(
+        reopenResponse['result'],
+        expectedResult: sourceResult,
+        expectedTitle: _pendingSaveTitle!,
+        expectedRequestId: _pendingSaveRequestId!,
+        expectedArtifactId: saved.artifactId,
+        expectedSha256: saved.sha256,
+        expectedMarkdown: saved.markdown,
+      );
+      _savedWorkArtifactId = reopened.artifactId;
+      _savedWorkSha256 = reopened.sha256;
+      _savedWorkTitle = reopened.title;
+      _savedWorkMarkdown = reopened.markdown;
+      _savedWorkState = SourceBriefSavedWorkState.saved;
+      _savedWorkErrorKind = null;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      if (!_isCurrent(operation)) return;
+      _savedWorkErrorKind = error is _SourceBriefSaveFailure
+          ? error.kind
+          : _errorFor(error);
+      _savedWorkState = SourceBriefSavedWorkState.failed;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    }
+  }
+
+  Future<void> reopenSavedResearch() async {
+    final sourceResult = _result;
+    final artifactId = _savedWorkArtifactId;
+    final sha256 = _savedWorkSha256;
+    final title = _savedWorkTitle;
+    final markdown = _savedWorkMarkdown;
+    final requestId = _pendingSaveRequestId;
+    if (_disposed ||
+        _busy ||
+        sourceResult == null ||
+        artifactId == null ||
+        sha256 == null ||
+        title == null ||
+        markdown == null ||
+        requestId == null) {
+      return;
+    }
+    final operation = _beginOperation(preserveResult: true);
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) {
+      _finishSavedWorkContextFailure(operation);
+      return;
+    }
+    if (fresh.scopeChanged || !fresh.selection.matches(sourceResult.scope)) {
+      _savedWorkErrorKind = SourceBriefErrorKind.contextChanged;
+      _savedWorkState = SourceBriefSavedWorkState.failed;
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    try {
+      final response = await client.reopenSourceBriefSavedWork(
+        domainId: _domainId,
+        artifactId: artifactId,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (response['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(response));
+      }
+      final reopened = _validatedSavedWork(
+        response['result'],
+        expectedResult: sourceResult,
+        expectedTitle: title,
+        expectedRequestId: requestId,
+        expectedArtifactId: artifactId,
+        expectedSha256: sha256,
+        expectedMarkdown: markdown,
+      );
+      _savedWorkMarkdown = reopened.markdown;
+      _savedWorkState = SourceBriefSavedWorkState.reopened;
+      _savedWorkErrorKind = null;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      if (!_isCurrent(operation)) return;
+      _savedWorkErrorKind = error is _SourceBriefSaveFailure
+          ? error.kind
+          : _errorFor(error);
+      _savedWorkState = SourceBriefSavedWorkState.failed;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    }
+  }
+
+  Future<void> loadSavedResearchHistory({bool loadMore = false}) async {
+    if (_disposed ||
+        _busy ||
+        _savedHistoryState == SourceBriefHistoryState.loading) {
+      return;
+    }
+    if (loadMore && (!_savedHistoryHasMore || _savedHistoryCursor == null)) {
+      return;
+    }
+    final priorCursor = loadMore ? _savedHistoryCursor : null;
+    final operation = _beginOperation(preserveResult: true);
+    _savedHistoryState = SourceBriefHistoryState.loading;
+    _savedHistoryErrorKind = null;
+    notifyListeners();
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) {
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = _errorKind ?? SourceBriefErrorKind.unavailable;
+      _finishSavedWorkContextFailure(operation);
+      return;
+    }
+    if (fresh.scopeChanged) {
+      _clearSavedResearchHistory();
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = SourceBriefErrorKind.contextChanged;
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    try {
+      final response = await client.listBrowserResearchNotes(
+        domainId: _domainId,
+        limit: 100,
+        cursor: priorCursor,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (response['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(response));
+      }
+      final page = _asMap(response['result']);
+      final items = page?['items'];
+      final hasMore = page?['has_more'];
+      final verificationComplete = page?['verification_complete'];
+      final unverified = page?['unverified_candidates'];
+      final nextCursor = page?['next_cursor'];
+      if (page == null ||
+          items is! List ||
+          hasMore is! bool ||
+          verificationComplete is! bool ||
+          unverified is! int ||
+          unverified < 0 ||
+          (nextCursor != null && nextCursor is! String) ||
+          (hasMore && (nextCursor is! String || nextCursor.isEmpty))) {
+        throw const _InvalidSourceBriefResponse();
+      }
+      final parsed = <SourceBriefSavedWork>[];
+      for (final item in items) {
+        final document = _asMap(_asMap(item)?['document']);
+        final payload = _asMap(document?['payload']);
+        if (payload?.containsKey('source_brief_reference') != true) continue;
+        parsed.add(
+          _validatedHistoricalSavedWork(
+            item,
+            expectedSelection: fresh.selection,
+          ),
+        );
+      }
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (!loadMore) _savedHistory.clear();
+      final known = _savedHistory.map((work) => work.artifactId).toSet();
+      _savedHistory.addAll(parsed.where((work) => known.add(work.artifactId)));
+      _savedHistory.sort((left, right) {
+        final workOrder = right.workId.compareTo(left.workId);
+        if (workOrder != 0) return workOrder;
+        return right.version.compareTo(left.version);
+      });
+      _savedHistoryCursor = nextCursor as String?;
+      _savedHistoryHasMore = hasMore;
+      _savedHistoryVerificationComplete = verificationComplete;
+      _savedHistoryUnverifiedCount = unverified;
+      _savedHistoryState = SourceBriefHistoryState.loaded;
+      _savedHistoryErrorKind = null;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      if (!_isCurrent(operation)) return;
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = error is _SourceBriefSaveFailure
+          ? error.kind
+          : _errorFor(error);
+      _finish(operation, phase: SourceBriefPhase.ready);
+    }
+  }
+
+  Future<void> reopenSavedResearchVersion(SourceBriefSavedWork work) async {
+    if (_disposed || _busy) return;
+    final selection = _selection;
+    if (selection == null || !_savedHistory.contains(work)) {
+      _savedHistoryErrorKind = SourceBriefErrorKind.contextChanged;
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      notifyListeners();
+      return;
+    }
+    final operation = _beginOperation(preserveResult: true);
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) {
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = _errorKind ?? SourceBriefErrorKind.unavailable;
+      _finish(operation, phase: SourceBriefPhase.ready);
+      return;
+    }
+    if (fresh.scopeChanged || !fresh.selection.sameScope(selection)) {
+      _clearSavedResearchHistory();
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = SourceBriefErrorKind.contextChanged;
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    try {
+      final response = await client.reopenBrowserResearchNote(
+        domainId: _domainId,
+        artifactId: work.artifactId,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (response['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(response));
+      }
+      final reopened = _validatedHistoricalSavedWork(
+        response['result'],
+        expectedSelection: fresh.selection,
+        expectedArtifactId: work.artifactId,
+        expectedSha256: work.sha256,
+        expectedWorkId: work.workId,
+        expectedVersion: work.version,
+        expectedJobId: work.sourceBriefJobId,
+        expectedSourceBriefHash: work.sourceBriefHash,
+      );
+      _openedHistoryWork = reopened;
+      _savedHistoryState = SourceBriefHistoryState.loaded;
+      _savedHistoryErrorKind = null;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      if (!_isCurrent(operation)) return;
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = error is _SourceBriefSaveFailure
+          ? error.kind
+          : _errorFor(error);
+      _finish(operation, phase: SourceBriefPhase.ready);
+    }
+  }
+
+  Future<void> reviseSavedResearchVersion({
+    required SourceBriefSavedWork parent,
+    required String reason,
+    required String title,
+    required String markdown,
+  }) async {
+    if (_disposed || _busy) return;
+    final normalizedReason = reason.trim();
+    final normalizedTitle = title.trim();
+    if (normalizedReason.isEmpty ||
+        normalizedReason.length > 4000 ||
+        normalizedTitle.isEmpty ||
+        normalizedTitle.length > 300 ||
+        markdown.trim().isEmpty ||
+        markdown.length > 100000) {
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = SourceBriefErrorKind.invalidResponse;
+      notifyListeners();
+      return;
+    }
+    final selection = _selection;
+    final latestVersion = _savedHistory
+        .where((work) => work.workId == parent.workId)
+        .fold<int>(
+          0,
+          (latest, work) => work.version > latest ? work.version : latest,
+        );
+    if (selection == null ||
+        !_savedHistory.contains(parent) ||
+        latestVersion != parent.version) {
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = SourceBriefErrorKind.contextChanged;
+      notifyListeners();
+      return;
+    }
+    final operation = _beginOperation(preserveResult: true);
+    _savedHistoryState = SourceBriefHistoryState.loading;
+    _savedHistoryErrorKind = null;
+    notifyListeners();
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) {
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = _errorKind ?? SourceBriefErrorKind.unavailable;
+      _finish(operation, phase: SourceBriefPhase.ready);
+      return;
+    }
+    if (fresh.scopeChanged || !fresh.selection.sameScope(selection)) {
+      _clearSavedResearchHistory();
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = SourceBriefErrorKind.contextChanged;
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    final draft = SourceBriefRevisionDraft(
+      title: normalizedTitle,
+      reason: normalizedReason,
+      markdown: markdown,
+    );
+    final pending = _pendingRevision;
+    if (pending != null && !pending.matches(parent, draft)) {
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = SourceBriefErrorKind.unavailable;
+      _finish(operation, phase: SourceBriefPhase.ready);
+      return;
+    }
+    final requestId = pending?.requestId ?? _newSourceBriefRevisionRequestId();
+    _pendingRevision ??= _PendingSourceBriefRevision(
+      parentArtifactId: parent.artifactId,
+      parentSha256: parent.sha256,
+      requestId: requestId,
+      draft: draft,
+    );
+    try {
+      final revised = await client.reviseBrowserResearchNote(
+        domainId: _domainId,
+        artifactId: parent.artifactId,
+        requestId: requestId,
+        expectedSha256: parent.sha256,
+        reason: normalizedReason,
+        expectedTitle: parent.title,
+        title: normalizedTitle,
+        expectedMarkdown: parent.markdown,
+        markdown: markdown,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (revised['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(revised));
+      }
+      final created = _validatedHistoricalSavedWork(
+        revised['result'],
+        expectedSelection: fresh.selection,
+        expectedWorkId: parent.workId,
+        expectedVersion: parent.version + 1,
+        expectedJobId: parent.sourceBriefJobId,
+        expectedSourceBriefHash: parent.sourceBriefHash,
+        expectedParentArtifactId: parent.artifactId,
+        expectedParentSha256: parent.sha256,
+        expectedTitle: normalizedTitle,
+        expectedMarkdown: markdown,
+        expectedRequestId: requestId,
+      );
+      final reopenedResponse = await client.reopenBrowserResearchNote(
+        domainId: _domainId,
+        artifactId: created.artifactId,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (reopenedResponse['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(reopenedResponse));
+      }
+      final reopened = _validatedHistoricalSavedWork(
+        reopenedResponse['result'],
+        expectedSelection: fresh.selection,
+        expectedArtifactId: created.artifactId,
+        expectedSha256: created.sha256,
+        expectedWorkId: created.workId,
+        expectedVersion: created.version,
+        expectedJobId: parent.sourceBriefJobId,
+        expectedSourceBriefHash: parent.sourceBriefHash,
+        expectedParentArtifactId: parent.artifactId,
+        expectedParentSha256: parent.sha256,
+        expectedTitle: normalizedTitle,
+        expectedMarkdown: markdown,
+        expectedRequestId: requestId,
+      );
+      _savedHistory.removeWhere(
+        (work) => work.artifactId == reopened.artifactId,
+      );
+      _savedHistory.add(reopened);
+      _savedHistory.sort((left, right) {
+        final workOrder = right.workId.compareTo(left.workId);
+        if (workOrder != 0) return workOrder;
+        return right.version.compareTo(left.version);
+      });
+      _openedHistoryWork = reopened;
+      _pendingRevision = null;
+      _savedHistoryState = SourceBriefHistoryState.loaded;
+      _savedHistoryErrorKind = null;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      if (!_isCurrent(operation)) return;
+      _savedHistoryState = SourceBriefHistoryState.failed;
+      _savedHistoryErrorKind = error is _SourceBriefSaveFailure
+          ? error.kind
+          : _errorFor(error);
+      _finish(operation, phase: SourceBriefPhase.ready);
+    }
+  }
+
+  Future<void> prepareSharedAdoption() async {
+    if (_disposed || _busy) return;
+    final sourceResult = _result;
+    final selection = _selection;
+    if (sourceResult == null ||
+        selection == null ||
+        _taskState != SourceBriefTaskState.succeeded) {
+      _failSharedAdoption(null, SourceBriefErrorKind.invalidResponse);
+      return;
+    }
+    var pending = _pendingSharedAdoption;
+    if (pending != null && !_sharedAdoptionMatches(pending, sourceResult)) {
+      _resetSharedAdoption();
+      pending = null;
+    }
+    if (pending?.preview != null) {
+      _sharedAdoptionState = SourceBriefSharedAdoptionState.prepared;
+      _sharedAdoptionErrorKind = null;
+      notifyListeners();
+      return;
+    }
+    pending ??= _PendingSourceBriefSharedAdoption(
+      requestId: _newSourceBriefSharedAdoptionRequestId(),
+      jobId: sourceResult.jobId,
+      sourceBriefHash: sourceResult.artifactHash,
+      sourceScopeKey: sourceResult.scope.scopeKey,
+      binding: const {},
+    );
+    _pendingSharedAdoption = pending;
+    final operation = _beginOperation(preserveResult: true);
+    _sharedAdoptionState = SourceBriefSharedAdoptionState.preparing;
+    _sharedAdoptionErrorKind = null;
+    _sharedAdoptedWork = null;
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) {
+      _failSharedAdoption(
+        operation,
+        _errorKind ?? SourceBriefErrorKind.unavailable,
+      );
+      return;
+    }
+    if (fresh.scopeChanged ||
+        !fresh.selection.sameScope(selection) ||
+        !fresh.selection.matches(sourceResult.scope)) {
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    if (!_contextStillCurrent(fresh, operation)) return;
+    if (!_sameCurrentResult(sourceResult)) {
+      _failSharedAdoption(operation, SourceBriefErrorKind.contextChanged);
+      return;
+    }
+    try {
+      final response = await client.adoptSourceBriefToShared(
+        jobId: pending.jobId,
+        requestId: pending.requestId,
+        mode: 'prepare',
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (response['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(response));
+      }
+      final prepared = _asMap(response['result']);
+      final binding = _asMap(prepared?['binding']);
+      final resource = _safeText(prepared?['resource'], maxLength: 4096);
+      final title = _safeText(prepared?['title'], maxLength: 300);
+      final citations = prepared?['displayed_citations'];
+      final guardedSources = prepared?['guarded_source_count'];
+      if (prepared == null ||
+          binding == null ||
+          prepared['state'] != 'requires_explicit_export_approval' ||
+          prepared['operation'] != 'data_export' ||
+          resource == null ||
+          title == null ||
+          citations is! int ||
+          citations < 0 ||
+          citations > 8 ||
+          guardedSources is! int ||
+          guardedSources < 1 ||
+          citations > guardedSources ||
+          !_validSharedAdoptionBinding(binding, sourceResult)) {
+        throw const _InvalidSourceBriefResponse();
+      }
+      final preview = SourceBriefSharedAdoptionPreview(
+        requestId: pending.requestId,
+        jobId: pending.jobId,
+        sourceBriefHash: pending.sourceBriefHash,
+        sourceScopeKey: pending.sourceScopeKey,
+        title: title,
+        resource: resource,
+        displayedCitations: citations,
+        guardedSourceCount: guardedSources,
+      );
+      _pendingSharedAdoption = _PendingSourceBriefSharedAdoption(
+        requestId: pending.requestId,
+        jobId: pending.jobId,
+        sourceBriefHash: pending.sourceBriefHash,
+        sourceScopeKey: pending.sourceScopeKey,
+        binding: Map.unmodifiable(binding),
+        title: title,
+        preview: preview,
+      );
+      _sharedAdoptionState = SourceBriefSharedAdoptionState.prepared;
+      _sharedAdoptionErrorKind = null;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      if (!_isCurrent(operation)) return;
+      _failSharedAdoption(
+        operation,
+        error is _SourceBriefSaveFailure ? error.kind : _errorFor(error),
+      );
+    }
+  }
+
+  Future<void> applySharedAdoption() async {
+    if (_disposed || _busy) return;
+    final sourceResult = _result;
+    final selection = _selection;
+    final pending = _pendingSharedAdoption;
+    final preview = pending?.preview;
+    if (sourceResult == null ||
+        selection == null ||
+        pending == null ||
+        preview == null ||
+        _taskState != SourceBriefTaskState.succeeded ||
+        !_sharedAdoptionMatches(pending, sourceResult)) {
+      _failSharedAdoption(null, SourceBriefErrorKind.contextChanged);
+      return;
+    }
+    final operation = _beginOperation(preserveResult: true);
+    _sharedAdoptionState = SourceBriefSharedAdoptionState.applying;
+    _sharedAdoptionErrorKind = null;
+    _sharedAdoptedWork = null;
+    final fresh = await _loadFreshContext(operation);
+    if (fresh == null || !_isCurrent(operation)) {
+      _failSharedAdoption(
+        operation,
+        _errorKind ?? SourceBriefErrorKind.unavailable,
+      );
+      return;
+    }
+    if (fresh.scopeChanged ||
+        !fresh.selection.sameScope(selection) ||
+        !fresh.selection.matches(sourceResult.scope) ||
+        !_sharedAdoptionMatches(pending, sourceResult)) {
+      _finish(
+        operation,
+        phase: SourceBriefPhase.ready,
+        errorKind: SourceBriefErrorKind.contextChanged,
+      );
+      return;
+    }
+    if (!_contextStillCurrent(fresh, operation)) {
+      return;
+    }
+    if (!_sameCurrentResult(sourceResult)) {
+      _failSharedAdoption(operation, SourceBriefErrorKind.contextChanged);
+      return;
+    }
+    try {
+      final response = await client.adoptSourceBriefToShared(
+        jobId: pending.jobId,
+        requestId: pending.requestId,
+        mode: 'apply',
+        title: pending.title,
+        confirm: true,
+        confirmedResource: preview.resource,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (response['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(response));
+      }
+      final committed = _validateSharedAdoptedWork(
+        response['result'],
+        expected: pending,
+        requireReplayState: true,
+      );
+      final reopenedResponse = await client.reopenSharedSavedWork(
+        committed.artifactId,
+      );
+      if (!_isCurrent(operation) || !_contextStillCurrent(fresh, operation)) {
+        return;
+      }
+      if (reopenedResponse['ok'] != true) {
+        throw _SourceBriefSaveFailure(_errorForResponse(reopenedResponse));
+      }
+      final reopened = _validateSharedAdoptedWork(
+        reopenedResponse['result'],
+        expected: pending,
+        expectedArtifactId: committed.artifactId,
+        expectedSha256: committed.sha256,
+        requireReplayState: false,
+      );
+      _sharedAdoptedWork = reopened;
+      _sharedAdoptionState = SourceBriefSharedAdoptionState.reopened;
+      _sharedAdoptionErrorKind = null;
+      _finish(operation, phase: SourceBriefPhase.ready);
+    } catch (error) {
+      if (!_isCurrent(operation)) return;
+      _failSharedAdoption(
+        operation,
+        error is _SourceBriefSaveFailure ? error.kind : _errorFor(error),
+      );
+    }
+  }
+
+  bool _sameCurrentResult(SourceBriefResult expected) {
+    final current = _result;
+    return current != null &&
+        current.jobId == expected.jobId &&
+        current.artifactHash == expected.artifactHash &&
+        current.scope.scopeKey == expected.scope.scopeKey;
+  }
+
+  bool _sharedAdoptionMatches(
+    _PendingSourceBriefSharedAdoption pending,
+    SourceBriefResult result,
+  ) =>
+      pending.jobId == result.jobId &&
+      pending.sourceBriefHash == result.artifactHash &&
+      pending.sourceScopeKey == result.scope.scopeKey;
+
+  bool _validSharedAdoptionBinding(
+    Map<String, Object?> binding,
+    SourceBriefResult result,
+  ) {
+    final sourceScope = _asMap(binding['source_scope']);
+    final targetScope = _asMap(binding['target_scope']);
+    final sourceCount = binding['source_count'];
+    final sourcesHash = binding['sources_sha256'];
+    return binding['schema'] == 'domain-report-adoption/v1' &&
+        binding['job_id'] == result.jobId &&
+        binding['report_hash'] == result.artifactHash &&
+        binding['authority'] == 'SOURCE_REFERENCE_ONLY' &&
+        binding['semantic_verification'] == 'NOT_PERFORMED' &&
+        binding['actor_id'] is String &&
+        (binding['actor_id'] as String).isNotEmpty &&
+        sourceCount is int &&
+        sourceCount > 0 &&
+        sourcesHash is String &&
+        RegExp(r'^[0-9a-f]{64}$').hasMatch(sourcesHash) &&
+        _sourceScopeMatches(sourceScope, result.scope) &&
+        _isSharedScope(targetScope);
+  }
+
+  bool _sourceScopeMatches(
+    Map<String, Object?>? scope,
+    SourceBriefScope expected,
+  ) =>
+      scope != null &&
+      scope['domain_id'] == expected.domainId &&
+      scope['subject_id'] == expected.subjectId &&
+      scope['brand_focus_id'] == expected.brandFocusId &&
+      scope['global_scope'] == expected.globalScope;
+
+  bool _isSharedScope(Map<String, Object?>? scope) =>
+      scope != null &&
+      scope.length == 2 &&
+      scope['scope_kind'] == 'shared_workspace' &&
+      scope['version'] == 1;
+
+  SourceBriefSharedSavedWork _validateSharedAdoptedWork(
+    Object? value, {
+    required _PendingSourceBriefSharedAdoption expected,
+    String? expectedArtifactId,
+    String? expectedSha256,
+    required bool requireReplayState,
+  }) {
+    final envelope = _asMap(value);
+    final artifact = _asMap(envelope?['artifact']);
+    final document = _asMap(envelope?['document']);
+    final returnRef = _asMap(envelope?['return_ref']);
+    final payload = _asMap(document?['payload']);
+    final binding = _asMap(payload?['domain_report_adoption']);
+    final artifactId = _safeText(artifact?['artifact_id'], maxLength: 20);
+    final sha256 = _safeText(artifact?['sha256'], maxLength: 64);
+    final title = _safeText(document?['title'], maxLength: 300);
+    final markdown = document?['markdown'];
+    final requestId = _safeText(document?['request_id'], maxLength: 128);
+    final replayed = envelope?['replayed'];
+    final workId = _safeText(returnRef?['work_id'], maxLength: 80);
+    if (artifactId == null ||
+        !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifactId) ||
+        sha256 == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(sha256) ||
+        (expectedArtifactId != null && artifactId != expectedArtifactId) ||
+        (expectedSha256 != null && sha256 != expectedSha256) ||
+        title != expected.title ||
+        document?['kind'] != 'report' ||
+        requestId != expected.requestId ||
+        markdown is! String ||
+        markdown.trim().isEmpty ||
+        workId == null ||
+        !workId.startsWith('WORK-') ||
+        returnRef?['artifact_id'] != artifactId ||
+        returnRef?['version'] != 1 ||
+        !_isSharedScope(_asMap(returnRef?['scope'])) ||
+        binding == null ||
+        _contextSignature(binding) != _contextSignature(expected.binding) ||
+        (requireReplayState && replayed is! bool)) {
+      throw const _InvalidSourceBriefResponse();
+    }
+    return SourceBriefSharedSavedWork(
+      artifactId: artifactId,
+      sha256: sha256,
+      title: title!,
+      markdown: markdown,
+      requestId: requestId!,
+      replayed: replayed == true,
+    );
+  }
+
+  void _failSharedAdoption(int? operation, SourceBriefErrorKind kind) {
+    _sharedAdoptionState = SourceBriefSharedAdoptionState.failed;
+    _sharedAdoptionErrorKind = kind;
+    if (operation == null) {
+      notifyListeners();
+    } else {
+      _finish(operation, phase: SourceBriefPhase.ready);
+    }
+  }
+
+  void _resetSharedAdoption() {
+    _pendingSharedAdoption = null;
+    _sharedAdoptionState = SourceBriefSharedAdoptionState.idle;
+    _sharedAdoptionErrorKind = null;
+    _sharedAdoptedWork = null;
   }
 
   SourceBriefErrorKind? _errorKind;
@@ -575,6 +1595,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     if (_disposed) return;
     _generation += 1;
     _clearReportState();
+    _clearSavedResearchHistory();
     _busy = false;
     _errorKind = null;
     _phase = _selection == null
@@ -640,7 +1661,10 @@ class SourceBriefViewModel extends ChangeNotifier {
       }
 
       final changed = _selection != null && !_selection!.sameScope(selection);
-      if (changed) _clearReportState();
+      if (changed) {
+        _clearReportState();
+        _clearSavedResearchHistory();
+      }
       _selection = selection;
       _scopeLabel = selection.scopeLabel;
       return _FreshSourceContext(
@@ -693,6 +1717,9 @@ class SourceBriefViewModel extends ChangeNotifier {
     if (selection == null) {
       _forgetContext();
       return;
+    }
+    if (_selection != null && !_selection!.sameScope(selection)) {
+      _clearSavedResearchHistory();
     }
     _selection = selection;
     _scopeLabel = selection.scopeLabel;
@@ -812,6 +1839,13 @@ class SourceBriefViewModel extends ChangeNotifier {
         expectedJobId: jobId,
         expectedContext: fresh.selection,
       );
+      final previous = _result;
+      if (previous != null &&
+          (previous.jobId != parsed.jobId ||
+              previous.artifactHash != parsed.artifactHash ||
+              previous.scope.scopeKey != parsed.scope.scopeKey)) {
+        _resetSharedAdoption();
+      }
       _jobId = jobId;
       _taskState = SourceBriefTaskState.succeeded;
       _canResume = false;
@@ -833,7 +1867,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     }
   }
 
-  int _beginOperation() {
+  int _beginOperation({bool preserveResult = false}) {
     if (_disposed) return _generation;
     _generation += 1;
     _busy = true;
@@ -842,7 +1876,7 @@ class SourceBriefViewModel extends ChangeNotifier {
     _resultArrivalToken = null;
     // Each operation must verify access and the saved artifact again. Keep
     // recovery references, but do not present the previous read as current.
-    _result = null;
+    if (!preserveResult) _result = null;
     sourceStatistics = null;
     notifyListeners();
     return _generation;
@@ -857,6 +1891,14 @@ class SourceBriefViewModel extends ChangeNotifier {
     _busy = false;
     _phase = phase;
     _errorKind = errorKind;
+    notifyListeners();
+  }
+
+  void _finishSavedWorkContextFailure(int operation) {
+    if (!_isCurrent(operation)) return;
+    if (_savedWorkState == SourceBriefSavedWorkState.idle) return;
+    _savedWorkState = SourceBriefSavedWorkState.failed;
+    _savedWorkErrorKind = _errorKind ?? SourceBriefErrorKind.unavailable;
     notifyListeners();
   }
 
@@ -886,6 +1928,7 @@ class SourceBriefViewModel extends ChangeNotifier {
   }
 
   void _clearReportState() {
+    _resetSharedAdoption();
     _taskId = null;
     _jobId = null;
     _taskState = SourceBriefTaskState.unknown;
@@ -896,10 +1939,37 @@ class SourceBriefViewModel extends ChangeNotifier {
     statisticsTaskId = null;
     _statisticsJobId = null;
     sourceStatistics = null;
+    _resetSavedWorkState();
+  }
+
+  void _resetSavedWorkState() {
+    _savedWorkState = SourceBriefSavedWorkState.idle;
+    _savedWorkErrorKind = null;
+    _savedWorkArtifactId = null;
+    _savedWorkSha256 = null;
+    _savedWorkTitle = null;
+    _savedWorkMarkdown = null;
+    _pendingSaveRequestId = null;
+    _pendingSaveTitle = null;
+    _pendingSaveJobId = null;
+    _pendingSaveArtifactHash = null;
+  }
+
+  void _clearSavedResearchHistory() {
+    _savedHistory.clear();
+    _savedHistoryState = SourceBriefHistoryState.idle;
+    _savedHistoryErrorKind = null;
+    _openedHistoryWork = null;
+    _savedHistoryCursor = null;
+    _savedHistoryHasMore = false;
+    _savedHistoryVerificationComplete = true;
+    _savedHistoryUnverifiedCount = null;
+    _pendingRevision = null;
   }
 
   void _forgetContext() {
     _clearReportState();
+    _clearSavedResearchHistory();
     _selection = null;
     _scopeLabel = null;
   }
@@ -1360,6 +2430,9 @@ String? _safeText(Object? value, {required int maxLength}) {
   return text;
 }
 
+String? _optionalSafeText(Object? value, {required int maxLength}) =>
+    value == null ? null : _safeText(value, maxLength: maxLength);
+
 Map<String, Object?>? _asMap(Object? value) {
   if (value is! Map) return null;
   final result = <String, Object?>{};
@@ -1510,4 +2583,225 @@ final class _ContextChanged implements Exception {
 
 final class _InvalidSourceBriefResponse implements Exception {
   const _InvalidSourceBriefResponse();
+}
+
+final class _SourceBriefSaveFailure implements Exception {
+  const _SourceBriefSaveFailure(this.kind);
+
+  final SourceBriefErrorKind kind;
+}
+
+final class _ValidatedSavedWork {
+  const _ValidatedSavedWork({
+    required this.artifactId,
+    required this.sha256,
+    required this.title,
+    required this.markdown,
+  });
+
+  final String artifactId;
+  final String sha256;
+  final String title;
+  final String markdown;
+}
+
+String _newSourceBriefSaveRequestId() =>
+    'sourcebrief_${DateTime.now().toUtc().microsecondsSinceEpoch}_${++SourceBriefViewModel._saveRequestSequence}';
+
+String _newSourceBriefRevisionRequestId() =>
+    'sourcebriefrev_${DateTime.now().toUtc().microsecondsSinceEpoch}_${++SourceBriefViewModel._saveRequestSequence}';
+
+String _newSourceBriefSharedAdoptionRequestId() =>
+    'sourcebriefshared_${DateTime.now().toUtc().microsecondsSinceEpoch}_${++SourceBriefViewModel._saveRequestSequence}';
+
+SourceBriefSavedWork _validatedHistoricalSavedWork(
+  Object? value, {
+  required _SourceContextSelection expectedSelection,
+  String? expectedArtifactId,
+  String? expectedSha256,
+  String? expectedWorkId,
+  int? expectedVersion,
+  String? expectedJobId,
+  String? expectedSourceBriefHash,
+  String? expectedParentArtifactId,
+  String? expectedParentSha256,
+  String? expectedTitle,
+  String? expectedMarkdown,
+  String? expectedRequestId,
+}) {
+  final envelope = _asMap(value);
+  final artifact = _asMap(envelope?['artifact']);
+  final document = _asMap(envelope?['document']);
+  final returnRef = _asMap(envelope?['return_ref']);
+  final payload = _asMap(document?['payload']);
+  final reference = _asMap(payload?['source_brief_reference']);
+  final artifactId = _safeText(artifact?['artifact_id'], maxLength: 20);
+  final sha256 = _safeText(artifact?['sha256'], maxLength: 64);
+  final title = _safeText(document?['title'], maxLength: 300);
+  final markdown = document?['markdown'];
+  final requestId = _safeText(document?['request_id'], maxLength: 128);
+  final workId = _safeText(returnRef?['work_id'], maxLength: 80);
+  final version = returnRef?['version'];
+  final jobId = _safeText(reference?['job_id'], maxLength: 120);
+  final sourceBriefHash = _safeText(reference?['artifact_hash'], maxLength: 64);
+  final actorId = _safeText(reference?['actor_id'], maxLength: 256);
+  final scope = _asMap(returnRef?['scope']);
+  final sourceScope = _asMap(reference?['scope']);
+  final parentArtifactId = _optionalSafeText(
+    document?['parent_artifact_id'],
+    maxLength: 20,
+  );
+  final parentSha256 = _optionalSafeText(
+    document?['parent_sha256'],
+    maxLength: 64,
+  );
+  final domain = expectedSelection.domainId == 'CTH' ? 'cth' : 'zbmp';
+  bool matchesScope(Map<String, Object?>? candidate) =>
+      candidate != null &&
+      candidate.keys.toSet().difference({
+        'domain_id',
+        'subject_id',
+        'brand_focus_id',
+        'global_scope',
+      }).isEmpty &&
+      candidate['domain_id'] == domain &&
+      candidate['subject_id'] == expectedSelection.subjectId &&
+      candidate['brand_focus_id'] == expectedSelection.brandFocusId &&
+      candidate['global_scope'] == expectedSelection.globalScope;
+
+  if (artifactId == null ||
+      !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifactId) ||
+      sha256 == null ||
+      !RegExp(r'^[0-9a-f]{64}$').hasMatch(sha256) ||
+      workId == null ||
+      !workId.startsWith('WORK-') ||
+      version is! int ||
+      version < 1 ||
+      title == null ||
+      title.isEmpty ||
+      markdown is! String ||
+      markdown.trim().isEmpty ||
+      requestId == null ||
+      !RegExp(r'^[A-Za-z0-9_-]{8,128}$').hasMatch(requestId) ||
+      document?['kind'] != 'research' ||
+      reference == null ||
+      reference.keys.toSet().difference({
+        'job_id',
+        'actor_id',
+        'scope',
+        'artifact_hash',
+      }).isNotEmpty ||
+      actorId == null ||
+      jobId == null ||
+      sourceBriefHash == null ||
+      !RegExp(r'^[0-9a-f]{64}$').hasMatch(sourceBriefHash) ||
+      returnRef?['artifact_id'] != artifactId ||
+      returnRef?['version'] != document?['version'] ||
+      !matchesScope(scope) ||
+      !matchesScope(sourceScope) ||
+      (version == 1 && (parentArtifactId != null || parentSha256 != null)) ||
+      (version > 1 &&
+          (parentArtifactId == null ||
+              !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(parentArtifactId) ||
+              parentSha256 == null ||
+              !RegExp(r'^[0-9a-f]{64}$').hasMatch(parentSha256))) ||
+      (expectedArtifactId != null && artifactId != expectedArtifactId) ||
+      (expectedSha256 != null && sha256 != expectedSha256) ||
+      (expectedWorkId != null && workId != expectedWorkId) ||
+      (expectedVersion != null && version != expectedVersion) ||
+      (expectedJobId != null && jobId != expectedJobId) ||
+      (expectedSourceBriefHash != null &&
+          sourceBriefHash != expectedSourceBriefHash) ||
+      (expectedParentArtifactId != null &&
+          parentArtifactId != expectedParentArtifactId) ||
+      (expectedParentSha256 != null && parentSha256 != expectedParentSha256) ||
+      (expectedTitle != null && title != expectedTitle) ||
+      (expectedMarkdown != null && markdown != expectedMarkdown) ||
+      (expectedRequestId != null && requestId != expectedRequestId)) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  return SourceBriefSavedWork(
+    artifactId: artifactId,
+    sha256: sha256,
+    workId: workId,
+    version: version,
+    title: title,
+    markdown: markdown,
+    requestId: requestId,
+    sourceBriefJobId: jobId,
+    sourceBriefHash: sourceBriefHash,
+    parentArtifactId: parentArtifactId,
+    parentSha256: parentSha256,
+  );
+}
+
+_ValidatedSavedWork _validatedSavedWork(
+  Object? value, {
+  required SourceBriefResult expectedResult,
+  required String expectedTitle,
+  required String expectedRequestId,
+  String? expectedArtifactId,
+  String? expectedSha256,
+  String? expectedMarkdown,
+}) {
+  final envelope = _asMap(value);
+  final artifact = _asMap(envelope?['artifact']);
+  final document = _asMap(envelope?['document']);
+  final returnRef = _asMap(envelope?['return_ref']);
+  final artifactId = _safeText(artifact?['artifact_id'], maxLength: 20);
+  final sha256 = _safeText(artifact?['sha256'], maxLength: 64);
+  final title = _safeText(document?['title'], maxLength: 300);
+  final markdown = document?['markdown'];
+  final payload = _asMap(document?['payload']);
+  final sourceReference = _asMap(payload?['source_brief_reference']);
+  final sourceScope = _asMap(sourceReference?['scope']);
+  final returnScope = _asMap(returnRef?['scope']);
+  final workId = _safeText(returnRef?['work_id'], maxLength: 80);
+  final actorRef = _safeText(sourceReference?['actor_id'], maxLength: 256);
+  final returnScopeMatches =
+      returnScope != null &&
+      returnScope.keys.toSet().difference({
+        'domain_id',
+        'subject_id',
+        'brand_focus_id',
+        'global_scope',
+      }).isEmpty &&
+      returnScope['domain_id'] == expectedResult.scope.domainId &&
+      returnScope['subject_id'] == expectedResult.scope.subjectId &&
+      returnScope['brand_focus_id'] == expectedResult.scope.brandFocusId &&
+      returnScope['global_scope'] == expectedResult.scope.globalScope;
+  final sourceScopeMatches =
+      sourceScope != null &&
+      sourceScope['domain_id'] == expectedResult.scope.domainId &&
+      sourceScope['subject_id'] == expectedResult.scope.subjectId &&
+      sourceScope['brand_focus_id'] == expectedResult.scope.brandFocusId &&
+      sourceScope['global_scope'] == expectedResult.scope.globalScope;
+  if (artifactId == null ||
+      !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifactId) ||
+      sha256 == null ||
+      !RegExp(r'^[0-9a-f]{64}$').hasMatch(sha256) ||
+      (expectedArtifactId != null && artifactId != expectedArtifactId) ||
+      (expectedSha256 != null && sha256 != expectedSha256) ||
+      title != expectedTitle ||
+      document?['kind'] != 'research' ||
+      document?['request_id'] != expectedRequestId ||
+      markdown is! String ||
+      markdown.trim().isEmpty ||
+      (expectedMarkdown != null && markdown != expectedMarkdown) ||
+      sourceReference?['job_id'] != expectedResult.jobId ||
+      sourceReference?['artifact_hash'] != expectedResult.artifactHash ||
+      actorRef == null ||
+      !sourceScopeMatches ||
+      returnRef?['artifact_id'] != artifactId ||
+      workId == null ||
+      returnRef?['version'] != 1 ||
+      !returnScopeMatches) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  return _ValidatedSavedWork(
+    artifactId: artifactId,
+    sha256: sha256,
+    title: title!,
+    markdown: markdown,
+  );
 }

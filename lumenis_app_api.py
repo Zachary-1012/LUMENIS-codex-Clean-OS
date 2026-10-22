@@ -90,7 +90,7 @@ def _internal_pitch_actor(action):
     from lumenis.system.security.permission import resolve_local_workspace_principal
     actor = resolve_local_workspace_principal(module="reports", action=action)
     if actor is None:
-        actor = get_current_user()
+        actor = get_current_user(read_only=True)
     if actor is None:
         raise PermissionError("AUTH_REQUIRED")
     return actor
@@ -102,14 +102,21 @@ def _internal_pitch_local_access_allowed():
     from lumenis.shared.reporting.saved_work import authorize_saved_work
     from lumenis.system.security.permission import resolve_local_workspace_principal
     prefix = "/api/experience/creation/internal-pitches"
-    path = request.path
-    expected = {"domain_api.api_internal_pitch_prepare", "domain_api.api_internal_pitch_read",
-                "domain_api.api_internal_pitch_action", "domain_api.api_internal_pitch_export"}
-    if request.endpoint not in expected:
-        return False
-    if not ((path == prefix and request.method == "POST") or
-            (re.fullmatch(re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}(?:/(?:run|cancel|export))?", path)
-             and request.method in {"GET", "POST"})):
+    routes = {
+        "domain_api.api_internal_pitch_prepare": (prefix, "POST", re.escape(prefix)),
+        "domain_api.api_internal_pitch_read": (
+            prefix + "/<task_id>", "GET", re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}"),
+        "domain_api.api_internal_pitch_action": (
+            prefix + "/<task_id>/<action>", "POST",
+            re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}/(?:run|cancel)"),
+        "domain_api.api_internal_pitch_export": (
+            prefix + "/<task_id>/export", "GET",
+            re.escape(prefix) + r"/task-pitch-[0-9a-f]{24}/export"),
+    }
+    expected = routes.get(request.endpoint)
+    if (expected is None or request.url_rule is None
+            or request.url_rule.rule != expected[0] or request.method != expected[1]
+            or re.fullmatch(expected[2], request.path) is None):
         return False
     action = "read" if request.method == "GET" else "write"
     actor = resolve_local_workspace_principal(module="reports", action=action)
@@ -146,7 +153,7 @@ def _internal_pitch_response(call):
             status = 404
         elif any(term in code for term in ("CONFLICT", "CANCELLED", "NOT_RUNNABLE", "STILL_ACTIVE")):
             status = 409
-        elif isinstance(exc, RuntimeError) or any(term in code for term in ("INTEGRITY", "MISSING", "OWNER_FAILED")):
+        elif isinstance(exc, RuntimeError) or any(term in code for term in ("INTEGRITY", "MISSING", "OWNER_FAILED", "UNAVAILABLE")):
             status = 503
         else:
             status = 400
@@ -292,10 +299,12 @@ def _business_work_response(call):
 def api_business_work_prepare():
     def execute():
         data = _business_work_body()
-        common = {"submission_id", "kind", "options"}
+        common = {"submission_id", "kind"}
         source_fields = common | {"source_job_id", "question"}
         case_fields = common | {"case_id"}
-        if set(data) not in (source_fields, case_fields):
+        required = case_fields if "case_id" in data else source_fields
+        optional = {"options", "planning_constraints"}
+        if not required.issubset(data) or set(data) - required - optional:
             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
         service, actor_ref, scope, authorize = _business_work_binding("prepare")
         if "case_id" in data:

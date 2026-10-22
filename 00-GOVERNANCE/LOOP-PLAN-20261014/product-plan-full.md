@@ -278,17 +278,17 @@ Web任务与参考抽屉并读、刷新核当前资格；Desktop新窗口同样�
 
 Web/Windows/macOS各在原CTH/BMP/创作工作区完成上述编辑与版本对比；iOS同对象审阅、轻改与明确采用按实际支持呈现；官网仅用获准去敏示例讲流程，不展示私人材料或伪效果。界面自身AIGC可按当前任务组织证据/方案/缺口层级，原创视觉可锁定，不能生成事实、授权或样本。交付验收为同一真实源→草案→明确选择→保存修订→独立重开→真实结果或明确未执行；全部六项需各留正反例，不把一项范例代全部。执行集合仍Codex、Zack、阿康，历史operator角色仅场景语义，不恢复旧W编号派工。
 
-### 恢复候选后的原F接口接续（2026-10-18，未构建）
+### 恢复候选后的原F接口接续（2026-10-22 源码校准）
 
 22条恢复候选前端/测试/合同路径已逐项静态比较；旧文件不能整包覆盖现版。三组接口错配接续到原J11/J18/J27，不新建会话、资料库、统计或任务Owner。来源恢复不等端到端通过。
 
 #### AI-01 当前输入、输出与验收
 
-当前静态事实：AI Hub已有持久会话Owner，AI01 Dart仍只提交ANALYZE intent，尚未消费该会话API。内存保稿、显式本地txt保存和execution_id不等服务器conversation_id；不得另建会话库或恢复旧READ/thread请求。
+2026-10-22 源码接续：AI-01通过现有AI Hub会话Owner接入会话清单、原文追加、分页重开、回复状态读回、明确重试/中断和任务关联；原ANALYZE任务与建议保稿路径保留。服务端conversation_id与本地未发草稿、execution_id分别管理，不采用旧候选的第二套会话表或旧READ/thread请求。创建结果不确定时先读清单，追加与回复使用原Owner的revision和幂等合同；迟到结果不得清掉后续编辑或进入其他scope。此项是受控源码适配，当前进程装载、真实模型结果及四端用户验收仍需各自证据。
 
 F输入合同：`POST /v4/ai/conversations {title}`返回`{ok,conversation}`；`GET`同路径以limit/offset分页列表；`GET /v4/ai/conversations/<id>?after_sequence=&limit=`返回conversation内turns/has_more/next_sequence/revision/state。追加`POST /<id>/turns {text,idempotency_key,expected_revision}`，保未经trim的用户原文，返回turn/revision/idempotent_hit。回复`POST /<id>/turns/<turn_id>/respond {idempotency_key,expected_revision,retry_confirmed?}`；先reserved再completed/unavailable/failed，失败原文仍可读。未知先读原会话，不自动重复模型调用。人工interrupt走同respond路径`{operation:"interrupt",expected_revision,confirmed:true}`，回执`external_call_stopped:false`及`prior_result_unknown:true`，不能画成已终止外部调用。400字段/输入错误、403当前权限、409版本/运行冲突、503存储不可用分别处理，旧批准或会话不可跨actor/workspace使用。
 
-F输出/视觉：原对话面侧栏或窄屏Sheet为真实会话列表，正文按sequence保用户原文和回答状态；输入区旁显示本地草稿/原文已持久/回复待核，不用Evidence图标暗示回答为事实。失败区提供读回及明确确认后再回复，换scope清旧，焦点和仍有权原稿保留。验收：create→原文追加→模型失败→独立重开原文一致，分页/乱序/CAS/撤权拒绝、不重复回复；继续保skill intent真实回执测试。前端实现/四端运行仍OPEN。
+F输出/视觉：原对话面侧栏或窄屏Sheet为真实会话列表，正文按sequence保用户原文和回答状态；输入区旁显示本地草稿/原文已持久/回复待核，不用Evidence图标暗示回答为事实。失败区提供读回及明确确认后再回复，换scope清旧，焦点和仍有权原稿保留。验收：create→原文追加→模型失败→独立重开原文一致，分页/乱序/CAS/撤权拒绝、不重复回复；继续保skill intent真实回执测试。会话有界源码接线随本批核验；完整视觉与四端运行验收仍OPEN。
 
 #### CTH-07 当前输入、输出与验收
 
@@ -300,11 +300,11 @@ F输出/视觉：原趋势图区上方保范围/时间口径，缺测点以断�
 
 #### CTH-10 当前输入、输出与验收
 
-当前静态事实：backend start已接business_question，Dart VM仍拒非空问句；已有任务重开/恢复/busy反馈继续保留。当前backend保存为同原scope研究成果，不能把它宣称为旧候选无条件跨域采用到Shared。
+当前静态事实：backend start已接business_question，Dart VM仍拒非空问句；已有任务重开/恢复/busy反馈继续保留。CTH-10现已连接同原scope SourceBrief保存和独立SavedWork读回，不能把它宣称为旧候选无条件跨域采用到Shared。该界面仍没有已保存`kind=research`历史列表或修订编辑器；SH-04使用Shared scope并只列`kind=report`，不是这类成果的操作入口。
 
-F输入合同：原`POST /api/experience/reports/source-brief/start`按当前白名单接可选business_question（4–1500字符）及source_ids/research/reference，202只是任务准入。job完成后独立读回；`POST /api/experience/reports/source-brief/jobs/<job_id>/save`严格body`{request_id,title}`，服务端重读job/来源/hash/当前review，输出`{ok:true,result:<SavedWork>}`，kind=research，保原scope/media_scope。保当前SavedWork返回的身份、version/hash并通过其原重开接口读回；客户端不能自改scope取得跨域权限。连接断开先核同request_id结果，不盲重复写。
+F输入合同：原`POST /api/experience/reports/source-brief/start`按当前白名单接可选business_question（4–1500字符）及source_ids/research/reference，202只是任务准入。job完成后独立读回；`POST /api/experience/reports/source-brief/jobs/<job_id>/save`严格body`{request_id,title}`，服务端重读job/来源/hash/当前review，输出`{ok:true,result:<SavedWork>}`，kind=research，保原scope/media_scope。CTH-10已连接该保存与当前SavedWork身份/版本/hash/范围核验后的独立重开。通用SavedWork修订服务可对`kind=research`创建不可变子版本，但当前CTH-10没有历史列表/修订编辑入口；客户端不能自改scope取得跨域权限。连接断开先核同request_id结果，不盲重复写。
 
-F输出/视觉：原问题区提供可选业务问句，结果标题旁[保存为可编辑研究成果]→标题/目标范围预览→[取消][确认保存]；保存中/已读回/冲突/来源变化/撤权各就地表达。历史任务选择恢复保原问题/资料/定位，技术编号仅兼容。验收非空问句实际传到现Owner、202不冒完成、保存独立重开/撤权清旧/重复请求幂等/乱序返回不串任务；无AI确定性结果与增强状态按实际method分别显示。前端接线及四端运行仍OPEN。
+F输出/视觉：目标构图仍是原问题区可选业务问句、结果标题旁[保存为可编辑研究成果]→标题/目标范围预览→[取消][确认保存]；保存中/已读回/冲突/来源变化/撤权各就地表达。当前源码已实现本屏一处本地化保存动作和同scope独立读回，不实现候选中的跨域Shared采用，也未接入research历史/修订编辑器。历史任务选择恢复保原问题/资料/定位，技术编号仅兼容。验收非空问句实际传到现Owner、202不冒完成、保存独立重开/撤权清旧/重复请求幂等/乱序返回不串任务；无AI确定性结果与增强状态按实际method分别显示。完整交互接线及四端运行仍OPEN。
 
 #### SH-02 当前输入、输出与验收
 
@@ -1946,10 +1946,10 @@ Web与桌面在图旁分列“统计状态／业务告警配置／写入与通�
 4. 处理：原Task受理后显示实际进度和已成立部分；断线不表示停止。旧run迟到隔离，不覆盖当前稿。
 5. 核结果：逐结论检查来源/方法/局限与Action/Outcome；来源侧读返回原选区。数字与图表用同一核定结果版本。
 6. 编辑：修改局部正文和结构，后续模型提案在旁比较，明确采用后才改选中内容；撤销不改原Evidence。
-7. 保存：绑定期望版本发送给原Owner，回执与独立读回后标已存；保存期间继续编辑保新输入。
+7. 保存：CTH-10从已核验SourceBrief明确选择“保存为可编辑研究成果”，只将request_id/title交给现有SourceBrief保存接口；服务端从不可变job重读来源、范围与review并生成SavedWork，客户端核对回执后再走同范围SavedWork读回。保存仅在Artifact身份、版本、SourceBrief job/hash和范围相符时标记成功；结果可沿既有SavedWork修订接口编辑，保存期间继续编辑保留新输入。
 8. 冲突：保服务器版本和本地稿，按真实差异选择合并/另存/保留；未确认不覆盖。权限撤回清不再可读部分。
 9. 导出：选择实际支持格式，核期望report/hash、服务端记录与实际字节，失败保稿；未支持格式说明影响，不发假文件。
-10. 重开：关闭后按原job/report重开准确版本，恢复合法章节/锚点；来源变化标受影响部分。历史版采用为新修订，原回执不伪造。
+10. 重开：关闭后按原job/report重开准确版本，恢复合法章节/锚点；已保存的研究成果通过既有SavedWork读回入口恢复准确Artifact版本。来源变化标受影响部分。历史版采用为新修订，原回执不伪造；修订SavedWork不改写其父SourceBrief job或来源Evidence。
 
 
 ### J13 BMP品牌组合、机会与传播

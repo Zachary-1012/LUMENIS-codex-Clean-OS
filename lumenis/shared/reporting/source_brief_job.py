@@ -1518,7 +1518,7 @@ def validate_domain_report_adoption(binding, *, actor, connection=None):
     return report
 
 
-def adopt_domain_report(*, job_id, request_id, actor, target_scope, mode='prepare'):
+def adopt_domain_report(*, job_id, request_id, actor, target_scope, mode='prepare', title=None):
     """Explicit domain report -> Shared SavedWork, using the existing export gate."""
     from . import saved_work
     from lumenis.system.security import permission
@@ -1527,6 +1527,13 @@ def adopt_domain_report(*, job_id, request_id, actor, target_scope, mode='prepar
         raise ValueError('SOURCE_BRIEF_ADOPTION_REQUEST_INVALID')
     saved_work.authorize_saved_work(actor, target_scope, action='write')
     binding, report, records = _domain_report_adoption_material(job_id, actor=actor)
+    if title is None:
+        source_scope = report['source_brief']['scope']
+        focus = source_scope.get('entity_label')
+        domain = 'CTH' if source_scope.get('product_id') == 'CTH' else 'BMP'
+        title = f'{focus} · 来源简报' if isinstance(focus, str) and focus.strip() else f'{domain} 来源简报'
+    if not isinstance(title, str) or not title.strip() or len(title) > 300:
+        raise ValueError('WORK_INPUT_INVALID')
     citations = []
     for record in records[:8]:
         text = record['content_excerpt']
@@ -1537,7 +1544,7 @@ def adopt_domain_report(*, job_id, request_id, actor, target_scope, mode='prepar
             raise PermissionError('SOURCE_BRIEF_ADOPTION_SOURCE_UNAVAILABLE')
         citations.append({'evidence_id': int(ref.split(':')[1]), 'start': 0, 'end': len(text),
                           'quote': text, 'source_scope': record['source_scope']})
-    args = {'title': 'Source Brief ' + job_id, 'markdown': report['source_brief']['markdown'],
+    args = {'title': title, 'markdown': report['source_brief']['markdown'],
         'kind': 'report', 'payload': {DOMAIN_REPORT_ADOPTION_KEY: binding,
             'source_report': report, 'displayed_citations': len(citations),
             'undisplayed_source_count': len(records) - len(citations)},
@@ -1547,7 +1554,8 @@ def adopt_domain_report(*, job_id, request_id, actor, target_scope, mode='prepar
     if mode == 'prepare':
         return {'state': 'requires_explicit_export_approval', 'resource': resource,
                 'operation': permission.OperationType.DATA_EXPORT.value, 'binding': binding,
-                'displayed_citations': len(citations), 'guarded_source_count': len(records)}
+                'displayed_citations': len(citations), 'guarded_source_count': len(records),
+                'title': title}
     gate = permission.get_permission_gate()
     def guard(con, _record, _document):
         saved_work.authorize_saved_work(actor, target_scope, action='write', connection=con)

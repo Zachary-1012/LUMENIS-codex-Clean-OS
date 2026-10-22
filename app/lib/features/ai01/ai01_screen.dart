@@ -7,6 +7,8 @@ import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import 'ai01_draft_actions.dart';
 import 'ai01_draft_files.dart';
+import 'ai01_conversation_panel.dart';
+import 'ai01_conversations.dart';
 import 'ai01_intent.dart';
 import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
@@ -16,6 +18,7 @@ class Ai01Screen extends StatefulWidget {
   const Ai01Screen({
     required this.client,
     this.repository,
+    this.conversationRepository,
     this.draftFiles,
     this.draftController,
     this.scopeLabel,
@@ -25,6 +28,7 @@ class Ai01Screen extends StatefulWidget {
 
   final LumenisCoreClient client;
   final Ai01Repository? repository;
+  final Ai01ConversationRepository? conversationRepository;
   final Ai01DraftFiles? draftFiles;
   final TextEditingController? draftController;
   final String? scopeLabel;
@@ -43,6 +47,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     debugLabel: 'ai01-details-opener',
   );
   final _ownedDialogs = <DialogRoute<void>>{};
+  final _suggestionAdoptions = <({TextEditingValue before, String after})>[];
 
   @override
   void initState() {
@@ -62,8 +67,16 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     super.didUpdateWidget(oldWidget);
     final readOwnerChanged =
         !identical(oldWidget.repository, widget.repository) ||
+        !identical(
+          oldWidget.conversationRepository,
+          widget.conversationRepository,
+        ) ||
         (widget.repository == null &&
             !identical(oldWidget.client, widget.client));
+    if (readOwnerChanged || oldWidget.scopeLabel != widget.scopeLabel) {
+      _closeOwnedDialogs();
+      _suggestionAdoptions.clear();
+    }
     if (readOwnerChanged) {
       _closeOwnedDialogs();
       _viewModel.dispose();
@@ -74,6 +87,7 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     if (oldWidget.draftController == widget.draftController) return;
 
     _closeOwnedDialogs();
+    _suggestionAdoptions.clear();
     final previousController = _draftController;
     final previousValue = previousController.value;
     previousController.removeListener(_syncDraft);
@@ -111,6 +125,27 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     repository: widget.repository ?? CoreAi01Repository(client: widget.client),
   );
 
+  Future<void> _openConversations() async {
+    final conversations = Ai01ConversationViewModel(
+      repository:
+          widget.conversationRepository ??
+          CoreAi01ConversationRepository(client: widget.client),
+    );
+    try {
+      await _showOwnedDialog(
+        animationStyle: AnimationStyle.noAnimation,
+        builder: (context) => Ai01ConversationPanel(
+          viewModel: conversations,
+          draftController: _draftController,
+          currentTaskId: _viewModel.intentResult?.executionId,
+          onClose: () => Navigator.of(context).pop(),
+        ),
+      );
+    } finally {
+      conversations.dispose();
+    }
+  }
+
   void _closeOwnedDialogs() {
     final dialogs = _ownedDialogs.toList();
     _ownedDialogs.clear();
@@ -142,11 +177,141 @@ class _Ai01ScreenState extends State<Ai01Screen> {
     };
   }
 
-  void _chooseSuggestion(Ai01Suggestion suggestion) {
-    _viewModel.useSuggestion(suggestion);
-    _draftController.value = TextEditingValue(
-      text: _viewModel.draft,
-      selection: TextSelection.collapsed(offset: _viewModel.draft.length),
+  Future<void> _chooseSuggestion(Ai01Suggestion suggestion) async {
+    if (!suggestion.isProductSafe) return;
+    final controller = _draftController;
+    final model = _viewModel;
+    final scopeLabel = widget.scopeLabel;
+    final intent = suggestion.safeIntent!;
+    await _showOwnedDialog(
+      animationStyle: AnimationStyle.noAnimation,
+      builder: (dialogContext) => ValueListenableBuilder<TextEditingValue>(
+        valueListenable: controller,
+        builder: (context, value, _) {
+          final duplicate = value.text
+              .split('\n')
+              .any((line) => line.trim() == intent);
+          final next = value.text.trim().isEmpty
+              ? intent
+              : '${value.text}\n$intent';
+          final tooLong = next.trim().runes.length > ai01MaxTaskLength;
+          return AlertDialog(
+            key: const ValueKey('ai01-suggestion-review'),
+            title: Text(suggestion.safeTitle!),
+            content: SingleChildScrollView(child: Text(intent)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(_suggestionCopy(context, '关闭', 'Close', '닫기')),
+              ),
+              FilledButton(
+                key: const ValueKey('ai01-suggestion-adopt'),
+                onPressed: duplicate || tooLong
+                    ? null
+                    : () {
+                        if (!mounted ||
+                            !identical(controller, _draftController) ||
+                            !identical(model, _viewModel) ||
+                            scopeLabel != widget.scopeLabel ||
+                            controller.value != value) {
+                          return;
+                        }
+                        setState(
+                          () => _suggestionAdoptions.add((
+                            before: value,
+                            after: next,
+                          )),
+                        );
+                        controller.value = TextEditingValue(
+                          text: next,
+                          selection: TextSelection.collapsed(
+                            offset: next.length,
+                          ),
+                        );
+                        Navigator.of(dialogContext).pop();
+                      },
+                child: Text(
+                  _suggestionCopy(
+                    context,
+                    duplicate
+                        ? '已加入'
+                        : tooLong
+                        ? '草稿过长'
+                        : '加入草稿',
+                    duplicate
+                        ? 'Already added'
+                        : tooLong
+                        ? 'Draft too long'
+                        : 'Add to draft',
+                    duplicate
+                        ? '이미 추가됨'
+                        : tooLong
+                        ? '초안이 너무 깁니다'
+                        : '초안에 추가',
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (mounted) _draftFocus.requestFocus();
+  }
+
+  Future<void> _withdrawSuggestion() async {
+    if (_suggestionAdoptions.isEmpty) return;
+    final adoption = _suggestionAdoptions.last;
+    final controller = _draftController;
+    void restore() {
+      if (!mounted ||
+          !identical(controller, _draftController) ||
+          _suggestionAdoptions.isEmpty ||
+          _suggestionAdoptions.last != adoption) {
+        return;
+      }
+      setState(() => _suggestionAdoptions.removeLast());
+      controller.value = adoption.before;
+    }
+
+    if (controller.text == adoption.after) {
+      restore();
+      return;
+    }
+    await _showOwnedDialog(
+      animationStyle: AnimationStyle.noAnimation,
+      builder: (context) => AlertDialog(
+        key: const ValueKey('ai01-suggestion-withdraw-review'),
+        title: Text(
+          _suggestionCopy(context, '撤回加入？', 'Undo addition?', '추가를 취소할까요?'),
+        ),
+        content: Text(
+          _suggestionCopy(
+            context,
+            '恢复加入前的草稿，后续编辑也会撤回。',
+            'Restore the draft before the addition. Later edits will also be undone.',
+            '추가 전 초안으로 복원합니다. 이후 편집 내용도 취소됩니다.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              _suggestionCopy(context, '保留编辑', 'Keep edits', '편집 유지'),
+            ),
+          ),
+          FilledButton(
+            key: const ValueKey('ai01-suggestion-withdraw-confirm'),
+            onPressed: () {
+              restore();
+              Navigator.of(context).pop();
+            },
+            child: Text(
+              _suggestionCopy(context, '恢复草稿', 'Restore draft', '초안 복원'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -274,6 +439,9 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                   intentResult: _viewModel.intentResult,
                   suggestions: snapshot?.suggestions ?? const [],
                   onChooseSuggestion: _chooseSuggestion,
+                  onWithdrawSuggestion: _suggestionAdoptions.isEmpty
+                      ? null
+                      : _withdrawSuggestion,
                   onExpand: _openFocusedEditor,
                   compact: phone,
                 ),
@@ -286,23 +454,37 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                   ),
                 ],
                 const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    key: const ValueKey('ai01-details-open'),
-                    focusNode: _detailsOpenerFocus,
-                    onPressed: _openDetails,
-                    icon: const LumenisIcon(
-                      Icons.account_tree_outlined,
-                      size: 18,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    TextButton.icon(
+                      key: const ValueKey('ai01-conversations-open'),
+                      onPressed: _openConversations,
+                      icon: const LumenisIcon(Icons.forum_outlined, size: 18),
+                      label: Text(
+                        context.lumenisL10n.text('ai01.conversation.open'),
+                      ),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
                     ),
-                    label: Text(
-                      context.lumenisL10n.text('ai01.inspector.show'),
+                    TextButton.icon(
+                      key: const ValueKey('ai01-details-open'),
+                      focusNode: _detailsOpenerFocus,
+                      onPressed: _openDetails,
+                      icon: const LumenisIcon(
+                        Icons.account_tree_outlined,
+                        size: 18,
+                      ),
+                      label: Text(
+                        context.lumenisL10n.text('ai01.inspector.show'),
+                      ),
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
                     ),
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -440,6 +622,7 @@ class _ComposerPane extends StatelessWidget {
     required this.intentResult,
     required this.suggestions,
     required this.onChooseSuggestion,
+    required this.onWithdrawSuggestion,
     required this.onExpand,
     required this.compact,
   });
@@ -454,6 +637,7 @@ class _ComposerPane extends StatelessWidget {
   final Ai01IntentResult? intentResult;
   final List<Ai01Suggestion> suggestions;
   final ValueChanged<Ai01Suggestion> onChooseSuggestion;
+  final VoidCallback? onWithdrawSuggestion;
   final VoidCallback onExpand;
   final bool compact;
 
@@ -532,6 +716,14 @@ class _ComposerPane extends StatelessWidget {
               ],
             ),
           ],
+          if (onWithdrawSuggestion != null)
+            TextButton(
+              key: const ValueKey('ai01-suggestion-withdraw'),
+              onPressed: onWithdrawSuggestion,
+              child: Text(
+                _suggestionCopy(context, '撤回加入', 'Undo addition', '추가 취소'),
+              ),
+            ),
           const SizedBox(height: 6),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1302,4 +1494,11 @@ String _providerStateLabel(BuildContext context, String state) =>
       'idle' => context.lumenisL10n.text('ai01.provider.idle'),
       'offline' => context.lumenisL10n.text('ai01.provider.offline'),
       _ => context.lumenisL10n.text('ai01.provider.unknown'),
+    };
+
+String _suggestionCopy(BuildContext context, String zh, String en, String ko) =>
+    switch (context.lumenisL10n.locale.languageCode) {
+      'en' => en,
+      'ko' => ko,
+      _ => zh,
     };

@@ -195,6 +195,33 @@ class TestBudgetControl:
 # ──────────────────────────────────────────────────────────
 
 class TestCancellation:
+    def test_cancel_during_planning_stops_before_tool_formation(self):
+        plan = Plan(goal="read a document", steps=[
+            PlanStep(action="read document", tool="document_reader"),
+        ])
+
+        class CancellingPlanner:
+            def plan(self, *_args, **_kwargs):
+                loop.cancel()
+                return plan
+
+        class UnreachableBinding:
+            def form_step(self, *_args, **_kwargs):
+                pytest.fail("cancelled task must not form or authorize tool calls")
+
+        loop = AgentLoop(
+            config=AgentConfig(enable_evaluation=False),
+            planner=CancellingPlanner(),
+            durable_adapter=DurableExecutionAdapter(enabled=False),
+            tool_binding=UnreachableBinding(),
+        )
+
+        result = loop.run(plan.goal)
+
+        assert result.status == "cancelled"
+        assert result.plan["steps"][0]["status"] == "pending"
+        assert result.metrics["final_state"] == "cancelled"
+
     def test_external_cancel(self):
         """外部取消应终止 Loop。"""
         config = AgentConfig(max_steps=20, max_time_seconds=30)

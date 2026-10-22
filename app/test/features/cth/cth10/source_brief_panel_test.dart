@@ -57,6 +57,91 @@ void main() {
     expect(find.text('来源记录'), findsNothing);
   });
 
+  testWidgets('source brief saves an editable result and can reopen it', (
+    tester,
+  ) async {
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope();
+    await _showCompletedResult(tester, client);
+
+    final save = find.byKey(const ValueKey('source-brief/save-research'));
+    await tester.ensureVisible(save);
+    await tester.tap(save);
+    await tester.pumpAndSettle();
+
+    expect(client.saveCalls, hasLength(1));
+    expect(client.saveCalls.single['jobId'], _jobId);
+    expect(client.saveCalls.single['title'], '来源简报');
+    expect(client.reopenArtifactIds, ['ART-0123456789abcdef']);
+    expect(find.text('已保存，可在研究成果中继续修订'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('source-brief/save-research')));
+    await tester.pumpAndSettle();
+
+    expect(client.reopenArtifactIds, [
+      'ART-0123456789abcdef',
+      'ART-0123456789abcdef',
+    ]);
+    expect(find.text('已重新打开保存的研究成果'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('source-brief/reopened-research')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('shared adoption requires explicit confirmation and readback', (
+    tester,
+  ) async {
+    final client = _SourceBriefClient()
+      ..startResponse = _taskEnvelope(state: 'succeeded', canResume: false)
+      ..jobResponse = _savedJobEnvelope()
+      ..sharedAdoptionPrepareResponse = _sharedAdoptionPrepareEnvelope()
+      ..sharedAdoptionApplyReplayed = false;
+    await _showCompletedResult(tester, client);
+
+    final action = find.byKey(const ValueKey('source-brief/adopt-to-shared'));
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+
+    expect(client.sharedAdoptionCalls.map((call) => call['mode']), ['prepare']);
+    expect(find.text('保存到共享成果？'), findsOneWidget);
+    expect(find.text('将包含 1 条来源，展示 1 条引用。'), findsOneWidget);
+    expect(client.sharedReopenArtifactIds, isEmpty);
+
+    await tester.tap(
+      find.byKey(const ValueKey('source-brief/shared-adoption/cancel')),
+    );
+    await tester.pumpAndSettle();
+    expect(client.sharedAdoptionCalls.map((call) => call['mode']), ['prepare']);
+
+    await tester.ensureVisible(action);
+    await tester.tap(action);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('source-brief/shared-adoption/confirm')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(client.sharedAdoptionCalls.map((call) => call['mode']), [
+      'prepare',
+      'apply',
+    ]);
+    final apply = client.sharedAdoptionCalls.last;
+    expect(apply['confirm'], isTrue);
+    expect(apply['confirmedResource'], 'resource:exact-approval');
+    expect(apply['requestId'], client.sharedAdoptionCalls.first['requestId']);
+    expect(client.sharedReopenArtifactIds, ['ART-2222222222222222']);
+    expect(find.text('共享成果已保存并独立重开；原来源简报保持不变。'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('source-brief/shared-adoption/reopened')),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('new verified result reveals once and can be skipped', (
     tester,
   ) async {
@@ -497,6 +582,10 @@ class _SourceBriefClient extends LumenisCoreClient {
   final List<String> taskReads = [];
   final List<Map<String, String>> resumeCalls = [];
   final List<String> jobReads = [];
+  final List<Map<String, Object?>> saveCalls = [];
+  final List<String> reopenArtifactIds = [];
+  final List<Map<String, Object?>> sharedAdoptionCalls = [];
+  final List<String> sharedReopenArtifactIds = [];
 
   Map<String, dynamic> startResponse = _taskEnvelope(
     state: 'pending',
@@ -514,6 +603,13 @@ class _SourceBriefClient extends LumenisCoreClient {
     'ok': false,
     'code': 'JOB_NOT_CONFIGURED',
   };
+
+  Map<String, dynamic>? saveResponseOverride;
+  Map<String, dynamic> sharedAdoptionPrepareResponse = {
+    'ok': false,
+    'code': 'NOT_CONFIGURED',
+  };
+  bool sharedAdoptionApplyReplayed = false;
 
   @override
   Map<String, dynamic>? get currentContextEnvelope => contextResponse;
@@ -561,7 +657,166 @@ class _SourceBriefClient extends LumenisCoreClient {
     jobReads.add(jobId);
     return jobResponse;
   }
+
+  @override
+  Future<Map<String, dynamic>> saveSourceBriefResult({
+    required String domainId,
+    required String jobId,
+    required String requestId,
+    required String title,
+  }) async {
+    saveCalls.add({
+      'domainId': domainId,
+      'jobId': jobId,
+      'requestId': requestId,
+      'title': title,
+    });
+    return saveResponseOverride ??
+        _savedWorkEnvelope(requestId: requestId, title: title);
+  }
+
+  @override
+  Future<Map<String, dynamic>> reopenSourceBriefSavedWork({
+    required String domainId,
+    required String artifactId,
+  }) async {
+    reopenArtifactIds.add(artifactId);
+    return _savedWorkEnvelope(
+      requestId: saveCalls.last['requestId']! as String,
+      title: saveCalls.last['title']! as String,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> adoptSourceBriefToShared({
+    required String jobId,
+    required String requestId,
+    required String mode,
+    String? title,
+    bool confirm = false,
+    String? confirmedResource,
+  }) async {
+    sharedAdoptionCalls.add({
+      'jobId': jobId,
+      'requestId': requestId,
+      'mode': mode,
+      'title': title,
+      'confirm': confirm,
+      'confirmedResource': confirmedResource,
+    });
+    if (mode == 'prepare') return sharedAdoptionPrepareResponse;
+    return _sharedAdoptionWorkEnvelope(
+      requestId: requestId,
+      replayed: sharedAdoptionApplyReplayed,
+    );
+  }
+
+  @override
+  Future<Map<String, dynamic>> reopenSharedSavedWork(String artifactId) async {
+    sharedReopenArtifactIds.add(artifactId);
+    return _sharedAdoptionWorkEnvelope(
+      requestId: sharedAdoptionCalls.last['requestId']! as String,
+    );
+  }
 }
+
+Map<String, dynamic> _sharedAdoptionBinding() => {
+  'schema': 'domain-report-adoption/v1',
+  'job_id': _jobId,
+  'actor_id': 'principal:local-test',
+  'source_scope': {
+    'domain_id': 'cth',
+    'subject_id': null,
+    'brand_focus_id': null,
+    'global_scope': true,
+  },
+  'target_scope': {'scope_kind': 'shared_workspace', 'version': 1},
+  'report_hash': 'a' * 64,
+  'source_count': 1,
+  'sources_sha256': 'c' * 64,
+  'authority': 'SOURCE_REFERENCE_ONLY',
+  'semantic_verification': 'NOT_PERFORMED',
+};
+
+Map<String, dynamic> _sharedAdoptionPrepareEnvelope() => {
+  'ok': true,
+  'result': {
+    'state': 'requires_explicit_export_approval',
+    'resource': 'resource:exact-approval',
+    'operation': 'data_export',
+    'binding': _sharedAdoptionBinding(),
+    'displayed_citations': 1,
+    'guarded_source_count': 1,
+    'title': 'CTH 来源简报',
+  },
+};
+
+Map<String, dynamic> _sharedAdoptionWorkEnvelope({
+  required String requestId,
+  bool? replayed,
+}) => {
+  'ok': true,
+  'result': {
+    'artifact': {'artifact_id': 'ART-2222222222222222', 'sha256': 'e' * 64},
+    'document': {
+      'kind': 'report',
+      'title': 'CTH 来源简报',
+      'markdown': '# 独立共享成果\n\n来源绑定已核验。',
+      'request_id': requestId,
+      'payload': {'domain_report_adoption': _sharedAdoptionBinding()},
+    },
+    'return_ref': {
+      'artifact_id': 'ART-2222222222222222',
+      'work_id': 'WORK-222222222222222222222222',
+      'version': 1,
+      'scope': {'scope_kind': 'shared_workspace', 'version': 1},
+    },
+    'replayed': ?replayed,
+  },
+};
+
+Map<String, dynamic> _savedWorkEnvelope({
+  required String requestId,
+  required String title,
+}) => {
+  'ok': true,
+  'result': {
+    'artifact': {
+      'artifact_id': 'ART-0123456789abcdef',
+      'sha256': List.filled(64, 'd').join(),
+    },
+    'document': {
+      'kind': 'research',
+      'title': title,
+      'markdown': '# 来源简报\n\n已核验来源与范围。',
+      'request_id': requestId,
+      'payload': {
+        'source_brief_reference': {
+          'job_id': _jobId,
+          'actor_id': 'principal:local-test',
+          'artifact_hash': List.filled(64, 'a').join(),
+          'scope': {
+            'domain_id': 'cth',
+            'subject_id': null,
+            'brand_focus_id': null,
+            'global_scope': true,
+          },
+        },
+      },
+    },
+    'return_ref': {
+      'artifact_id': 'ART-0123456789abcdef',
+      'work_id': 'WORK-0123456789abcdef01234567',
+      'version': 1,
+      'scope': {
+        'domain_id': 'cth',
+        'subject_id': null,
+        'brand_focus_id': null,
+        'global_scope': true,
+      },
+    },
+  },
+};
 
 class _BlockedCth10Repository implements Cth10Repository {
   @override
