@@ -36,7 +36,9 @@ This is bounded source and local operation evidence. Full SH-01, proposal/video/
 podcast tools, final visual quality, native surfaces and whole-product acceptance
 remain OPEN under the complete plan; all 396 coverage rows and 30 outcomes remain.
 Production 8201/database, collection, external AI, training and deployment were
-not changed. Exact-head protected CI and online readback are separate evidence.
+not changed. Exact-head protected CI and online readback are separate evidence;
+the first App check's two save-action style errors were corrected with its failed
+receipt preserved alongside the actual operation record.
 
 ## 2026-10-23 Video creation — actual render and version continuity
 

@@ -1470,10 +1470,12 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   }
 
   void _persistProject({required bool render}) {
-    if (_isBusy || !_canUseCurrentContext || _hasUnappliedInspectorDrafts)
+    if (_isBusy || !_canUseCurrentContext || _hasUnappliedInspectorDrafts) {
       return;
-    if (_controller.title == null)
+    }
+    if (_controller.title == null) {
       _controller.setTitle(_copy(context, 'untitled'));
+    }
     _controller.export(
       outputKind: _controller.version?.outputKind ?? widget.initialOutputKind,
       renderMedia: render,

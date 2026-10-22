@@ -83,7 +83,8 @@
     "web_final": "PASS; release build after final formatting is byte-identical to the observed build",
     "user_final_waveform": "Actual first and second source waveforms observed; v3 reopened, append/undo and v4 render/download/play performed through normal UI",
     "dart_analysis": "PASS",
-    "governance": "Constitution/machine/Experience authority/anti-template/blueprints/source-adoption PASS. Original stale-range failure retained and 556 current bindings corrected."
+    "governance": "Constitution/machine/Experience authority/anti-template/blueprints/source-adoption PASS. Original stale-range failure retained and 556 current bindings corrected.",
+    "first_app_ci": "Failed two missing-brace lint infos after formatting; repaired in the existing save action. No behavior/test weakening. Full local flutter analyze encountered its Windows LSP framing failure; exact source Dart analysis and protected CI remain required."
   },
   "remaining": [
     "Full podcast scripting, transcription, word editing, master/normalization, cover/chapters/feed/package tools and real programme-quality acceptance.",
@@ -128,7 +129,7 @@
   ],
   "source_pins": {
     "app/lib/core/lumenis_core_client.dart": "872c46bddac9cf8cf96a6a9f39eaefe85668aea9174a49cb7e18e2b1a87cfd16",
-    "app/lib/features/shared/sh01/media_project_workbench.dart": "55e5be83784b187f0075f7e534a5d364881a3ce931d93aa441e9ad9fbab52e1f",
+    "app/lib/features/shared/sh01/media_project_workbench.dart": "073b8800d51b2e8377c18e6cfcbb8f338d46b78b4447e9e5ebaabf84a90df577",
     "app/lib/features/shared/sh01/media_source_waveform.dart": "93272a0497c65198cc99271cc841c61cfc05041ff728f8c21a67012d6429218f",
     "tests/test_offline_speech.py": "ef7ca8e2da68a1cf0e50f419172741a244a2c2c1b1cb0bca83c69ce893dd32c2",
     "contracts/experience/screen-specifications/SH-01.md": "dfc7dd178177eda5b58bb591ee9c35b115c19e0abfcf125de0239ff1da28b590"
