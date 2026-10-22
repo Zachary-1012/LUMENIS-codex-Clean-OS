@@ -478,7 +478,7 @@ def content_project_export_resource(
 
 
 def _validate_content_project_save(title, render_media, delivery_options=None):
-    if type(render_media) is not bool or (not render_media and delivery_options):
+    if type(render_media) is not bool:
         raise LocalArtifactError("INVALID_CONTENT_INPUT")
     if title is not None and (
         not isinstance(title, str) or not title.strip() or title != title.strip()

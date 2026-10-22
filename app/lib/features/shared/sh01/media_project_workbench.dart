@@ -1207,6 +1207,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         code == 'CONTENT_PROJECT_PARENT_REVISION_REQUIRED') {
       return 'no_changes';
     }
+    if (code.startsWith('AUDIO_DELIVERY_')) return 'audio_delivery_failed';
     if (code == 'CONTENT_BATCH_PREVIEW_STALE') return 'batch_stale';
     if (code.contains('CONTEXT')) return 'context';
     if (code.contains('AUTH') || code.contains('DENIED')) return 'denied';
@@ -1993,6 +1994,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               if (timeline != null &&
                   timeline.assets.any((asset) => asset.audioStreamCount > 0))
                 _audioMastering(),
+              if (timeline != null &&
+                  timeline.assets.any((asset) => asset.audioStreamCount > 0))
+                _noiseReduction(),
               _ClipInspector(
                 timeline: timeline,
                 clip: clip,
@@ -2090,6 +2094,135 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         const SizedBox(height: 12),
       ],
     );
+  }
+
+  Widget _noiseReduction() {
+    final options = _controller.renderOptions;
+    final enabled = options.containsKey('noise_reduction_db');
+    final reduction = options['noise_reduction_db'] ?? 12.0;
+    final floor = options['noise_floor_db'] ?? -50.0;
+    final editable = !_isBusy && _canUseCurrentContext;
+    return ExpansionTile(
+      key: const Key('media-denoise'),
+      tilePadding: EdgeInsets.zero,
+      trailing: const LumenisExpansionIndicator(),
+      title: Text(_copy(context, 'denoise')),
+      maintainState: true,
+      children: [
+        SwitchListTile.adaptive(
+          key: const Key('media-denoise-enabled'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(_copy(context, 'denoise_enable')),
+          value: enabled,
+          onChanged: editable
+              ? (value) => _controller.setNoiseReduction(
+                  enabled: value,
+                  reduction: reduction,
+                  floor: floor,
+                )
+              : null,
+        ),
+        if (enabled) ...[
+          Text(
+            '${_copy(context, 'denoise_amount')} · ${reduction.toStringAsFixed(0)} dB',
+          ),
+          Slider(
+            key: const Key('media-denoise-amount'),
+            value: reduction,
+            min: 3,
+            max: 18,
+            divisions: 15,
+            label: '${reduction.toStringAsFixed(0)} dB',
+            semanticFormatterCallback: (value) =>
+                '${_copy(context, 'denoise_amount')} ${value.toStringAsFixed(0)} dB',
+            onChanged: editable
+                ? (value) => _controller.setNoiseReduction(
+                    enabled: true,
+                    reduction: value,
+                    floor: floor,
+                  )
+                : null,
+          ),
+          Text(
+            '${_copy(context, 'denoise_floor')} · ${floor.toStringAsFixed(0)} dB',
+          ),
+          Slider(
+            key: const Key('media-denoise-floor'),
+            value: floor,
+            min: -80,
+            max: -20,
+            divisions: 60,
+            label: '${floor.toStringAsFixed(0)} dB',
+            semanticFormatterCallback: (value) =>
+                '${_copy(context, 'denoise_floor')} ${value.toStringAsFixed(0)} dB',
+            onChanged: editable
+                ? (value) => _controller.setNoiseReduction(
+                    enabled: true,
+                    reduction: reduction,
+                    floor: value,
+                  )
+                : null,
+          ),
+        ],
+        Text(_copy(context, 'denoise_original')),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _audioDelivery() {
+    final selected =
+        _controller.deliveryOptions['audio_formats'] as List? ?? [];
+    final version = _controller.version;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _copy(context, 'audio_files'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        Text(_copy(context, 'wav_included')),
+        for (final format in const ['mp3', 'm4a'])
+          CheckboxListTile(
+            key: Key('media-format-$format'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(format.toUpperCase()),
+            value: selected.contains(format),
+            onChanged: _isBusy || !_canUseCurrentContext
+                ? null
+                : (value) {
+                    if (value != null) {
+                      _controller.setAudioDeliveryFormat(format, value);
+                    }
+                  },
+          ),
+        if (version?.rendered == true)
+          for (final format in const ['mp3', 'm4a'])
+            if (version!.deliveryReports[format] case final Map report)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_deliveryMeasurement(format, report, version)),
+              ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  String _deliveryMeasurement(
+    String format,
+    Map report,
+    MediaProjectVersion version,
+  ) {
+    final duration = report['duration_sec'];
+    final loudness = report['loudness'];
+    final lufs = loudness is Map ? loudness['integrated_lufs'] : null;
+    final peak = loudness is Map ? loudness['true_peak_dbtp'] : null;
+    String measured(Object? value, String unit) =>
+        value is num && value.isFinite
+        ? '${value.toStringAsFixed(2)} $unit'
+        : '— $unit';
+    return '${format.toUpperCase()} · v${version.projectRevision ?? version.timelineVersion}'
+        ' · ${measured(duration, "s")} · ${measured(lufs, "LUFS")} · ${measured(peak, "dBTP")}';
   }
 
   Future<void> _openPropertiesLayer() => _openLayerSheet(
@@ -2350,6 +2483,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_isAudio && timeline != null) _audioDelivery(),
         Text(
           _rightsNotice(context),
           key: const Key('media-rights-unknown'),

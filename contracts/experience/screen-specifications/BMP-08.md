@@ -13,7 +13,7 @@
 ```yaml
 screen_id: BMP-08
 status: OWNER_REVIEW
-revision: 2
+revision: 3
 owner_domain: BMP
 owner_domain_role: compatibility screen and brand-business context, not exclusive production ownership
 production_capability_owner: Shared Capability / C4-W4
@@ -86,12 +86,12 @@ persistence, actual AI/rights binding and live user acceptance remain open.
 
 
 **4. States**
-空 / 导入中 / 转写中（进度，可取消）/ 模型不可用（显示原因，可导入已有字幕稿继续）/ 剪辑提议待确认 / 母带不达标（显示实测值与差值，不自动二次施压）/ 版权未知（导出提醒）/ 数据缺失 / 权限不足。
+空 / 导入中 / 转写中（进度，可取消）/ 模型不可用（显示原因，可导入已有字幕稿继续）/ 剪辑提议待确认 / 母带不达标（显示实测值与差值，不自动二次施压）/ 版权未知（按真实SourceUse用途限制相应导出，保留原创编辑与查明权利入口）/ 数据缺失 / 权限不足。
 
 **9. Acceptance**
 - 删词剪点误差 ≤1 帧；词内零切；撤销还原原稿与音频。
 - 母带实测 -16 LUFS ±1、真峰 ≤ -1 dBTP，数值显示在界面。
-- 脚本事实句 100% 有来源或标 UNKNOWN；配音仅用户开启，声音克隆需本人授权。
+- 脚本事实句 100% 有来源或标 UNKNOWN；配音仅用户开启；外部依法获权音色/语音包核来源、用途授权与格式/模型/运行时兼容后导入与使用，产品内不执行克隆；导入失败保原默认和工程。
 - 发布包 RSS 含 podcast:transcript / podcast:chapters 并通过校验；发布需确认。
 - 新建→编辑→试听→导出→重开修订完整可走通（G55）；三语；无主体写死。
 

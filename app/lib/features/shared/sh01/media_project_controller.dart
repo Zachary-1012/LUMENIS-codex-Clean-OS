@@ -39,6 +39,7 @@ abstract interface class MediaProjectRepository {
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
+    Map<String, dynamic> deliveryOptions = const {},
   });
   Future<Map<String, dynamic>> reopen(String? domain, String artifactId);
 }
@@ -78,6 +79,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
+    Map<String, dynamic> deliveryOptions = const {},
   }) => client.exportContentProject(
     domainId: domain,
     assetPaths: refs == null ? paths : null,
@@ -88,6 +90,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     title: title,
     renderMedia: renderMedia,
     renderOptions: renderOptions,
+    deliveryOptions: deliveryOptions,
   );
 
   @override
@@ -173,6 +176,8 @@ final class MediaProjectVersion {
     required this.projectRevision,
     required this.rendered,
     required this.renderOptions,
+    required this.deliveryOptions,
+    required this.deliveryReports,
     required this.inputLufs,
     required this.inputTruePeak,
     required this.outputLufs,
@@ -187,6 +192,8 @@ final class MediaProjectVersion {
   final int? projectRevision;
   final bool rendered;
   final Map<String, double> renderOptions;
+  final Map<String, dynamic> deliveryOptions;
+  final Map<String, dynamic> deliveryReports;
   final double? inputLufs;
   final double? inputTruePeak;
   final double? outputLufs;
@@ -280,6 +287,8 @@ final class MediaProjectVersion {
       projectRevision: revision as int?,
       rendered: rendered,
       renderOptions: _readRenderOptions(project['render_options']),
+      deliveryOptions: _readDeliveryOptions(project['delivery_options']),
+      deliveryReports: _freezeJsonMap(render['delivery_reports']),
       inputLufs: measured(input is Map ? input['input_i'] : null),
       inputTruePeak: measured(input is Map ? input['input_tp'] : null),
       outputLufs: measured(
@@ -327,6 +336,40 @@ Map<String, double> _readRenderOptions(Object? value) {
   return Map.unmodifiable(result);
 }
 
+Map<String, dynamic> _freezeJsonMap(Object? value) {
+  if (value == null) return const {};
+  if (value is! Map || value.keys.any((key) => key is! String)) {
+    throw const FormatException('Invalid project option object.');
+  }
+  Object? freeze(Object? item) {
+    if (item is Map) return _freezeJsonMap(item);
+    if (item is List) return List<Object?>.unmodifiable(item.map(freeze));
+    if (item == null ||
+        item is String ||
+        item is bool ||
+        item is num && item.isFinite) {
+      return item;
+    }
+    throw const FormatException('Invalid project option value.');
+  }
+
+  final keys = value.keys.cast<String>().toList()..sort();
+  return Map.unmodifiable({for (final key in keys) key: freeze(value[key])});
+}
+
+Map<String, dynamic> _readDeliveryOptions(Object? value) {
+  final options = _freezeJsonMap(value);
+  final formats = options['audio_formats'];
+  if (formats != null &&
+      (formats is! List ||
+          formats.length > 2 ||
+          formats.toSet().length != formats.length ||
+          formats.any((format) => !const ['mp3', 'm4a'].contains(format)))) {
+    throw const FormatException('Invalid audio delivery formats.');
+  }
+  return options;
+}
+
 /// A validated, in-memory preview tied to one controller and one exact draft.
 /// Keeping this object never saves, exports, or grants source rights.
 final class MediaProjectBatchPreview {
@@ -361,6 +404,7 @@ final class MediaProjectController extends ChangeNotifier {
   MediaProjectVersion? _version;
   String? _title;
   Map<String, double> _renderOptions = const {};
+  Map<String, dynamic> _deliveryOptions = const {};
   List<String> _paths = const [];
   List<String>? _sourceRefs;
   List<String>? _suspendedSourceRefs;
@@ -379,6 +423,8 @@ final class MediaProjectController extends ChangeNotifier {
   String? get title => contextMatches ? _title : null;
   Map<String, double> get renderOptions =>
       contextMatches ? _renderOptions : const {};
+  Map<String, dynamic> get deliveryOptions =>
+      contextMatches ? _deliveryOptions : const {};
   String? get selectedClipId => _selectedClipId;
   String? get failureCode => _failureCode;
   MediaProjectOperation get operation => _operation;
@@ -393,7 +439,9 @@ final class MediaProjectController extends ChangeNotifier {
       _timeline != null &&
       (_timeline!.version != _version?.timelineVersion ||
           _title != _version?.title ||
-          !mapEquals(_renderOptions, _version?.renderOptions));
+          !mapEquals(_renderOptions, _version?.renderOptions) ||
+          jsonEncode(_deliveryOptions) !=
+              jsonEncode(_version?.deliveryOptions));
   bool get contextMatches =>
       _draftContext == null ||
       (_matchesContext(_draftContext!) && !_sourcesNeedRevalidation);
@@ -410,6 +458,45 @@ final class MediaProjectController extends ChangeNotifier {
       options['loudness_target_lufs'] = target;
     }
     _renderOptions = _readRenderOptions(options);
+    _failureCode = null;
+    notifyListeners();
+  }
+
+  void setNoiseReduction({
+    required bool enabled,
+    double reduction = 12,
+    double floor = -50,
+  }) {
+    if (_disposed || busy || !contextMatches || _timeline == null) return;
+    final options = Map<String, double>.from(_renderOptions);
+    if (enabled) {
+      options['noise_reduction_db'] = reduction;
+      options['noise_floor_db'] = floor;
+    } else {
+      options.remove('noise_reduction_db');
+      options.remove('noise_floor_db');
+    }
+    _renderOptions = _readRenderOptions(options);
+    _failureCode = null;
+    notifyListeners();
+  }
+
+  void setAudioDeliveryFormat(String format, bool selected) {
+    if (_disposed || busy || !contextMatches || _timeline == null) return;
+    if (!const ['mp3', 'm4a'].contains(format)) {
+      throw const FormatException('Unsupported audio delivery format.');
+    }
+    final formats = Set<String>.from(
+      _deliveryOptions['audio_formats'] as List? ?? [],
+    );
+    selected ? formats.add(format) : formats.remove(format);
+    final options = Map<String, dynamic>.from(_deliveryOptions);
+    if (formats.isEmpty) {
+      options.remove('audio_formats');
+    } else {
+      options['audio_formats'] = formats.toList()..sort();
+    }
+    _deliveryOptions = _readDeliveryOptions(options);
     _failureCode = null;
     notifyListeners();
   }
@@ -585,6 +672,7 @@ final class MediaProjectController extends ChangeNotifier {
       _sourcesNeedRevalidation = false;
       _version = null;
       _renderOptions = const {};
+      _deliveryOptions = const {};
       _draftContext = context;
       _selectedClipId = null;
       _completionUnknown = false;
@@ -727,6 +815,7 @@ final class MediaProjectController extends ChangeNotifier {
     );
     final title = _title;
     final renderOptions = _renderOptions;
+    final deliveryOptions = _deliveryOptions;
     final snapshot = _timeline!;
     final context = _contextKey;
     try {
@@ -740,6 +829,7 @@ final class MediaProjectController extends ChangeNotifier {
         title: title,
         renderMedia: renderMedia,
         renderOptions: renderOptions,
+        deliveryOptions: deliveryOptions,
       );
       final result = response['result'];
       if (response['ok'] != true ||
@@ -766,6 +856,7 @@ final class MediaProjectController extends ChangeNotifier {
           version.title != title ||
           version.rendered != renderMedia ||
           !mapEquals(version.renderOptions, renderOptions) ||
+          jsonEncode(version.deliveryOptions) != jsonEncode(deliveryOptions) ||
           jsonEncode(returned.toJson()) != jsonEncode(snapshot.toJson())) {
         throw const FormatException(
           'Export does not match the submitted edit.',
@@ -827,6 +918,7 @@ final class MediaProjectController extends ChangeNotifier {
       _version = version;
       _title = version.title;
       _renderOptions = version.renderOptions;
+      _deliveryOptions = version.deliveryOptions;
       _timeline = timeline;
       _paths = const [];
       _sourceRefs = version.sourceRefs.isEmpty ? null : version.sourceRefs;

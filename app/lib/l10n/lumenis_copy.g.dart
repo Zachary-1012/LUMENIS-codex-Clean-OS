@@ -961,6 +961,14 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.master_unreachable": "该目标会超过安全峰值或需要改变动态。请选择更低响度，或调整音轨后重试。",
     "sh01.media.master_unverified": "处理后的音频未达到目标，原版本已保留。请调整音轨后重试。",
     "sh01.media.master_silent": "这段音频无法测得有效响度，请检查音轨或保留原音量。",
+    "sh01.media.denoise": "降噪",
+    "sh01.media.denoise_enable": "启用降噪",
+    "sh01.media.denoise_amount": "降噪强度",
+    "sh01.media.denoise_floor": "噪声底限",
+    "sh01.media.denoise_original": "原音频保留，导出时应用降噪。",
+    "sh01.media.audio_files": "音频文件",
+    "sh01.media.wav_included": "工程包包含 WAV，可同时添加：",
+    "sh01.media.audio_delivery_failed": "音频导出未完成，草稿及已有版本已保留。请调整处理设置后重试。",
   },
   "en": {
     "product.mother": "OEVIRA",
@@ -2128,6 +2136,17 @@ const Map<String, Map<String, String>> lumenisCopy = {
         "The processed audio did not meet the target. The original version is preserved. Adjust the tracks and retry.",
     "sh01.media.master_silent":
         "Loudness could not be measured. Check the tracks or keep the original level.",
+    "sh01.media.denoise": "Noise reduction",
+    "sh01.media.denoise_enable": "Reduce noise",
+    "sh01.media.denoise_amount": "Reduction",
+    "sh01.media.denoise_floor": "Noise floor",
+    "sh01.media.denoise_original":
+        "Original audio is kept. Noise reduction applies on export.",
+    "sh01.media.audio_files": "Audio files",
+    "sh01.media.wav_included":
+        "The project package includes WAV. Also include:",
+    "sh01.media.audio_delivery_failed":
+        "Audio export did not finish. Your draft and saved versions are kept. Adjust processing settings and retry.",
   },
   "ko": {
     "product.mother": "OEVIRA",
@@ -3132,5 +3151,14 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.master_unverified":
         "처리한 오디오가 목표에 도달하지 못했습니다. 원본 버전은 유지됩니다. 트랙을 조정한 뒤 다시 시도하세요.",
     "sh01.media.master_silent": "유효한 음량을 측정할 수 없습니다. 트랙을 확인하거나 원래 음량을 유지하세요.",
+    "sh01.media.denoise": "노이즈 감소",
+    "sh01.media.denoise_enable": "노이즈 감소 사용",
+    "sh01.media.denoise_amount": "감소 강도",
+    "sh01.media.denoise_floor": "노이즈 기준",
+    "sh01.media.denoise_original": "원본 오디오는 유지되며 내보낼 때 노이즈 감소가 적용됩니다.",
+    "sh01.media.audio_files": "오디오 파일",
+    "sh01.media.wav_included": "프로젝트 패키지에는 WAV가 포함됩니다. 추가 형식:",
+    "sh01.media.audio_delivery_failed":
+        "오디오를 내보내지 못했습니다. 초안과 저장된 버전은 유지됩니다. 처리 설정을 조정한 후 다시 시도하세요.",
   },
 };

@@ -729,3 +729,44 @@ def test_processing_only_revision_preserves_original_and_exact_scope(media_store
         assert (media_store["root"] / f"{first_id}.zip").read_bytes() == original
         base = dict(actor=ACTOR, **SCOPE, source_artifact_refs=[source_id], output_kind="audio", title="Episode", render_media=False)
         assert artifacts.content_project_export_resource(timeline, **base) != artifacts.content_project_export_resource(timeline, render_options=options, **base)
+
+
+def test_delivery_preferences_save_without_encoding_then_export(media_store, monkeypatch):
+    from lumenis.shared.content_creation import rendering
+
+    approve(media_store)
+    source_id = import_source(media_store)["artifact"]["artifact_id"]
+    with artifacts.resolve_content_source_assets([source_id], actor=ACTOR, **SCOPE) as sources:
+        asset = sources[0]["asset"]
+        timeline = Timeline.from_assets([asset]).add_audio_track("voice", audio_role="voiceover")
+        timeline = timeline.add_clip(asset.asset_id, track_id="voice", source_out=.4)
+        args = dict(actor=ACTOR, **SCOPE, source_execution_id="delivery-preferences",
+                    output_kind="audio", source_artifact_refs=[source_id], title="Episode")
+        first = artifacts.stage_timeline_artifact(timeline, render_media=False, **args)
+        first_id = first["artifact"]["artifact_id"]
+        original = (media_store["root"] / f"{first_id}.zip").read_bytes()
+        options = {"audio_formats": ["mp3", "m4a"]}
+        def forbidden(*args, **kwargs):
+            raise AssertionError("settings-only save must not render or encode")
+        with monkeypatch.context() as scoped:
+            scoped.setattr(rendering, "render_timeline", forbidden)
+            scoped.setattr(rendering, "encode_audio_delivery", forbidden)
+            saved = artifacts.stage_timeline_artifact(timeline, previous_artifact_id=first_id,
+                render_media=False, delivery_options=options, **args)
+        saved_id = saved["artifact"]["artifact_id"]
+        assert saved["project"]["project_revision"] == 2
+        assert saved["render"]["state"] == "not_rendered"
+        assert saved["project"]["delivery_manifest"] == {}
+        assert artifacts.read_content_project(saved_id, actor=ACTOR, **SCOPE)["project"]["delivery_options"] == options
+        with zipfile.ZipFile(media_store["root"] / f"{saved_id}.zip") as archive:
+            assert set(archive.namelist()) == {"project.json", "render.json"}
+        final = artifacts.stage_timeline_artifact(timeline, previous_artifact_id=saved_id,
+            delivery_options=options, **args)
+        final_id = final["artifact"]["artifact_id"]
+        reopened = artifacts.read_content_project(final_id, actor=ACTOR, **SCOPE)
+        assert reopened["render"]["state"] == "rendered_verified"
+        assert set(final["project"]["delivery_manifest"]) == {"episode.mp3", "episode.m4a"}
+        assert all(report["decode_all_frames"] == "passed" for report in final["render"]["delivery_reports"].values())
+        assert (media_store["root"] / f"{first_id}.zip").read_bytes() == original
+        base = dict(actor=ACTOR, **SCOPE, source_artifact_refs=[source_id], output_kind="audio", title="Episode", render_media=False)
+        assert artifacts.content_project_export_resource(timeline, **base) != artifacts.content_project_export_resource(timeline, delivery_options=options, **base)

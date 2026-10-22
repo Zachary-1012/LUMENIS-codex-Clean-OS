@@ -1165,6 +1165,7 @@ class LumenisCoreClient {
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
+    Map<String, dynamic> deliveryOptions = const {},
   }) {
     if (outputKind != 'video' && outputKind != 'audio') {
       throw const FormatException('Unsupported content output kind.');
@@ -1188,6 +1189,7 @@ class LumenisCoreClient {
           'title': ?title,
           if (!renderMedia) 'render_media': false,
           if (renderOptions.isNotEmpty) 'render_options': renderOptions,
+          if (deliveryOptions.isNotEmpty) 'delivery_options': deliveryOptions,
         },
       },
     ).timeout(
