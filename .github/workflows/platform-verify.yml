@@ -272,6 +272,14 @@ jobs:
           os.environ.update(ZBC_DB_PATH=str(root/'seed.sqlite3'), ZBC_DATA_DIR=str(root),
               LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
               XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
+          import sqlite3
+          from lumenis.shared.database import apply_business_schema
+          connection = sqlite3.connect(root/'seed.sqlite3')
+          try:
+              apply_business_schema(connection)
+              connection.commit()
+          finally:
+              connection.close()
           original_bind, original_connect = socket.socket.bind, socket.socket.connect
           owned_ports = set()
           def denied(*args, **kwargs):

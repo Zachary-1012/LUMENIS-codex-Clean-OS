@@ -171,3 +171,11 @@ reaps the controlled direct child on timeout. Its 66 isolated protocol, package
 and Permission checks passed; no external plugin, model or production session was
 invoked. Inherited handles in a malicious descendant process tree were not
 exercised and are not covered by this receipt.
+
+The next Product CI run passed its isolated regressions, adopted-candidate and
+source-boundary checks, then failed before the owned HTTP test because the new
+temporary seed path had no database. The workflow now initializes that isolated
+seed with the existing Shared business schema before the unchanged authorization
+and revocation assertions run. The original failed run 39787366890 remains
+retained; only the corrected exact-head CI can close this failure. No production
+database, Core service, platform session or training worker is used.

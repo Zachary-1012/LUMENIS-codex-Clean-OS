@@ -30,7 +30,9 @@ are reconciled by request identity before another attempt. Original pagination,
 research continuation and full four-surface requirements retain their separate
 implementation and acceptance states. Existing MCP package and stdio owners also
 retain their byte/identity checks and bounded transport on Windows; no new plugin
-or execution authority is introduced.
+or execution authority is introduced. The CI-owned HTTP fixture now creates its
+disposable schema before exercising authenticated recovery; this changes no
+production database or authorization rule.
 The existing complete product plan, visual sketch and
 AI-01 contract carry the same bounded source state, without claiming live or
 four-surface acceptance. Exact recovery archives retain original bytes across Git
