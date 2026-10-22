@@ -7,8 +7,6 @@ import 'package:lumenis_app/features/cth/cth07/cth07_repository.dart';
 import 'package:lumenis_app/features/cth/cth07/cth07_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
-import '../cth_test_support.dart';
-
 void main() {
   testWidgets('raw arrays without a trend definition stay unavailable', (
     tester,
@@ -57,6 +55,7 @@ void main() {
     expect(data.context.mode, 'GLOBAL_ALL');
     expect(data.trendAvailable, isTrue);
     expect(data.definition?.subject, 'GLOBAL/ALL');
+    expect(data.definition?.freshness, 'UNKNOWN');
   });
 
   test('an applied Guangzhou Taikoo Hui focus keeps the trend scope', () async {
@@ -72,6 +71,64 @@ void main() {
     expect(data.trendAvailable, isTrue);
     expect(data.definition?.subject, 'GUANGZHOU_TAIKOO_HUI');
   });
+
+  test('partial temporal metrics preserve null values and scope', () async {
+    final response = _trendResponse(
+      global: true,
+      state: 'partial',
+      total: [6, null, 4],
+      negative: [2, null, 1],
+      high: [0, null, 1],
+    );
+    final client = _FakeClient(
+      contextResponse: _globalContext,
+      screenResponse: response,
+    );
+
+    final data = await CoreCth07Repository(client: client).load();
+
+    expect(data.state, Cth07DataState.partial);
+    expect(data.trendAvailable, isTrue);
+    expect(data.series.first.values, [6, null, 4]);
+  });
+
+  test(
+    'chart values that diverge from the bound metric snapshot are withheld',
+    () async {
+      final response = Map<String, dynamic>.from(_globalTrendResponse);
+      final sections = List<dynamic>.from(response['sections'] as List);
+      final chart = Map<String, dynamic>.from(sections.last as Map);
+      chart['series'] = [
+        {
+          'name': '总量',
+          'metric': 'total',
+          'data': [6, 999, 4],
+        },
+        {
+          'name': '负面',
+          'metric': 'negative',
+          'data': [2, 1, 1],
+        },
+        {
+          'name': '高风险',
+          'metric': 'high',
+          'data': [0, 1, 0],
+        },
+      ];
+      sections[sections.length - 1] = chart;
+      response['sections'] = sections;
+      final client = _FakeClient(
+        contextResponse: _globalContext,
+        screenResponse: response,
+      );
+
+      final data = await CoreCth07Repository(client: client).load();
+
+      expect(data.state, Cth07DataState.notCollected);
+      expect(data.trendAvailable, isFalse);
+      expect(data.labels, isEmpty);
+    },
+  );
 
   testWidgets('desktop trend preserves definition, chart and decomposition', (
     tester,
@@ -150,6 +207,32 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('尚未采集'), findsOneWidget);
     expect(find.text('0'), findsNothing);
+  });
+
+  testWidgets('partial trend shows missing days as gaps and dashes', (
+    tester,
+  ) async {
+    final response = _trendResponse(
+      global: true,
+      state: 'partial',
+      total: [6, null, 4],
+      negative: [2, null, 1],
+      high: [0, null, 1],
+    );
+    final data = await CoreCth07Repository(
+      client: _FakeClient(
+        contextResponse: _globalContext,
+        screenResponse: response,
+      ),
+    ).load();
+    await tester.pumpWidget(
+      _app(repository: _FakeRepository(Future.value(data))),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('—'), findsOneWidget);
+    expect(find.text('状态: -2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -298,6 +381,9 @@ const Map<String, dynamic> _chartResponse = {
   'screen': 'CTH-07',
   'bound': true,
   'global_binding': {
+    'contract': 'lumenis.scope-read-binding.v1',
+    'policy': 'actor-exact-scope-v1',
+    'actor_scope': 'authenticated',
     'applied': true,
     'global_all_granted': true,
     'canonical_scope': 'GLOBAL_ALL',
@@ -305,19 +391,18 @@ const Map<String, dynamic> _chartResponse = {
     'read_allowed': true,
     'domain_id': 'CTH',
     'product_id': 'CTH',
-    'evidence_lineage': 'verified',
-    'projection': cthGlobalProjection,
+    'subject_id': null,
   },
   'generated_at': '2026-09-22T10:00:00',
   'sections': [
     {
       'type': 'chart',
       'state': 'ready',
-      'projection': cthGlobalProjection,
       'labels': ['09-20', '09-21'],
       'series': [
         {
           'name': '总量',
+          'metric': 'total',
           'data': [6, 5],
         },
       ],
@@ -325,48 +410,122 @@ const Map<String, dynamic> _chartResponse = {
   ],
 };
 
-final Map<String, dynamic> _focusedTrendResponse = {
-  ..._chartResponse,
-  'sections': [
-    {
-      ...(_chartResponse['sections'] as List).first as Map,
-      'projection': cthGuangzhouFocusProjection,
-    },
-  ],
-  'focus_binding': {
-    'applied': true,
-    'subject_id': 'GUANGZHOU_TAIKOO_HUI',
-    'canonical_scope': 'FOCUS',
-    'scope_verified': true,
-    'read_allowed': true,
-    'domain_id': 'CTH',
-    'product_id': 'CTH',
-    'evidence_lineage': 'verified',
-    'projection': cthGuangzhouFocusProjection,
-  },
-  'trend_metadata': {
-    'numerator': '返回记录数',
-    'denominator': '全部可用记录数',
-    'time_window': '2026-09-20 至 2026-09-22',
-    'subject': 'GUANGZHOU_TAIKOO_HUI',
-    'source': 'verified notes',
-    'freshness': '2026-09-22T10:00:00',
-    'projection': cthGuangzhouFocusProjection,
-  },
+Map<String, dynamic> _scopeBinding({
+  required bool global,
+  required bool authenticated,
+}) => {
+  'contract': 'lumenis.scope-read-binding.v1',
+  'policy': authenticated ? 'actor-exact-scope-v1' : 'local-workspace-read-v1',
+  'actor_scope': authenticated ? 'authenticated' : 'anonymous_read',
+  'applied': true,
+  'read_allowed': true,
+  'scope_verified': true,
+  'product_id': 'CTH',
+  'domain_id': 'CTH',
+  'canonical_scope': global ? 'GLOBAL_ALL' : 'FOCUS',
+  'subject_id': global ? null : 'GUANGZHOU_TAIKOO_HUI',
+  'global_all_granted': global && authenticated,
 };
 
-final Map<String, dynamic> _globalTrendResponse = {
-  ..._chartResponse,
-  'trend_metadata': {
-    'numerator': '返回记录数',
-    'denominator': '全部可用记录数',
-    'time_window': '2026-09-20 至 2026-09-21',
-    'subject': 'GLOBAL/ALL',
-    'source': 'verified notes',
-    'freshness': '2026-09-22T10:00:00',
-    'projection': cthGlobalProjection,
-  },
-};
+Map<String, dynamic> _trendResponse({
+  required bool global,
+  required String state,
+  required List<num?> total,
+  required List<num?> negative,
+  required List<num?> high,
+}) {
+  const labels = ['2026-09-20', '2026-09-21', '2026-09-22'];
+  const snapshotHash =
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+  final binding = _scopeBinding(global: global, authenticated: true);
+  final fields = <String, List<num?>>{
+    'total': total,
+    'negative': negative,
+    'high': high,
+  };
+  final days = [
+    for (var index = 0; index < labels.length; index++)
+      {
+        'date': labels[index],
+        for (final entry in fields.entries)
+          entry.key: {
+            'value': entry.value[index],
+            'state': entry.value[index] == null
+                ? 'partial'
+                : state == 'partial'
+                ? 'partial'
+                : 'ready',
+          },
+      },
+  ];
+  final subject = global ? 'GLOBAL/ALL' : 'GUANGZHOU_TAIKOO_HUI';
+  final source = global ? '总范围已获准资料' : '已获准资料';
+  final metadata = {
+    'numerator': '所选原生发布时间内的已收录资料数量',
+    'denominator': '计数，不使用市场总体分母',
+    'time_window': '2026-09-20 / 2026-09-22',
+    'subject': subject,
+    'source': source,
+    'freshness': 'UNKNOWN',
+    'recipe': 'CTH_NATIVE_PUBLICATION_COUNTS_V1',
+    'snapshot_sha256': snapshotHash,
+  };
+  final metrics = {
+    'state': state,
+    'binding': binding,
+    'recipe': 'CTH_NATIVE_PUBLICATION_COUNTS_V1',
+    'snapshot_sha256': snapshotHash,
+    'coverage': 'NOT_VERIFIED',
+    'source_freshness': 'UNKNOWN',
+    'days': days,
+    'totals': {
+      for (final entry in fields.entries)
+        entry.key: {'value': entry.value.first},
+    },
+    'contributions': const [],
+  };
+  return {
+    ..._chartResponse,
+    if (global) 'global_binding': binding else 'focus_binding': binding,
+    'temporal_metrics': metrics,
+    'trend_metadata': metadata,
+    'sections': [
+      {
+        'type': 'chart',
+        'state': state,
+        'labels': labels,
+        'series': [
+          for (final entry in fields.entries)
+            {
+              'name': entry.key == 'total'
+                  ? '总量'
+                  : entry.key == 'negative'
+                  ? '负面'
+                  : '高风险',
+              'metric': entry.key,
+              'data': entry.value,
+            },
+        ],
+      },
+    ],
+  };
+}
+
+final Map<String, dynamic> _focusedTrendResponse = _trendResponse(
+  global: false,
+  state: 'ready',
+  total: [6, 5, 4],
+  negative: [2, 1, 1],
+  high: [0, 1, 0],
+);
+
+final Map<String, dynamic> _globalTrendResponse = _trendResponse(
+  global: true,
+  state: 'ready',
+  total: [6, 5, 4],
+  negative: [2, 1, 1],
+  high: [0, 1, 0],
+);
 
 void _expectNoInternalCopy(WidgetTester tester) {
   final text = tester

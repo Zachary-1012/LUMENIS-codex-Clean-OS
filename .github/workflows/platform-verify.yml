@@ -166,6 +166,9 @@ jobs:
               'tests/test_root_owner_auth_composition.py',
               'tests/test_scoped_topic_labels.py',
               'tests/test_ai.py', 'tests/test_intelligence_boundary_audit.py',
+              'tests/test_boundary_review_source_identity.py',
+              'tests/test_mcp_contract_review.py', 'tests/test_mcp_package_byte_binding.py',
+              'tests/test_mcp_protocol_contract.py',
               'tests/test_csv_dialect_real_inputs.py',
               # CPython 3.11 worker-entry matrix: real local processes only,
               # no network/model/training. Full affected recovery runs are

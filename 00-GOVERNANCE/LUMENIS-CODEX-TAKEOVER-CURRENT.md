@@ -23,6 +23,14 @@ operations through the existing AI Hub owner, and independent creation entry
 paths remain available. SourceBrief connects saved history, revision and optional
 Shared continuation through the current SavedWork owner, preserving exact source
 and export approval checks instead of restoring the old route alias.
+CTH-07 consumes the current authorized temporal snapshot and preserves null gaps,
+metric definitions and snapshot identity. SH-02 adds explicit file import and
+SavedWork list/readback through the current Shared owner; uncertain upload results
+are reconciled by request identity before another attempt. Original pagination,
+research continuation and full four-surface requirements retain their separate
+implementation and acceptance states. Existing MCP package and stdio owners also
+retain their byte/identity checks and bounded transport on Windows; no new plugin
+or execution authority is introduced.
 The existing complete product plan, visual sketch and
 AI-01 contract carry the same bounded source state, without claiming live or
 four-surface acceptance. Exact recovery archives retain original bytes across Git

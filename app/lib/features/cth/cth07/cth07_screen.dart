@@ -429,14 +429,15 @@ class _Chart extends StatelessWidget {
 class _TrendPainter extends CustomPainter {
   const _TrendPainter({required this.values, required this.color});
 
-  final List<num> values;
+  final List<num?> values;
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (values.isEmpty) return;
-    final minValue = values.reduce(math.min).toDouble();
-    final maxValue = values.reduce(math.max).toDouble();
+    final knownValues = values.whereType<num>().toList(growable: false);
+    if (knownValues.isEmpty) return;
+    final minValue = knownValues.reduce(math.min).toDouble();
+    final maxValue = knownValues.reduce(math.max).toDouble();
     final range = maxValue - minValue == 0 ? 1.0 : maxValue - minValue;
     final paint = Paint()
       ..color = color
@@ -444,31 +445,40 @@ class _TrendPainter extends CustomPainter {
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
     final path = Path();
+    var hasPreviousPoint = false;
     for (var index = 0; index < values.length; index++) {
+      final value = values[index];
+      if (value == null) {
+        hasPreviousPoint = false;
+        continue;
+      }
       final x = values.length == 1
           ? size.width / 2
           : index * size.width / (values.length - 1);
       final y =
           size.height -
-          ((values[index].toDouble() - minValue) / range) * (size.height - 18) -
+          ((value.toDouble() - minValue) / range) * (size.height - 18) -
           9;
-      if (index == 0) {
+      if (!hasPreviousPoint) {
         path.moveTo(x, y);
       } else {
         path.lineTo(x, y);
       }
+      hasPreviousPoint = true;
     }
     canvas.drawPath(path, paint);
     final dotPaint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
     for (var index = 0; index < values.length; index++) {
+      final value = values[index];
+      if (value == null) continue;
       final x = values.length == 1
           ? size.width / 2
           : index * size.width / (values.length - 1);
       final y =
           size.height -
-          ((values[index].toDouble() - minValue) / range) * (size.height - 18) -
+          ((value.toDouble() - minValue) / range) * (size.height - 18) -
           9;
       canvas.drawCircle(Offset(x, y), 3.5, dotPaint);
     }
@@ -509,7 +519,7 @@ class _SeriesTable extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${series.values[index]}',
+                  series.values[index]?.toString() ?? '—',
                   style: TextStyle(
                     color: LumenisTheme.of(context).foreground,
                     fontFeatures: [FontFeature.tabularFigures()],
@@ -533,9 +543,13 @@ class _DecompositionPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final series =
         selectedSeries ?? (data.series.isEmpty ? null : data.series.first);
-    final delta = series == null || series.values.length < 2
+    final first = series == null || series.values.isEmpty
         ? null
-        : series.values.last - series.values.first;
+        : series.values.first;
+    final last = series == null || series.values.isEmpty
+        ? null
+        : series.values.last;
+    final delta = first == null || last == null ? null : last - first;
     final copy = context.lumenisL10n;
     return _Panel(
       key: const ValueKey('cth07/decomposition'),

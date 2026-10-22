@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -969,15 +970,15 @@ class LumenisCoreClient {
     if (!const {'prepare', 'save', 'apply', 'revoke'}.contains(mode)) {
       throw ArgumentError.value(mode, 'mode');
     }
-    if (title != null &&
-        (title.trim().isEmpty || title.length > 300)) {
+    if (title != null && (title.trim().isEmpty || title.length > 300)) {
       throw const FormatException('Invalid shared research title.');
     }
     final needsConfirmation = mode == 'apply' || mode == 'revoke';
     if (needsConfirmation != confirm ||
         needsConfirmation != (confirmedResource != null) ||
         (confirmedResource != null &&
-            (confirmedResource.trim().isEmpty || confirmedResource.length > 4096))) {
+            (confirmedResource.trim().isEmpty ||
+                confirmedResource.length > 4096))) {
       throw const FormatException('Invalid shared report confirmation.');
     }
     return _request(
@@ -1914,6 +1915,156 @@ class LumenisCoreClient {
     );
   }
 
+  /// Lists the existing SavedWork records created by Shared document import.
+  /// The server still resolves the actor and applies the Shared read boundary.
+  Future<Map<String, dynamic>> listSharedDocumentImports({
+    int limit = 30,
+    String? cursor,
+  }) {
+    if (limit < 1 || limit > 100) {
+      throw ArgumentError.value(limit, 'limit');
+    }
+    if (cursor != null &&
+        (cursor.isEmpty ||
+            cursor.length > 4096 ||
+            RegExp(r'[\x00-\x1f\x7f]').hasMatch(cursor))) {
+      throw const FormatException('Invalid SavedWork cursor.');
+    }
+    final query = Uri(
+      queryParameters: {
+        'kind': 'research',
+        'query': 'Private uploaded source analysis',
+        'latest_only': 'true',
+        'limit': '$limit',
+        'cursor': ?cursor,
+      },
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/saved-work?$query',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  /// Imports one user-selected file through the current Shared document owner.
+  /// No actor, source assertion or business-domain context is accepted here.
+  Future<Map<String, dynamic>> importSharedDocument({
+    required String filename,
+    required Uint8List bytes,
+    required String requestId,
+  }) {
+    _validateSavedWorkRequestId(requestId);
+    _validateSharedImportFile(filename, bytes);
+    final boundary = _multipartBoundary();
+    final body = _sharedImportMultipartBody(
+      filename: filename,
+      bytes: bytes,
+      requestId: requestId,
+      boundary: boundary,
+    );
+    return _request(
+      'POST',
+      '/api/experience/materials/documents',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      binaryBody: body,
+      binaryContentType: 'multipart/form-data; boundary=$boundary',
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
+  static const _sharedImportExtensions = {
+    'docx',
+    'xlsx',
+    'pptx',
+    'pdf',
+    'txt',
+    'csv',
+    'json',
+    'xml',
+    'xbrl',
+    'html',
+    'htm',
+    'doc',
+    'xls',
+  };
+
+  static void _validateSharedImportFile(String filename, Uint8List bytes) {
+    final extension = filename.contains('.')
+        ? filename.split('.').last.toLowerCase()
+        : '';
+    final stem = filename.split('.').first.toUpperCase();
+    const reservedWindowsNames = {
+      'CON',
+      'PRN',
+      'AUX',
+      'NUL',
+      'COM1',
+      'COM2',
+      'COM3',
+      'COM4',
+      'COM5',
+      'COM6',
+      'COM7',
+      'COM8',
+      'COM9',
+      'LPT1',
+      'LPT2',
+      'LPT3',
+      'LPT4',
+      'LPT5',
+      'LPT6',
+      'LPT7',
+      'LPT8',
+      'LPT9',
+    };
+    if (filename.isEmpty ||
+        filename.runes.length > 185 ||
+        filename.trim() != filename ||
+        filename.startsWith('.') ||
+        RegExp(r'[<>:"/\\|?*\x00-\x1f\x7f]').hasMatch(filename) ||
+        filename.endsWith('.') ||
+        filename.endsWith(' ') ||
+        reservedWindowsNames.contains(stem) ||
+        !_sharedImportExtensions.contains(extension) ||
+        bytes.isEmpty ||
+        bytes.length > 8 * 1024 * 1024) {
+      throw const FormatException('Shared document file is invalid.');
+    }
+  }
+
+  static String _multipartBoundary() {
+    final random = math.Random.secure();
+    final suffix = List.generate(
+      24,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return 'lumenis-sh02-$suffix';
+  }
+
+  static Uint8List _sharedImportMultipartBody({
+    required String filename,
+    required Uint8List bytes,
+    required String requestId,
+    required String boundary,
+  }) {
+    final builder = BytesBuilder(copy: false);
+    void text(String value) => builder.add(utf8.encode(value));
+    final asciiName = filename.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final encodedName = Uri.encodeComponent(filename);
+    text('--$boundary\r\n');
+    text(
+      'Content-Disposition: form-data; name="file"; filename="$asciiName"; filename*=UTF-8\'\'$encodedName\r\n',
+    );
+    text('Content-Type: application/octet-stream\r\n\r\n');
+    builder.add(bytes);
+    text('\r\n--$boundary\r\n');
+    text('Content-Disposition: form-data; name="request_id"\r\n\r\n');
+    text('$requestId\r\n--$boundary--\r\n');
+    return builder.takeBytes();
+  }
+
   /// Saves a user-authored report as a versioned Shared SavedWork artifact.
   /// Source citations are empty for this user-authored draft; revisions of an
   /// existing cited artifact retain the server's original citation scopes.
@@ -2542,6 +2693,7 @@ class LumenisCoreClient {
     Map<String, String>? operationContext,
     Duration connectionTimeout = const Duration(seconds: 8),
     Uint8List? binaryBody,
+    String? binaryContentType,
     Map<String, String> requestHeaders = const {},
   }) async {
     if (payload != null && binaryBody != null) {
@@ -2563,7 +2715,8 @@ class LumenisCoreClient {
         requestBody = jsonEncode(payload);
       }
       if (binaryBody != null) {
-        headers['Content-Type'] = 'application/octet-stream';
+        headers['Content-Type'] =
+            binaryContentType ?? 'application/octet-stream';
       }
       final reply = await sendLumenisHttpRequest(
         LumenisTransportRequest(

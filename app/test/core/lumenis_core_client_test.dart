@@ -7,6 +7,96 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 
 void main() {
   test(
+    'SH-02 uploads one selected file through the exact Shared route',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+      final response = await client.importSharedDocument(
+        filename: '研究材料.txt',
+        bytes: Uint8List.fromList(utf8.encode('原始资料')),
+        requestId: 'sh02-request-001',
+      );
+
+      expect(response['ok'], isTrue);
+      final request = server.requests.single;
+      expect(request.method, 'POST');
+      expect(request.path, '/api/experience/materials/documents');
+      expect(
+        request.workspaceScope,
+        '{"scope_kind":"shared_workspace","version":1}',
+      );
+      expect(request.contextMode, isNull);
+      expect(request.domainId, isNull);
+      expect(request.authorization, isNull);
+      expect(
+        request.headers['content-type'],
+        startsWith('multipart/form-data; boundary=lumenis-sh02-'),
+      );
+      expect(request.body, contains('name="file"'));
+      expect(
+        request.body,
+        contains("filename*=UTF-8''%E7%A0%94%E7%A9%B6%E6%9D%90%E6%96%99.txt"),
+      );
+      expect(request.body, contains('原始资料'));
+      expect(request.body, contains('sh02-request-001'));
+    },
+  );
+
+  test(
+    'SH-02 rejects unsupported and oversized files before a request',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+      expect(
+        () => client.importSharedDocument(
+          filename: 'script.exe',
+          bytes: Uint8List.fromList([1]),
+          requestId: 'sh02-request-002',
+        ),
+        throwsFormatException,
+      );
+      expect(
+        () => client.importSharedDocument(
+          filename: 'source.txt',
+          bytes: Uint8List(8 * 1024 * 1024 + 1),
+          requestId: 'sh02-request-003',
+        ),
+        throwsFormatException,
+      );
+      expect(server.requests, isEmpty);
+    },
+  );
+
+  test(
+    'SH-02 recent imports use the existing scoped SavedWork search',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+
+      await client.listSharedDocumentImports();
+      final request = server.requests.single;
+      expect(request.method, 'GET');
+      expect(request.path, startsWith('/api/experience/saved-work?'));
+      expect(
+        request.workspaceScope,
+        '{"scope_kind":"shared_workspace","version":1}',
+      );
+      final query = Uri.parse(
+        'http://localhost${request.path}',
+      ).queryParameters;
+      expect(query['kind'], 'research');
+      expect(query['query'], 'Private uploaded source analysis');
+      expect(query['latest_only'], 'true');
+      expect(query['limit'], '30');
+    },
+  );
+
+  test(
     'SourceBrief SavedWork uses its scoped save and canonical readback routes',
     () async {
       final server = await _CoreStub.start(
@@ -862,6 +952,16 @@ class _CoreStub {
         body: requestBody.isEmpty ? null : requestBody,
       ),
     );
+
+    if (request.uri.path == '/api/experience/materials/documents' &&
+        request.method == 'POST') {
+      await _reply(request, HttpStatus.ok, const {
+        'ok': true,
+        'result': {},
+        'publish_status': 'not_performed',
+      });
+      return;
+    }
 
     if (request.uri.path.startsWith(
           '/api/experience/reports/source-brief/jobs/',

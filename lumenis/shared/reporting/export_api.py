@@ -25,10 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 export_bp = Blueprint('export', __name__)
 
-# 数据库/导出路径保持原生产位置，不因模块迁移改变数据归属。
 DB_PATH = main_db_path()
-EXPORT_DIR = str(PROJECT_ROOT / 'data' / 'exports')
-os.makedirs(EXPORT_DIR, exist_ok=True)
 
 LOGGER = logging.getLogger(__name__)
 

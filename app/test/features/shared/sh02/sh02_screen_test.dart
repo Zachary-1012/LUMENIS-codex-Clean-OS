@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -8,6 +10,212 @@ import 'package:lumenis_app/features/shared/sh02/sh02_snapshot.dart';
 import '../shared_test_support.dart';
 
 void main() {
+  testWidgets('imports a document and verifies it through Shared readback', (
+    tester,
+  ) async {
+    final repository = _ImportingSh02Repository();
+    final picker = _FakeSh02DocumentPicker(
+      Sh02PickedDocument(
+        filename: '研究资料.txt',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      ),
+    );
+
+    await tester.pumpWidget(_app(repository, documentPicker: picker));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+
+    expect(picker.calls, 1);
+    expect(repository.importCalls, 1);
+    expect(repository.reopenCalls, 1);
+    expect(find.text('资料内容'), findsOneWidget);
+    expect(find.text('研究资料.txt'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is SelectableText && widget.data == '原始研究内容',
+      ),
+      findsOneWidget,
+    );
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('返回最近导入'));
+    await tester.pumpAndSettle();
+    expect(find.text('最近导入'), findsOneWidget);
+    expect(find.text('研究资料.txt'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sh02-import-0123456789ab')));
+    await tester.pumpAndSettle();
+    expect(repository.reopenCalls, 2);
+    expect(find.text('资料内容'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('cancelled file selection does not create an import', (
+    tester,
+  ) async {
+    final repository = _ImportingSh02Repository();
+    final picker = _FakeSh02DocumentPicker(null);
+    await tester.pumpWidget(_app(repository, documentPicker: picker));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+
+    expect(picker.calls, 1);
+    expect(repository.importCalls, 0);
+    expect(repository.reopenCalls, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('uncertain upload is reconciled before any retry', (
+    tester,
+  ) async {
+    final repository = _ImportingSh02Repository(
+      pageCount: 3,
+      publishOnPage: 3,
+      uncertainFirstUpload: true,
+    );
+    final picker = _FakeSh02DocumentPicker(
+      Sh02PickedDocument(
+        filename: '研究资料.txt',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      ),
+    );
+    await tester.pumpWidget(_app(repository, documentPicker: picker));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+    expect(repository.importCalls, 1);
+    expect(repository.reopenCalls, 0);
+    expect(picker.calls, 1);
+    expect(find.text('核对导入结果'), findsOneWidget);
+    expect(find.text('结果尚未确认。请继续核对最近导入记录，确认前不要重复上传。'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+    expect(repository.importCalls, 1);
+    expect(repository.reopenCalls, 0);
+    expect(picker.calls, 1);
+
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+    expect(repository.importCalls, 1);
+    expect(repository.reopenCalls, 1);
+    expect(picker.calls, 1);
+    expect(find.text('资料内容'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('unknown upload reconciliation reaches records beyond 300', (
+    tester,
+  ) async {
+    final repository = _ImportingSh02Repository(
+      pageCount: 11,
+      publishOnPage: 11,
+      pageSize: 30,
+      uncertainFirstUpload: true,
+    );
+    final picker = _FakeSh02DocumentPicker(
+      Sh02PickedDocument(
+        filename: '研究资料.txt',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      ),
+    );
+    await tester.pumpWidget(_app(repository, documentPicker: picker));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+    for (var page = 2; page <= 11; page++) {
+      await tester.tap(find.byKey(const Key('sh02-import-document')));
+      await tester.pumpAndSettle();
+      if (page < 11) {
+        expect(repository.reopenCalls, 0);
+      }
+    }
+
+    expect(repository.importCalls, 1);
+    expect(repository.reopenCalls, 1);
+    expect(picker.calls, 1);
+    expect(repository.recentImportCount, greaterThan(300));
+    for (var page = 2; page <= 11; page++) {
+      expect(repository.cursorCalls('page:$page'), 1);
+    }
+    expect(find.text('资料内容'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('failed reconciliation page stops and retries the same cursor', (
+    tester,
+  ) async {
+    final repository = _ImportingSh02Repository(
+      pageCount: 2,
+      publishOnPage: 2,
+      pageSize: 1,
+      failCursorOnce: 'page:2',
+      uncertainFirstUpload: true,
+    );
+    final picker = _FakeSh02DocumentPicker(
+      Sh02PickedDocument(
+        filename: '研究资料.txt',
+        bytes: Uint8List.fromList([1, 2, 3]),
+      ),
+    );
+    await tester.pumpWidget(_app(repository, documentPicker: picker));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+
+    expect(repository.cursorCalls('page:2'), 1);
+    expect(repository.importCalls, 1);
+    expect(repository.reopenCalls, 0);
+    expect(picker.calls, 1);
+    expect(find.text('核对导入结果'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('sh02-import-document')));
+    await tester.pumpAndSettle();
+    expect(repository.cursorCalls('page:2'), 2);
+    expect(repository.importCalls, 1);
+    expect(repository.reopenCalls, 1);
+    expect(picker.calls, 1);
+    expect(find.text('资料内容'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  test('malformed recent-import rows make page verification incomplete', () {
+    final page = Sh02ImportPage.fromResponse({
+      'items': [
+        _importResponse(),
+        <String, dynamic>{'artifact': 'invalid'},
+      ],
+      'verification_complete': true,
+      'unverified_candidates': 0,
+      'has_more': false,
+      'next_cursor': null,
+    });
+
+    expect(page.items, hasLength(1));
+    expect(page.malformedItems, 1);
+    expect(page.verificationComplete, isFalse);
+  });
+
+  testWidgets('unreadable-only recent imports show incomplete verification', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(_MalformedImportPageRepository(_readyResponse)),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('部分记录无法核验或读取；下方只显示可确认的资料。'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'authentication and access failures remain distinct and retryable in all locales',
     (tester) async {
@@ -540,9 +748,14 @@ void main() {
 
 Widget _app(
   Sh02Repository repository, {
+  Sh02DocumentPicker? documentPicker,
   Locale locale = const Locale('zh', 'CN'),
 }) => sharedTestApp(
-  Sh02Screen(client: LumenisCoreClient(), repository: repository),
+  Sh02Screen(
+    client: LumenisCoreClient(),
+    repository: repository,
+    documentPicker: documentPicker,
+  ),
   locale: locale,
 );
 
@@ -554,6 +767,40 @@ class _FakeSh02Repository implements Sh02Repository {
   @override
   Future<Sh02Snapshot> loadLibrary() async =>
       Sh02Snapshot.fromResponse(response);
+
+  @override
+  Future<Sh02ImportPage> loadRecentImports({String? cursor}) async =>
+      const Sh02ImportPage(
+        items: [],
+        hasMore: false,
+        verificationComplete: true,
+        unverifiedCandidates: 0,
+      );
+
+  @override
+  Future<Sh02ImportedMaterial> importDocument({
+    required String filename,
+    required Uint8List bytes,
+    required String requestId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<Sh02ImportedMaterial> reopenImport(String artifactId) =>
+      throw UnimplementedError();
+}
+
+class _MalformedImportPageRepository extends _FakeSh02Repository {
+  _MalformedImportPageRepository(super.response);
+
+  @override
+  Future<Sh02ImportPage> loadRecentImports({String? cursor}) async =>
+      const Sh02ImportPage(
+        items: [],
+        hasMore: false,
+        verificationComplete: false,
+        unverifiedCandidates: 0,
+        malformedItems: 1,
+      );
 }
 
 class _RecoveringSh02Repository implements Sh02Repository {
@@ -573,7 +820,186 @@ class _RecoveringSh02Repository implements Sh02Repository {
     }
     return Sh02Snapshot.fromResponse(_readyResponse);
   }
+
+  @override
+  Future<Sh02ImportPage> loadRecentImports({String? cursor}) async =>
+      const Sh02ImportPage(
+        items: [],
+        hasMore: false,
+        verificationComplete: true,
+        unverifiedCandidates: 0,
+      );
+
+  @override
+  Future<Sh02ImportedMaterial> importDocument({
+    required String filename,
+    required Uint8List bytes,
+    required String requestId,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<Sh02ImportedMaterial> reopenImport(String artifactId) =>
+      throw UnimplementedError();
 }
+
+class _FakeSh02DocumentPicker implements Sh02DocumentPicker {
+  _FakeSh02DocumentPicker(this.document);
+
+  final Sh02PickedDocument? document;
+  int calls = 0;
+
+  @override
+  Future<Sh02PickedDocument?> pick() async {
+    calls++;
+    return document;
+  }
+}
+
+class _ImportingSh02Repository implements Sh02Repository {
+  _ImportingSh02Repository({
+    this.pageCount = 1,
+    this.publishOnPage = 1,
+    this.pageSize = 0,
+    this.failCursorOnce,
+    this.uncertainFirstUpload = false,
+  });
+
+  final int pageCount;
+  final int publishOnPage;
+  final int pageSize;
+  final String? failCursorOnce;
+  final bool uncertainFirstUpload;
+  int importCalls = 0;
+  int reopenCalls = 0;
+  final List<String?> requestedCursors = [];
+  final Set<String> _failedCursors = {};
+  final Set<String> _observedArtifacts = {};
+  Sh02ImportedMaterial? committed;
+
+  int cursorCalls(String? cursor) =>
+      requestedCursors.where((value) => value == cursor).length;
+
+  int get recentImportCount => _observedArtifacts.length;
+
+  @override
+  Future<Sh02Snapshot> loadLibrary() async =>
+      Sh02Snapshot.fromResponse(_readyResponse);
+
+  @override
+  Future<Sh02ImportPage> loadRecentImports({String? cursor}) async {
+    requestedCursors.add(cursor);
+    if (failCursorOnce != null &&
+        cursor == failCursorOnce &&
+        _failedCursors.add(failCursorOnce!)) {
+      throw const LumenisCoreException('Recent imports page is unavailable.');
+    }
+    final page = cursor == null
+        ? 1
+        : int.parse(cursor.substring('page:'.length));
+    if (page < 1 || page > pageCount) {
+      throw const LumenisCoreException('Recent imports cursor is invalid.');
+    }
+    final items = <Sh02ImportedMaterial>[];
+    for (var index = 0; index < pageSize; index++) {
+      final isPublishedRecord =
+          page == publishOnPage && index == pageSize - 1 && committed != null;
+      final item = isPublishedRecord
+          ? committed!
+          : _importedMaterial(
+              artifactId:
+                  'ART-${page.toRadixString(16).padLeft(8, '0')}'
+                  '${index.toRadixString(16).padLeft(8, '0')}',
+              requestId: 'existing-$page-$index',
+              filename: 'existing-$page-$index.txt',
+            );
+      items.add(item);
+      _observedArtifacts.add(item.artifactId);
+    }
+    if (pageSize == 0 && page == publishOnPage && committed != null) {
+      items.add(committed!);
+      _observedArtifacts.add(committed!.artifactId);
+    }
+    final hasMore = page < pageCount;
+    return Sh02ImportPage(
+      items: items,
+      hasMore: hasMore,
+      verificationComplete: true,
+      unverifiedCandidates: 0,
+      nextCursor: hasMore ? 'page:${page + 1}' : null,
+    );
+  }
+
+  @override
+  Future<Sh02ImportedMaterial> importDocument({
+    required String filename,
+    required Uint8List bytes,
+    required String requestId,
+  }) async {
+    importCalls++;
+    committed = _importedMaterial(requestId: requestId, filename: filename);
+    if (uncertainFirstUpload) {
+      throw const LumenisCoreException('Upload response was lost.');
+    }
+    return committed!;
+  }
+
+  @override
+  Future<Sh02ImportedMaterial> reopenImport(String artifactId) async {
+    reopenCalls++;
+    final item = committed;
+    if (item == null || item.artifactId != artifactId) {
+      throw const LumenisCoreException('Saved material is unavailable.');
+    }
+    return item;
+  }
+}
+
+Sh02ImportedMaterial _importedMaterial({
+  required String requestId,
+  String filename = '研究资料.txt',
+  String artifactId = 'ART-0123456789abcdef',
+}) => Sh02ImportedMaterial(
+  artifactId: artifactId,
+  artifactSha256: 'a' * 64,
+  requestId: requestId,
+  filename: filename,
+  sourceSha256:
+      '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+  sizeBytes: 3,
+  createdAt: '2026-10-22T12:00:00Z',
+  characterCount: 6,
+  tableCount: 0,
+  text: '原始研究内容',
+  excerpts: const ['原始研究内容'],
+  limitations: const ['Source facts have not been independently verified.'],
+);
+
+Map<String, dynamic> _importResponse() => {
+  'artifact': {
+    'artifact_id': 'ART-0123456789abcdef',
+    'sha256': 'a' * 64,
+    'created_at': '2026-10-22T12:00:00Z',
+  },
+  'document': {
+    'kind': 'research',
+    'request_id': 'sh02-request-12345678',
+    'payload': {
+      'source_material': {
+        'original_filename': 'research.txt',
+        'sha256': 'b' * 64,
+        'size_bytes': 3,
+        'origin': 'user-upload',
+      },
+      'parsed_source': {'text': 'abc'},
+      'basic_analysis': {
+        'character_count': 3,
+        'table_count': 0,
+        'source_excerpts': <Object>[],
+        'limitations': <String>[],
+      },
+    },
+  },
+};
 
 void _expectNoAuthOrNetworkAdvice(
   WidgetTester tester,

@@ -194,6 +194,14 @@ def package_tree_snapshot(install_path: Any) -> Dict[str, Any]:
     maximum_files, maximum_bytes = 100_000, 1024 * 1024 * 1024
     def identity(info):
         return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+    def same_file(path_info, handle_info):
+        path_identity, handle_identity = identity(path_info), identity(handle_info)
+        if os.name == 'nt':
+            # Windows path-stat and CRT handle-stat expose different ctime
+            # semantics. Device/inode/size/mtime identify the same opened file;
+            # same-API snapshots below still compare ctime to catch mutation.
+            return path_identity[:-1] == handle_identity[:-1]
+        return path_identity == handle_identity
     def linked(info):
         return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0) & 0x400)
     try:
@@ -227,7 +235,7 @@ def package_tree_snapshot(install_path: Any) -> Dict[str, Any]:
                                     'cookies.json','cookies.txt','cookie.json','api_key','private_key','password'}
                         or name.endswith(('.key','.p12','.pfx'))):
                     raise ValueError('SENSITIVE_RUNTIME_CONTENT_BLOCKED')
-                info = entry.stat(follow_symlinks=False)
+                info = os.lstat(entry.path)
                 if linked(info):
                     raise ValueError('PACKAGE_LINK_BLOCKED')
                 path = Path(entry.path)
@@ -239,13 +247,14 @@ def package_tree_snapshot(install_path: Any) -> Dict[str, Any]:
                     raise ValueError('PACKAGE_NONREGULAR_FILE_BLOCKED')
                 if len(files) + len(directories) + len(pending) > maximum_files or total > maximum_bytes:
                     raise ValueError('PACKAGE_SNAPSHOT_LIMIT_EXCEEDED')
-        digest, verified = hashlib.sha256(), 0
+        digest, verified, file_digests = hashlib.sha256(), 0, {}
         for directory,_ in sorted(directories,key=lambda item:str(item[0])):
             digest.update(b'D\0'+directory.relative_to(root).as_posix().encode()+b'\0')
         for path,before in sorted(files,key=lambda item:str(item[0])):
             fd = os.open(path, os.O_RDONLY | getattr(os,'O_NOFOLLOW',0) | getattr(os,'O_BINARY',0))
             with os.fdopen(fd,'rb') as stream:
-                if identity(os.fstat(stream.fileno())) != identity(before):
+                opened_before = os.fstat(stream.fileno())
+                if not same_file(before, opened_before):
                     raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
                 count, file_hash = 0, hashlib.sha256()
                 while chunk := stream.read(1024*1024):
@@ -253,18 +262,44 @@ def package_tree_snapshot(install_path: Any) -> Dict[str, Any]:
                     if count > before.st_size or verified > maximum_bytes:
                         raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
                     file_hash.update(chunk)
-                if identity(os.fstat(stream.fileno())) != identity(before):
+                if identity(os.fstat(stream.fileno())) != identity(opened_before):
                     raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+            file_digests[path] = file_hash.digest()
             after = os.lstat(path)
             if linked(after) or identity(after) != identity(before) or count != before.st_size:
                 raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
             digest.update(b'F\0'+path.relative_to(root).as_posix().encode()+b'\0'+str(count).encode()+b'\0'+file_hash.digest())
-        # A later file read may mutate an earlier, already hashed file without
-        # touching its parent directory. Revalidate every captured file identity
-        # (including ctime/inode), not only directory membership, before return.
+        # A later file read may mutate an earlier file without changing its
+        # length or restored mtime. This is especially important on Windows,
+        # where st_ctime is creation time and cannot detect in-place writes.
+        # Rehash each captured file before return as well as rechecking identity.
+        verification_total = 0
         for path, before in files:
-            final = os.lstat(path)
-            if linked(final) or not stat.S_ISREG(final.st_mode) or identity(final) != identity(before):
+            final_before = os.lstat(path)
+            if linked(final_before) or not stat.S_ISREG(final_before.st_mode) or identity(final_before) != identity(before):
+                raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+            fd = os.open(path, os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_BINARY', 0))
+            with os.fdopen(fd, 'rb') as stream:
+                opened_before = os.fstat(stream.fileno())
+                if not same_file(final_before, opened_before):
+                    raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+                count, verification_hash = 0, hashlib.sha256()
+                while chunk := stream.read(1024 * 1024):
+                    count += len(chunk)
+                    verification_total += len(chunk)
+                    if count > before.st_size or verification_total > maximum_bytes:
+                        raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+                    verification_hash.update(chunk)
+                opened_after = os.fstat(stream.fileno())
+                if identity(opened_after) != identity(opened_before):
+                    raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
+            final_after = os.lstat(path)
+            if (
+                linked(final_after)
+                or identity(final_after) != identity(before)
+                or count != before.st_size
+                or verification_hash.digest() != file_digests[path]
+            ):
                 raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
         if any(linked(os.lstat(path)) or identity(os.lstat(path)) != identity(before) for path,before in directories):
             raise ValueError('PACKAGE_CHANGED_DURING_SNAPSHOT')
