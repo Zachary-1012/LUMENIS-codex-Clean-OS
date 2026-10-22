@@ -770,7 +770,7 @@
   "sh01.media.format_ratio": "画幅",
   "sh01.media.podcast_title": "播客编辑",
   "sh01.media.rendered_audio": "音频预览",
-  "sh01.media.preview_audio_empty": "保存音频后可试听。",
+  "sh01.media.preview_audio_empty": "导出音频后可试听。",
   "sh01.media.preview_audio": "试听",
   "sh01.media.back": "返回创作",
   "sh01.media.bgm": "配乐",
@@ -939,6 +939,11 @@
   "sh01.media.project_name": "作品名称",
   "sh01.media.untitled": "未命名作品",
   "sh01.media.save_project": "保存工程",
-  "sh01.media.saving": "正在保存"
+  "sh01.media.saving": "正在保存",
+  "sh01.media.waveform_select": "选择音频片段",
+  "sh01.media.waveform_source": "原始音频",
+  "sh01.media.waveform_retry": "波形未能读取，重试",
+  "sh01.media.waveform_previous": "上一段波形",
+  "sh01.media.waveform_next": "下一段波形"
  }
 }

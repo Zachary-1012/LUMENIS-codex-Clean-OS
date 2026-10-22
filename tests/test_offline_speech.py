@@ -1,15 +1,16 @@
 """Unit and real installed-FFmpeg integration; not a naturalness/user E2E claim."""
 from __future__ import annotations
 
-from array import array
 import hashlib
 import io
 import json
-from pathlib import Path
+import os
 import struct
 import subprocess
 import sys
 import wave
+from array import array
+from pathlib import Path
 
 import pytest
 
@@ -140,8 +141,39 @@ def test_literal_textfile_never_interpolates_filter_or_shell_and_is_cleaned(monk
 
     def inspect(command, cwd, callback):
         contents.append((cwd / "speech.txt").read_bytes())
-        assert (cwd / "speech.txt").stat().st_mode & 0o077 == 0
-        assert cwd.stat().st_mode & 0o077 == 0
+        if os.name == "nt":
+            acl_command = r"""
+$ErrorActionPreference = 'Stop'
+$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+$items = @($env:OEVIRA_SPEECH_TEMP, (Join-Path $env:OEVIRA_SPEECH_TEMP 'speech.txt'))
+@($items | ForEach-Object {
+  $acl = if ([System.IO.Directory]::Exists($_)) {
+    [System.IO.Directory]::GetAccessControl($_)
+  } else { [System.IO.File]::GetAccessControl($_) }
+  @{owner=$acl.GetOwner([System.Security.Principal.SecurityIdentifier]).Value;
+    user=$identity;
+    entries=@($acl.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier]) | ForEach-Object {
+      @{sid=$_.IdentityReference.Value; type=$_.AccessControlType.ToString(); rights=[int]$_.FileSystemRights}
+    })}
+}) | ConvertTo-Json -Depth 4 -Compress
+"""
+            inspected = subprocess.run(
+                ["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", acl_command],
+                env={**os.environ, "OEVIRA_SPEECH_TEMP": str(cwd)},
+                capture_output=True, text=True, check=True, timeout=15, shell=False,
+            )
+            for acl in json.loads(inspected.stdout):
+                allowed = {acl["user"], "S-1-5-18", "S-1-5-32-544"}
+                grants = [entry for entry in acl["entries"] if entry["type"] == "Allow"]
+                for entry in grants:
+                    if entry["sid"] == "S-1-3-4":
+                        entry["sid"] = acl["owner"]
+                assert acl["owner"] in allowed
+                assert grants and all(entry["sid"] in allowed for entry in grants)
+                assert any(entry["sid"] == acl["owner"] and entry["rights"] & 1 for entry in grants)
+        else:
+            assert (cwd / "speech.txt").stat().st_mode & 0o077 == 0
+            assert cwd.stat().st_mode & 0o077 == 0
         assert text not in " ".join(command)
         assert "https://" not in " ".join(command)
         assert all(flag not in command for flag in ("-t", "-fs", "-frames:a", "-af"))

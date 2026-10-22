@@ -1,0 +1,137 @@
+{
+  "captured_at": "2026-10-22T22:31:19.864623+00:00",
+  "base_main": "e4d7493b4200e60fdb290914a8887c822523d4cd",
+  "classification": "BOUNDED_PODCAST_OPERATION_VERIFIED_NOT_WHOLE_PRODUCT",
+  "whole_product": "OPEN",
+  "overall_frontend": "NOT_ACCEPTED",
+  "requirements": [
+    "00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#3.3",
+    "contracts/experience/screen-specifications/SH-01.md"
+  ],
+  "existing_owners": "Shared media Timeline/Artifact, current source inspection/Permission and Flutter SH-01. No new runtime, store or queue.",
+  "source_inputs": {
+    "origin": "Authored English research-work guide, locally synthesized by the existing product TTS API. Synthetic speech, not human recording, external fact or model capability.",
+    "api_only_tts": true,
+    "tts_ui": "UNBOUND",
+    "source_sha256": [
+      "848f6f86c539f65057e71514204d7f63097e3a356f487be56dcaf6cb1b215cd0",
+      "f03b68b71e93dc21ff2fec22112542123e786200e78d035fe3d06f323fda13bd"
+    ],
+    "versions": [
+      {
+        "artifact_id": "ART-599e47d29f9149cd",
+        "sha256": "ee6b65e10f65c4c7912be9af7f055bd4e4a0c17f4f16ea882be6e85f06252321",
+        "revision": 1,
+        "parent": null,
+        "title": "研究工作札记 · 合成配音"
+      },
+      {
+        "artifact_id": "ART-5aec51de945f4fea",
+        "sha256": "b62588d4d5eb299187abf281939be0b28bfc42da29a78f63d588fd7ee3416e45",
+        "revision": 2,
+        "parent": "ART-599e47d29f9149cd",
+        "title": "研究工作札记 · 合成配音"
+      },
+      {
+        "artifact_id": "ART-132a5c5651b34ee7",
+        "sha256": "c2513884b01182f79f5c9181fab17cef2f2eae0bc1b7b227796af8aed74d85ca",
+        "revision": 3,
+        "parent": "ART-5aec51de945f4fea",
+        "title": "研究工作札记 · 合成配音"
+      },
+      {
+        "artifact_id": "ART-8e9f353748da4b8b",
+        "sha256": "879ef7042467c56ea9f83ccf89236eaa442d972da195ad4967bd6c646933165f",
+        "revision": 4,
+        "parent": "ART-132a5c5651b34ee7",
+        "title": "研究工作札记 · 合成配音"
+      }
+    ]
+  },
+  "actual_operations": [
+    "Import both real WAV files through the normal independent podcast entry with existing confirmation.",
+    "Place two clips consecutively, save v1; export v2 and download the actual package.",
+    "Change second clip gain from 1.0 to 0.85 and save v3, preserving v1/v2.",
+    "Back up only the owned isolated database; controlled interruption/restart of its verified idle manual-workspace Core; reopen v3 and earlier v2 through normal UI.",
+    "Play recovered v2 in the normal browser audio player: duration=35.38, readyState=4, paused=false.",
+    "On final served Web build, reopen v3, select each source and observe its measured waveform; adding voiceover lengthens 35.38 to 53.10 seconds, undo returns 35.38.",
+    "Export v4, download actual package, independently inspect parent/source hashes/gain 0.85 and media hash; play actual 35.38-second audio.",
+    "Reload final Web application, list all four versions and reopen v4; exact title, sources, 35.38-second timeline and measured waveform recovered."
+  ],
+  "audio_result": {
+    "duration_sec": 35.38,
+    "format": "PCM WAV",
+    "channels": 2,
+    "sample_rate": 48000,
+    "media_sha256": "6f1c9b29550d568e5b613c90f120c8bd0895bddbfccfe14d961c0b19d375df5f",
+    "lufs": -17.02,
+    "true_peak_dbTP": -6.63,
+    "target_minus16_plusminus1": "NOT_PASSED",
+    "normalization_performed": false,
+    "naturalness": "NOT_EVALUATED"
+  },
+  "preservation": {
+    "prior_22_artifacts_unchanged_after_restart": true,
+    "production_8201_database": "UNCHANGED",
+    "external_model_training_collection_deployment": "NOT_PERFORMED"
+  },
+  "verification": {
+    "flutter_workbench_and_waveform": "80 PASS before narrow-layout correction; relevant final wire/waveform 35 PASS",
+    "python_speech_preview_toolchain": "61 PASS, 2 eSpeak explicit-runtime skips",
+    "windows_privacy": "Actual DACL owner/system/admin access checked; S-1-3-4 resolved to the actual owner. POSIX retains private mode checks.",
+    "ruff_changed_python": "PASS",
+    "web_final": "PASS; release build after final formatting is byte-identical to the observed build",
+    "user_final_waveform": "Actual first and second source waveforms observed; v3 reopened, append/undo and v4 render/download/play performed through normal UI",
+    "dart_analysis": "PASS",
+    "governance": "Constitution/machine/Experience authority/anti-template/blueprints/source-adoption PASS. Original stale-range failure retained and 556 current bindings corrected.",
+    "first_app_ci": "Failed two missing-brace lint infos after formatting; repaired in the existing save action. No behavior/test weakening. Full local flutter analyze encountered its Windows LSP framing failure; exact source Dart analysis and protected CI remain required."
+  },
+  "remaining": [
+    "Full podcast scripting, transcription, word editing, master/normalization, cover/chapters/feed/package tools and real programme-quality acceptance.",
+    "TTS UI and non-English local engines not accepted.",
+    "Four native/surface and final visual acceptance remain open; this is not full SH-01 or whole-product closure.",
+    "Full-build distribution licensing/source obligations remain a separate release gate."
+  ],
+  "reference": {
+    "windows_owner_rights": "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dtyp/81d92bba-d22b-4a8c-908a-554ab29148ab",
+    "ffmpeg_full_build": "https://www.gyan.dev/ffmpeg/builds/"
+  },
+  "runtime": {
+    "scope": "owned isolated manual workspace, scheduler disabled",
+    "port": 57946,
+    "web_js_sha256": "ce7c3e53ef47ccb5bd4328c8b9aee108dd454a9a5d325f5b011ff51a3e6b6f46",
+    "served_js_hash_equal": true,
+    "backend": "unchanged source from e4d7493b; prior controlled restart/source pins retained in existing media operation receipt",
+    "restart_backup_sha256": "6e1925b3699f6d1980ef6da1eaa8f447ec8aa5484b36b1128f79d15c693b6996",
+    "production": "not restarted or written"
+  },
+  "revised_audio_result": {
+    "duration_sec": 35.38,
+    "media_sha256": "fddad5cc0fcf6afac705cb1e3c25ec9d415042e3eacda198a024685ae525d972",
+    "integrated_lufs": -17.72,
+    "true_peak_dbtp": -7.64,
+    "master_target": "NOT_PASSED; no normalization requested",
+    "actual_browser_playback": {
+      "duration": 35.38,
+      "readyState": 4,
+      "paused": false
+    }
+  },
+  "screenshots": [
+    {
+      "path": "podcast-waveform-v3-final.png",
+      "sha256": "a6c895694aab840e0081fc8f25d850142bde17a6e65bb31c073c7cc5f9e09b0f"
+    },
+    {
+      "path": "podcast-v4-waveform-playing.png",
+      "sha256": "4302233f660f085dff8b1416f1ad1e1d0abbebfdb7a81922399c8704238ed25c"
+    }
+  ],
+  "source_pins": {
+    "app/lib/core/lumenis_core_client.dart": "872c46bddac9cf8cf96a6a9f39eaefe85668aea9174a49cb7e18e2b1a87cfd16",
+    "app/lib/features/shared/sh01/media_project_workbench.dart": "073b8800d51b2e8377c18e6cfcbb8f338d46b78b4447e9e5ebaabf84a90df577",
+    "app/lib/features/shared/sh01/media_source_waveform.dart": "93272a0497c65198cc99271cc841c61cfc05041ff728f8c21a67012d6429218f",
+    "tests/test_offline_speech.py": "ef7ca8e2da68a1cf0e50f419172741a244a2c2c1b1cb0bca83c69ce893dd32c2",
+    "contracts/experience/screen-specifications/SH-01.md": "dfc7dd178177eda5b58bb591ee9c35b115c19e0abfcf125de0239ff1da28b590"
+  }
+}

@@ -770,7 +770,7 @@
   "sh01.media.format_ratio": "Aspect ratio",
   "sh01.media.podcast_title": "Podcast editing",
   "sh01.media.rendered_audio": "Audio preview",
-  "sh01.media.preview_audio_empty": "Save audio to listen.",
+  "sh01.media.preview_audio_empty": "Export audio to listen.",
   "sh01.media.preview_audio": "Listen",
   "sh01.media.back": "Back to creation",
   "sh01.media.bgm": "Music",
@@ -939,6 +939,11 @@
   "sh01.media.project_name": "Project name",
   "sh01.media.untitled": "Untitled project",
   "sh01.media.save_project": "Save project",
-  "sh01.media.saving": "Saving"
+  "sh01.media.saving": "Saving",
+  "sh01.media.waveform_select": "Select an audio clip",
+  "sh01.media.waveform_source": "Original audio",
+  "sh01.media.waveform_retry": "Waveform unavailable. Retry",
+  "sh01.media.waveform_previous": "Previous waveform segment",
+  "sh01.media.waveform_next": "Next waveform segment"
  }
 }

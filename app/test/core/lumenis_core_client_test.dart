@@ -7,6 +7,43 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 
 void main() {
   test(
+    'source waveform uses the existing independent Shared inspection route',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+      await client.inspectContentWaveform(
+        domainId: null,
+        assetRef: 'ART-source',
+        startSec: 12,
+        endSec: 34,
+        audioStreamIndex: 1,
+      );
+      final request = server.requests.single;
+      expect(request.method, 'POST');
+      expect(
+        request.path,
+        '/api/experience/shared-skills/shared.content_project/inspect',
+      );
+      expect(
+        request.workspaceScope,
+        '{"scope_kind":"shared_workspace","version":1}',
+      );
+      expect(jsonDecode(request.body!), {
+        'action_type': 'READ',
+        'input': {
+          'asset_refs': ['ART-source'],
+          'waveform': {
+            'start_sec': 12.0,
+            'end_sec': 34.0,
+            'audio_stream_index': 1,
+            'bins': 256,
+          },
+        },
+      });
+    },
+  );
+  test(
     'SH-02 uploads one selected file through the exact Shared route',
     () async {
       final server = await _CoreStub.start();
