@@ -101,7 +101,64 @@ class Repository implements SharedResearchRepository {
   ) => throw UnimplementedError();
 }
 
+class PagedRepository extends Repository {
+  @override
+  Future<ResearchPage<SharedResearchDocument>> history({String? cursor}) async {
+    final value = saved(version: cursor == null ? 1 : 2);
+    (value['document'] as Map)['title'] = cursor == null ? '首份成果' : '后续成果';
+    return ResearchPage(
+      [SharedResearchDocument.fromResponse(value)],
+      cursor == null ? 'history-next' : null,
+      false,
+    );
+  }
+
+  @override
+  Future<ResearchPage<SharedResearchTask>> tasks({
+    String? cursor,
+  }) async => ResearchPage(
+    [
+      SharedResearchTask.fromResponse({
+        'task_id':
+            'rbrief_00000000-0000-0000-0000-00000000000${cursor == null ? 1 : 2}',
+        'job_id': 'brief-${'a' * 32}',
+        'state': 'paused',
+        'business_question': cursor == null ? '首项工作' : '后续工作',
+      }),
+    ],
+    cursor == null ? 'tasks-next' : null,
+    false,
+  );
+}
+
 void main() {
+  testWidgets('paging tasks preserves already loaded saved versions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1280, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      sharedTestApp(
+        SharedResearchWorkspace(
+          repository: PagedRepository(),
+          sources: const {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('更多版本'));
+    await tester.pumpAndSettle();
+    expect(find.text('后续成果'), findsOneWidget);
+    await tester.tap(find.text('更多工作'));
+    await tester.pumpAndSettle();
+    expect(find.text('首份成果'), findsOneWidget);
+    expect(find.text('后续成果'), findsOneWidget);
+    expect(find.text('首项工作'), findsOneWidget);
+    expect(find.text('后续工作'), findsOneWidget);
+  });
+
   testWidgets(
     'user-edited uneven table remains readable without losing source text',
     (tester) async {

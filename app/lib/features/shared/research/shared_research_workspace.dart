@@ -85,21 +85,31 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
       _notice = null;
     });
     try {
-      final history = await widget.repository.history(
-        cursor: moreHistory ? _historyCursor : null,
-      );
-      final tasks = await widget.repository.tasks(
-        cursor: moreTasks ? _taskCursor : null,
-      );
+      final history = moreTasks
+          ? null
+          : await widget.repository.history(
+              cursor: moreHistory ? _historyCursor : null,
+            );
+      final tasks = moreHistory
+          ? null
+          : await widget.repository.tasks(
+              cursor: moreTasks ? _taskCursor : null,
+            );
       if (!mounted || generation != _generation) return;
       setState(() {
-        _history = moreHistory
-            ? [..._history, ...history.items]
-            : history.items;
-        _tasks = moreTasks ? [..._tasks, ...tasks.items] : tasks.items;
-        _historyCursor = history.cursor;
-        _taskCursor = tasks.cursor;
-        _incomplete = history.incomplete;
+        if (history != null) {
+          _history = moreHistory
+              ? [..._history, ...history.items]
+              : history.items;
+          _historyCursor = history.cursor;
+          _incomplete = moreHistory
+              ? _incomplete || history.incomplete
+              : history.incomplete;
+        }
+        if (tasks != null) {
+          _tasks = moreTasks ? [..._tasks, ...tasks.items] : tasks.items;
+          _taskCursor = tasks.cursor;
+        }
       });
     } catch (error) {
       if (mounted) _error(error);

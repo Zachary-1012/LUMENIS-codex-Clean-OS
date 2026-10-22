@@ -7,8 +7,10 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 ## 2026-10-23 Material reading — bounded source and actual operation
 
 The retained SH-02 work now connects scoped material reading to independent
-Shared research, persisted tasks and versioned SavedWork. Real selected files
-are calculated by the existing Reporting owner without AI. Reports present
+Shared research, persisted tasks and versioned SavedWork. The existing request
+accepts up to 100 selected originals from the loaded material list; larger/batch
+intake is not accepted by this limit. Selected files are calculated by the
+existing Reporting owner without AI. Reports present
 field completeness, category frequencies, exact duplicate counts and explicit
 metric totals, with header assumptions, denominators and unknowns preserved.
 Internal source IDs remain in provenance; normal reading presents the result.

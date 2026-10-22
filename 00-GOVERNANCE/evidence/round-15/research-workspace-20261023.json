@@ -269,5 +269,25 @@
     "Production 8201 loading, external platform operations and whole-product autonomous operation NOT_VERIFIED.",
     "Known Ruff debt retained; zero added findings does not mean whole-file lint is clean.",
     "Current PR CI and reviewed merge must independently establish publication; no earlier receipt proves this composition."
-  ]
+  ],
+  "frontend_followup": {
+    "at": "2026-10-22T19:02:33.831319+00:00",
+    "base_commit": "3babdad58f875867f0a3932c4cea828e4281f0b6",
+    "change": "Saved-version and task pagination retain each other; accumulated incomplete status is preserved.",
+    "source_sha256_lf": {
+      "app/lib/features/shared/research/shared_research_workspace.dart": "56defb6ab480d84cb83ab6d6c8cb4a7f9663d0eb8088810486ea1a899fa0d234",
+      "app/test/features/shared/research/shared_research_workspace_test.dart": "6f4e3abb9f8cc32c337c91918345600f1b5c750923e924e54ccf6918b7246ed3"
+    },
+    "web_main_sha256": "0958ef80e40f41f21c21242be4838454870de020929b1490b470dd409f4078bc",
+    "widget_regression": {
+      "passed": 8,
+      "failed": 0,
+      "scope": "Existing seven checks plus independent task/history pagination"
+    },
+    "dart_analysis": "PASS no issues in affected research source and tests",
+    "release_web_build": "PASS",
+    "actual_operation": "Reloaded final Web build at port 57946; opened existing saved version 2 in normal UI; original statistics and user revision remained visible.",
+    "boundary": "Readback on final frontend, not a new save or service restart. Earlier save/revision/recovery source pins and observations above are retained.",
+    "screenshot_sha256": "73b043ce8109b54802b6093d0b90c603d64cf09b76af65ba4600f3a6e4be651a"
+  }
 }
