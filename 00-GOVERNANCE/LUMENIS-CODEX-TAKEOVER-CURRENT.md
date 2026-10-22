@@ -4,6 +4,30 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Runtime startup — bounded implementation and real operation
+
+The approved complete product work continues in the current single controller
+task; source-role labels do not dispatch additional windows. The existing Core
+now selects installed Waitress by default, retains explicit Flask development
+mode, and reports startup failure with a nonzero exit instead of silently
+falling back. Health reports the observed server and scheduler lifecycle state;
+neither field certifies collection or a completed user task. The Windows
+launcher distinguishes Core availability from resident-browser startup failure
+and preserves the independent Core when that component is unavailable.
+
+The current source was run through the normal manual-workspace entry with an
+isolated database and a fresh Web build. A real authored work note was selected
+in SH-02, persisted, independently read back, and reopened after page refresh
+with identical text and Artifact identity. This is bounded operation evidence:
+revision, service-restart recovery, production 8201 version convergence, source
+library scope binding, full Experience upgrade and four-surface acceptance
+remain open. No external inference, collection, training or deployment was
+started. Exact source hashes, 41 targeted regressions, the Windows startup
+check, retained static debt and verification limits are recorded in
+[the runtime receipt](evidence/round-15/runtime-startup-20261023.json).
+Publication still requires the current-head protected PR checks and merge
+readback. This receipt does not close J07 or the full product.
+
 ## 2026-10-22 Local candidate reconciliation — bounded source integration
 
 The PO authorized source unification with current main and resolution of useful

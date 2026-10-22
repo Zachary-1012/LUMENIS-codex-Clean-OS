@@ -23,6 +23,26 @@ $decisionAst = $ast.Find({
 }, $true)
 if (-not $decisionAst) { throw 'Get-CoreStartupDecision function not found' }
 . ([scriptblock]::Create($decisionAst.Extent.Text))
+$readinessAst = $ast.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+        $node.Name -eq 'Get-StartupReadiness'
+}, $true)
+if (-not $readinessAst) { throw 'Get-StartupReadiness function not found' }
+. ([scriptblock]::Create($readinessAst.Extent.Text))
+foreach ($browserExit in @(0, 1, 2)) {
+    if ((Get-StartupReadiness $false $browserExit) -ne 'CORE_UNAVAILABLE') {
+        throw 'Browser state hid a failed Core'
+    }
+}
+foreach ($browserExit in @(1, 2)) {
+    if ((Get-StartupReadiness $true $browserExit) -ne 'CORE_READY_BROWSER_UNAVAILABLE') {
+        throw 'Failed or missing browser launcher was reported as ready'
+    }
+}
+if ((Get-StartupReadiness $true 0) -ne 'CORE_AND_BROWSER_READY') {
+    throw 'Ready Core and browser were rejected'
+}
 $script:MockHealth = $null
 $script:MockTransportFailure = $false
 function Invoke-RestMethod {
@@ -87,4 +107,4 @@ if (Test-Http 'http://127.0.0.1:8201/healthz' 1) {
     throw 'Transport failure was accepted'
 }
 
-Write-Output 'PASS: launcher Test-Http accepts only the complete healthy database contract'
+Write-Output 'PASS: launcher preserves Core identity and distinguishes browser readiness from Core availability'

@@ -3,8 +3,10 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import json
+import threading
 from unittest.mock import patch
-from pathlib import Path
+
+import pytest
 
 import app as product_core
 import run_supervised
@@ -51,6 +53,10 @@ def test_healthz_requires_existing_canonical_notes_schema_and_read_only_connecti
         'version': product_core.APP_VERSION,
         'service': 'lumenis-core',
         'core_instance': dict(product_core._CORE_INSTANCE),
+        'runtime': {
+            'web_server': product_core._CORE_SERVER_KIND,
+            'scheduler': product_core._scheduler_runtime_state(),
+        },
     }
     assert repository.options == {'read_only': True, 'wal': False}
     assert repository.connection_value.sql == (
@@ -92,6 +98,63 @@ def test_healthz_missing_database_is_unavailable_without_creating_file(monkeypat
     assert response.status_code == 503
     assert response.get_json()['dependencies'] == {'database': 'unavailable'}
     assert not missing.exists()
+
+
+def test_product_server_defaults_to_installed_waitress_without_development_fallback(monkeypatch):
+    import waitress
+
+    monkeypatch.delenv('ZB_WSGI', raising=False)
+    monkeypatch.delenv('ZB_WSGI_THREADS', raising=False)
+    monkeypatch.setattr(product_core, '_CORE_SERVER_KIND', 'not_started')
+    calls = []
+    application = object()
+    monkeypatch.setattr(waitress, 'serve', lambda app, **kwargs: calls.append((app, kwargs)))
+    product_core._serve_product_core(application, '127.0.0.1', 8123)
+    assert calls == [(application, {'host': '127.0.0.1', 'port': 8123, 'threads': 8})]
+    assert product_core._CORE_SERVER_KIND == 'waitress'
+
+
+@pytest.mark.parametrize('server,threads,error', [
+    ('unknown', '8', 'ZB_WSGI must'),
+    ('waitress', '0', 'ZB_WSGI_THREADS must'),
+    ('waitress', '257', 'ZB_WSGI_THREADS must'),
+    ('waitress', 'invalid', 'invalid literal'),
+])
+def test_invalid_server_configuration_cannot_silently_start_development_server(
+    monkeypatch, server, threads, error
+):
+    monkeypatch.setenv('ZB_WSGI', server)
+    monkeypatch.setenv('ZB_WSGI_THREADS', threads)
+    with pytest.raises(ValueError, match=error):
+        product_core._serve_product_core(object(), '127.0.0.1', 8123)
+
+
+def test_waitress_failure_propagates_without_fallback(monkeypatch):
+    import waitress
+
+    monkeypatch.setenv('ZB_WSGI', 'waitress')
+    monkeypatch.setattr(product_core, '_CORE_SERVER_KIND', 'not_started')
+    def failed(*args, **kwargs):
+        raise OSError('port is already in use')
+    monkeypatch.setattr(waitress, 'serve', failed)
+    with pytest.raises(OSError, match='port is already in use'):
+        product_core._serve_product_core(object(), '127.0.0.1', 8123)
+
+
+def test_runtime_scheduler_observation_distinguishes_not_started_failed_and_stopping(monkeypatch):
+    from types import SimpleNamespace
+
+    stop = threading.Event()
+    monkeypatch.setattr(product_core, '_SCHEDULER_STOP', stop)
+    monkeypatch.setattr(product_core, '_SCHEDULER_THREAD', None)
+    assert product_core._scheduler_runtime_state() == 'not_started'
+    for alive, expected in [(True, 'running'), (False, 'unavailable')]:
+        monkeypatch.setattr(product_core, '_SCHEDULER_THREAD', SimpleNamespace(is_alive=lambda alive=alive: alive))
+        assert product_core._scheduler_runtime_state() == expected
+    stop.set()
+    for alive, expected in [(True, 'stopping'), (False, 'stopped')]:
+        monkeypatch.setattr(product_core, '_SCHEDULER_THREAD', SimpleNamespace(is_alive=lambda alive=alive: alive))
+        assert product_core._scheduler_runtime_state() == expected
 
 
 class _HTTPResponse:
@@ -168,8 +231,8 @@ def test_supervisor_health_is_bound_to_current_launch_boot_and_entry():
     }
     healthy = {'ok': True, 'status': 'healthy', 'dependencies': {'database': 'ok'}}
     cases = [({}, False), (identity, True)]
-    for field in identity:
-        cases.append(({**identity, field: 'd' * len(identity[field])}, False))
+    for field, value in identity.items():
+        cases.append(({**identity, field: 'd' * len(value)}, False))
     for observed, accepted in cases:
         payload = {**healthy, 'core_instance': observed}
         with patch.object(run_supervised.urllib.request, 'urlopen', return_value=_HTTPResponse(200, payload)):
