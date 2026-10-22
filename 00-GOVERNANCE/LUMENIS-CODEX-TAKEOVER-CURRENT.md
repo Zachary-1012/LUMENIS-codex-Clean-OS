@@ -4,6 +4,52 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-22 Local candidate reconciliation — bounded source integration
+
+The PO authorized source unification with current main and resolution of useful
+local-only candidates before retiring competing development copies. Historical
+branches, both stash trees including index/untracked parents, and valuable ignored
+files were preserved outside the active product root with hash manifests and
+actual recovery checks. The approved two archived scripts were moved out of active
+auditor traversal with unchanged hashes. This preservation is not another active
+implementation.
+
+The existing Shared owners adopt independent authored manuscripts and editable
+PPTX export; the risk owner distinguishes observed negative posts from an explicitly
+provided distinct-creator count. CTH/BMP adopt bounded question/resource analysis;
+event and topic owners retain unknown measurements and proper cohort denominators.
+Suggestion review preserves local writing; AI-01 binds persistent conversation
+operations through the existing AI Hub owner, and independent creation entry
+paths remain available. SourceBrief connects saved history, revision and optional
+Shared continuation through the current SavedWork owner, preserving exact source
+and export approval checks instead of restoring the old route alias.
+CTH-07 consumes the current authorized temporal snapshot and preserves null gaps,
+metric definitions and snapshot identity. SH-02 adds explicit file import and
+SavedWork list/readback through the current Shared owner; uncertain upload results
+are reconciled by request identity before another attempt. Original pagination,
+research continuation and full four-surface requirements retain their separate
+implementation and acceptance states. Existing MCP package and stdio owners also
+retain their byte/identity checks and bounded transport on Windows; no new plugin
+or execution authority is introduced. The CI-owned HTTP fixture now creates its
+disposable schema before exercising authenticated recovery; this changes no
+production database or authorization rule.
+The existing complete product plan, visual sketch and
+AI-01 contract carry the same bounded source state, without claiming live or
+four-surface acceptance. Exact recovery archives retain original bytes across Git
+checkouts. Existing actor, source-use, immutable Artifact, revision and recovery
+boundaries remain. Current source contracts supersede old
+fixed-port/provider paths and one-off source-use approval loaders; historical
+snapshots are not overlaid onto current main. The bounded source/evidence record
+is [local candidate reconciliation](evidence/round-15/local-source-reconciliation-20261022.md).
+
+Status: **SOURCE_ADOPTION_REVIEWED**. Exact-head required CI, the associated
+checked PR merge and independent main readback establish publication; this document
+alone is not a merge receipt. This task starts no Core, collection, model,
+training, deployment or full product closure; Issue #17 remains OPEN. Isolated
+regression and source acceptance do not establish the current production process's
+loaded version or real user acceptance. Previous acceptance receipts retain their
+original version and scope.
+
 ## 2026-10-21 Existing-mainline engineering clearance — merged evidence
 
 Final PR #118 publication readback: reviewed head `60f9f8da05a30c595d3b8fcbb9d1c183d4da2e68` passed both required checks and merged normally at 2026-10-21 12:36:05 UTC / 20:36:05 Beijing as `f7c864cbb007eb79eea116aa3d84da93333fba5a`. The final independent readback at 12:41:52.208 UTC / 20:41:52.208 Beijing confirmed the same main; both post-merge main gates also passed. The [existing report's final-publication section](evidence/round-15/mainline-clearance-20261021/OEVIRA_CLEARANCE_FOLLOWUP.md#pr-118-最终发布与合并原件) now links the merge receipt and byte-preserved final PR CI XML/log. Historical pending paragraphs below retain their original time-bound meaning. This evidence-only addition does not dispatch development or change product acceptance.
@@ -845,9 +891,16 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 
-This publication only archives PR #118 final merge/readback and raw CI receipts in the existing evidence owner, updates its finite manifest and exact validator pin, and corrects this publication classification. It changes no product behavior source. PR #118 already published and merged the managed-worker interpreter repair and its regression/CI coverage; that source verification remains recorded in the linked final receipt and is not revoked by this documentation-only classification. Preserve the original PR #116/#117/#118 evidence and historical scope. This is not a production runtime load, a training run, or full product acceptance. This archive PR still requires its own exact-head checks and normal merge/readback.
+This source publication reconciles useful local candidates into the existing Shared,
+CTH/BMP, W6 and Experience owners, with CURRENT in the same commit. The exact
+[bounded adoption record](evidence/round-15/local-source-reconciliation-20261022.md)
+identifies the source inputs, semantic decisions, affected checks and runtime limits.
+The source-publication classification applies to the checked merged commit; before
+normal PR merge and remote readback it remains an integration candidate. Original
+PR #116/#117/#118 receipts retain their historical scope. No earlier runtime or
+whole-product receipt is inherited by this combination.
 
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 Database state: `NOT_VERIFIED`

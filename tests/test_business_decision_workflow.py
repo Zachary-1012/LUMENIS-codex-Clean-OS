@@ -99,8 +99,15 @@ def _owner_read_contract(inputs, *, version=1, parent=None, contract_version="1"
     """
     from types import SimpleNamespace
     scope = BusinessDecisionWorkflow._action_scope(inputs["scope"])
+    contract_paths = {
+        "1": ["manuscript", "shot_plan", "truth_state"],
+        "2": ["manuscript", "input_manifest", "truth_state"],
+        "3": ["manuscript", "upstream_binding", "truth_state"],
+        "4": ["manuscript", "truth_state"],
+        "5": ["manuscript", "audiovisual_plan", "truth_state"],
+    }
     contract = {"id": "lumenis.internal-pitch", "version": contract_version,
-                "required_payload_paths": ["manuscript", "shot_plan" if contract_version == "1" else "input_manifest", "truth_state"]}
+                "required_payload_paths": contract_paths[contract_version]}
     receipt = {"owner": "Shared ContentCreation/TaskEngine/SavedWork", "task_id": f"task-contract-{version}",
                "scope": scope, "action_kind": "INTERNAL_TEXT_CREATION" if version == 1 else "INTERNAL_TEXT_REVISION",
                "execution_state": "ARTIFACT_COMMITTED",
@@ -202,13 +209,40 @@ def test_action_consumer_v2_cancel_reopen_retains_committed_creation(work):
     assert _saved_work_counts(db) == before
 
 
+def test_action_consumer_accepts_authored_manuscript_v4_creation_revision_and_reopen(work):
+    service, inputs, db = work
+    selected = choose(service, inputs, service.prepare(**inputs))
+    first, actor, _, _ = _owner_read_contract(inputs, contract_version="4")
+    second, _, _, _ = _owner_read_contract(
+        inputs, version=2, parent=first["action_receipt"], contract_version="4")
+    observations = {item["task_id"]: item for item in (first, second)}
+
+    def reader(task_id, *, actor, scope):
+        assert actor.principal_ref == inputs["actor_ref"]
+        assert scope == BusinessDecisionWorkflow._action_scope(inputs["scope"])
+        return copy.deepcopy(observations[task_id])
+
+    bound = BusinessDecisionWorkflow(internal_action_reader=reader, action_actor=actor)
+    created = _record_action(bound, inputs, selected, first["task_id"], "authored-v4-create")
+    revised = _record_action(bound, inputs, created, second["task_id"], "authored-v4-revise")
+    assert revised["action"]["receipt"] == second["action_receipt"]
+    assert second["work"]["receipt"]["contract"] == {
+        "id": "lumenis.internal-pitch", "version": "4",
+        "required_payload_paths": ["manuscript", "truth_state"]}
+    before = _saved_work_counts(db)
+    fresh = BusinessDecisionWorkflow(internal_action_reader=reader, action_actor=actor)
+    assert fresh.reopen(revised["work_id"], actor_ref=inputs["actor_ref"],
+                        scope=inputs["scope"], authorize=inputs["authorize"]) == revised
+    assert _saved_work_counts(db) == before
+
+
 @pytest.mark.parametrize("fault", ["future_version", "hybrid_paths", "v1_paths", "document_mismatch", "extra_contract_key", "missing_contract"])
 def test_action_consumer_v2_rejects_unknown_or_relabelled_contract_without_write(work, fault):
     service, inputs, db = work
     selected = choose(service, inputs, service.prepare(**inputs))
     observed, actor, reader, _ = _owner_read_contract(inputs, contract_version="2")
     contract = observed["work"]["receipt"]["contract"]
-    if fault == "future_version": contract["version"] = "3"
+    if fault == "future_version": contract["version"] = "6"
     elif fault == "hybrid_paths": contract["required_payload_paths"].append("shot_plan")
     elif fault == "v1_paths": contract["required_payload_paths"] = ["manuscript", "shot_plan", "truth_state"]
     elif fault == "extra_contract_key": contract["profile"] = "manuscript-only/v2"
@@ -276,7 +310,9 @@ def test_action_contract_signed_history_unknown_evaluation_and_lost_ack(work, mo
     with sqlite3.connect(db) as con:
         old = con.execute("SELECT * FROM app_evidence_records WHERE feature_id=? ORDER BY id", (service.FEATURE,)).fetchall()
     observed, actor, reader, calls = _owner_read_contract(inputs)
-    service = BusinessDecisionWorkflow(internal_action_reader=reader, action_actor=actor)
+    service = BusinessDecisionWorkflow(
+        internal_action_reader=reader, action_actor=actor, source_actor=service._source_actor,
+    )
     executed = _record_action(service, inputs, selected)
     assert executed["action_state"] == "EXECUTED" and executed["business_outcome"] == "NOT_OBSERVED"
     assert executed["action"]["receipt"] == observed["action_receipt"]
@@ -362,7 +398,9 @@ def test_action_contract_revisions_cancel_and_final_owner_revocation(work, monke
         if revoked: raise PermissionError("owner revoked during render")
         assert actor.principal_ref == inputs["actor_ref"] and scope == BusinessDecisionWorkflow._action_scope(inputs["scope"])
         return copy.deepcopy(observed[task_id])
-    service = BusinessDecisionWorkflow(internal_action_reader=reader, action_actor=actor)
+    service = BusinessDecisionWorkflow(
+        internal_action_reader=reader, action_actor=actor, source_actor=service._source_actor,
+    )
     executed = _record_action(service, inputs, selected)
     assert _record_action(service, inputs, selected) == executed
     revised = _record_action(service, inputs, executed, second["task_id"], "action-contract-02")
@@ -462,7 +500,9 @@ def test_action_contract_source_claim_is_not_measured_effect_and_eval_tamper_rej
     service, inputs, db = work
     selected = choose(service, inputs, service.prepare(**inputs))
     observed, actor, reader, _ = _owner_read_contract(inputs)
-    service = BusinessDecisionWorkflow(internal_action_reader=reader, action_actor=actor)
+    service = BusinessDecisionWorkflow(
+        internal_action_reader=reader, action_actor=actor, source_actor=service._source_actor,
+    )
     executed = _record_action(service, inputs, selected)
     result = step(service, inputs, executed, "outcome", {"source_job_id": inputs["source_job_id"],
                   "source_id": inputs["options"][0]["source_ids"][0], "quote": "The source reports zero participants.",
@@ -541,7 +581,9 @@ def test_action_contract_continues_legacy_source_outcome_without_rewriting_histo
         old_rows = con.execute("SELECT * FROM app_evidence_records WHERE feature_id=? ORDER BY id", (service.FEATURE,)).fetchall()
         old_eval = con.execute("SELECT * FROM evaluation_records WHERE evaluation_id=?", (legacy["evaluation"]["evaluation_id"],)).fetchone()
     observed, actor, reader, _ = _owner_read_contract(inputs)
-    service = BusinessDecisionWorkflow(internal_action_reader=reader, action_actor=actor)
+    service = BusinessDecisionWorkflow(
+        internal_action_reader=reader, action_actor=actor, source_actor=service._source_actor,
+    )
     executed = _record_action(service, inputs, legacy)
     assert executed["action_state"] == "EXECUTED" and executed["business_outcome"] == "NOT_OBSERVED"
     reviewed = step(service, inputs, executed, "outcome_unknown", {"limits": "Draft creation performed; no later effect observation."}, "new-effect-review")

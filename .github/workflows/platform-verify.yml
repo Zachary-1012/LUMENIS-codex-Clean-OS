@@ -78,7 +78,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install --disable-pip-version-check --retries 4 --timeout 30 -r requirements.txt
-          python -m pip install --disable-pip-version-check --retries 3 --timeout 30 pytest
+          python -m pip install --disable-pip-version-check --retries 3 --timeout 30 pytest xlwt==1.3.0
 
       - name: Credential-path boundary (BLOCKING)
         shell: bash
@@ -166,6 +166,9 @@ jobs:
               'tests/test_root_owner_auth_composition.py',
               'tests/test_scoped_topic_labels.py',
               'tests/test_ai.py', 'tests/test_intelligence_boundary_audit.py',
+              'tests/test_boundary_review_source_identity.py',
+              'tests/test_mcp_contract_review.py', 'tests/test_mcp_package_byte_binding.py',
+              'tests/test_mcp_protocol_contract.py',
               'tests/test_csv_dialect_real_inputs.py',
               # CPython 3.11 worker-entry matrix: real local processes only,
               # no network/model/training. Full affected recovery runs are
@@ -175,6 +178,128 @@ jobs:
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_preserves_private_venv_for_start_replace_and_reap',
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_invalid_interpreter_before_spawn',
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_identity_or_entry_change_and_reaps']))
+          PY
+
+      - name: Verify adopted candidate contracts and media integrity (BLOCKING)
+        timeout-minutes: 10
+        shell: bash
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python - <<'PY'
+          import os, pathlib, socket, tempfile
+          root = pathlib.Path(tempfile.mkdtemp(prefix='oevira-candidate-regression-'))
+          for key in list(os.environ):
+              if key.startswith(('ZBC_', 'TAIKOO_', 'XHS_', 'LUMENIS_', 'AI_', 'OPENAI_', 'ANTHROPIC_', 'ZHIPU_')):
+                  os.environ.pop(key, None)
+          os.environ.update(ZBC_DB_PATH=str(root/'seed.sqlite3'), ZBC_DATA_DIR=str(root),
+              LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
+              XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
+          def denied(*args, **kwargs):
+              raise RuntimeError('ISOLATED_CANDIDATE_NETWORK_FORBIDDEN')
+          socket.socket.connect = denied
+          socket.socket.connect_ex = denied
+          socket.create_connection = denied
+          import sqlite3
+          from lumenis.shared.database import apply_business_schema
+          connection = sqlite3.connect(root/'seed.sqlite3')
+          try:
+              apply_business_schema(connection)
+              connection.commit()
+          finally:
+              connection.close()
+          import pytest
+          raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
+              '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-candidates.xml'),
+              '--basetemp=' + str(root / 'pytest'),
+              '-k', 'not test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation',
+              'tests/test_risk_dual_domain.py',
+              'tests/test_internal_pitch_workflow.py',
+              'tests/test_saved_work_pptx_exports.py',
+              'tests/test_domain_report_shared_adoption.py',
+              'tests/test_source_brief_job_routes.py',
+              'tests/test_saved_document_workflow.py',
+              'tests/test_business_result_continuity.py',
+              'tests/test_business_domain_analysis_candidate.py',
+              'tests/test_business_global_analysis_candidate.py',
+              'tests/test_business_planning_constraints_api.py',
+              'tests/test_event_graph_relations.py',
+              'tests/test_topic_campaign_identity_fence.py',
+              'tests/test_topic_campaign_metric_semantics.py',
+              'tests/test_brand_propagation_statistics.py',
+              'tests/test_brand_stats_recompute.py',
+              'tests/test_supervisor_lifecycle.py',
+              'tests/test_human_browser_endpoint_identity.py',
+              'tests/test_internal_beta_startup_gate.py',
+              'tests/test_owned_final_candidate_transfer.py',
+              'tests/test_owned_training_runtime_recovery.py',
+              'tests/test_owned_training_phase_http_v2.py',
+              'tests/test_owned_training_callback_v3.py',
+              'tests/test_owned_training_execution_approval_routes.py',
+              'tests/test_owned_training_parent_routes.py',
+              'tests/agent_runtime/test_planner.py',
+              'tests/agent_runtime/test_loop.py',
+              'tests/agent_runtime/test_loop_checkpoint_contract.py',
+              'tests/agent_runtime/test_durable_adapter.py',
+              'tests/test_skill_execution_result_state.py',
+              'tests/test_facebook_x_adapter.py',
+              'tests/test_multi_platform_native_payload.py',
+              'tests/test_platform_naming.py',
+              'tests/test_secondary_collection_surface.py',
+              'tests/test_wechat_public_sources.py',
+              'tests/test_content_project_storage.py',
+              'tests/test_video_editing_core.py',
+              'tests/test_timeline_rendering.py',
+              'tests/test_audio_timeline_rendering.py',
+              'tests/test_internal_pitch_shared_av.py::test_pitch_owner_response_preserves_unavailable_and_denied',
+              'tests/test_internal_pitch_shared_av.py::test_pitch_unauthenticated_read_cannot_initialize_account_database']))
+          PY
+
+      - name: Test training-owner HTTP authorization with owned ephemeral listener (BLOCKING)
+        timeout-minutes: 3
+        shell: bash
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python - <<'PY'
+          import os, pathlib, socket, tempfile
+          root = pathlib.Path(tempfile.mkdtemp(prefix='oevira-owned-http-regression-'))
+          for key in list(os.environ):
+              if key.startswith(('ZBC_', 'TAIKOO_', 'XHS_', 'LUMENIS_', 'AI_', 'OPENAI_', 'ANTHROPIC_', 'ZHIPU_')):
+                  os.environ.pop(key, None)
+          os.environ.update(ZBC_DB_PATH=str(root/'seed.sqlite3'), ZBC_DATA_DIR=str(root),
+              LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
+              XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
+          import sqlite3
+          from lumenis.shared.database import apply_business_schema
+          connection = sqlite3.connect(root/'seed.sqlite3')
+          try:
+              apply_business_schema(connection)
+              connection.commit()
+          finally:
+              connection.close()
+          original_bind, original_connect = socket.socket.bind, socket.socket.connect
+          owned_ports = set()
+          def denied(*args, **kwargs):
+              raise RuntimeError('ONLY_OWNED_EPHEMERAL_HTTP_FIXTURE_ALLOWED')
+          def bind(sock, address):
+              if not isinstance(address, tuple) or address[:2] != ('127.0.0.1', 0):
+                  return denied()
+              result = original_bind(sock, address)
+              owned_ports.add(sock.getsockname()[1])
+              return result
+          def connect(sock, address):
+              if not isinstance(address, tuple) or address[0] != '127.0.0.1' or address[1] not in owned_ports:
+                  return denied()
+              return original_connect(sock, address)
+          socket.socket.bind, socket.socket.connect = bind, connect
+          socket.socket.connect_ex = socket.socket.sendto = denied
+          import pytest
+          raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
+              '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-owned-http.xml'),
+              'tests/test_owned_training_runtime_recovery.py::test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation']))
           PY
 
       - name: Test owned loopback HTTP consistency (BLOCKING)
@@ -277,6 +402,8 @@ jobs:
             ${{ runner.temp }}/oevira-offline.xml
             ${{ runner.temp }}/oevira-http.xml
             ${{ runner.temp }}/oevira-browser.xml
+            ${{ runner.temp }}/oevira-candidates.xml
+            ${{ runner.temp }}/oevira-owned-http.xml
           if-no-files-found: error
           retention-days: 14
 

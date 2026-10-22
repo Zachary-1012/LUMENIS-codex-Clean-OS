@@ -66,7 +66,7 @@ class Cth07Series {
   const Cth07Series({required this.label, required this.values});
 
   final String label;
-  final List<num> values;
+  final List<num?> values;
 }
 
 class Cth07ScreenData {
@@ -87,7 +87,9 @@ class Cth07ScreenData {
   final Cth07TrendDefinition? definition;
 
   bool get trendAvailable =>
-      state == Cth07DataState.ready && labels.isNotEmpty && series.isNotEmpty;
+      (state == Cth07DataState.ready || state == Cth07DataState.partial) &&
+      labels.isNotEmpty &&
+      series.isNotEmpty;
 }
 
 enum Cth07BlockReason { contextUnavailable, pageNotBound, focusNotBound }
@@ -137,16 +139,44 @@ class CoreCth07Repository implements Cth07Repository {
   Cth07ScreenData _decode(Map<String, dynamic> response, Cth07Context context) {
     final sections = _maps(response['sections']);
     final chart = _firstSection(sections, 'chart');
-    final definition = _trendDefinition(response, context);
+    final definition = _trendDefinition(response);
     final labels = _strings(chart?['labels']);
-    final series = _maps(
-      chart?['series'],
-    ).map(_series).whereType<Cth07Series>().toList(growable: false);
+    final rawSeries = _maps(chart?['series']);
+    final series = rawSeries
+        .map(_series)
+        .whereType<Cth07Series>()
+        .toList(growable: false);
+    final truth = _map(response['truth']);
+    final metadata = _map(response['trend_metadata']) ?? _map(truth?['trend']);
+    final metrics = _map(response['temporal_metrics']);
+    final binding = _map(
+      context.isGlobal ? response['global_binding'] : response['focus_binding'],
+    );
+    final metricsBinding = _map(metrics?['binding']);
+    final temporalDays = _maps(metrics?['days']);
+    final snapshotMatches = _snapshotMatches(
+      chart: chart,
+      metadata: metadata,
+      metrics: metrics,
+      binding: binding,
+      metricsBinding: metricsBinding,
+      labels: labels,
+      series: series,
+      rawSeries: rawSeries,
+      temporalDays: temporalDays,
+      rawSeriesCount: chart?['series'] is List
+          ? (chart!['series'] as List).length
+          : -1,
+    );
+    final responseState = Cth07DataStateParser.parse(chart?['state']);
+    if (responseState == Cth07DataState.error) {
+      throw const FormatException('CTH-07 metric read returned an error.');
+    }
     final valid =
         definition != null &&
         definition.isComplete &&
         _scopeMatches(context, definition.subject) &&
-        _projectionMatches(chart?['projection'], context) &&
+        snapshotMatches &&
         labels.isNotEmpty &&
         series.isNotEmpty &&
         series.every((item) => item.values.length == labels.length);
@@ -157,23 +187,18 @@ class CoreCth07Repository implements Cth07Repository {
       labels: valid ? labels : const [],
       series: valid ? series : const [],
       state: valid
-          ? Cth07DataState.ready
-          : Cth07DataStateParser.parse(chart?['state']) == Cth07DataState.empty
+          ? responseState
+          : responseState == Cth07DataState.empty
           ? Cth07DataState.empty
           : Cth07DataState.notCollected,
       definition: definition,
     );
   }
 
-  Cth07TrendDefinition? _trendDefinition(
-    Map<String, dynamic> response,
-    Cth07Context context,
-  ) {
+  Cth07TrendDefinition? _trendDefinition(Map<String, dynamic> response) {
     final truth = _map(response['truth']);
     final trend = _map(response['trend_metadata']) ?? _map(truth?['trend']);
-    if (trend == null || !_projectionMatches(trend['projection'], context)) {
-      return null;
-    }
+    if (trend == null) return null;
     return Cth07TrendDefinition(
       numerator: _text(trend['numerator']),
       denominator: _text(trend['denominator']),
@@ -188,12 +213,72 @@ class CoreCth07Repository implements Cth07Repository {
     final label = _text(record['label'] ?? record['name']);
     final values = record['data'] ?? record['values'];
     if (label.isEmpty || values is! List) return null;
-    final parsed = values
-        .whereType<num>()
-        .where((value) => value.isFinite)
-        .toList(growable: false);
-    if (parsed.length != values.length) return null;
+    final parsed = <num?>[];
+    for (final value in values) {
+      if (value == null) {
+        parsed.add(null);
+      } else if (value is num && value.isFinite) {
+        parsed.add(value);
+      } else {
+        return null;
+      }
+    }
     return Cth07Series(label: label, values: parsed);
+  }
+
+  bool _snapshotMatches({
+    required Map<String, dynamic>? chart,
+    required Map<String, dynamic>? metadata,
+    required Map<String, dynamic>? metrics,
+    required Map<String, dynamic>? binding,
+    required Map<String, dynamic>? metricsBinding,
+    required List<String> labels,
+    required List<Cth07Series> series,
+    required List<Map<String, dynamic>> rawSeries,
+    required List<Map<String, dynamic>> temporalDays,
+    required int rawSeriesCount,
+  }) {
+    if (chart == null ||
+        metadata == null ||
+        metrics == null ||
+        binding == null ||
+        metricsBinding == null) {
+      return false;
+    }
+    if (!_sameBinding(binding, metricsBinding) ||
+        metrics['state'] != chart['state']) {
+      return false;
+    }
+    final recipe = _text(metadata['recipe']);
+    final snapshotHash = _text(metadata['snapshot_sha256']);
+    if (recipe.isEmpty ||
+        recipe != metrics['recipe'] ||
+        !RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(snapshotHash) ||
+        snapshotHash != metrics['snapshot_sha256']) {
+      return false;
+    }
+    if (rawSeriesCount != series.length ||
+        labels.length != temporalDays.length ||
+        series.isEmpty ||
+        series.any((item) => item.values.length != labels.length)) {
+      return false;
+    }
+    for (var index = 0; index < labels.length; index++) {
+      if (temporalDays[index]['date'] != labels[index]) return false;
+    }
+    final seenMetrics = <String>{};
+    for (var seriesIndex = 0; seriesIndex < series.length; seriesIndex++) {
+      final item = series[seriesIndex];
+      final source = rawSeries[seriesIndex];
+      if (_text(source['name'] ?? source['label']) != item.label) return false;
+      final metric = _text(source['metric']);
+      if (metric.isEmpty || !seenMetrics.add(metric)) return false;
+      for (var index = 0; index < labels.length; index++) {
+        final point = _map(temporalDays[index][metric]);
+        if (point == null || point['value'] != item.values[index]) return false;
+      }
+    }
+    return true;
   }
 
   static bool _scopeMatches(Cth07Context context, String subject) {
@@ -214,70 +299,74 @@ class CoreCth07Repository implements Cth07Repository {
     final binding = _map(
       context.isGlobal ? response['global_binding'] : response['focus_binding'],
     );
+    return _bindingMatches(binding, context);
+  }
+
+  static bool _bindingMatches(
+    Map<String, dynamic>? binding,
+    Cth07Context context,
+  ) {
     if (binding == null ||
+        binding['contract'] != 'lumenis.scope-read-binding.v1' ||
         binding['applied'] != true ||
         binding['domain_id'] != 'CTH' ||
         binding['product_id'] != 'CTH' ||
         binding['read_allowed'] != true ||
+        binding['scope_verified'] != true ||
         binding['canonical_scope'] !=
             (context.isGlobal ? 'GLOBAL_ALL' : 'FOCUS')) {
       return false;
     }
+    final policy = binding['policy'];
+    final actorScope = binding['actor_scope'];
+    if (!((policy == 'actor-exact-scope-v1' && actorScope == 'authenticated') ||
+        (policy == 'local-workspace-read-v1' &&
+            actorScope == 'anonymous_read'))) {
+      return false;
+    }
     if (context.isGlobal) {
-      return binding['global_all_granted'] == true &&
-          _projectionMatches(binding['projection'], context);
+      final expectedGrant = policy == 'actor-exact-scope-v1';
+      return binding['subject_id'] == null &&
+          binding['global_all_granted'] == expectedGrant;
     }
     return binding['subject_id'] == context.subjectId &&
         binding['global_all_granted'] != true &&
-        _projectionMatches(binding['projection'], context);
+        binding['global_all_granted'] == false;
   }
 
-  static bool _projectionMatches(Object? value, Cth07Context context) {
-    final projection = _map(value);
-    if (projection == null ||
-        projection['contract'] != 'lumenis.shared.experience-row-projection' ||
-        projection['version'] != 2 ||
-        projection['read_allowed'] != true) {
-      return false;
-    }
-    final scope = _map(projection['scope']);
-    final expectedMode = context.isGlobal ? 'GLOBAL_ALL' : 'FOCUS';
-    if (scope == null ||
-        scope['mode'] != expectedMode ||
-        scope['domain_id'] != 'CTH' ||
-        scope['product_id'] != 'CTH') {
-      return false;
-    }
-    if (context.isGlobal) {
-      if (scope['global_all_granted'] != true ||
-          _text(scope['subject_id']).isNotEmpty) {
+  static bool _sameBinding(
+    Map<String, dynamic> left,
+    Map<String, dynamic> right,
+  ) {
+    if (left.length != right.length) return false;
+    for (final entry in left.entries) {
+      if (!right.containsKey(entry.key) ||
+          !_deepEquals(entry.value, right[entry.key])) {
         return false;
       }
-    } else if (scope['subject_id'] != context.subjectId ||
-        scope['global_all_granted'] == true) {
-      return false;
     }
+    return true;
+  }
 
-    final evidence = _map(projection['evidence']);
-    final reference = _text(evidence?['canonical_reference']);
-    final integrity = _map(projection['integrity']);
-    final assurance = _text(integrity?['assurance']);
-    final algorithm = _text(integrity?['algorithm']);
-    final digest = _text(integrity?['digest']);
-    final honestAssurance =
-        assurance == 'writer-authenticated' ||
-        assurance == 'content-integrity-only';
-    final consistentAssurance =
-        (assurance == 'writer-authenticated' && algorithm == 'hmac-sha256') ||
-        (assurance == 'content-integrity-only' && algorithm == 'sha256');
-    return reference.length <= 200 &&
-        RegExp(r'^evidence:canonical:[A-Za-z0-9._:-]+$').hasMatch(reference) &&
-        integrity?['integrity_version'] == 2 &&
-        integrity?['verified'] == true &&
-        integrity?['lineage_verified'] == true &&
-        honestAssurance &&
-        consistentAssurance &&
-        RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(digest);
+  static bool _deepEquals(Object? left, Object? right) {
+    if (left is Map && right is Map) {
+      if (left.length != right.length) return false;
+      for (final entry in left.entries) {
+        if (!right.containsKey(entry.key) ||
+            !_deepEquals(entry.value, right[entry.key])) {
+          return false;
+        }
+      }
+      return true;
+    }
+    if (left is List && right is List) {
+      if (left.length != right.length) return false;
+      for (var index = 0; index < left.length; index++) {
+        if (!_deepEquals(left[index], right[index])) return false;
+      }
+      return true;
+    }
+    return left == right;
   }
 
   static Cth07Context? _parseContext(Map<String, dynamic> response) {
@@ -331,13 +420,13 @@ class CoreCth07Repository implements Cth07Repository {
     return result.isEmpty ? null : result;
   }
 
-  static List<String> _strings(Object? value) => value is List
-      ? value
-            .whereType<String>()
-            .map((item) => item.trim())
-            .where((item) => item.isNotEmpty)
-            .toList(growable: false)
-      : const [];
+  static List<String> _strings(Object? value) {
+    if (value is! List ||
+        value.any((item) => item is! String || item.trim().isEmpty)) {
+      return const [];
+    }
+    return value.map((item) => (item as String).trim()).toList(growable: false);
+  }
 
   static Map<String, dynamic>? _firstSection(
     List<Map<String, dynamic>> sections,

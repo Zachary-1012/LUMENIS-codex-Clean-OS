@@ -29,6 +29,9 @@ MANUSCRIPT_CONTRACT = {"id": "lumenis.internal-pitch", "version": "2",
 SOURCE_PROFILE = "source-bound/v3"
 SOURCE_CONTRACT = {"id": "lumenis.internal-pitch", "version": "3",
                    "required_payload_paths": ["manuscript", "upstream_binding", "truth_state"]}
+AUTHORING_PROFILE = "authored-manuscript/v4"
+AUTHORING_CONTRACT = {"id": "lumenis.internal-pitch", "version": "4",
+                      "required_payload_paths": ["manuscript", "truth_state"]}
 AV_PLAN_PROFILE = "audiovisual-planning/v5"
 AV_PLAN_CONTRACT = {"id": "lumenis.internal-pitch", "version": "5",
                     "required_payload_paths": ["manuscript", "audiovisual_plan", "truth_state"]}
@@ -137,6 +140,10 @@ def _contract(value):
             if unbound:
                 raise ValueError("INTERNAL_PITCH_SOURCE_BINDING_REQUIRED")
         return AV_PLAN_CONTRACT
+    if value["profile"] == AUTHORING_PROFILE:
+        if any(key in value for key in ("shot_plan", "input_manifest", "upstream_binding", "upstream_ref")):
+            raise ValueError("INTERNAL_PITCH_PROFILE_INVALID")
+        return AUTHORING_CONTRACT
     if value["profile"] == SOURCE_PROFILE:
         if "shot_plan" in value or "input_manifest" in value or not isinstance(value.get("upstream_binding"), dict):
             raise ValueError("INTERNAL_PITCH_PROFILE_INVALID")
@@ -178,7 +185,7 @@ def _check_upstream(value, *, actor, scope, connection=None):
 def prepare_internal_pitch(*, manuscript, request_id, actor, scope, shot_plan=None,
                            citations=None, work_id=None, previous_artifact_id=None,
                            expected_draft_digest=None, profile=None, input_manifest=None, upstream_ref=None):
-    """Seal an exact legacy input or the explicit audiovisual planning profile."""
+    """Seal an existing contract or an independently authored manuscript."""
     context = _context(actor, scope, "write")
     value = {"manuscript": manuscript, "citations": citations if citations is not None else [], "work_id": work_id,
              "previous_artifact_id": previous_artifact_id, "expected_draft_digest": expected_draft_digest}
@@ -196,6 +203,9 @@ def prepare_internal_pitch(*, manuscript, request_id, actor, scope, shot_plan=No
         value["shot_plan"] = shot_plan
     elif profile == MANUSCRIPT_PROFILE and shot_plan is None and upstream_ref is None:
         value.update(profile=profile, input_manifest=input_manifest)
+    elif (profile == AUTHORING_PROFILE and shot_plan is None
+          and input_manifest is None and upstream_ref is None):
+        value["profile"] = profile
     elif profile == AV_PLAN_PROFILE and input_manifest is None and upstream_ref is None:
         value.update(profile=profile, shot_plan=AudiovisualPlan.from_dict(shot_plan).to_dict())
     else:
@@ -220,9 +230,7 @@ def prepare_internal_pitch(*, manuscript, request_id, actor, scope, shot_plan=No
         _check_upstream(value, actor=actor, scope=scope)
     elif _contract(value) == MANUSCRIPT_CONTRACT:
         _input_manifest(value["input_manifest"])
-    elif _contract(value) == AV_PLAN_CONTRACT:
-        # _contract validates the exact AV input and refuses unbound sources.
-        # It remains authoring intent, never a media/source-use grant.
+    elif _contract(value) in (AUTHORING_CONTRACT, AV_PLAN_CONTRACT):
         pass
     else:
         shot = value["shot_plan"]
@@ -311,6 +319,13 @@ def run_internal_pitch(task_id, *, actor, scope):
             payload = {"manuscript": value["manuscript"], "input_manifest": value["input_manifest"],
                        "truth_state": {"source_admission": "PENDING", "input_materials": "OPERATOR_DECLARED_NOT_INGESTED",
                                        "citation_admission": "SIGNED_CITATIONS_BOUND" if value["citations"] else "PENDING",
+                                       "owned_model_execution": "NOT_RUN", "external_effect": "NOT_PERFORMED",
+                                       "business_outcome": "NOT_OBSERVED"}}
+        if contract == AUTHORING_CONTRACT:
+            payload = {"manuscript": value["manuscript"],
+                       "truth_state": {"source_admission": "USER_AUTHORED_CONTENT" if value["manuscript"]["authorship"] == "user_supplied" else "ASSISTED_DERIVED_CONTENT",
+                                       "citation_admission": "SIGNED_CITATIONS_BOUND" if value["citations"] else "NO_SIGNED_QUOTE",
+                                       "external_fact_verification": "NOT_INFERRED_FROM_AUTHORSHIP",
                                        "owned_model_execution": "NOT_RUN", "external_effect": "NOT_PERFORMED",
                                        "business_outcome": "NOT_OBSERVED"}}
         if contract == AV_PLAN_CONTRACT:

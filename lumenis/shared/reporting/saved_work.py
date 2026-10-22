@@ -1461,7 +1461,7 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
 
 
 def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "json") -> dict:
-    if not isinstance(format, str) or format not in {"json", "md", "txt", "docx", "pdf", "xlsx"}:
+    if not isinstance(format, str) or format not in {"json", "md", "txt", "docx", "pdf", "xlsx", "pptx"}:
         raise SavedWorkError("WORK_EXPORT_FORMAT_INVALID")
     item = read_committed_work(artifact_id, actor=actor, scope=scope)
     resource = "saved-work-export:v1:" + _digest({"id": artifact_id,
@@ -1484,7 +1484,8 @@ def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "
     _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
     types = {"json": "application/json", "md": "text/markdown; charset=utf-8", "txt": "text/plain; charset=utf-8",
              "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-             "pdf": "application/pdf", "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+             "pdf": "application/pdf", "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+             "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation"}
     return {"content": raw, "filename": artifact_id + "." + format,
             "media_type": types[format],
             "sha256": hashlib.sha256(raw).hexdigest(), "return_ref": item["return_ref"]}

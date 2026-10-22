@@ -4,7 +4,10 @@ from copy import deepcopy
 
 import pytest
 
-from lumenis.system.collector.adapters.multi_platform_import import _to_note_payload
+from lumenis.system.collector.adapters.multi_platform_import import (
+    _format_epoch_publication,
+    _to_note_payload,
+)
 from lumenis.system.collector.adapters.platform_naming import to_canonical_record
 
 
@@ -69,3 +72,8 @@ def test_unmapped_platform_keeps_content_unknown():
     assert payload["source_platform"] == "unknown"
     assert payload["content"] == ""
     assert raw == original
+
+
+def test_douyin_zero_publication_timestamp_remains_unknown():
+    assert _format_epoch_publication(0, "douyin") == ""
+    assert _format_epoch_publication(1_700_000_000, "douyin").startswith("2023-")

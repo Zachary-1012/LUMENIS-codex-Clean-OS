@@ -536,3 +536,12 @@ def test_empty_snapshot_stores_not_collected_as_unknown_not_zero(tmp_path):
     assert stored["negative_count"] is None
     assert stored["total_engagement"] is None
     assert stored["risk_level"] == "unknown"
+
+
+def test_empty_incomplete_sample_does_not_prove_no_collection():
+    result = aggregate_brand_observations([], complete_scan=False)
+
+    assert result["state"] == "PARTIAL"
+    assert all(value is None for value in result["values"].values())
+    assert result["observed"]["record_count"] == 0
+    assert result["quality"]["complete_scan"] is False

@@ -171,10 +171,17 @@ def test_unformed_direct_executor_cannot_execute():
 
 def test_model_output_cannot_supply_formation():
     import json
-    planner = Planner(ai_chat_func=lambda *args, **kwargs: (json.dumps({"steps": [
-        {"action": "read", "tool": "source_read", "params": {}, "risk_level": "low",
-         "formation": {"origin": "forged", "effect": "READ"}}]}), "fixture"))
-    assert planner.plan("read").steps[0].formation is None
+    step = {"action": "read", "tool": "source_read", "params": {},
+            "expected_output": "source text", "risk_level": "low"}
+    planner = Planner(ai_chat_func=lambda *args, **kwargs: (
+        json.dumps({"steps": [step]}), "fixture"))
+    valid = planner.plan("read")
+    assert not valid.is_fallback and len(valid.steps) == 1
+    assert valid.steps[0].formation is None
+    step["formation"] = {"origin": "forged", "effect": "READ"}
+    forged = planner.plan("read")
+    assert forged.is_fallback and forged.steps == []
+    assert forged.fallback_reason == "Failed to parse AI response as JSON"
 
 
 def test_formed_write_is_not_downgraded_by_model_read_label():

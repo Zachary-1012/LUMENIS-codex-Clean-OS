@@ -9,6 +9,7 @@ import 'sh01_repository.dart';
 import 'sh01_snapshot.dart';
 import 'sh01_view_model.dart';
 import 'media_project_workbench.dart';
+import 'manuscript_editor.dart';
 
 String _catalogFailureCopy(String? error) => switch (error) {
   '登录已失效，请重新登录后读取。' => 'sh01.failure.auth',
@@ -136,6 +137,9 @@ class Sh01Screen extends StatefulWidget {
     this.repository,
     this.invokingDomain,
     this.contextAvailable = true,
+    this.initialWorkspaceEntry,
+    this.returnScreenId,
+    this.onNavigate,
     super.key,
   });
 
@@ -143,6 +147,9 @@ class Sh01Screen extends StatefulWidget {
   final Sh01Repository? repository;
   final String? invokingDomain;
   final bool contextAvailable;
+  final String? initialWorkspaceEntry;
+  final String? returnScreenId;
+  final ValueChanged<String>? onNavigate;
 
   @override
   State<Sh01Screen> createState() => _Sh01ScreenState();
@@ -150,6 +157,7 @@ class Sh01Screen extends StatefulWidget {
 
 class _Sh01ScreenState extends State<Sh01Screen> {
   bool _editing = false;
+  bool _writing = false;
   bool _independent = true;
   late final Sh01ViewModel _viewModel = Sh01ViewModel(
     repository: widget.repository ?? CoreSh01Repository(client: widget.client),
@@ -158,7 +166,23 @@ class _Sh01ScreenState extends State<Sh01Screen> {
   @override
   void initState() {
     super.initState();
+    _editing =
+        widget.initialWorkspaceEntry == 'media' &&
+        widget.returnScreenId == 'BMP-08';
     _viewModel.refresh();
+  }
+
+  void _leaveMediaWorkspace() {
+    final returnTo = widget.returnScreenId;
+    final shouldReturnToPodcast =
+        widget.initialWorkspaceEntry == 'media' &&
+        returnTo == 'BMP-08' &&
+        widget.onNavigate != null;
+    setState(() => _editing = false);
+    if (!shouldReturnToPodcast || returnTo == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.onNavigate!(returnTo);
+    });
   }
 
   @override
@@ -167,14 +191,35 @@ class _Sh01ScreenState extends State<Sh01Screen> {
     super.dispose();
   }
 
+  String _copy(String zh, String en, String ko) =>
+      switch (Localizations.localeOf(context).languageCode) {
+        'zh' => zh,
+        'ko' => ko,
+        _ => en,
+      };
+
+  String get _mediaOutputKind =>
+      widget.initialWorkspaceEntry == 'media' &&
+          widget.returnScreenId == 'BMP-08'
+      ? 'audio'
+      : 'video';
+
   @override
-  Widget build(BuildContext context) => _editing
+  Widget build(BuildContext context) => _writing
+      ? ManuscriptEditor(
+          client: widget.client,
+          invokingDomain: widget.invokingDomain,
+          contextAvailable: widget.contextAvailable,
+          onBack: () => setState(() => _writing = false),
+        )
+      : _editing
       ? MediaProjectWorkbench(
           client: widget.client,
           invokingDomain: widget.invokingDomain,
           sharedWorkspace: _independent && widget.invokingDomain == null,
           contextAvailable: widget.contextAvailable,
-          onBack: () => setState(() => _editing = false),
+          initialOutputKind: _mediaOutputKind,
+          onBack: _leaveMediaWorkspace,
         )
       : ColoredBox(
           color: LumenisTheme.of(context).canvas,
@@ -190,13 +235,27 @@ class _Sh01ScreenState extends State<Sh01Screen> {
                       runSpacing: 8,
                       children: [
                         OutlinedButton.icon(
+                          key: const Key('sh01-create-manuscript'),
+                          onPressed: () => setState(() {
+                            _writing = true;
+                          }),
+                          icon: const LumenisIcon(Icons.edit_document),
+                          label: Text(
+                            _copy('新建文稿', 'Write a document', '새 문서 작성'),
+                          ),
+                        ),
+                        OutlinedButton.icon(
                           key: const Key('sh01-open-video-editor'),
                           onPressed: () => setState(() {
                             _independent = true;
                             _editing = true;
                           }),
-                          icon: const LumenisIcon(Icons.video_collection_outlined),
-                          label: Text(context.lumenisL10n.text('sh01.media.open')),
+                          icon: const LumenisIcon(
+                            Icons.video_collection_outlined,
+                          ),
+                          label: Text(
+                            context.lumenisL10n.text('sh01.media.open'),
+                          ),
                         ),
                         OutlinedButton.icon(
                           key: const Key('sh01-open-linked-media'),
@@ -205,7 +264,11 @@ class _Sh01ScreenState extends State<Sh01Screen> {
                             _editing = true;
                           }),
                           icon: const LumenisIcon(Icons.folder_open_outlined),
-                          label: Text(context.lumenisL10n.text('sh01.media.linked_workspace')),
+                          label: Text(
+                            context.lumenisL10n.text(
+                              'sh01.media.linked_workspace',
+                            ),
+                          ),
                         ),
                       ],
                     ),

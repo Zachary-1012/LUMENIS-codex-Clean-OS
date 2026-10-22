@@ -66,8 +66,8 @@ def _format_epoch_publication(value: int | float, platform: str) -> str:
         not math.isfinite(value) or platform not in _FLOAT_EPOCH_PLATFORMS
     ):
         return ""
-    # Bilibili's native source uses zero as its missing-time sentinel.
-    if platform == "bilibili" and value == 0:
+    # These platform payloads use zero as the absent publication-time sentinel.
+    if platform in {"bilibili", "douyin"} and value == 0:
         return ""
     try:
         timestamp = value / 1000 if unit == "milliseconds" else value

@@ -49,11 +49,24 @@ def _run(plan, adapter, monkeypatch, context):
     return loop.run(plan.goal, context=context, agent_id="agent-checkpoint-test")
 
 
+def _owned_plan_receipt():
+    return {
+        "provider": "owned", "status": "COMPLETED", "operation": "agent_plan",
+        "request_id": "request-fixture", "request_digest": "1" * 64,
+        "run_id": "run-fixture", "model_id": "owned-model",
+        "model_revision": "revision-fixture", "recipe": "recipe-fixture",
+        "source_use_policy_sha256": "2" * 64, "source_binding_sha256": "3" * 64,
+        "input_revision_sha256": "4" * 64, "source_evidence_refs": ["evidence:fixture"],
+        "prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150,
+    }
+
+
 def test_completed_plan_and_cumulative_budget_survive_engine_reopen(durable, monkeypatch):
     _engine, gate, adapter = durable
     step = PlanStep(step_id="step-stable-1", index=0, action="read report", tool="reader")
     plan = Plan(plan_id="plan-stable", goal="read report", steps=[step],
                 token_usage={"prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150},
+                inference_receipt=_owned_plan_receipt(),
                 raw_response="raw planner response is omitted")
 
     result = _run(plan, adapter, monkeypatch, {
@@ -73,6 +86,7 @@ def test_completed_plan_and_cumulative_budget_survive_engine_reopen(durable, mon
     assert snapshot["plan_id"] == "plan-stable"
     assert "raw_response" not in snapshot
     assert snapshot["token_usage"] == {"prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150}
+    assert snapshot["inference_receipt"]["run_id"] == "run-fixture"
     assert snapshot["steps"][0]["step_id"] == "step-stable-1"
     assert snapshot["steps"][0]["status"] == "completed"
     assert snapshot["steps"][0]["result"]["output"] == "completed output"
@@ -89,6 +103,25 @@ def test_completed_plan_and_cumulative_budget_survive_engine_reopen(durable, mon
         "max_retries": 3, "max_replans": 2, "step_timeout_seconds": 60.0,
     }
     assert checkpoint["metadata"]["resumable"] is True
+
+
+def test_unreceipted_plan_token_usage_is_discarded_and_not_resumable(durable, monkeypatch):
+    engine, gate, adapter = durable
+    plan = Plan(
+        plan_id="plan-unreceipted-tokens", goal="read report",
+        steps=[PlanStep(step_id="step-unreceipted", index=0, action="read report", tool="reader")],
+        token_usage={"prompt_tokens": 120, "completion_tokens": 30, "total_tokens": 150},
+        inference_receipt={"provider": "owned", "status": "COMPLETED", "secret": "must not persist"},
+    )
+
+    result = _run(plan, adapter, monkeypatch, {"actor_id": 1, "domain_id": "cth"})
+    checkpoint = DurableExecutionAdapter(task_engine=TaskEngine(), permission_gate=gate).recover(
+        result.task_id)["last_checkpoint"]
+
+    assert checkpoint["metadata"]["resumable"] is False
+    assert checkpoint["plan_snapshot"]["token_usage"] == {}
+    assert "inference_receipt" not in checkpoint["plan_snapshot"]
+    assert "secret" not in json.dumps(engine.get_steps(result.task_id))
 
 
 @pytest.mark.parametrize("memory_first", [True, False])

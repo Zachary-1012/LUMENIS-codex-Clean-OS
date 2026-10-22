@@ -1,7 +1,9 @@
 """Self-authored subprocess protocol fixtures: no external MCP execution."""
 
 import json
+import subprocess
 import sys
+import threading
 
 import pytest
 
@@ -29,7 +31,7 @@ def server(tmp_path, **options):
     config = {"tool": TOOL, **options}
     path = tmp_path / "server.py"
     path.write_text(
-        """import json,sys
+        """import json,sys,time
 config = json.loads(CONFIG)
 for line in sys.stdin:
  m=json.loads(line)
@@ -50,13 +52,14 @@ for line in sys.stdin:
  if config.get('oversize'): print('x' * 1100000,flush=True); continue
  if config.get('error_and_result'): reply['error']={'code':-32603,'message':'bad'}
  print(json.dumps(reply),flush=True)
+ if config.get('hang_after_list') and method=='tools/list': time.sleep(30)
 """.replace("CONFIG", repr(json.dumps(config))),
         encoding="utf-8",
     )
     return [sys.executable], [str(path)]
 
 
-def invoke(tmp_path, *, arguments=None, reviewed=True, contracts=None, **options):
+def invoke(tmp_path, *, arguments=None, reviewed=True, contracts=None, timeout=3, **options):
     command, args = server(tmp_path, **options)
     return call_mcp_stdio(
         command,
@@ -73,7 +76,7 @@ def invoke(tmp_path, *, arguments=None, reviewed=True, contracts=None, **options
             if contracts is not None
             else ({"read_signal": tool_contract_hash(TOOL)} if reviewed else {})
         ),
-        timeout=3,
+        timeout=timeout,
     )
 
 
@@ -168,20 +171,76 @@ def test_reader_rejects_duplicate_keys_and_nonfinite_json(tmp_path):
         assert result["state"] == "PROTOCOL_ERROR"
 
 
-def test_timeout_reaps_unresponsive_process(tmp_path):
-    script = tmp_path / "hang.py"
-    pidfile = tmp_path / "pid"
-    script.write_text(
-        "import os,time\nopen("
-        + repr(str(pidfile))
-        + ',"w").write(str(os.getpid()))\ntime.sleep(30)\n'
+def test_expired_deadline_never_starts_pipe_write(monkeypatch):
+    import mcp_discovery
+
+    class Stdin:
+        def fileno(self):
+            return 1
+
+    class Process:
+        stdin = Stdin()
+
+    monkeypatch.setattr(
+        mcp_discovery.os,
+        "write",
+        lambda *_args: pytest.fail("expired request must not write to the pipe"),
     )
+    monkeypatch.setattr(
+        mcp_discovery.threading.Thread,
+        "start",
+        lambda _thread: pytest.fail("expired request must not start a writer"),
+    )
+    with pytest.raises(TimeoutError, match="MCP request write timed out"):
+        mcp_discovery._send(Process(), {"jsonrpc": "2.0", "method": "test"}, 0)
+
+
+def test_timeout_reaps_unresponsive_process(tmp_path, monkeypatch):
+    script = tmp_path / "hang.py"
+    script.write_text("import time\ntime.sleep(30)\n", encoding="utf-8")
+    processes = []
+    original_popen = subprocess.Popen
+
+    def track_process(*args, **kwargs):
+        process = original_popen(*args, **kwargs)
+        processes.append(process)
+        return process
+
+    import mcp_discovery
+
+    monkeypatch.setattr(mcp_discovery.subprocess, "Popen", track_process)
     result = discover_mcp_stdio([sys.executable], [str(script)], allow_process=True, timeout=0.2)
     assert result["state"] == "TIMEOUT"
-    import os
+    assert len(processes) == 1
+    assert processes[0].poll() is not None
 
-    with pytest.raises(ProcessLookupError):
-        os.kill(int(pidfile.read_text()), 0)
+
+def test_blocked_pipe_write_times_out_and_reaps_its_process(tmp_path, monkeypatch):
+    processes = []
+    original_popen = subprocess.Popen
+
+    def track_process(*args, **kwargs):
+        process = original_popen(*args, **kwargs)
+        processes.append(process)
+        return process
+
+    import mcp_discovery
+
+    monkeypatch.setattr(mcp_discovery.subprocess, "Popen", track_process)
+    result = invoke(
+        tmp_path,
+        arguments={"query": "x" * 950_000},
+        hang_after_list=True,
+        timeout=2.0,
+    )
+    assert result["state"] == "TIMEOUT", result
+    assert result["errors"] == ["MCP request write timed out"]
+    assert len(processes) == 1
+    assert processes[0].poll() is not None
+    assert not any(
+        thread.name == "lumenis-mcp-stdin-writer" and thread.is_alive()
+        for thread in threading.enumerate()
+    )
 
 
 def test_registered_runtime_requires_stored_contract_before_process(tmp_path, monkeypatch):

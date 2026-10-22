@@ -500,6 +500,16 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
                                          ("share_count", "shares")):
             value = item.get(item_field)
             fill_native(native_field, value)
+        if "play_count" not in record:
+            views = item.get("views")
+            if views is not None and views != "":
+                record["play_count"] = views
+    elif platform == "facebook":
+        for native_field, item_field in (("reactions", "likes"),
+                                         ("comments", "comments"),
+                                         ("shares", "shares")):
+            if native_field not in record and item_field in item:
+                record[native_field] = item[item_field]
     elif platform == "weibo":
         # Top-level idstr identifies the post. Author identity comes from
         # user.id in the adapter, never from the post's id/idstr.
@@ -3434,6 +3444,10 @@ def _verified_live_native_observation(platform, observed):
     native_id = native_id or normalize_content_id(platform, observed.get("content_id"))
     if not native_id:
         raise ValueError("COLLECTED_SOURCE_NATIVE_ID_MISSING")
+    if platform == "facebook":
+        detail_native_id = normalize_content_id("facebook", detail.get("native_post_id"))
+        if detail_native_id != native_id:
+            raise ValueError("LIVE_NATIVE_DETAIL_ID_MISMATCH")
     return str(native_id), body
 
 
@@ -3887,10 +3901,12 @@ def _persist_pending_live_observations(connection, *, platform, records,
                 "canonical_ref": None, "scope_status": "UNASSIGNED",
                 "cleanup_status": "COMPLETE" if cleaned else "FAILED"})
     saved = sum(row["status"] == "SAVED" for row in originals)
+    eligible_pending = sum(row.get("status") != "EXCLUDED" for row in originals)
     summary = {"observed_records": len(records), "formal_saved_records_skipped": len(saved_ids),
                "unassigned_originals_saved": saved,
                "unassigned_originals_unavailable": sum(row["status"] == "UNAVAILABLE" for row in originals),
                "excluded_observations": sum(row["status"] == "EXCLUDED" for row in originals),
+               "eligible_pending_records": eligible_pending,
                "observations_beyond_authorized_batch": max(0, len(records) - max_results),
                "canonical_rows_created": 0, "entity_assignment": "PENDING",
                "keyword_processing_mode": "POST_COMMIT_SOURCE_BACKLOG",
@@ -3916,9 +3932,10 @@ def _persist_pending_live_observations(connection, *, platform, records,
                 outputs={"summary": summary, "original_refs": originals},
                 collection_metadata={"kind": "DERIVATIVE_EXECUTION_OUTCOME",
                                      "context_role": "ACQUISITION_PERMISSION_CONTEXT_ONLY"},
-                result="PASS" if saved == len(originals) else "FAIL",
-                actual="PENDING_ORIGINALS_PRESERVED" if saved == len(originals)
-                       else "PARTIAL_PENDING_SOURCE_PRESERVATION",
+                result="PASS" if saved == eligible_pending else "FAIL",
+                actual=("NO_ELIGIBLE_PENDING_ORIGINALS" if eligible_pending == 0
+                        else "PENDING_ORIGINALS_PRESERVED" if saved == eligible_pending
+                        else "PARTIAL_PENDING_SOURCE_PRESERVATION"),
                 provider="collector-source-intake", domain_id=context["domain_id"],
                 subject_id=context["subject_id"], brand_focus_id=context["brand_focus_id"],
                 global_scope=False)

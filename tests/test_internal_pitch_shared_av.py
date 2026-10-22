@@ -518,3 +518,38 @@ def test_shared_read_rejects_boolean_nested_snapshot_after_committed_owner(share
     monkeypatch.setattr(work,'reopen_work',substitute)
     with pytest.raises(ValueError,match='INTERNAL_PITCH_AV_PLAN_INTEGRITY_FAILED'):
         pitch.read_internal_pitch(first['task_id'],actor=shared['actor'],scope=SHARED)
+
+
+@pytest.mark.parametrize("error,expected", [
+    (ValueError("INTERNAL_PITCH_BACKEND_UNAVAILABLE"), 503),
+    (PermissionError("INTERNAL_PITCH_PERMISSION_DENIED"), 403),
+    (ValueError("INTERNAL_PITCH_REQUEST_INVALID"), 400),
+])
+def test_pitch_owner_response_preserves_unavailable_and_denied(error, expected):
+    from lumenis_app_api import _internal_pitch_response
+
+    def fail():
+        raise error
+
+    with Flask("pitch-status-boundary").test_request_context("/"):
+        response, status = _internal_pitch_response(fail)
+        assert status == expected
+        assert response.get_json() == {"ok": False, "code": str(error)}
+        assert response.headers["Cache-Control"] == "no-store"
+
+
+def test_pitch_unauthenticated_read_cannot_initialize_account_database(monkeypatch):
+    from lumenis.auth import service
+    from lumenis.system.security import permission
+    from lumenis_app_api import _internal_pitch_actor
+
+    def forbidden():
+        pytest.fail("reading the request identity must not initialize accounts")
+
+    monkeypatch.setattr(service, "ensure_initialized", forbidden)
+    monkeypatch.setattr(permission, "resolve_local_workspace_principal", lambda **kw: None)
+    with (
+        Flask("pitch-read-only-auth").test_request_context("/"),
+        pytest.raises(PermissionError, match="AUTH_REQUIRED"),
+    ):
+        _internal_pitch_actor("read")

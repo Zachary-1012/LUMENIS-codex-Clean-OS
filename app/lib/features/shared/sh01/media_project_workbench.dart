@@ -1,5 +1,6 @@
 import 'dart:async';
-import '../../system/sys02/sys_system_foundation.dart' show WaitingFeedback, WaitingScene;
+import '../../system/sys02/sys_system_foundation.dart'
+    show WaitingFeedback, WaitingScene;
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -60,16 +61,22 @@ class MediaProjectWorkbench extends StatefulWidget {
     this.invokingDomain,
     this.sharedWorkspace = false,
     this.contextAvailable = true,
+    this.initialOutputKind = 'video',
     this.controller,
     this.files,
     super.key,
-  });
+  }) : assert(initialOutputKind == 'video' || initialOutputKind == 'audio');
   final LumenisCoreClient client;
   final VoidCallback onBack;
   final String? invokingDomain;
+
   /// Explicit independent entry; never inherits a selected CTH/BMP focus.
   final bool sharedWorkspace;
   final bool contextAvailable;
+
+  /// The selected creation mode for a new project. Reopened projects keep
+  /// the output kind recorded by the server.
+  final String initialOutputKind;
   final MediaProjectController? controller;
   final MediaProjectFiles? files;
 
@@ -253,8 +260,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   }
 
   bool get _isProcessing =>
-      _choosing || _retrieving ||
-      _controllerInitialized && _controller.busy;
+      _choosing || _retrieving || _controllerInitialized && _controller.busy;
 
   // A confirmation dialog locks edits without claiming a request is running.
   bool get _isBusy => _batchPreviewOpen || _isProcessing;
@@ -301,8 +307,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           .where((candidate) => candidate.clipId == entry.key)
           .firstOrNull;
       if (clip == null) return true;
-      final video = timeline!.tracks.firstWhere(
-        (track) => track.trackId == clip.trackId).kind == 'video';
+      final video =
+          timeline!.tracks
+              .firstWhere((track) => track.trackId == clip.trackId)
+              .kind ==
+          'video';
       final expected = <String, double>{
         'source_in': clip.sourceIn,
         'source_out': clip.sourceOut,
@@ -313,7 +322,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         'split_position': (clip.sourceIn + clip.sourceOut) / 2,
       };
       if (entry.value.values.entries.any(
-        (value) => !(video && value.key == 'position') &&
+        (value) =>
+            !(video && value.key == 'position') &&
             expected[value.key] != double.tryParse(value.value),
       )) {
         return true;
@@ -758,10 +768,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(
-                dialogContext,
-                stillInScope() ? false : null,
-              ),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, stillInScope() ? false : null),
               child: Text(_copy(dialogContext, 'cancel')),
             ),
             FilledButton(
@@ -823,8 +831,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   ) {
     final commands = <Map<String, dynamic>>[];
     for (final entry in drafts.entries) {
-      final clip = timeline.tracks.expand((track) => track.clips)
-          .where((clip) => clip.clipId == entry.key).firstOrNull;
+      final clip = timeline.tracks
+          .expand((track) => track.clips)
+          .where((clip) => clip.clipId == entry.key)
+          .firstOrNull;
       if (clip == null) throw const FormatException('Missing draft clip.');
       final draft = entry.value;
       double value(String key) {
@@ -834,10 +844,15 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         }
         return number;
       }
-      final video = timeline.tracks
-          .firstWhere((track) => track.trackId == clip.trackId).kind == 'video';
+
+      final video =
+          timeline.tracks
+              .firstWhere((track) => track.trackId == clip.trackId)
+              .kind ==
+          'video';
       if (draft.replacement != null ||
-          draft.stream != (clip.audioRole == 'muted' ? -1 : clip.audioStreamIndex) ||
+          draft.stream !=
+              (clip.audioRole == 'muted' ? -1 : clip.audioStreamIndex) ||
           value('split_position') != (clip.sourceIn + clip.sourceOut) / 2) {
         // These intents still have their original single-clip controls. Never
         // silently clear them when adopting only trim/move/audio commands.
@@ -856,15 +871,19 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       mix.validate(sourceOut - sourceIn);
       final trim = sourceIn != clip.sourceIn || sourceOut != clip.sourceOut;
       final move = !video && position != clip.timelineStart;
-      final audio = mix.volume != clip.audioMix.volume ||
+      final audio =
+          mix.volume != clip.audioMix.volume ||
           mix.fadeInSec != clip.audioMix.fadeInSec ||
           mix.fadeOutSec != clip.audioMix.fadeOutSec;
       final shorter = sourceOut - sourceIn < clip.durationSec;
       final mixCommand = <String, dynamic>{
-        'op': 'audio_mix', 'clip_id': clip.clipId, 'mix': mix.toJson(),
+        'op': 'audio_mix',
+        'clip_id': clip.clipId,
+        'mix': mix.toJson(),
       };
       final moveCommand = <String, dynamic>{
-        'op': 'move_audio_clip', 'clip_id': clip.clipId,
+        'op': 'move_audio_clip',
+        'clip_id': clip.clipId,
         'timeline_start': position,
       };
       // A shorter range can require shorter fades first. An expanded range can
@@ -874,8 +893,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       if (move && !shorter) commands.add(moveCommand);
       if (trim) {
         commands.add({
-          'op': 'trim', 'clip_id': clip.clipId,
-          'source_in': sourceIn, 'source_out': sourceOut,
+          'op': 'trim',
+          'clip_id': clip.clipId,
+          'source_in': sourceIn,
+          'source_out': sourceOut,
         });
       }
       if (audio && !shorter) commands.add(mixCommand);
@@ -904,19 +925,28 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       return;
     }
     if (commands.isEmpty) return;
-    bool draftsMatch() => drafts.length == _inspectorDrafts.length &&
-        drafts.entries.every((entry) =>
-            identical(_inspectorDrafts[entry.key], entry.value));
-    setState(() { _batchPreviewOpen = true; _notice = null; });
+    bool draftsMatch() =>
+        drafts.length == _inspectorDrafts.length &&
+        drafts.entries.every(
+          (entry) => identical(_inspectorDrafts[entry.key], entry.value),
+        );
+    setState(() {
+      _batchPreviewOpen = true;
+      _notice = null;
+    });
     _sheetUpdates.refresh();
     try {
       final preview = await controller.previewEditBatch(commands);
-      if (!mounted || !identical(_controller, controller) || preview == null ||
+      if (!mounted ||
+          !identical(_controller, controller) ||
+          preview == null ||
           _layerGeneration != layerGeneration) {
         return;
       }
-      bool current() => _layerGeneration == layerGeneration &&
-          _canUseCurrentContext && draftsMatch() &&
+      bool current() =>
+          _layerGeneration == layerGeneration &&
+          _canUseCurrentContext &&
+          draftsMatch() &&
           controller.canAdoptEditBatch(preview);
       if (!current()) {
         setState(() => _notice = 'batch_stale');
@@ -937,20 +967,39 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_copy(context, valid ? 'batch_preview_description' : 'batch_stale')),
+                    Text(
+                      _copy(
+                        context,
+                        valid ? 'batch_preview_description' : 'batch_stale',
+                      ),
+                    ),
                     if (valid)
-                      for (final clip in preview.timeline.tracks
-                          .expand((track) => track.clips)
-                          .where((clip) => clipIds.contains(clip.clipId))) ...[
+                      for (final clip
+                          in preview.timeline.tracks
+                              .expand((track) => track.clips)
+                              .where(
+                                (clip) => clipIds.contains(clip.clipId),
+                              )) ...[
                         const SizedBox(height: 12),
-                        Text(preview.timeline.assets.firstWhere(
-                          (asset) => asset.assetId == clip.mediaAssetId).filename),
-                        Text('${_copy(context, 'source_in')}: ${_seconds(clip.sourceIn)}; '
-                            '${_copy(context, 'source_out')}: ${_seconds(clip.sourceOut)}'),
-                        Text('${_copy(context, 'position')}: ${_seconds(clip.timelineStart)}; '
-                            '${_copy(context, 'gain')}: ${_seconds(clip.audioMix.volume)}'),
-                        Text('${_copy(context, 'fade_in')}: ${_seconds(clip.audioMix.fadeInSec)}; '
-                            '${_copy(context, 'fade_out')}: ${_seconds(clip.audioMix.fadeOutSec)}'),
+                        Text(
+                          preview.timeline.assets
+                              .firstWhere(
+                                (asset) => asset.assetId == clip.mediaAssetId,
+                              )
+                              .filename,
+                        ),
+                        Text(
+                          '${_copy(context, 'source_in')}: ${_seconds(clip.sourceIn)}; '
+                          '${_copy(context, 'source_out')}: ${_seconds(clip.sourceOut)}',
+                        ),
+                        Text(
+                          '${_copy(context, 'position')}: ${_seconds(clip.timelineStart)}; '
+                          '${_copy(context, 'gain')}: ${_seconds(clip.audioMix.volume)}',
+                        ),
+                        Text(
+                          '${_copy(context, 'fade_in')}: ${_seconds(clip.audioMix.fadeInSec)}; '
+                          '${_copy(context, 'fade_out')}: ${_seconds(clip.audioMix.fadeOutSec)}',
+                        ),
                       ],
                   ],
                 ),
@@ -963,7 +1012,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 ),
                 FilledButton(
                   key: const Key('media-batch-adopt'),
-                  onPressed: valid ? () => Navigator.pop(dialogContext, true) : null,
+                  onPressed: valid
+                      ? () => Navigator.pop(dialogContext, true)
+                      : null,
                   child: Text(_copy(context, 'batch_adopt')),
                 ),
               ],
@@ -971,14 +1022,18 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           },
         ),
       );
-      if (!mounted || accepted != true || !identical(_controller, controller)) return;
+      if (!mounted || accepted != true || !identical(_controller, controller)) {
+        return;
+      }
       if (!current()) {
         setState(() => _notice = 'batch_stale');
         return;
       }
       if (controller.adoptEditBatch(preview)) {
         setState(() {
-          for (final id in drafts.keys) { _inspectorDrafts.remove(id); }
+          for (final id in drafts.keys) {
+            _inspectorDrafts.remove(id);
+          }
           _notice = null;
         });
         _leaveGuard?.refresh();
@@ -1162,7 +1217,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                             ),
                             onPressed: () => _chooseInvokingDomain(null),
                             icon: const LumenisIcon(Icons.edit_outlined),
-                            label: Text(_copy(context, 'independent_workspace')),
+                            label: Text(
+                              _copy(context, 'independent_workspace'),
+                            ),
                           ),
                           OutlinedButton.icon(
                             key: const Key('media-domain-cth'),
@@ -1339,13 +1396,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     final notice = _failure ?? _notice;
     final version = _controller.version;
     final status = timeline == null && version == null
-        ? context.lumenisL10n.text(
-            switch (_controller.domain) {
-              'CTH' => 'navgroup.cth',
-              'BMP' => 'navgroup.bmp',
-              _ => 'sh01.media.independent_workspace',
-            },
-          )
+        ? context.lumenisL10n.text(switch (_controller.domain) {
+            'CTH' => 'navgroup.cth',
+            'BMP' => 'navgroup.bmp',
+            _ => 'sh01.media.independent_workspace',
+          })
         : _copy(context, _hasUnsavedChanges ? 'draft' : 'saved');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1408,7 +1463,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         if (!wide) _editorTools(timeline, wide: wide),
         if (_isProcessing && !_layerOpen) ...[
           const LinearProgressIndicator(),
-          if (_failure == null && _notice == null) WaitingFeedback(scene: _waitingScene),
+          if (_failure == null && _notice == null)
+            WaitingFeedback(scene: _waitingScene),
           Semantics(
             liveRegion: true,
             child: Text(_copy(context, _operationCopyKey)),
@@ -1690,8 +1746,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 timeline: timeline,
                 clip: clip,
                 onEdit: _edit,
-                onPreviewBatch: !_isBusy && _canUseCurrentContext &&
-                        _hasUnappliedClipDrafts
+                onPreviewBatch:
+                    !_isBusy && _canUseCurrentContext && _hasUnappliedClipDrafts
                     ? _previewInspectorBatch
                     : null,
                 draft: clip == null ? null : _inspectorDrafts[clip.clipId],
@@ -1850,7 +1906,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     content,
   }) async {
     if (_activeLayer != null) return;
-    setState(() { _activeLayer = layer; _layerGeneration++; });
+    setState(() {
+      _activeLayer = layer;
+      _layerGeneration++;
+    });
     try {
       await showModalBottomSheet<void>(
         context: context,
@@ -1882,9 +1941,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                   header: true,
                                   child: Text(
                                     title,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
                                   ),
                                 ),
                               ),
@@ -1902,7 +1961,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                           ),
                           if (_isProcessing) ...[
                             const LinearProgressIndicator(),
-                            if (_failure == null && _notice == null) WaitingFeedback(scene: _waitingScene),
+                            if (_failure == null && _notice == null)
+                              WaitingFeedback(scene: _waitingScene),
                             Semantics(
                               liveRegion: true,
                               child: Text(
@@ -1942,7 +2002,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       );
     } finally {
       if (mounted && _activeLayer == layer) {
-        setState(() { _activeLayer = null; _layerGeneration++; });
+        setState(() {
+          _activeLayer = null;
+          _layerGeneration++;
+        });
       }
     }
   }
@@ -1976,7 +2039,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                       _hasUnappliedInspectorDrafts ||
                       _controller.completionUnknown
                   ? null
-                  : () => _controller.export(outputKind: 'video'),
+                  : () => _controller.export(
+                      outputKind:
+                          _controller.version?.outputKind ??
+                          widget.initialOutputKind,
+                    ),
               icon: const LumenisIcon(Icons.file_download_outlined),
               label: Text(_copy(context, 'export')),
             ),
@@ -2096,85 +2163,84 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     );
   }
 
-  Widget _sources(MediaProjectSnapshot? timeline, {VoidCallback? onChoose}) =>
-      _pane(
-        context,
-        'sources',
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            OutlinedButton.icon(
-              key: const Key('media-import'),
-              onPressed:
-                  _controller.busy ||
-                      _choosing ||
-                      !_canUseCurrentContext ||
-                      _controller.needsOriginalFiles
-                  ? null
-                  : (onChoose ?? _choose),
-              icon: const LumenisIcon(Icons.add),
-              label: Text(_copy(context, 'choose')),
-            ),
-            if (timeline == null)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(_copy(context, 'empty')),
+  Widget _sources(
+    MediaProjectSnapshot? timeline, {
+    VoidCallback? onChoose,
+  }) => _pane(
+    context,
+    'sources',
+    Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OutlinedButton.icon(
+          key: const Key('media-import'),
+          onPressed:
+              _controller.busy ||
+                  _choosing ||
+                  !_canUseCurrentContext ||
+                  _controller.needsOriginalFiles
+              ? null
+              : (onChoose ?? _choose),
+          icon: const LumenisIcon(Icons.add),
+          label: Text(_copy(context, 'choose')),
+        ),
+        if (timeline == null)
+          Padding(
+            padding: const EdgeInsets.only(top: 16),
+            child: Text(_copy(context, 'empty')),
+          ),
+        for (final asset in timeline?.assets ?? <MediaProjectAsset>[])
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: LumenisTheme.of(context).line),
               ),
-            for (final asset in timeline?.assets ?? <MediaProjectAsset>[])
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: LumenisTheme.of(context).line),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  asset.hasVideo
+                      ? Icons.movie_outlined
+                      : Icons.audio_file_outlined,
+                  size: 20,
+                  color: LumenisTheme.of(context).muted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        asset.filename,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      Text(
+                        '${_seconds(asset.durationSec)} s',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      asset.hasVideo
-                          ? Icons.movie_outlined
-                          : Icons.audio_file_outlined,
-                      size: 20,
-                      color: LumenisTheme.of(context).muted,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            asset.filename,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          Text(
-                            '${_seconds(asset.durationSec)} s',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
-                      ),
-                      tooltip: '${_copy(context, 'add')} · ${asset.filename}',
-                      onPressed: _isBusy ? null : () => _add(asset),
-                      icon: const LumenisIcon(Icons.add_rounded),
-                    ),
-                  ],
+                IconButton(
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
+                  tooltip: '${_copy(context, 'add')} · ${asset.filename}',
+                  onPressed: _isBusy ? null : () => _add(asset),
+                  icon: const LumenisIcon(Icons.add_rounded),
                 ),
-              ),
-          ],
-        ),
-      );
+              ],
+            ),
+          ),
+      ],
+    ),
+  );
 
   Widget _timeline(MediaProjectSnapshot? timeline, {required bool wide}) {
     final palette = LumenisTheme.of(context);
@@ -2374,9 +2440,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                         _copy(context, track.kind),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .labelMedium,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.labelMedium,
                                       ),
                                     ),
                                   for (final overlay in overlays)
@@ -2395,9 +2461,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                             ),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .labelMedium,
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.labelMedium,
                                           ),
                                         ),
                                       ),
@@ -2480,18 +2546,15 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                                           top: 4,
                                                           child: Text(
                                                             '${_seconds(tick * interval)} s',
-                                                            style:
-                                                                Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .textTheme
-                                                                    .labelSmall
-                                                                    ?.copyWith(
-                                                                      fontFeatures:
-                                                                          const [
-                                                                            FontFeature.tabularFigures(),
-                                                                          ],
-                                                                    ),
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .labelSmall
+                                                                ?.copyWith(
+                                                                  fontFeatures:
+                                                                      const [
+                                                                        FontFeature.tabularFigures(),
+                                                                      ],
+                                                                ),
                                                           ),
                                                         ),
                                                       if (_timelinePlayheadSec !=
@@ -3212,8 +3275,11 @@ class _ClipInspectorState extends State<_ClipInspector> {
   bool get _hasClipFieldChanges {
     final clip = widget.clip;
     if (clip == null) return false;
-    final video = widget.timeline!.tracks.firstWhere(
-      (track) => track.trackId == clip.trackId).kind == 'video';
+    final video =
+        widget.timeline!.tracks
+            .firstWhere((track) => track.trackId == clip.trackId)
+            .kind ==
+        'video';
     final expected = {
       'source_in': clip.sourceIn,
       'source_out': clip.sourceOut,

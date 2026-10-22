@@ -3800,50 +3800,19 @@ class TaskEngine:
         return self._execute_data_query(task, intent)
 
     def _execute_browser(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
-        """浏览器 Agent：只读操作。严格遵守官方账号只读保护。"""
-        from agent_runtime.agent_zero_gui_executor import (
-            AGENT_ZERO_TASK_RECORD,
-            get_agent_zero_gui_executor,
-            is_agent_zero_gui_task,
-        )
+        """Reject withdrawn desktop execution and unbound internal browser work."""
+        from agent_runtime.agent_zero_gui_executor import is_agent_zero_gui_task
         if is_agent_zero_gui_task(task):
-            task_id = task.get("task_id")
-            with self._agent_zero_task_lock(task_id):
-                current = self._db_get_task(task_id) or task
-                if current.get("status") in {TaskStatus.CANCELLED.value, TaskStatus.UNKNOWN.value}:
-                    outcome = (
-                        "CANCELLED" if current.get("status") == TaskStatus.CANCELLED.value
-                        else "OUTCOME_UNKNOWN"
-                    )
-                    return {
-                        "executor": "agent_zero_gui",
-                        "execution_status": outcome,
-                        "task_outcome": outcome,
-                        "failure_code": current.get("error") or "AGENT_ZERO_TASK_STATE_CHANGED",
-                        "external_submission": False,
-                    }
-                record = (current.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
-                permission = self._agent_zero_permission(task_id, "dispatch")
-                executor = get_agent_zero_gui_executor()
-            # Never hold the per-task lock over preflight or worker I/O. The
-            # durable attempt CAS serializes dispatch/cancel transitions while
-            # allowing a cancel request to reach the bounded worker request.
-            return executor.execute(
-                current,
-                permission=permission,
-                existing_record=record if isinstance(record, dict) else None,
-                claim_attempt=lambda attempt: self._claim_agent_zero_attempt(task_id, attempt),
-                transition_attempt=lambda attempt_id, replacement: self._transition_agent_zero_attempt(
-                    task_id, attempt_id, dict(replacement),
-                ),
-                is_cancelled=lambda: self._agent_zero_cancelled(task_id),
-            )
+            code = "GENERAL_OS_EXECUTION_WITHDRAWN"
+            return {"status": "unavailable", "error": code, "failure_code": code,
+                    "task_outcome": "UNAVAILABLE", "execution_status": "UNAVAILABLE",
+                    "external_submission": False}
         return {
+            "status": "unavailable",
             "browser_action": intent,
-            "mode": "read_only",
-            "note": "Browser operations are read-only. No login/post/like/follow/comment allowed.",
-            "status": "planned",
-            "requires_manual_browser": True,
+            "error": "INTERNAL_BROWSER_TASK_BINDING_NOT_BOUND",
+            "failure_code": "INTERNAL_BROWSER_TASK_BINDING_NOT_BOUND",
+            "external_submission": False,
         }
 
     def _execute_ai_assist(self, task: Dict[str, Any], intent: str) -> Dict[str, Any]:
@@ -4057,6 +4026,10 @@ class TaskEngine:
 
     def _verify_owner_outcome(self, task: dict[str, Any], result: dict[str, Any]):
         """Consume current canonical Owner readers, never a caller's verified flag."""
+        if isinstance(result, dict) and result.get("executor") == "agent_zero_gui":
+            from agent_runtime.agent_zero_gui_executor import is_agent_zero_gui_task
+            if is_agent_zero_gui_task(task):
+                return False, "GENERAL_OS_EXECUTION_WITHDRAWN"
         if not isinstance(result, dict) or result.get("error"):
             return False, "EXECUTION_RETURN"
         if (task.get("agent_id") == "analysis_agent" or
@@ -4075,15 +4048,6 @@ class TaskEngine:
                 return valid, "SOURCE_BRIEF_SAMPLE_ANALYSIS"
             except (ValueError, PermissionError, LookupError, RuntimeError):
                 return False, "SOURCE_BRIEF_SAMPLE_ANALYSIS"
-        if result.get("executor") == "agent_zero_gui":
-            from agent_runtime.agent_zero_gui_executor import (
-                get_agent_zero_gui_executor,
-                is_agent_zero_gui_task,
-            )
-            if is_agent_zero_gui_task(task):
-                executor = get_agent_zero_gui_executor()
-                outcome = executor._verify_outcome(task, executor._outcome_contract_hash(task["task_id"]))
-                return outcome.get("verified_goal_achieved") is True, "BOUND_AGENT_OUTCOME"
         return False, "EXECUTION_RETURN"
 
     # ──────────────────────────────────────────────────────────
@@ -4141,50 +4105,33 @@ class TaskEngine:
     # ──────────────────────────────────────────────────────────
 
     def _cancel_agent_zero_task(self, task_id: str, reason: str) -> Dict[str, Any]:
-        from agent_runtime.agent_zero_gui_executor import (
-            AGENT_ZERO_TASK_RECORD,
-            get_agent_zero_gui_executor,
-        )
+        from agent_runtime.agent_zero_gui_executor import AGENT_ZERO_TASK_RECORD
 
         with self._agent_zero_task_lock(task_id):
             task = self._db_get_task(task_id)
             if not task:
                 raise ValueError(f"Task not found: {task_id}")
             record = (task.get("parameters") or {}).get(AGENT_ZERO_TASK_RECORD)
-            if (task.get("status") in {TaskStatus.SUCCEEDED.value, TaskStatus.CANCELLED.value}
-                    or (isinstance(record, dict)
-                        and record.get("state") in {"completed", "failed", "cancelled"})
-                    or (task.get("status") == TaskStatus.UNKNOWN.value
-                        and (not isinstance(record, dict)
-                             or record.get("state") not in {"submitted", "outcome_unknown"}))):
+            if task.get("status") in {
+                    TaskStatus.SUCCEEDED.value, TaskStatus.CANCELLED.value,
+                    TaskStatus.FAILED.value, TaskStatus.DLQ.value, TaskStatus.UNKNOWN.value,
+            }:
                 return task
             self._cancelled.add(task_id)
             if isinstance(record, dict):
-                cancel_result = get_agent_zero_gui_executor().cancel(
-                    task,
-                    permission=self._agent_zero_permission(task_id, "cancel"),
-                    existing_record=record,
-                    transition_attempt=lambda attempt_id, replacement: self._transition_agent_zero_attempt(
-                        task_id, attempt_id, dict(replacement),
-                    ),
-                )
-                if cancel_result.get("task_outcome") == "CANCELLED":
-                    status = TaskStatus.CANCELLED.value
-                    state = "cancelled"
-                else:
-                    # Local cancellation is not proof the remote process stopped.
-                    status = TaskStatus.UNKNOWN.value
-                    state = "unknown"
-                error = cancel_result.get("failure_code") or reason
+                # A historical attempt record may have crossed the boundary.
+                # Preserve it and the uncertainty; never contact a withdrawn worker.
+                error = "GENERAL_OS_EXECUTION_WITHDRAWN"
                 self._db_update_task(
-                    task_id, status=status, error=error,
-                    result_json=json.dumps(cancel_result, ensure_ascii=False, default=str),
+                    task_id, status=TaskStatus.UNKNOWN.value, error=error,
                     finished_at=self._now(),
                 )
                 self._db_add_step(
-                    task_id, StepPhase.ERROR.value, state, detail=error, error=error,
+                    task_id, StepPhase.ERROR.value, "unknown",
+                    detail="External attempt outcome is unknown; worker was not contacted.", error=error,
                 )
-                self._db_add_trace(task_id, "task.cancel", error, state)
+                self._db_add_trace(task_id, "task.cancel", error, "unknown",
+                                   metadata={"external_contact": "NOT_ATTEMPTED"})
                 return self._db_get_task(task_id)
             self._db_update_task(
                 task_id, status=TaskStatus.CANCELLED.value,

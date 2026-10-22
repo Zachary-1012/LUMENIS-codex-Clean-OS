@@ -8,7 +8,7 @@ import '../../../core/lumenis_core_client.dart';
 class Sh04ExportFiles {
   static const _reportTypes = XTypeGroup(
     label: 'Report',
-    extensions: ['md', 'txt', 'docx', 'pdf', 'xlsx'],
+    extensions: ['md', 'txt', 'docx', 'pdf', 'xlsx', 'pptx'],
   );
 
   bool get canSaveFile =>

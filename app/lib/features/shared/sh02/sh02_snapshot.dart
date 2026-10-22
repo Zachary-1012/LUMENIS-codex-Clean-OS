@@ -140,7 +140,8 @@ class Sh02Evidence {
     final id = _string(record['id'] ?? record['evidence_id']);
     final summary = _safeText(record['summary'] ?? record['quote']);
     if (id == null || summary == null) return null;
-    if (_SharedProjection.tryParse(record['projection'], scope: scope) == null) {
+    if (_SharedProjection.tryParse(record['projection'], scope: scope) ==
+        null) {
       return null;
     }
     final lineage = _strings(record['lineage'] ?? record['chain']);
@@ -197,6 +198,108 @@ class Sh02Snapshot {
   }
 }
 
+class Sh02ImportedMaterial {
+  const Sh02ImportedMaterial({
+    required this.artifactId,
+    required this.artifactSha256,
+    required this.requestId,
+    required this.filename,
+    required this.sourceSha256,
+    required this.sizeBytes,
+    required this.createdAt,
+    required this.characterCount,
+    required this.tableCount,
+    required this.text,
+    required this.excerpts,
+    required this.limitations,
+  });
+
+  final String artifactId;
+  final String artifactSha256;
+  final String requestId;
+  final String filename;
+  final String sourceSha256;
+  final int sizeBytes;
+  final String createdAt;
+  final int characterCount;
+  final int tableCount;
+  final String text;
+  final List<String> excerpts;
+  final List<String> limitations;
+
+  static Sh02ImportedMaterial? tryParse(Object? value) {
+    final item = _asMap(value);
+    final artifact = _asMap(item?['artifact']);
+    final document = _asMap(item?['document']);
+    final payload = _asMap(document?['payload']);
+    final source = _asMap(payload?['source_material']);
+    final parsed = _asMap(payload?['parsed_source']);
+    final analysis = _asMap(payload?['basic_analysis']);
+    final artifactId = _string(artifact?['artifact_id']);
+    final artifactSha = _string(artifact?['sha256']);
+    final requestId = _string(document?['request_id']);
+    final filename = _string(source?['original_filename']);
+    final sourceSha = _string(source?['sha256']);
+    final size = source?['size_bytes'];
+    final characterCount = analysis?['character_count'];
+    final tableCount = analysis?['table_count'];
+    final text = parsed?['text'];
+    final createdAt = _string(artifact?['created_at']);
+    if (document?['kind'] != 'research' ||
+        source?['origin'] != 'user-upload' ||
+        artifactId == null ||
+        !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifactId) ||
+        artifactSha == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(artifactSha) ||
+        requestId == null ||
+        !RegExp(r'^[A-Za-z0-9_-]{8,128}$').hasMatch(requestId) ||
+        filename == null ||
+        filename.runes.length > 185 ||
+        sourceSha == null ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(sourceSha) ||
+        size is! int ||
+        size <= 0 ||
+        size > 8 * 1024 * 1024 ||
+        characterCount is! int ||
+        characterCount < 0 ||
+        tableCount is! int ||
+        tableCount < 0 ||
+        text is! String ||
+        text.runes.length != characterCount ||
+        createdAt == null ||
+        createdAt.isEmpty) {
+      return null;
+    }
+    final rawExcerpts = analysis?['source_excerpts'];
+    final excerpts = rawExcerpts is List
+        ? rawExcerpts
+              .map(_asMap)
+              .whereType<Map<String, dynamic>>()
+              .map((excerpt) => excerpt['text'])
+              .whereType<String>()
+              .toList(growable: false)
+        : const <String>[];
+    final rawLimitations = analysis?['limitations'];
+    final limitations = rawLimitations is List
+        ? rawLimitations.whereType<String>().toList(growable: false)
+        : const <String>[];
+    return Sh02ImportedMaterial(
+      artifactId: artifactId,
+      artifactSha256: artifactSha,
+      requestId: requestId,
+      filename: filename,
+      sourceSha256: sourceSha,
+      sizeBytes: size,
+      createdAt: createdAt,
+      characterCount: characterCount,
+      tableCount: tableCount,
+      text: text,
+      excerpts: excerpts,
+      limitations: limitations,
+    );
+  }
+}
+
 class _SharedProjection {
   const _SharedProjection({
     required this.canonicalEvidenceReference,
@@ -217,8 +320,7 @@ class _SharedProjection {
   }) {
     final projection = _asMap(value);
     if (projection == null ||
-        projection['contract'] !=
-            'lumenis.shared.experience-row-projection' ||
+        projection['contract'] != 'lumenis.shared.experience-row-projection' ||
         projection['version'] != 2 ||
         projection['read_allowed'] != true) {
       return null;
@@ -242,8 +344,10 @@ class _SharedProjection {
     }
     final assurance = _string(integrity['assurance']);
     if (assurance == null ||
-        !const {'writer-authenticated', 'content-integrity-only'}
-            .contains(assurance)) {
+        !const {
+          'writer-authenticated',
+          'content-integrity-only',
+        }.contains(assurance)) {
       return null;
     }
     final algorithm = _string(integrity['algorithm'])?.toLowerCase();
@@ -282,7 +386,8 @@ bool _projectionScopeMatches(Map<String, dynamic> raw, Sh02Scope scope) {
     _string(raw['focus_id']),
   ].whereType<String>().toList(growable: false);
   if (ids.length != 1) return false;
-  return (domain == scope.domain || (domain == 'ZBMP' && scope.domain == 'BMP')) &&
+  return (domain == scope.domain ||
+          (domain == 'ZBMP' && scope.domain == 'BMP')) &&
       ids.single == scope.focusId;
 }
 
@@ -297,9 +402,7 @@ String? _safeProjectionReference(Object? value) {
 String? _safeProjectionDigest(Object? value) {
   final digest = _string(value);
   if (digest == null || digest.length > 200) return null;
-  return RegExp(r'^[a-f0-9]{64}$').hasMatch(digest)
-      ? digest
-      : null;
+  return RegExp(r'^[a-f0-9]{64}$').hasMatch(digest) ? digest : null;
 }
 
 Sh02EvidenceKind _kind(Object? value) =>

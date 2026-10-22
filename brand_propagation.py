@@ -24,12 +24,13 @@ Phase 1 范围：
 from __future__ import annotations
 
 import json
+import math
 import os
 import sqlite3
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from lumenis.shared.database import DatabaseRepository, main_db_path
 
 
@@ -102,15 +103,19 @@ class PropagationEvent:
     content_type: str = ""          # 主要内容类型
     platform: str = ""              # 主要平台
     sentiment: str = "unknown"      # PropagationSentiment
-    heat_score: float = 0.0         # 热度评分 0-100
-    mention_count: int = 0          # 提及次数
-    engagement_total: int = 0       # 总互动量
+    heat_score: float | None = None  # 热度评分 0-100
+    mention_count: int | None = None # 提及次数
+    engagement_total: int | None = None # 总互动量
     start_time: str = ""
     end_time: str = ""
     summary: str = ""
     key_contents: List[Dict[str, Any]] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: str = ""
+    metric_basis: str = "UNKNOWN"
+    metric_freshness: str = "UNKNOWN"
+    metric_completeness: str = "UNKNOWN"
+    source_verification: str = "NOT_ESTABLISHED"
 
 
 @dataclass
@@ -122,11 +127,40 @@ class PropagationDashboard:
     positive_count: int = 0
     neutral_count: int = 0
     negative_count: int = 0
-    avg_heat: float = 0.0
+    avg_heat: float | None = None
     top_events: List[PropagationEvent] = field(default_factory=list)
     platform_distribution: Dict[str, int] = field(default_factory=dict)
     time_range: Dict[str, str] = field(default_factory=dict)
     filters_applied: Dict[str, Any] = field(default_factory=dict)
+    unknown_sentiment_count: int = 0
+    heat_observed_count: int = 0
+    heat_unknown_count: int = 0
+    metric_freshness: str = "UNKNOWN"
+    metric_completeness: str = "UNKNOWN"
+    source_verification: str = "NOT_ESTABLISHED"
+
+
+def _event_metric_observation(metadata: dict[str, Any], name: str, stored_value: Any):
+    """Read only values explicitly saved through the current event writer."""
+    if not isinstance(metadata, dict):
+        return None
+    observation = metadata.get('metric_observations')
+    if not isinstance(observation, dict) or observation.get('basis') != 'EXPLICIT_CALLER_INPUT':
+        return None
+    values = observation.get('values')
+    if not isinstance(values, dict) or name not in values:
+        return None
+    value = values[name]
+    if name == 'heat_score':
+        if type(value) not in (int, float) or not math.isfinite(float(value)) or not 0 <= float(value) <= 100:
+            return None
+        try:
+            return float(value) if float(stored_value) == float(value) else None
+        except (TypeError, ValueError):
+            return None
+    if type(value) is not int or value < 0 or value != stored_value:
+        return None
+    return value
 
 
 # ============================================================
@@ -266,20 +300,33 @@ class BrandPropagationEngine:
     def create_event(self, title: str, category: str,
                       entity_type: str = "", entity_ids: Optional[List[str]] = None,
                       content_type: str = "", platform: str = "",
-                      sentiment: str = "unknown", heat_score: float = 0.0,
-                      mention_count: int = 0, engagement_total: int = 0,
+                      sentiment: str = "unknown", heat_score: float | None = None,
+                      mention_count: int | None = None, engagement_total: int | None = None,
                       start_time: str = "", end_time: str = "",
-                      summary: str = "") -> PropagationEvent:
+                      summary: str = "", metadata: dict[str, Any] | None = None) -> PropagationEvent:
         """创建传播事件。"""
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         event_id = f"event_{int(datetime.now().timestamp())}_{abs(hash(title)) % 10000}"
+        metadata_value = dict(metadata or {})
+        observed_metrics = {}
+        if type(heat_score) in (int, float) and math.isfinite(float(heat_score)) and 0 <= float(heat_score) <= 100:
+            observed_metrics['heat_score'] = float(heat_score)
+        if type(mention_count) is int and mention_count >= 0:
+            observed_metrics['mention_count'] = mention_count
+        if type(engagement_total) is int and engagement_total >= 0:
+            observed_metrics['engagement_total'] = engagement_total
+        if observed_metrics:
+            metadata_value['metric_observations'] = {
+                'basis': 'EXPLICIT_CALLER_INPUT',
+                'values': observed_metrics,
+            }
         event = PropagationEvent(
             event_id=event_id, title=title, category=category,
             entity_type=entity_type, entity_ids=entity_ids or [],
             content_type=content_type, platform=platform, sentiment=sentiment,
             heat_score=heat_score, mention_count=mention_count,
             engagement_total=engagement_total, start_time=start_time,
-            end_time=end_time, summary=summary, created_at=now,
+            end_time=end_time, summary=summary, metadata=metadata_value, created_at=now,
         )
         try:
             conn = self._get_conn()
@@ -306,14 +353,18 @@ class BrandPropagationEngine:
                       sentiment: str = "", entity_type: str = "",
                       start_date: str = "", end_date: str = "",
                       min_heat: float = 0.0, limit: int = 50,
-                      offset: int = 0) -> Tuple[List[PropagationEvent], int]:
+                      offset: int = 0, *,
+                      _connection: sqlite3.Connection | None = None) -> tuple[list[PropagationEvent], int]:
         """多维度筛选查询传播事件。
 
         Returns:
             (events列表, 总数)
         """
+        owns_connection = _connection is None
+        conn = _connection
         try:
-            conn = self._get_conn()
+            if conn is None:
+                conn = self._get_conn()
             cur = conn.cursor()
             query = "SELECT * FROM brand_propagation_events WHERE 1=1"
             count_query = "SELECT COUNT(*) as cnt FROM brand_propagation_events WHERE 1=1"
@@ -352,26 +403,39 @@ class BrandPropagationEngine:
             cur.execute(count_query, params)
             total = cur.fetchone()["cnt"]
             cur.execute(query, params + [limit, offset])
-            events = []
+            events: list[PropagationEvent] = []
             for row in cur.fetchall():
+                try:
+                    metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+                except (TypeError, ValueError):
+                    metadata = {}
+                heat = _event_metric_observation(metadata, 'heat_score', row['heat_score'])
+                mentions = _event_metric_observation(metadata, 'mention_count', row['mention_count'])
+                engagement = _event_metric_observation(metadata, 'engagement_total', row['engagement_total'])
+                observed = any(value is not None for value in (heat, mentions, engagement))
                 events.append(PropagationEvent(
                     event_id=row["event_id"], title=row["title"], category=row["category"],
                     entity_type=row["entity_type"],
                     entity_ids=json.loads(row["entity_ids"]) if row["entity_ids"] else [],
                     content_type=row["content_type"], platform=row["platform"],
-                    sentiment=row["sentiment"], heat_score=row["heat_score"],
-                    mention_count=row["mention_count"], engagement_total=row["engagement_total"],
+                    sentiment=row["sentiment"] or "unknown", heat_score=heat,
+                    mention_count=mentions, engagement_total=engagement,
                     start_time=row["start_time"], end_time=row["end_time"],
                     summary=row["summary"],
                     key_contents=json.loads(row["key_contents"]) if row["key_contents"] else [],
-                    metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+                    metadata=metadata,
                     created_at=row["created_at"],
+                    metric_basis='EXPLICIT_CALLER_INPUT' if observed else 'UNKNOWN',
+                    metric_freshness='UNKNOWN', metric_completeness='UNKNOWN',
+                    source_verification='NOT_ESTABLISHED',
                 ))
-            conn.close()
             return events, total
         except Exception as e:
             print(f"[BrandPropagation] 查询事件失败: {e}")
             return [], 0
+        finally:
+            if owns_connection and conn is not None:
+                conn.close()
 
     # ── 三类看板 ──────────────────────────────────────────────
 
@@ -397,37 +461,74 @@ class BrandPropagationEngine:
             PropagationEventCategory.INDUSTRY_EVENT.value: "行业事件看板",
         }
 
-        events, total = self.query_events(
-            category=category, platform=platform, sentiment=sentiment,
-            start_date=start_date, end_date=end_date, limit=top_n,
-        )
+        clauses = ['category = ?']
+        params: list[Any] = [category]
+        if platform:
+            clauses.append('platform = ?')
+            params.append(platform)
+        if sentiment:
+            clauses.append('sentiment = ?')
+            params.append(sentiment)
+        if start_date:
+            clauses.append('start_time >= ?')
+            params.append(start_date)
+        if end_date:
+            clauses.append('start_time <= ?')
+            params.append(end_date)
+        conn = self._get_conn()
+        try:
+            conn.execute('BEGIN')
+            events, _ = self.query_events(
+                category=category, platform=platform, sentiment=sentiment,
+                start_date=start_date, end_date=end_date, limit=top_n,
+                _connection=conn,
+            )
+            rows = conn.execute(
+                'SELECT sentiment,platform,heat_score,mention_count,engagement_total,metadata '
+                'FROM brand_propagation_events WHERE ' + ' AND '.join(clauses), params,
+            ).fetchall()
+        finally:
+            if conn.in_transaction:
+                conn.rollback()
+            conn.close()
 
-        # 统计情感分布
-        pos = sum(1 for e in events if e.sentiment == PropagationSentiment.POSITIVE.value)
-        neu = sum(1 for e in events if e.sentiment == PropagationSentiment.NEUTRAL.value)
-        neg = sum(1 for e in events if e.sentiment == PropagationSentiment.NEGATIVE.value)
-
-        # 平台分布
+        total = len(rows)
+        sentiment_counts = {name: 0 for name in ('positive', 'neutral', 'negative', 'unknown')}
         platform_dist: Dict[str, int] = {}
-        for e in events:
-            if e.platform:
-                platform_dist[e.platform] = platform_dist.get(e.platform, 0) + 1
+        observed_heat = []
+        for row in rows:
+            value = row['sentiment'] if row['sentiment'] in sentiment_counts else 'unknown'
+            sentiment_counts[value] += 1
+            platform_name = row['platform']
+            if platform_name:
+                platform_dist[platform_name] = platform_dist.get(platform_name, 0) + 1
+            try:
+                metadata = json.loads(row['metadata']) if row['metadata'] else {}
+            except (TypeError, ValueError):
+                metadata = {}
+            heat = _event_metric_observation(metadata, 'heat_score', row['heat_score'])
+            if heat is not None:
+                observed_heat.append(heat)
 
-        # 平均热度
-        avg_heat = sum(e.heat_score for e in events) / len(events) if events else 0.0
+        avg_heat = round(sum(observed_heat) / total, 2) if total and len(observed_heat) == total else None
 
         return PropagationDashboard(
             category=category,
             title=category_titles.get(category, f"{category} 看板"),
             total_events=total,
-            positive_count=pos,
-            neutral_count=neu,
-            negative_count=neg,
-            avg_heat=round(avg_heat, 2),
+            positive_count=sentiment_counts['positive'],
+            neutral_count=sentiment_counts['neutral'],
+            negative_count=sentiment_counts['negative'],
+            avg_heat=avg_heat,
             top_events=events,
             platform_distribution=platform_dist,
             time_range={"start": start_date, "end": end_date},
             filters_applied={"platform": platform, "sentiment": sentiment},
+            unknown_sentiment_count=sentiment_counts['unknown'],
+            heat_observed_count=len(observed_heat),
+            heat_unknown_count=max(0, total - len(observed_heat)),
+            metric_freshness='UNKNOWN', metric_completeness='UNKNOWN',
+            source_verification='NOT_ESTABLISHED',
         )
 
     def get_all_dashboards(self, start_date: str = "", end_date: str = "",

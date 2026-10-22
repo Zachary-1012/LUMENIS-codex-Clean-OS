@@ -246,6 +246,121 @@ def test_native_record_keeps_string_id_and_provenance():
     assert record["engine"] == "fixture"
 
 
+def test_native_record_projects_douyin_views_and_preserves_explicit_native_values():
+    from lumenis.system.collector.adapters.platform_naming import map_raw_to_normalized
+
+    projected = surface._native_record(
+        {"platform_content_id": "aweme-1", "views": 42, "raw": {}},
+        "douyin", "query", "capture",
+    )
+    assert map_raw_to_normalized(projected, "douyin")["view_count"] == 42
+
+    for explicit in (None, 0):
+        native = surface._native_record(
+            {"platform_content_id": "aweme-1", "views": 42,
+             "raw": {"play_count": explicit}}, "douyin", "query", "capture",
+        )
+        assert native["play_count"] == explicit
+
+
+def test_native_record_projects_facebook_metrics_only_when_native_keys_are_absent():
+    projected = surface._native_record(
+        {"platform_content_id": "123", "likes": 7, "comments": 3, "shares": 1,
+         "raw": {}}, "facebook", "query", "capture",
+    )
+    assert (projected["reactions"], projected["comments"], projected["shares"]) == (7, 3, 1)
+
+    for explicit in (None, 0):
+        native = surface._native_record(
+            {"platform_content_id": "123", "likes": 7, "comments": 3, "shares": 1,
+             "raw": {"reactions": explicit, "comments": explicit, "shares": explicit}},
+            "facebook", "query", "capture",
+        )
+        assert native["reactions"] == native["comments"] == native["shares"] == explicit
+
+
+def test_facebook_live_original_requires_detail_native_id_binding():
+    observed = {
+        "post_id": "post-1", "content": "native body",
+        "source_raw": {"detail_observation": {
+            "status": "SUCCESS", "body_kind": "NATIVE_POST_BODY",
+            "body": "native body", "native_post_id": "post-2",
+        }},
+    }
+    with pytest.raises(ValueError, match="LIVE_NATIVE_DETAIL_ID_MISMATCH"):
+        surface._verified_live_native_observation("facebook", observed)
+
+    observed["source_raw"]["detail_observation"]["native_post_id"] = "post-1"
+    assert surface._verified_live_native_observation("facebook", observed) == (
+        "post-1", "native body",
+    )
+
+
+def test_pending_original_outcome_excludes_valid_excluded_rows(monkeypatch):
+    import sqlite3
+    from types import SimpleNamespace
+
+    from lumenis.shared.evidence import store
+
+    outcomes = []
+    persisted = []
+    monkeypatch.setattr(store, "record_evidence", lambda **kwargs: outcomes.append(kwargs) or 1)
+    def persist(connection, **kwargs):
+        persisted.append(kwargs)
+        return {"status": "SAVED", "source_evidence_ref": "e1", "source_artifact_ref": "a1",
+                "canonical_ref": None, "source_fingerprint": "fp1"}
+    monkeypatch.setattr(surface, "_persist_pending_live_source_original", persist)
+    args = {
+        "collection_evidence_id": 1,
+        "context": {"domain_id": "cth", "subject_id": None, "brand_focus_id": None},
+        "staged_paths": [],
+        "scope": {},
+        "keyword": "query",
+        "authorization": SimpleNamespace(plan_id="plan-1", authorization_ref="auth-1"),
+        "business_query": None,
+        "max_results": 10,
+        "saved_ids": set(),
+    }
+
+    with sqlite3.connect(":memory:") as connection:
+        excluded = surface._persist_pending_live_observations(
+            connection, platform="facebook", records=[{"post_id": "1"}],
+            reviews=[{"platform_content_id": "1", "status": "EXCLUDED_TASK_BOUNDARY"}],
+            **args,
+        )
+    assert outcomes[-1]["result"] == "PASS"
+    assert outcomes[-1]["actual"] == "NO_ELIGIBLE_PENDING_ORIGINALS"
+    assert excluded["summary"]["excluded_observations"] == 1
+    assert excluded["summary"]["eligible_pending_records"] == 0
+
+    outcomes.clear()
+    with sqlite3.connect(":memory:") as connection:
+        mixed = surface._persist_pending_live_observations(
+            connection, platform="facebook", records=[{"post_id": "1"}, {"post_id": "2"}],
+            reviews=[{"platform_content_id": "1", "status": "OUTSIDE_REQUESTED_PUBLICATION_PERIOD"}],
+            **args,
+        )
+    assert outcomes[-1]["result"] == "PASS", (outcomes[-1], mixed["summary"], mixed["original_refs"], persisted)
+    assert mixed["summary"]["unassigned_originals_saved"] == 1
+    assert mixed["summary"]["excluded_observations"] == 1
+    assert mixed["summary"]["eligible_pending_records"] == 1
+
+    def unavailable(connection, **kwargs):
+        return {"status": "UNAVAILABLE", "source_evidence_ref": None,
+                "source_artifact_ref": None, "canonical_ref": None,
+                "source_fingerprint": None}
+    monkeypatch.setattr(surface, "_persist_pending_live_source_original", unavailable)
+    outcomes.clear()
+    with sqlite3.connect(":memory:") as connection:
+        surface._persist_pending_live_observations(
+            connection, platform="facebook", records=[{"post_id": "1"}, {"post_id": "2"}],
+            reviews=[{"platform_content_id": "2", "status": "EXCLUDED_TASK_BOUNDARY"}],
+            **args,
+        )
+    assert outcomes[-1]["result"] == "FAIL"
+    assert outcomes[-1]["actual"] == "PARTIAL_PENDING_SOURCE_PRESERVATION"
+
+
 def test_collect_search_rejects_non_human_operator():
     with pytest.raises(PermissionError):
         surface.collect_search("douyin", "广州太古汇", operator="agent")

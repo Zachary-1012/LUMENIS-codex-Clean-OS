@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:typed_data';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -11,6 +10,33 @@ import 'package:lumenis_app/features/shared/sh04/sh04_snapshot.dart';
 import '../shared_test_support.dart';
 
 void main() {
+  testWidgets('file export format picker includes PPTX on desktop', (
+    tester,
+  ) async {
+    final priorPlatform = debugDefaultTargetPlatformOverride;
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      final repository = _FakeSh04Repository()
+        ..items.add(
+          _makeExport(index: 1, title: '季度复盘', markdown: '# 季度复盘', version: 1),
+        );
+      await tester.pumpWidget(_app(repository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('季度复盘').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('sh04-export-report')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('sh04-export-pptx')), findsOneWidget);
+      expect(find.byKey(const Key('sh04-export-docx')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    } finally {
+      await tester.binding.setSurfaceSize(null);
+      debugDefaultTargetPlatformOverride = priorPlatform;
+    }
+  });
+
   testWidgets('writes, reopens and revises a Shared report version', (
     tester,
   ) async {

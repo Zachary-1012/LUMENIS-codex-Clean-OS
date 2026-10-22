@@ -41,7 +41,7 @@ BASE_HEADERS = {
 TASK_OWNER = "owned_training_phase_receipts:v1"
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def strict_permission_mode(monkeypatch):
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     monkeypatch.setattr(p, "_TESTING_BYPASS_ENABLED", False)
@@ -52,6 +52,9 @@ def strict_permission_mode(monkeypatch):
                 if id(thread) not in thread_ids and thread.is_alive()]
     assert not [child for child in multiprocessing.active_children()
                 if child.pid not in child_pids and child.is_alive()]
+
+
+pytestmark = pytest.mark.usefixtures("strict_permission_mode")
 
 
 def _training_request():
@@ -185,7 +188,7 @@ def _post(client, path, body, identity=None):
 
 
 @pytest.fixture
-def phase_http(tmp_path, monkeypatch):
+def phase_http(tmp_path, monkeypatch, strict_permission_mode):
     seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
     assert seed.is_file()
     seed_before = hashlib.sha256(seed.read_bytes()).hexdigest()

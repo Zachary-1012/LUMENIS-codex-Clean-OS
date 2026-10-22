@@ -227,7 +227,7 @@ def test_typed_gateway_planning_contract_and_unavailable(monkeypatch):
     from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
     calls = []
     def factory(system, user, context):
-        return OwnedServiceRequest(operation='fixture_plan', request_id='fixture', job_id='fixture',
+        return OwnedServiceRequest(operation='agent_plan', request_id='fixture', job_id='fixture',
             actor_ref='actor:1', domain_id='cth', scope='GLOBAL / ALL',
             source_use_policy_version='fixture-v1', source_use_policy_sha256='a'*64,
             source_binding_sha256='b'*64, source_evidence_refs=('fixture:source',),
@@ -235,9 +235,15 @@ def test_typed_gateway_planning_contract_and_unavailable(monkeypatch):
             response_schema_json='{}', max_output_tokens=2000)
     def gateway(request, **kwargs):
         calls.append(request)
-        return {'ok': True, 'provider': 'owned', 'analysis': {'steps': [{
-            'action': 'Read local metadata', 'tool': 'zbc.skill_registry_snapshot',
-            'params': {}, 'expected_output': 'registry metadata', 'risk_level': 'low'}]}}
+        return {'ok': True, 'status': 'COMPLETED', 'provider': 'owned', 'operation': 'agent_plan',
+            'request_id': 'fixture-request', 'request_digest': '1'*64, 'run_id': 'fixture-run',
+            'model_id': 'gpt-6-luna', 'model_revision': 'fixture-revision', 'recipe': 'fixture-recipe',
+            'source_use_policy_sha256': 'a'*64, 'source_binding_sha256': 'b'*64,
+            'input_revision_sha256': 'c'*64, 'source_evidence_refs': ['fixture:source'],
+            'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120,
+            'real_input_bound': True, 'analysis': {'steps': [{
+                'action': 'Read local metadata', 'tool': 'zbc.skill_registry_snapshot',
+                'params': {}, 'expected_output': 'registry metadata', 'risk_level': 'low'}]}}
     monkeypatch.setattr(core, 'run_owned_request', gateway)
     from lumenis.system.ai_gateway import owned_service
     monkeypatch.setattr(owned_service, 'measure_owned_request', lambda request: {
@@ -248,6 +254,10 @@ def test_typed_gateway_planning_contract_and_unavailable(monkeypatch):
     plan = planner.plan('Read registered metadata')
     assert len(plan.steps) == 1 and plan.steps[0].tool == 'zbc.skill_registry_snapshot'
     assert type(calls[0]) is OwnedServiceRequest
+    assert json.loads(calls[0].response_schema_json)['additionalProperties'] is False
+    assert json.loads(calls[0].response_schema_json)['properties']['steps']['maxItems'] == 15
+    assert plan.inference_receipt['run_id'] == 'fixture-run'
+    assert plan.token_usage == {'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120}
     def measured(request):
         return {'ok': True, 'fits': 'optional-large-memory' not in request.user_payload,
                 'binding_sha256': 'd'*64, 'prompt_tokens': 100,
@@ -272,3 +282,14 @@ def test_typed_gateway_planning_contract_and_unavailable(monkeypatch):
     monkeypatch.setattr(core, 'run_owned_request', lambda request, **kwargs: {'ok': False, 'code': 'OWNED_RUNTIME_NOT_BOUND'})
     unavailable = planner.plan('Read registered metadata')
     assert unavailable.steps == [] and 'OWNED_RUNTIME_NOT_BOUND' in unavailable.fallback_reason
+
+
+def test_failed_planning_persistence_cannot_return_executable_steps():
+    def fail_persist(_plan):
+        raise RuntimeError("private persistence detail")
+
+    plan = Planner(ai_chat_func=_mock_ai_chat, persist_func=fail_persist).plan("read report")
+
+    assert plan.is_fallback is True
+    assert plan.steps == []
+    assert plan.fallback_reason == "PLANNING_PERSISTENCE_FAILED"

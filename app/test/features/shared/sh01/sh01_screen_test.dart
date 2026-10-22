@@ -8,44 +8,141 @@ import 'package:lumenis_app/features/shared/sh01/sh01_repository.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_screen.dart';
 import 'package:lumenis_app/features/shared/sh01/sh01_snapshot.dart';
 import 'package:lumenis_app/features/shared/sh01/media_project_workbench.dart';
+import 'package:lumenis_app/features/shared/sh01/manuscript_editor.dart';
 
 void main() {
-
-  testWidgets('Shared creation opens independently even with an existing business focus', (tester) async {
+  testWidgets('new manuscript starts in independent Shared scope', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1440, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final client = _CatalogOnlyClient()..contextEnvelope = {
-      'contract': 'lumenis.context.v1', 'selection_only': true,
-      'context': {'mode': 'FOCUS', 'domain_id': 'BMP', 'subject_id': 'brand-a'},
-    };
-    await tester.pumpWidget(_app(CoreSh01Repository(client: client), client: client));
+    final client = _CatalogOnlyClient()
+      ..contextEnvelope = {
+        'contract': 'lumenis.context.v1',
+        'selection_only': true,
+        'context': {
+          'mode': 'FOCUS',
+          'domain_id': 'BMP',
+          'brand_focus_id': 'brand-a',
+        },
+      };
+    await tester.pumpWidget(
+      _app(_FakeSh01Repository(_catalog), client: client),
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('sh01-open-video-editor')));
+    await tester.tap(find.byKey(const Key('sh01-create-manuscript')));
     await tester.pumpAndSettle();
-    final editor = tester.widget<MediaProjectWorkbench>(find.byType(MediaProjectWorkbench));
-    expect(editor.sharedWorkspace, isTrue);
+
+    final editor = tester.widget<ManuscriptEditor>(
+      find.byType(ManuscriptEditor),
+    );
     expect(editor.invokingDomain, isNull);
-    expect(find.text('独立作品'), findsOneWidget);
-    expect(find.byKey(const Key('media-import')), findsOneWidget);
-    expect(find.byKey(const Key('media-domain-bmp')), findsNothing);
-    expect(client.contextEnvelope!['context']['domain_id'], 'BMP');
+    expect(client.currentContextEnvelope!['context']['domain_id'], 'BMP');
+    expect(find.byKey(const Key('manuscript-title')), findsOneWidget);
+    expect(find.byKey(const Key('manuscript-summary')), findsOneWidget);
+    expect(find.byKey(const Key('sh01-open-video-editor')), findsNothing);
+    await tester.enterText(find.byKey(const Key('manuscript-title')), '独立提案');
+    await tester.enterText(
+      find.byKey(const Key('manuscript-summary')),
+      '从用户自己的内容开始。',
+    );
+    await tester.enterText(find.byKey(const Key('manuscript-heading-0')), '方向');
+    await tester.enterText(
+      find.byKey(const Key('manuscript-body-0')),
+      '先明确目标与受众。',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('manuscript-save')));
+    await tester.pumpAndSettle();
+    expect(client.manuscriptScope, isA<SharedWorkspaceScope>());
+    expect(find.textContaining('文稿仍保留'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Shared entry retains the separate business-linked media path', (tester) async {
+  testWidgets(
+    'Shared creation opens independently even with an existing business focus',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _CatalogOnlyClient()
+        ..contextEnvelope = {
+          'contract': 'lumenis.context.v1',
+          'selection_only': true,
+          'context': {
+            'mode': 'FOCUS',
+            'domain_id': 'BMP',
+            'subject_id': 'brand-a',
+          },
+        };
+      await tester.pumpWidget(
+        _app(CoreSh01Repository(client: client), client: client),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('sh01-open-video-editor')));
+      await tester.pumpAndSettle();
+      final editor = tester.widget<MediaProjectWorkbench>(
+        find.byType(MediaProjectWorkbench),
+      );
+      expect(editor.sharedWorkspace, isTrue);
+      expect(editor.invokingDomain, isNull);
+      expect(find.text('独立作品'), findsOneWidget);
+      expect(find.byKey(const Key('media-import')), findsOneWidget);
+      expect(find.byKey(const Key('media-domain-bmp')), findsNothing);
+      expect(client.contextEnvelope!['context']['domain_id'], 'BMP');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Shared entry retains the separate business-linked media path', (
+    tester,
+  ) async {
     await tester.binding.setSurfaceSize(const Size(1440, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    final client = _CatalogOnlyClient()..contextEnvelope = {
-      'contract': 'lumenis.context.v1', 'selection_only': true,
-      'context': {'mode': 'FOCUS', 'domain_id': 'CTH', 'subject_id': 'shop-1'},
-    };
-    await tester.pumpWidget(_app(CoreSh01Repository(client: client), client: client));
+    final client = _CatalogOnlyClient()
+      ..contextEnvelope = {
+        'contract': 'lumenis.context.v1',
+        'selection_only': true,
+        'context': {
+          'mode': 'FOCUS',
+          'domain_id': 'CTH',
+          'subject_id': 'shop-1',
+        },
+      };
+    await tester.pumpWidget(
+      _app(CoreSh01Repository(client: client), client: client),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('sh01-open-linked-media')));
     await tester.pumpAndSettle();
-    final editor = tester.widget<MediaProjectWorkbench>(find.byType(MediaProjectWorkbench));
+    final editor = tester.widget<MediaProjectWorkbench>(
+      find.byType(MediaProjectWorkbench),
+    );
     expect(editor.sharedWorkspace, isFalse);
     expect(find.text('商业运营'), findsOneWidget);
+    expect(find.byKey(const Key('media-import')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('podcast media entry selects the existing audio export mode', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final client = _CatalogOnlyClient();
+    await tester.pumpWidget(
+      _app(
+        _FakeSh01Repository(_catalog),
+        client: client,
+        initialWorkspaceEntry: 'media',
+        returnScreenId: 'BMP-08',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final workbench = tester.widget<MediaProjectWorkbench>(
+      find.byType(MediaProjectWorkbench),
+    );
+    expect(workbench.initialOutputKind, 'audio');
     expect(find.byKey(const Key('media-import')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
@@ -335,6 +432,9 @@ Widget _app(
   Sh01Repository repository, {
   LumenisCoreClient? client,
   Locale locale = const Locale('zh', 'CN'),
+  String? initialWorkspaceEntry,
+  String? returnScreenId,
+  ValueChanged<String>? onNavigate,
 }) => MaterialApp(
   theme: LumenisTheme.dark,
   locale: locale,
@@ -349,6 +449,9 @@ Widget _app(
     body: Sh01Screen(
       client: client ?? LumenisCoreClient(),
       repository: repository,
+      initialWorkspaceEntry: initialWorkspaceEntry,
+      returnScreenId: returnScreenId,
+      onNavigate: onNavigate,
     ),
   ),
 );
@@ -375,6 +478,7 @@ class _CatalogOnlyClient extends LumenisCoreClient {
   int catalogCalls = 0;
   int screenCalls = 0;
   int detailCalls = 0;
+  LumenisWorkspaceScope? manuscriptScope;
 
   @override
   Future<Map<String, dynamic>> sharedSkillsCatalog() async {
@@ -392,6 +496,17 @@ class _CatalogOnlyClient extends LumenisCoreClient {
   Future<Map<String, dynamic>> contentEvidence(String evidenceId) async {
     detailCalls++;
     throw StateError('global Evidence detail must not be requested');
+  }
+
+  @override
+  Future<Map<String, dynamic>> prepareInternalPitch({
+    required LumenisWorkspaceScope scope,
+    required InternalPitchManuscript manuscript,
+    required String requestId,
+    InternalPitchRevision? revision,
+  }) async {
+    manuscriptScope = scope;
+    throw const LumenisCoreException('Save response unavailable');
   }
 }
 

@@ -189,6 +189,207 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
     }
   }
 
+  Future<void> _reviseSavedResearch(
+    SourceBriefSavedWork work,
+    SourceBriefCopy copy,
+  ) async {
+    final scopeKey = _model.result?.scope.scopeKey;
+    final title = TextEditingController(text: work.title);
+    final markdown = TextEditingController(text: work.markdown);
+    final reason = TextEditingController();
+    try {
+      final values = await showDialog<Map<String, String>>(
+        context: context,
+        builder: (dialogContext) => AnimatedBuilder(
+          animation: _model,
+          builder: (dialogContext, _) {
+            final valid =
+                _model.savedHistory.contains(work) &&
+                _model.result?.scope.scopeKey == scopeKey;
+            if (!valid) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (dialogContext.mounted &&
+                    !_model.savedHistory.contains(work)) {
+                  Navigator.of(dialogContext).maybePop();
+                }
+              });
+            }
+            return AlertDialog(
+              title: Text(copy.text('reviseResearch')),
+              content: SizedBox(
+                width: 720,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextField(
+                        controller: title,
+                        enabled: valid,
+                        maxLength: 300,
+                        decoration: InputDecoration(
+                          labelText: copy.text('researchTitle'),
+                        ),
+                      ),
+                      TextField(
+                        controller: reason,
+                        enabled: valid,
+                        maxLength: 4000,
+                        decoration: InputDecoration(
+                          labelText: copy.text('revisionReason'),
+                        ),
+                      ),
+                      TextField(
+                        controller: markdown,
+                        enabled: valid,
+                        minLines: 8,
+                        maxLines: 18,
+                        maxLength: 100000,
+                        decoration: InputDecoration(
+                          labelText: copy.text('researchContent'),
+                          alignLabelWithHint: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(copy.text('cancel')),
+                ),
+                FilledButton(
+                  key: const ValueKey('source-brief/revision-confirm'),
+                  onPressed:
+                      !valid ||
+                          title.text.trim().isEmpty ||
+                          reason.text.trim().isEmpty ||
+                          markdown.text.trim().isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop({
+                          'title': title.text,
+                          'reason': reason.text,
+                          'markdown': markdown.text,
+                        }),
+                  child: Text(copy.text('saveRevision')),
+                ),
+              ],
+            );
+          },
+        ),
+      );
+      if (!mounted ||
+          values == null ||
+          !_model.savedHistory.contains(work) ||
+          _model.result?.scope.scopeKey != scopeKey) {
+        return;
+      }
+      _cancelRevealForUserInteraction();
+      await _model.reviseSavedResearchVersion(
+        parent: work,
+        title: values['title']!,
+        reason: values['reason']!,
+        markdown: values['markdown']!,
+      );
+    } finally {
+      title.dispose();
+      markdown.dispose();
+      reason.dispose();
+    }
+  }
+
+  Future<void> _adoptToShared(SourceBriefCopy copy) async {
+    if (_model.busy) return;
+    if (_model.sharedAdoptionPreview == null) {
+      _cancelRevealForUserInteraction();
+      await _model.prepareSharedAdoption();
+    }
+    if (!mounted) return;
+    final preview = _model.sharedAdoptionPreview;
+    final result = _model.result;
+    if (preview == null ||
+        result == null ||
+        preview.jobId != result.jobId ||
+        preview.sourceBriefHash != result.artifactHash ||
+        preview.sourceScopeKey != result.scope.scopeKey) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AnimatedBuilder(
+        animation: _model,
+        builder: (dialogContext, _) {
+          final current = _model.sharedAdoptionPreview;
+          final currentResult = _model.result;
+          final valid =
+              current?.requestId == preview.requestId &&
+              currentResult?.jobId == preview.jobId &&
+              currentResult?.artifactHash == preview.sourceBriefHash &&
+              currentResult?.scope.scopeKey == preview.sourceScopeKey;
+          if (!valid) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).maybePop(false);
+              }
+            });
+          }
+          return AlertDialog(
+            title: Text(copy.text('sharedAdoptionConfirmTitle')),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(preview.title),
+                const SizedBox(height: 12),
+                Text(copy.text('sharedAdoptionTarget')),
+                const SizedBox(height: 8),
+                Text(
+                  copy
+                      .text('sharedAdoptionCounts')
+                      .replaceFirst(
+                        '{sources}',
+                        '${preview.guardedSourceCount}',
+                      )
+                      .replaceFirst(
+                        '{citations}',
+                        '${preview.displayedCitations}',
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Text(copy.text('sharedAdoptionDisclaimer')),
+              ],
+            ),
+            actions: [
+              TextButton(
+                key: const ValueKey('source-brief/shared-adoption/cancel'),
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(copy.text('cancel')),
+              ),
+              FilledButton(
+                key: const ValueKey('source-brief/shared-adoption/confirm'),
+                onPressed: valid
+                    ? () => Navigator.of(dialogContext).pop(true)
+                    : null,
+                child: Text(copy.text('sharedAdoptionConfirm')),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (!mounted || confirmed != true) return;
+    final currentPreview = _model.sharedAdoptionPreview;
+    final currentResult = _model.result;
+    if (currentPreview?.requestId != preview.requestId ||
+        currentResult?.jobId != preview.jobId ||
+        currentResult?.artifactHash != preview.sourceBriefHash ||
+        currentResult?.scope.scopeKey != preview.sourceScopeKey) {
+      return;
+    }
+    _cancelRevealForUserInteraction();
+    await _model.applySharedAdoption();
+  }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _model,
@@ -297,6 +498,7 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
                             ],
                           ),
                       ],
+                      _savedResearchHistory(copy),
                       if (_model.taskId == null && result == null) ...[
                         const SizedBox(height: 20),
                         _sectionTitle(copy.text('empty')),
@@ -591,6 +793,129 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
           icon: const Icon(Icons.copy_outlined, size: 16),
           label: Text('${copy.text('statisticsReference')}: $taskId'),
         ),
+      const SizedBox(height: 16),
+      FilledButton.tonalIcon(
+        key: const ValueKey('source-brief/save-research'),
+        onPressed: _model.busy
+            ? null
+            : () {
+                _cancelRevealForUserInteraction();
+                if (_model.savedWorkState == SourceBriefSavedWorkState.saved ||
+                    _model.savedWorkState ==
+                        SourceBriefSavedWorkState.reopened) {
+                  _model.reopenSavedResearch();
+                } else {
+                  _model.saveAsEditableResearch(title: copy.text('title'));
+                }
+              },
+        icon: Icon(
+          _model.savedWorkState == SourceBriefSavedWorkState.saving
+              ? Icons.hourglass_top
+              : _model.savedWorkState == SourceBriefSavedWorkState.saved ||
+                    _model.savedWorkState == SourceBriefSavedWorkState.reopened
+              ? Icons.open_in_new
+              : Icons.save_outlined,
+          size: 18,
+        ),
+        label: Text(
+          _model.savedWorkState == SourceBriefSavedWorkState.saving
+              ? copy.text('savingResearch')
+              : _model.savedWorkState == SourceBriefSavedWorkState.saved ||
+                    _model.savedWorkState == SourceBriefSavedWorkState.reopened
+              ? copy.text('openSavedResearch')
+              : copy.text('saveResearch'),
+        ),
+      ),
+      if (_model.savedWorkState == SourceBriefSavedWorkState.saved ||
+          _model.savedWorkState == SourceBriefSavedWorkState.reopened) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            copy.text(
+              _model.savedWorkState == SourceBriefSavedWorkState.reopened
+                  ? 'reopenedResearch'
+                  : 'savedResearch',
+            ),
+          ),
+        ),
+      ],
+      if (_model.savedWorkState == SourceBriefSavedWorkState.failed) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            copy.text(
+              _model.savedWorkErrorKind == SourceBriefErrorKind.accessDenied
+                  ? 'saveResearchDenied'
+                  : 'saveResearchFailed',
+            ),
+            style: TextStyle(color: LumenisTheme.of(context).danger),
+          ),
+        ),
+      ],
+      if (_model.savedWorkState == SourceBriefSavedWorkState.reopened &&
+          _model.savedWorkMarkdown != null) ...[
+        const SizedBox(height: 12),
+        SelectableText(
+          _model.savedWorkMarkdown!,
+          key: const ValueKey('source-brief/reopened-research'),
+        ),
+      ],
+      const SizedBox(height: 16),
+      OutlinedButton.icon(
+        key: const ValueKey('source-brief/adopt-to-shared'),
+        onPressed: _model.busy ? null : () => _adoptToShared(copy),
+        icon: Icon(switch (_model.sharedAdoptionState) {
+          SourceBriefSharedAdoptionState.preparing ||
+          SourceBriefSharedAdoptionState.applying => Icons.hourglass_top,
+          SourceBriefSharedAdoptionState.reopened => Icons.open_in_new,
+          _ => Icons.drive_file_move_outline,
+        }, size: 18),
+        label: Text(switch (_model.sharedAdoptionState) {
+          SourceBriefSharedAdoptionState.preparing => copy.text(
+            'sharedAdoptionPreparing',
+          ),
+          SourceBriefSharedAdoptionState.applying => copy.text(
+            'sharedAdoptionApplying',
+          ),
+          SourceBriefSharedAdoptionState.reopened => copy.text(
+            'sharedAdoptionDone',
+          ),
+          _ => copy.text('sharedAdoptionAction'),
+        }),
+      ),
+      if (_model.sharedAdoptionState ==
+          SourceBriefSharedAdoptionState.reopened) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          liveRegion: true,
+          child: Text(copy.text('sharedAdoptionReopened')),
+        ),
+        if (_model.sharedAdoptedWork case final adopted?) ...[
+          const SizedBox(height: 12),
+          SelectableText(
+            adopted.markdown,
+            key: const ValueKey('source-brief/shared-adoption/reopened'),
+          ),
+        ],
+      ],
+      if (_model.sharedAdoptionState ==
+          SourceBriefSharedAdoptionState.failed) ...[
+        const SizedBox(height: 8),
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            copy.text(
+              _model.sharedAdoptionErrorKind ==
+                      SourceBriefErrorKind.accessDenied
+                  ? 'sharedAdoptionDenied'
+                  : 'sharedAdoptionFailed',
+            ),
+            style: TextStyle(color: LumenisTheme.of(context).danger),
+          ),
+        ),
+      ],
       const SizedBox(height: 24),
       _sectionTitle(copy.text('review')),
       const SizedBox(height: 8),
@@ -873,6 +1198,170 @@ class _SourceBriefPanelState extends State<SourceBriefPanel>
         ),
     ],
   );
+
+  Widget _savedResearchHistory(SourceBriefCopy copy) {
+    final state = _model.savedHistoryState;
+    final history = _model.savedHistory;
+    final palette = LumenisTheme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 28),
+        Divider(color: palette.line),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Expanded(child: _sectionTitle(copy.text('researchHistory'))),
+            OutlinedButton.icon(
+              key: const ValueKey('source-brief/research-history/load'),
+              onPressed: _model.busy || state == SourceBriefHistoryState.loading
+                  ? null
+                  : () {
+                      _cancelRevealForUserInteraction();
+                      _model.loadSavedResearchHistory();
+                    },
+              icon: Icon(
+                state == SourceBriefHistoryState.loading
+                    ? Icons.hourglass_top
+                    : Icons.refresh,
+                size: 18,
+              ),
+              label: Text(
+                state == SourceBriefHistoryState.loading
+                    ? copy.text('loadingResearchHistory')
+                    : state == SourceBriefHistoryState.loaded
+                    ? copy.text('refreshResearchHistory')
+                    : copy.text('loadResearchHistory'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          copy.text('researchHistoryHint'),
+          style: TextStyle(color: palette.muted, height: 1.5),
+        ),
+        if (state == SourceBriefHistoryState.failed) ...[
+          const SizedBox(height: 10),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              copy.text(
+                _model.savedHistoryErrorKind ==
+                        SourceBriefErrorKind.accessDenied
+                    ? 'researchHistoryDenied'
+                    : 'researchHistoryFailed',
+              ),
+              style: TextStyle(color: palette.danger),
+            ),
+          ),
+        ],
+        if (state == SourceBriefHistoryState.loaded) ...[
+          if (!_model.savedHistoryVerificationComplete ||
+              (_model.savedHistoryUnverifiedCount ?? 0) > 0) ...[
+            const SizedBox(height: 10),
+            Text(
+              copy.text('researchHistoryIncomplete'),
+              style: TextStyle(color: palette.muted, height: 1.5),
+            ),
+          ],
+          if (history.isEmpty) ...[
+            const SizedBox(height: 12),
+            Text(copy.text('researchHistoryEmpty')),
+          ],
+          for (final work in history) ...[
+            const SizedBox(height: 10),
+            Card(
+              key: ValueKey('source-brief/research-history/${work.artifactId}'),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      work.title,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${copy.text('researchVersion')} ${work.version}',
+                      style: TextStyle(color: palette.muted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        OutlinedButton.icon(
+                          key: ValueKey(
+                            'source-brief/research-history/open/${work.artifactId}',
+                          ),
+                          onPressed: _model.busy
+                              ? null
+                              : () {
+                                  _cancelRevealForUserInteraction();
+                                  _model.reopenSavedResearchVersion(work);
+                                },
+                          icon: const Icon(Icons.open_in_new, size: 16),
+                          label: Text(copy.text('openResearchVersion')),
+                        ),
+                        if (_isLatestResearchVersion(work))
+                          TextButton.icon(
+                            key: ValueKey(
+                              'source-brief/research-history/revise/${work.artifactId}',
+                            ),
+                            onPressed: _model.busy
+                                ? null
+                                : () => _reviseSavedResearch(work, copy),
+                            icon: const Icon(Icons.edit_outlined, size: 16),
+                            label: Text(copy.text('reviseResearch')),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (_model.openedHistoryWork case final opened?) ...[
+            const SizedBox(height: 14),
+            Semantics(
+              liveRegion: true,
+              child: Text(
+                '${copy.text('openedResearchVersion')} ${opened.version}',
+                style: TextStyle(color: palette.muted),
+              ),
+            ),
+            const SizedBox(height: 6),
+            SelectableText(
+              opened.markdown,
+              key: const ValueKey('source-brief/research-history/opened'),
+            ),
+          ],
+          if (_model.savedHistoryHasMore) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              key: const ValueKey('source-brief/research-history/more'),
+              onPressed: _model.busy
+                  ? null
+                  : () => _model.loadSavedResearchHistory(loadMore: true),
+              child: Text(copy.text('moreResearchHistory')),
+            ),
+          ],
+        ],
+      ],
+    );
+  }
+
+  bool _isLatestResearchVersion(SourceBriefSavedWork work) {
+    final latest = _model.savedHistory
+        .where((item) => item.workId == work.workId)
+        .fold<int>(
+          0,
+          (value, item) => item.version > value ? item.version : value,
+        );
+    return latest == work.version;
+  }
 
   Widget _sectionTitle(String text) => Text(
     text,

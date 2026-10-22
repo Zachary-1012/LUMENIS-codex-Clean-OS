@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib
+import logging
 import sys
 import types
 from types import SimpleNamespace
@@ -70,15 +71,18 @@ def test_custom_handler_result_states(output, expected):
     assert result.get("result") == output
 
 
-def test_custom_handler_exception_is_failure():
+def test_custom_handler_exception_is_failure_without_exception_details():
+    secret = "handler-private-detail-canary"
     result = execution.execute_skill(
         execution.SkillExecutionContext(skill_id="custom.test"),
-        handler=lambda _ctx: (_ for _ in ()).throw(RuntimeError("handler failed")),
+        handler=lambda _ctx: (_ for _ in ()).throw(RuntimeError(secret)),
     )
 
     assert result["success"] is False
     assert result["source"] == "custom_handler"
-    assert result["error"] == "handler failed"
+    assert result["error"] == result["code"] == "SKILL_HANDLER_FAILED"
+    assert secret not in repr(result)
+    assert "traceback" not in result
 
 
 @pytest.mark.parametrize(
@@ -133,9 +137,10 @@ def test_registered_mcp_classifies_tool_result_without_invoking_provider(monkeyp
     assert result["source"] == "registered_mcp"
 
 
-def test_registered_mcp_exception_is_failure(monkeypatch):
+def test_registered_mcp_exception_is_failure_without_exception_details(monkeypatch):
+    secret = "mcp-private-detail-canary"
     module = types.ModuleType("mcp_skill_runtime")
-    module.invoke_registered_mcp = lambda *_args: (_ for _ in ()).throw(RuntimeError("mcp failed"))
+    module.invoke_registered_mcp = lambda *_args: (_ for _ in ()).throw(RuntimeError(secret))
     monkeypatch.setitem(sys.modules, "mcp_skill_runtime", module)
     skill = execution.SkillRuntimeInfo(
         skill_id="mcp.test", config={"runtime": "mcp"}
@@ -147,7 +152,62 @@ def test_registered_mcp_exception_is_failure(monkeypatch):
 
     assert result["success"] is False
     assert result["source"] == "registered_mcp"
-    assert result["error"] == "mcp failed"
+    assert result["error"] == result["code"] == "SKILL_MCP_RUNTIME_FAILED"
+    assert secret not in repr(result)
+    assert "traceback" not in result
+
+
+def test_evidence_bridge_exception_uses_stable_error(monkeypatch):
+    secret = "evidence-private-detail-canary"
+    module = types.ModuleType("lumenis.shared.evidence")
+
+    class FailingEvidenceStore:
+        def __init__(self):
+            raise RuntimeError(secret)
+
+    module.EvidenceStore = FailingEvidenceStore
+    monkeypatch.setitem(sys.modules, "lumenis.shared.evidence", module)
+
+    result = execution.record_execution_evidence(
+        execution.SkillExecutionContext(skill_id="custom.test")
+    )
+
+    assert result["ok"] is False
+    assert result["error"] == result["code"] == "SKILL_EVIDENCE_BRIDGE_FAILED"
+    assert secret not in repr(result)
+
+
+def test_trace_failure_log_suppresses_exception_details(caplog):
+    secret = "trace-private-detail-canary"
+
+    class FailingConnection:
+        def execute(self, *_args, **_kwargs):
+            raise RuntimeError(secret)
+
+    with caplog.at_level(logging.ERROR):
+        assert execution.write_trace(
+            execution.SkillExecutionContext(skill_id="custom.test"),
+            connection=FailingConnection(),
+        ) is False
+
+    assert secret not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+def test_registered_skill_worker_log_suppresses_exception_details(monkeypatch, caplog):
+    secret = "worker-private-detail-canary"
+    monkeypatch.setattr(
+        execution, "run_registered_skill_job",
+        lambda _execution_id: (_ for _ in ()).throw(RuntimeError(secret)),
+    )
+
+    with caplog.at_level(logging.ERROR):
+        worker = execution.start_registered_skill_job("isolated-execution")
+        worker.join(timeout=2)
+
+    assert not worker.is_alive()
+    assert secret not in caplog.text
+    assert "Traceback" not in caplog.text
 
 
 @pytest.mark.parametrize(

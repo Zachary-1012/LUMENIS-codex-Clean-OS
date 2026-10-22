@@ -617,3 +617,28 @@ def test_local_render_reopen_revision_revalidates_export_and_transport(local_sto
         export_audits = gate.get_audit_log(operation_type="data_export")
         assert export_audits and all(entry["caller"] == "workspace:local" for entry in export_audits)
         assert len(rows(local_store)) == 3
+
+
+def test_legacy_source_inner_digest_is_verified_on_read(media_store):
+    approve(media_store)
+    result = import_source(media_store)
+    artifact_id = result["artifact"]["artifact_id"]
+    package = media_store["root"] / f"{artifact_id}.zip"
+    with zipfile.ZipFile(package) as archive:
+        entries = {name: archive.read(name) for name in archive.namelist()}
+    metadata = json.loads(entries["source.json"])
+    assert metadata["schema_version"] == 1
+    media_name = metadata["media_filename"]
+    media_bytes = bytearray(entries[media_name])
+    media_bytes[-1] ^= 1
+    entries[media_name] = bytes(media_bytes)
+    with zipfile.ZipFile(package, "w", compression=zipfile.ZIP_STORED) as archive:
+        for name, data in entries.items():
+            archive.writestr(name, data)
+    with media_store["repository"].transaction() as connection:
+        connection.execute(
+            "UPDATE lumenis_shared_artifacts SET sha256=?,size_bytes=? WHERE artifact_id=?",
+            (hashlib.sha256(package.read_bytes()).hexdigest(), package.stat().st_size, artifact_id),
+        )
+    with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_INTEGRITY_FAILED"):
+        artifacts.read_content_source_artifact(artifact_id, actor=ACTOR, **SCOPE)

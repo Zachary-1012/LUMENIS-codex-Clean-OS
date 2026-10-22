@@ -12,6 +12,13 @@ import pytest
 from lumenis.system.ai_gateway.owned_training import TrainingBlocked
 from lumenis.system.ai_gateway.owned_training_runtime import TrainingProcessFence
 
+pytest_plugins = (
+    "tests.test_owned_training_phase_http_v2",
+    "tests.test_owned_training_checkpoint_recovery",
+)
+
+pytestmark = pytest.mark.usefixtures("strict_permission_mode")
+
 
 def test_real_os_lock_prevents_competing_owner_and_survives_child_stop(tmp_path):
     lock = (tmp_path / "owner.lock").resolve()
@@ -156,6 +163,7 @@ def test_authenticated_remote_transport_binds_remote_peer_and_replaces_under_ret
             self.channel = None
             self.peer = None
             self.pause_states = []
+            self.lifecycle = []
             self.endpoint = SimpleNamespace(source_root="/remote/source")
 
         def start_stdio(self):
@@ -194,11 +202,16 @@ def test_authenticated_remote_transport_binds_remote_peer_and_replaces_under_ret
         def fetch_checkpoint_bytes(self, **_kwargs):
             raise AssertionError("This protocol test does not transfer checkpoint bytes")
 
+        def cancel_checkpoint_transfers(self):
+            self.lifecycle.append("cancel-transfer-readers")
+            return {"state": "CHECKPOINT_TRANSFER_READERS_STOPPED", "count": 0}
+
         def verify_training_inputs(self, paths, expected_files):
             return {"state": "PHYSICAL_TRAINING_INPUTS_VERIFIED", "paths": paths,
                 "files": expected_files, "remote_peer": dict(self.peer)}
 
         def stop_remote_and_reap(self):
+            self.lifecycle.append("stop-remote-worker")
             return {"state": "REMOTE_GROUP_STOPPED", "pid": self.peer["pid"],
                 "process_group": self.peer["pid"], "live_members": 0}
 
@@ -218,6 +231,7 @@ def test_authenticated_remote_transport_binds_remote_peer_and_replaces_under_ret
             assert transport.pause_states == [True]
         assert transport.pause_states == [True, False]
         stopped = fence.stop_and_reap()
+        assert transport.lifecycle == ["cancel-transfer-readers", "stop-remote-worker"]
         second = fence.start_managed_training(python_executable=Path(sys.executable), cwd=root,
             log_path=(tmp_path / "remote-replaced.log").resolve(), source_pins=transport.source_pins,
             replace=True)
@@ -332,14 +346,11 @@ def test_public_worker_context_matches_canonical_hashes_without_manufacturing_id
 # The real owner implementations run against an explicitly disposable Canonical
 # DB. These tests grant only synthetic technical material; they are not admission
 # or acceptance for a real training job.
-from tests.test_owned_training_phase_http_v2 import phase_http, strict_permission_mode, _prepare_task, _request_object
-from tests.test_owned_training_checkpoint_recovery import policy_material
-
-
 def test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation(checkpoint_owner):
     import threading
     import requests
     from werkzeug.serving import make_server
+    from tests.test_owned_training_phase_http_v2 import _request_object
     from lumenis.system.ai_gateway.owned_training_runtime import OwnedTrainingPhaseHTTPTransport
     from lumenis.system.ai_gateway.owned_training_phases import TrainingPhaseClient, TrainingPublicContext
     from lumenis.system.security.permission import owned_training_phase_fingerprints
@@ -391,6 +402,7 @@ def checkpoint_owner(phase_http, policy_material, tmp_path, monkeypatch, request
     from lumenis.system.ai_gateway import owned_training as training
     from lumenis.system.ai_gateway.owned_training_checkpoints import CheckpointPolicy
     from lumenis.system.ai_gateway.owned_training_runtime import OwnedTrainingCheckpointClient
+    from tests.test_owned_training_phase_http_v2 import _prepare_task, _request_object
     document = copy.deepcopy(policy_material[0])
     document["base_recipe"] = training.ADA_RECIPE
     policy = CheckpointPolicy.validate(document)

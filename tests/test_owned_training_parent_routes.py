@@ -7,6 +7,8 @@ import experience_runtime as runtime
 from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
 from tests.test_owned_training_phase_http_v2 import phase_http, strict_permission_mode, BASE_HEADERS, TASK_URL, _db_snapshot
 
+pytestmark = pytest.mark.usefixtures("strict_permission_mode")
+
 
 def execute(case, task_id, body=None):
     return case['client'].post(TASK_URL + '/' + task_id + '/execute',

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Risk 双域策略测试（ZBC V2.0）
 ==============================
@@ -14,14 +13,19 @@ Risk 双域策略测试（ZBC V2.0）
 """
 import os
 import sys
+
 import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from risk_engine import (
-    CTH_RISK_POLICY, ZBMP_RISK_POLICY, DOMAIN_RISK_POLICIES,
-    get_risk_policy, compute_domain_risk_score, compare_domain_risk,
-    get_risk_policy_summary, evaluate_risk,
+    CTH_RISK_POLICY,
+    ZBMP_RISK_POLICY,
+    compare_domain_risk,
+    compute_domain_risk_score,
+    evaluate_risk,
+    get_risk_policy,
+    get_risk_policy_summary,
 )
 
 
@@ -29,10 +33,14 @@ from risk_engine import (
 def isolated_domain_context():
     """Keep policy-selection tests independent of stale request/job context."""
     from domain_isolation import (
-        clear_domain_context, get_domain_context, set_domain_context,
+        clear_domain_context,
+        get_domain_context,
+        set_domain_context,
     )
     from subject_context import (
-        clear_thread_context, get_thread_context, set_thread_context,
+        clear_thread_context,
+        get_thread_context,
+        set_thread_context,
     )
 
     prior_domain = get_domain_context()
@@ -149,7 +157,11 @@ class TestGetRiskPolicy:
     def test_default_without_context_is_unselected_and_does_not_leak(
         self, isolated_domain_context,
     ):
-        from domain_isolation import DomainContext, clear_domain_context, set_domain_context
+        from domain_isolation import (
+            DomainContext,
+            clear_domain_context,
+            set_domain_context,
+        )
 
         with pytest.raises(ValueError, match="DOMAIN_NOT_SELECTED"):
             get_risk_policy(None)
@@ -233,6 +245,42 @@ class TestComputeDomainRiskScore:
             text="歧视行为", sentiment="negative", domain_id="cth"
         )
         assert len(result["escalation_triggered"]) > 0
+
+
+class TestDistinctCreatorEscalation:
+    def test_negative_posts_do_not_establish_distinct_creators(self):
+        result = compute_domain_risk_score(negative_count=3, domain_id="cth")
+        assert result["risk_score"] == 6.0
+        assert not result["escalation_triggered"]
+        assert result["escalation_unavailable"][0]["unavailable_reason"] == "KOC_COUNT_NOT_PROVIDED"
+
+    @pytest.mark.parametrize("count", [0, 1, 2, 3])
+    def test_explicit_distinct_creator_threshold(self, count):
+        result = compute_domain_risk_score(domain_id="cth", koc_count=count)
+        assert result["data_available"] is True
+        assert bool(result["escalation_triggered"]) is (count >= 3)
+        assert result["escalation_unavailable"] == []
+
+    @pytest.mark.parametrize("count", [True, False, -1, 1.5, "3", float("nan"), float("inf")])
+    def test_invalid_creator_count_is_rejected(self, count):
+        with pytest.raises(ValueError, match="KOC_COUNT_INVALID"):
+            compute_domain_risk_score(domain_id="cth", koc_count=count)
+
+    def test_unknown_creators_do_not_make_no_data_available(self):
+        result = compute_domain_risk_score(domain_id="cth")
+        assert result["risk_score"] is None
+        assert result["data_available"] is False
+        assert result["escalation_unavailable"][0]["condition"] == "koc_count >= 3"
+
+    def test_comparison_preserves_creator_input(self):
+        result = compare_domain_risk(koc_count=3)
+        assert result["cth"]["risk_level"] == "high"
+        assert not result["zbmp"]["escalation_triggered"]
+        assert result["zbmp"]["escalation_unavailable"][0]["unavailable_reason"] == "COMPARABLE_BASELINE_NOT_BOUND"
+
+    def test_declared_financial_fraud_rule_is_evaluated(self):
+        result = compute_domain_risk_score(text="财务造假", domain_id="zbmp")
+        assert "contains_financial_fraud" in {rule["condition"] for rule in result["escalation_triggered"]}
 
 
 class TestCompareDomainRisk:

@@ -22,3 +22,11 @@ tests/fixtures/collector/native_public_captures_20261004.json -text whitespace=c
 AGENTS.md text eol=lf
 scripts/data_candidates/*.jsonl text eol=lf
 scripts/data_candidates/*.json text eol=lf
+
+# Recovery admission checks original bytes, including original line endings.
+research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/** -text
+research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/** -text
+research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/** -text
+research/engineering/documentation-evidence/reports/competitor_research_20261018/01_official_competitor_benchmark.md -text
+00-GOVERNANCE/evidence/round-15/document-delivery-20261018/URL_TOKEN_REDACTIONS.json -text
+00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/results/public-credential-signature-scan.json -text

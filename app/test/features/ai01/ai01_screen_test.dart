@@ -113,7 +113,13 @@ void main() {
 
     await tester.ensureVisible(find.text('查看风险变化'));
     await tester.tap(find.text('查看风险变化'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller?.text,
+      isEmpty,
+    );
+    await tester.tap(find.byKey(const ValueKey('ai01-suggestion-adopt')));
+    await tester.pumpAndSettle();
     expect(
       tester.widget<TextField>(find.byType(TextField)).controller?.text,
       '检查风险变化并列出已有来源',
@@ -651,6 +657,82 @@ void main() {
     expect(find.text('AI 模型服务'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('suggestions preview, append, and protect later edits on undo', (
+    tester,
+  ) async {
+    final draft = TextEditingController(text: '保留原始问题');
+    addTearDown(draft.dispose);
+    final repository = _FakeAi01Repository();
+    await tester.pumpWidget(
+      _app(repository: repository, draftController: draft),
+    );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.widgetWithText(ActionChip, '查看风险变化'));
+    await tester.tap(find.widgetWithText(ActionChip, '查看风险变化'));
+    await tester.pumpAndSettle();
+    expect(draft.text, '保留原始问题');
+    expect(repository.submitted, isEmpty);
+    await tester.tap(find.byKey(const ValueKey('ai01-suggestion-adopt')));
+    await tester.pumpAndSettle();
+    expect(draft.text, '保留原始问题\n检查风险变化并列出已有来源');
+    draft.text += '\n后续手工修改';
+    await tester.pump();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('ai01-suggestion-withdraw')),
+    );
+    await tester.tap(find.byKey(const ValueKey('ai01-suggestion-withdraw')));
+    await tester.pumpAndSettle();
+    expect(draft.text, contains('后续手工修改'));
+    await tester.tap(find.text('保留编辑'));
+    await tester.pumpAndSettle();
+    expect(draft.text, contains('后续手工修改'));
+    await tester.tap(find.byKey(const ValueKey('ai01-suggestion-withdraw')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('ai01-suggestion-withdraw-confirm')),
+    );
+    await tester.pumpAndSettle();
+    expect(draft.text, '保留原始问题');
+    expect(repository.submitted, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'suggestions reject duplicates and overflow and close on owner replacement',
+    (tester) async {
+      final draft = TextEditingController(text: '检查风险变化并列出已有来源');
+      addTearDown(draft.dispose);
+      final repository = _FakeAi01Repository();
+      await tester.pumpWidget(
+        _app(repository: repository, draftController: draft),
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.widgetWithText(ActionChip, '查看风险变化'));
+      await tester.tap(find.widgetWithText(ActionChip, '查看风险变化'));
+      await tester.pumpAndSettle();
+      FilledButton adopt() => tester.widget<FilledButton>(
+        find.byKey(const ValueKey('ai01-suggestion-adopt')),
+      );
+      expect(adopt().onPressed, isNull);
+      draft.text = '界' * 3999;
+      await tester.pump();
+      expect(adopt().onPressed, isNull);
+      final replacement = TextEditingController(text: '新问题');
+      addTearDown(replacement.dispose);
+      await tester.pumpWidget(
+        _app(repository: repository, draftController: replacement),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('ai01-suggestion-review')),
+        findsNothing,
+      );
+      expect(replacement.text, '新问题');
+      expect(draft.text, '界' * 3999);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('filters untrusted suggestions before Text and EditableText', (
     tester,

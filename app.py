@@ -8038,7 +8038,7 @@ def api_xhs_rednote_check_login():
 
 # ============ GAP-21 Cookie 导入 API（受 Basic Auth 保护，不接收/不返回 Cookie 明文）============
 
-def _start_optional_runtime_services(internal_beta_acceptance):
+def _start_optional_runtime_services(internal_beta_acceptance, *, no_scheduler=False):
     if MANUAL_WORKSPACE or internal_beta_acceptance or INTERNAL_BETA_SAFE_STARTUP:
         print('[Runtime] manual/acceptance startup: CDP, heartbeat, and guardian startup suppressed')
         return False
@@ -8052,6 +8052,10 @@ def _start_optional_runtime_services(internal_beta_acceptance):
         raise
     except Exception as _pf_e:
         print(f"[Preflight] 预检异常，不阻断启动: {type(_pf_e).__name__}: {_pf_e}")
+
+    if no_scheduler:
+        print('[Runtime] manual startup: optional automatic services suppressed')
+        return False
 
     # 自动检查并启动CDP浏览器（确保采集功能可用）
     # 注意：暂时禁用自动启动，避免Edge浏览器崩溃导致主进程退出
@@ -8223,7 +8227,7 @@ if __name__ == '__main__':
         print(runtime_preflight.format_summary(runtime_preflight.run_preflight(enforce=True)))
     try:
         _start_hang_watchdog()
-        _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP)
+        _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP, no_scheduler=args.no_scheduler)
         # T-P1-1 waitress 可配置化：ZB_WSGI=waitress 时用生产级多线程 WSGI（waitress.serve），
         # 默认仍 Flask dev server（零影响）。先 Staging 验证再切生产；缺 waitress 自动回落 Flask。
         _wsgi = os.environ.get('ZB_WSGI', '').strip().lower()

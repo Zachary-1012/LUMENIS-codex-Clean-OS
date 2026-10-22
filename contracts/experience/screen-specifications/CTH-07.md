@@ -35,7 +35,7 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 ## 2. Route, entry, exit and return
 
 - **Entry:** `Cth07Screen(client: ...)` from the existing workspace; no new route.
-- **Read sequence:** `settingsContext()` → `screen('CTH-07')`. The adapter verifies the server scope/read/lineage binding, then reads `chart.labels`, `chart.series[name,data]` and `trend_metadata`/`truth.trend`; every series must align to all labels.
+- **Read sequence:** `settingsContext()` → `screen('CTH-07')`. The adapter verifies the current `lumenis.scope-read-binding.v1`, then checks `chart.labels` and each `chart.series[name,metric,data]` against the same `temporal_metrics.days`, recipe, snapshot hash and binding. Every series aligns to all labels; null values remain gaps and are never zero-filled.
 - **Scope gate:** global definitions must be `GLOBAL/ALL`, `global_all` or `global` and carry the authorized global binding; focused definitions must match the returned Subject ID and authorized focus binding. Missing or mismatched scope blocks the chart.
 - **Exit / return:** series chips and detail selection are local; there is no server-side metric/cohort mutation and no deep-link to a contribution source.
 
@@ -44,7 +44,7 @@ approval_reference: source baseline origin/main 5ba1aefc53a1babc293e990c23c62f84
 | Priority | UI field / action | Current owner | Exact source/ViewModel field or callable | Definition / units / window | Freshness and missing-data behavior | Binding ID | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | Scope label | SYSTEM context read | `LumenisCoreClient.settingsContext()` | `GLOBAL_ALL` or applied CTH focus | Invalid/missing scope blocks; internal IDs hidden | — | Current context contract |
-| P1 | Aligned series | CTH aggregate read | `_build_cth07()` chart `labels`, `series[name,data]` | Same time labels for every series; numeric values only | Unaligned/missing data or missing server authorization/lineage produces NOT_COLLECTED; no zero-fill | BACKEND-GAP-013 | Current authorized temporal metric projection; complete UI binding not established |
+| P1 | Aligned series | CTH aggregate read | `_build_cth07()` chart `labels`, `series[name,metric,data]`, matched against `temporal_metrics.days[date][metric].value` | Same returned time labels for every series; numeric or null values | Unaligned/mismatched snapshot, missing data or invalid current scope binding produces NOT_COLLECTED; null remains unknown | BACKEND-GAP-013 | Current temporal metric contract; source adapter is wired, runtime acceptance remains separate |
 | P1 | Definition rail | CTH native-time metric Owner | `trend_metadata` or `truth.trend`: numerator, denominator, time_window, subject, source, freshness | All six fields required; units/window shown as returned | Missing/unsafe source means no chart | BACKEND-GAP-013 | Current server supplies metadata; App adapter same-version acceptance remains separate |
 | P1 | Change explanation | Metric/decomposition owner UNKNOWN | Local first-to-last difference only; contribution data is not returned | Numeric delta over the displayed window; not a cause | Show “贡献拆解暂未返回” when absent | BACKEND-GAP-013 | Arithmetic/statistical output is not causal attribution; causal contribution owner remains unverified |
 | BLOCKED | Add/remove metric or cohort | CTH trend/action owner UNKNOWN | ViewModel/action declaration only; no verified request/result | UNKNOWN | No controls or optimistic overlay | BACKEND-GAP-013 | `trend_api/canonical_metrics` UNKNOWN |
@@ -225,10 +225,10 @@ Web与桌面在图旁分列“统计状态／业务告警配置／写入与通�
 
 ## 2026-10-18 恢复候选后的当前接口接续（F待执行）
 
-当前静态事实：后端`experience_screens._cth_temporal_screen`直接返回现temporal owner；当前Dart强制experience-row-projection v2，恢复候选强制旧experience-query-receipt v1，两者均未接现shape。不得给后端补假projection/聚合Evidence来迁就旧UI。
+当前源码事实：后端`experience_screens._cth_temporal_screen`直接返回现temporal owner；Dart适配现`scope-read-binding.v1`，核对chart与同响应`temporal_metrics`的scope binding、recipe、snapshot hash、日期和逐项指标值，不依赖旧experience-row-projection或experience-query-receipt。不得给后端补假projection/聚合Evidence来迁就旧UI。
 
 F输入合同：原screen endpoint的envelope含sections及truth；`temporal_metrics`是完整派生快照，含binding/recipe/coverage/source_freshness/totals/days及原来源contributions；scope用`global_binding`或`focus_binding`。`trend_metadata`含numerator/denominator/time_window/subject/source/freshness/recipe/snapshot_sha256；chart.labels为日期，series每项name/metric/data，data允许null。snapshot_sha256仅计算身份，不是来源Evidence。界面不得因null丢掉整条系列或补14天零值。窗口、原生发布时间缺失、样本范围/可比性和来源贡献沿Owner真实状态显示。
 
-F输出/视觉：原趋势图区上方保范围/时间口径，缺测点以断点/未知展示；右侧依据抽屉为真实contributions，不能以计算hash替原件。模型READY不等业务告警批准；CONFIGURATION_REQUIRED/APPROVED_SCOPED_BUSINESS_RULE_REQUIRED时零告警写入、alerts=[]、NOT_PERFORMED、cooldown NOT_APPLICABLE。原人工启发式单独标scope/window未核。验收用真实builder输出做GLOBAL/FOCUS、known/null/partial/empty、撤权及来源变化解析测试；无旧projection时不误报未绑定，不自动告警或推断市场覆盖。Dart适配和四端效果仍OPEN。
+F输出/视觉：原趋势图区上方保范围/时间口径，缺测点以断点/未知展示；右侧依据抽屉为真实contributions，不能以计算hash替原件。模型READY不等业务告警批准；CONFIGURATION_REQUIRED/APPROVED_SCOPED_BUSINESS_RULE_REQUIRED时零告警写入、alerts=[]、NOT_PERFORMED、cooldown NOT_APPLICABLE。原人工启发式单独标scope/window未核。定向回归覆盖真实builder shape、GLOBAL/FOCUS、known/null/partial/empty、同快照不一致和撤权边界；没有旧projection时不误报未绑定，不自动告警或推断市场覆盖。Dart源码适配已接入；真实Core装载及四端效果仍OPEN。
 
 本段校准旧current断言，历史验收不改写。源码/字段以现Owner为准，静态对齐不升级IMPLEMENTED/ACCEPTED。执行集合Codex、Zack、阿康；F是模块归属，不派个人。

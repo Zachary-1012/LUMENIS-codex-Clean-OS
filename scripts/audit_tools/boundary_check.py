@@ -385,7 +385,7 @@ def check_contract_artifact_usage(files: List[Path]) -> List[Violation]:
 
 # Review identities for the ten ambiguous legacy findings at 79a88b5.
 # Not a directory whitelist, execution grant or semantic proof. Any changed
-# bytes require renewed review; permission/source denial regressions still run.
+# canonical LF source bytes require renewed review; denial regressions still run.
 _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE: execute_skill_api checks dual domain, '
                                          'task binding, then run_execution_chain; local path '
                                          'authorized_context and readback.',
@@ -399,7 +399,7 @@ _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE:
                                                      'before callback; CapabilityRouter and '
                                                      'AgentLoop own Permission.',
                                    'dependencies': {'agent_capability/router.py': '332edd66089df095b090d27c41d2adab2244f58fcfa1304568a183ed2f567259',
-                                                    'agent_runtime/loop.py': '2a3c8d678b6ecb37a1f7becc81d00f1a935e3ad712880f4df39cb2c9bd5a1d4a'},
+                                                    'agent_runtime/loop.py': 'bcbede38ce9b43e792ac4cda379b2d92cd38a342b909fa986010341d9108eec9'},
                                    'sha256': 'a4fd55b510ec84e3fbed5ad6f3f25c2ca8ad12aa550802e333f57cac3e0f6e51'},
  'agent_capability/router.py': {'classification': 'CANONICAL_CHAIN: formed invoke callback '
                                                   'executes only via FormedCall/AgentLoop; execute '
@@ -435,7 +435,7 @@ _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE:
                                              'invocation, with task scope and current binding '
                                              'checks.',
                            'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
-                           'sha256': '2a3c8d678b6ecb37a1f7becc81d00f1a935e3ad712880f4df39cb2c9bd5a1d4a'},
+                           'sha256': 'bcbede38ce9b43e792ac4cda379b2d92cd38a342b909fa986010341d9108eec9'},
  'agent_runtime/task_binding.py': {'classification': 'CANONICAL_DELEGATE: authorized_context calls '
                                                      'check_actor_scope_permission/check_local_workspace_scope_permission; '
                                                      'invocation and result recheck bindings.',
@@ -455,25 +455,25 @@ _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE:
                                                                  'first and background owner '
                                                                  'revalidates producer/scope.',
                                                'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
-                                               'sha256': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
+                                               'sha256': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
  'lumenis_shared_skills.py': {'classification': 'DELEGATED: run_shared_skill is called by '
                                                 'shared.agents.skills.execution._execute_builtin_local '
                                                 'after canonical Permission/Firewall/Effect Fence; '
                                                 'no independent permission grant.',
-                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
+                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
                               'sha256': '16b684ebfc7103da27882a7d254b2d965d4847a61d061a529dc3107138789a89'},
  'lumenis_skill_adapter.py': {'classification': 'DELEGATED: invoked by '
                                                 'shared.agents.skills.execution.execute_skill only '
                                                 'after run_execution_chain '
                                                 'Permission/Firewall/Effect Fence. OSAI missing '
                                                 'remains unavailable.',
-                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
+                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
                               'sha256': '9baa31c2da14ca9fa7fc79be778e875f59007548c88baa71f599bc30e394c3fe'},
  'mcp_skill_runtime.py': {'classification': 'DELEGATED: registered MCP invoked by same execution '
                                             'owner; own installation/tool allowlist/human '
                                             'approval/read-only contract checks retained.',
-                          'dependencies': {'lumenis/shared/agents/skills/execution.py': '0ed9e5e94728e8cc540e9c5173cce6daf3c56e4fe23e720ec3190e46c5c26747'},
-                          'sha256': '60d8c6ad3116a6fbaa4ca9bca9df3d8b65f6d87642ebbce6e8ba8ea353425a6b'},
+                          'dependencies': {'lumenis/shared/agents/skills/execution.py': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
+                          'sha256': '18e178a6e1b1ab9c2ea39df03a2a50be1c243a28e813c78a7e487b32bfdc4769'},
  'migrations/create_intelligence_assets_table.py': {'classification': 'SCHEMA_DIAGNOSTIC: '
                                                                       'controlled migration count '
                                                                       'after CREATE TABLE; not '
@@ -494,15 +494,19 @@ _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE:
                                                        'sha256': '262bbe44b9dde42722cc796d9ee7d97edca522146fed0db2aa32aa4dd3a12490'}}
 
 
+def _source_digest(path):
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def _review_status(rel, path):
     reviewed = _REVIEWED_BOUNDARIES.get(rel)
     if reviewed is None:
         return None
-    if hashlib.sha256(path.read_bytes()).hexdigest() != reviewed["sha256"]:
+    if path.is_symlink() or _source_digest(path) != reviewed["sha256"]:
         return False
     for dependency, expected in reviewed.get("dependencies", {}).items():
         linked = PROJECT_ROOT / dependency
-        if not linked.is_file() or linked.is_symlink() or hashlib.sha256(linked.read_bytes()).hexdigest() != expected:
+        if not linked.is_file() or linked.is_symlink() or _source_digest(linked) != expected:
             return False
     return True
 

@@ -13,10 +13,16 @@ import 'bmp08_snapshot.dart';
 import 'bmp08_view_model.dart';
 
 class Bmp08Screen extends StatefulWidget {
-  const Bmp08Screen({required this.client, this.repository, super.key});
+  const Bmp08Screen({
+    required this.client,
+    this.repository,
+    this.onNavigate,
+    super.key,
+  });
 
   final LumenisCoreClient client;
   final Bmp08Repository? repository;
+  final ValueChanged<String>? onNavigate;
 
   @override
   State<Bmp08Screen> createState() => _Bmp08ScreenState();
@@ -64,6 +70,9 @@ class _Bmp08ScreenState extends State<Bmp08Screen> {
               actionId: _viewModel.actionId,
               onRefresh: _viewModel.refresh,
               onAction: _viewModel.stageAction,
+              onOpenMediaWorkspace: widget.onNavigate == null
+                  ? null
+                  : () => widget.onNavigate!('SH-01'),
             ),
           },
         ),
@@ -79,6 +88,7 @@ class _PodcastStudio extends StatefulWidget {
     required this.actionId,
     required this.onRefresh,
     required this.onAction,
+    this.onOpenMediaWorkspace,
     this.savedRepository,
   });
 
@@ -88,6 +98,7 @@ class _PodcastStudio extends StatefulWidget {
   final String? actionId;
   final VoidCallback onRefresh;
   final void Function(String actionId, String permission) onAction;
+  final VoidCallback? onOpenMediaWorkspace;
 
   @override
   State<_PodcastStudio> createState() => _PodcastStudioState();
@@ -235,6 +246,7 @@ class _PodcastStudioState extends State<_PodcastStudio> {
                   onSectionSelected: selectSection,
                   onMaterialSelected: selectMaterial,
                   onDraftChanged: editDraft,
+                  onOpenMediaWorkspace: widget.onOpenMediaWorkspace,
                 )
               : _MobileStudio(
                   snapshot: snapshot,
@@ -247,6 +259,7 @@ class _PodcastStudioState extends State<_PodcastStudio> {
                   onSectionSelected: selectSection,
                   onMaterialSelected: selectMaterial,
                   onDraftChanged: editDraft,
+                  onOpenMediaWorkspace: widget.onOpenMediaWorkspace,
                 ),
         );
         final header = <Widget>[
@@ -366,6 +379,7 @@ class _DesktopStudio extends StatelessWidget {
     required this.onSectionSelected,
     required this.onMaterialSelected,
     required this.onDraftChanged,
+    this.onOpenMediaWorkspace,
   });
 
   final Bmp08Snapshot snapshot;
@@ -378,6 +392,7 @@ class _DesktopStudio extends StatelessWidget {
   final ValueChanged<int> onSectionSelected;
   final ValueChanged<int> onMaterialSelected;
   final ValueChanged<String> onDraftChanged;
+  final VoidCallback? onOpenMediaWorkspace;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -446,7 +461,11 @@ class _DesktopStudio extends StatelessWidget {
                         onDraftChanged: onDraftChanged,
                         selectedOnly: true,
                       )
-                    : _AudioStage(snapshot: snapshot, copy: copy),
+                    : _AudioStage(
+                        snapshot: snapshot,
+                        copy: copy,
+                        onOpenMediaWorkspace: onOpenMediaWorkspace,
+                      ),
               ),
             ),
             const SizedBox(width: 8),
@@ -500,6 +519,7 @@ class _MobileStudio extends StatelessWidget {
     required this.onSectionSelected,
     required this.onMaterialSelected,
     required this.onDraftChanged,
+    this.onOpenMediaWorkspace,
   });
 
   final Bmp08Snapshot snapshot;
@@ -512,6 +532,7 @@ class _MobileStudio extends StatelessWidget {
   final ValueChanged<int> onSectionSelected;
   final ValueChanged<int> onMaterialSelected;
   final ValueChanged<String> onDraftChanged;
+  final VoidCallback? onOpenMediaWorkspace;
 
   @override
   Widget build(BuildContext context) {
@@ -532,7 +553,11 @@ class _MobileStudio extends StatelessWidget {
         onSectionSelected: onSectionSelected,
         onMaterialSelected: onMaterialSelected,
       ),
-      _MobileStudioTask.audio => _AudioStage(snapshot: snapshot, copy: copy),
+      _MobileStudioTask.audio => _AudioStage(
+        snapshot: snapshot,
+        copy: copy,
+        onOpenMediaWorkspace: onOpenMediaWorkspace,
+      ),
       _MobileStudioTask.properties => _PropertiesPanel(
         snapshot: snapshot,
         copy: copy,
@@ -1096,10 +1121,15 @@ Duration _bmp08Motion(BuildContext context) =>
     : const Duration(milliseconds: 160);
 
 class _AudioStage extends StatelessWidget {
-  const _AudioStage({required this.snapshot, required this.copy});
+  const _AudioStage({
+    required this.snapshot,
+    required this.copy,
+    this.onOpenMediaWorkspace,
+  });
 
   final Bmp08Snapshot snapshot;
   final _Bmp08Copy copy;
+  final VoidCallback? onOpenMediaWorkspace;
 
   @override
   Widget build(BuildContext context) {
@@ -1165,6 +1195,18 @@ class _AudioStage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             _StudioFlags(snapshot: snapshot, copy: copy),
+            if (onOpenMediaWorkspace != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const ValueKey('podcast-open-media-workspace'),
+                  onPressed: onOpenMediaWorkspace,
+                  icon: const LumenisIcon(Icons.video_collection_outlined),
+                  label: Text(copy.openMediaWorkspace),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -1609,6 +1651,7 @@ class _Bmp08Copy {
   String get audioReadyDetail => _get('audioReadyDetail');
   String get audioPendingDetail => _get('audioPendingDetail');
   String get audioPreviewUnavailable => _get('audioPreviewUnavailable');
+  String get openMediaWorkspace => _get('openMediaWorkspace');
   String get version => _get('version');
   String get rights => _get('rights');
   String get ready => _get('ready');
@@ -1685,6 +1728,7 @@ class _Bmp08Copy {
       'audioReadyDetail': '可进入逐段校对。',
       'audioPendingDetail': '当前只显示制作结构，不播放或导出未确认音频。',
       'audioPreviewUnavailable': '音频来源已登记；可播放音频与真实波形尚未提供。',
+      'openMediaWorkspace': '打开媒体工作台',
       'version': '版本',
       'rights': '版权',
       'ready': '已确认',
@@ -1758,6 +1802,7 @@ class _Bmp08Copy {
           'Only the studio structure is shown; unconfirmed audio is not played or exported.',
       'audioPreviewUnavailable':
           'Audio reference confirmed; playable audio and waveform data are not available here.',
+      'openMediaWorkspace': 'Open media workspace',
       'version': 'Version',
       'rights': 'Rights',
       'ready': 'Confirmed',
@@ -1838,6 +1883,7 @@ class _Bmp08Copy {
       'audioReadyDetail': '타임코드 검토를 시작할 수 있습니다.',
       'audioPendingDetail': '제작 구조만 표시하며 확인되지 않은 오디오는 재생하거나 내보내지 않습니다.',
       'audioPreviewUnavailable': '오디오 출처는 확인됐지만 재생 데이터와 실제 파형은 제공되지 않았습니다.',
+      'openMediaWorkspace': '미디어 작업 공간 열기',
       'version': '버전',
       'rights': '권리',
       'ready': '확인됨',

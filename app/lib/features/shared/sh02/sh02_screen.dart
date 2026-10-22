@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 
@@ -12,10 +13,16 @@ import 'sh02_snapshot.dart';
 import 'sh02_view_model.dart';
 
 class Sh02Screen extends StatefulWidget {
-  const Sh02Screen({required this.client, this.repository, super.key});
+  const Sh02Screen({
+    required this.client,
+    this.repository,
+    this.documentPicker,
+    super.key,
+  });
 
   final LumenisCoreClient client;
   final Sh02Repository? repository;
+  final Sh02DocumentPicker? documentPicker;
 
   @override
   State<Sh02Screen> createState() => _Sh02ScreenState();
@@ -24,6 +31,7 @@ class Sh02Screen extends StatefulWidget {
 class _Sh02ScreenState extends State<Sh02Screen> {
   late final Sh02ViewModel _viewModel = Sh02ViewModel(
     repository: widget.repository ?? CoreSh02Repository(client: widget.client),
+    documentPicker: widget.documentPicker ?? PlatformSh02DocumentPicker(),
   );
 
   @override
@@ -45,14 +53,23 @@ class _Sh02ScreenState extends State<Sh02Screen> {
       child: AnimatedBuilder(
         animation: _viewModel,
         builder: (context, _) => switch (_viewModel.phase) {
-          Sh02LoadPhase.loading => _LoadingState(),
-          Sh02LoadPhase.blocked => _BlockedState(
-            error: _viewModel.scopeError,
-            onRetry: _viewModel.refresh,
+          Sh02LoadPhase.loading => _IndependentImportWorkspace(
+            viewModel: _viewModel,
+            state: _LoadingState(),
           ),
-          Sh02LoadPhase.failed => _FailureState(
-            kind: _viewModel.failureKind!,
-            onRetry: _viewModel.refresh,
+          Sh02LoadPhase.blocked => _IndependentImportWorkspace(
+            viewModel: _viewModel,
+            state: _BlockedState(
+              error: _viewModel.scopeError,
+              onRetry: _viewModel.refresh,
+            ),
+          ),
+          Sh02LoadPhase.failed => _IndependentImportWorkspace(
+            viewModel: _viewModel,
+            state: _FailureState(
+              kind: _viewModel.failureKind!,
+              onRetry: _viewModel.refresh,
+            ),
           ),
           Sh02LoadPhase.ready => _Workspace(viewModel: _viewModel),
         },
@@ -62,6 +79,36 @@ class _Sh02ScreenState extends State<Sh02Screen> {
 }
 
 enum _BrowseMode { list, space }
+
+class _IndependentImportWorkspace extends StatelessWidget {
+  const _IndependentImportWorkspace({
+    required this.viewModel,
+    required this.state,
+  });
+
+  final Sh02ViewModel viewModel;
+  final Widget state;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    padding: const EdgeInsets.fromLTRB(18, 22, 18, 36),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1260),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Header(),
+            const SizedBox(height: 16),
+            _ImportPanel(viewModel: viewModel),
+            const SizedBox(height: 16),
+            state,
+          ],
+        ),
+      ),
+    ),
+  );
+}
 
 class _Workspace extends StatefulWidget {
   const _Workspace({required this.viewModel});
@@ -265,6 +312,8 @@ class _WorkspaceState extends State<_Workspace> {
               children: [
                 _Header(),
                 const SizedBox(height: 18),
+                _ImportPanel(viewModel: viewModel),
+                const SizedBox(height: 16),
                 _ScopeBanner(scope: snapshot.scope),
                 const SizedBox(height: 16),
                 if (wide)
@@ -374,6 +423,393 @@ class _Header extends StatelessWidget {
         ),
         style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.45),
       ),
+    ],
+  );
+}
+
+class _ImportPanel extends StatelessWidget {
+  const _ImportPanel({required this.viewModel});
+
+  final Sh02ViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    final status = viewModel.importStatus;
+    final opened = viewModel.openedImport;
+    return _Panel(
+      title: _copy(context, '导入资料', 'Import material', '자료 가져오기'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                key: const Key('sh02-import-document'),
+                onPressed: status == Sh02ImportStatus.uploading
+                    ? null
+                    : status == Sh02ImportStatus.uncertain
+                    ? viewModel.checkImportStatus
+                    : viewModel.importDocument,
+                icon: Icon(
+                  status == Sh02ImportStatus.uploading
+                      ? Icons.hourglass_top_rounded
+                      : status == Sh02ImportStatus.uncertain
+                      ? Icons.sync_rounded
+                      : Icons.upload_file_rounded,
+                ),
+                label: Text(switch (status) {
+                  Sh02ImportStatus.uploading => _copy(
+                    context,
+                    '正在保存…',
+                    'Saving…',
+                    '저장 중…',
+                  ),
+                  Sh02ImportStatus.uncertain => _copy(
+                    context,
+                    '核对导入结果',
+                    'Check import status',
+                    '가져오기 결과 확인',
+                  ),
+                  _ => _copy(context, '选择文件', 'Choose a file', '파일 선택'),
+                }),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(48, 48),
+                ),
+              ),
+              Text(
+                _copy(
+                  context,
+                  '单个文件不超过 8 MB。',
+                  'Up to 8 MB per file.',
+                  '파일당 최대 8MB입니다.',
+                ),
+                style: TextStyle(
+                  color: LumenisTheme.of(context).muted,
+                  fontSize: 12,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+          if (status != Sh02ImportStatus.idle ||
+              viewModel.importOpenFailed) ...[
+            const SizedBox(height: 10),
+            Semantics(
+              liveRegion: true,
+              child: _InfoMessage(
+                status == Sh02ImportStatus.uploading
+                    ? _copy(
+                        context,
+                        '正在保存资料并核对读回结果。',
+                        'Saving the document and checking the saved copy.',
+                        '자료를 저장하고 다시 읽은 결과를 확인하고 있습니다.',
+                      )
+                    : status == Sh02ImportStatus.uncertain
+                    ? _copy(
+                        context,
+                        '结果尚未确认。请继续核对最近导入记录，确认前不要重复上传。',
+                        'The result is not confirmed yet. Continue checking recent imports before trying again.',
+                        '결과가 아직 확인되지 않았습니다. 다시 업로드하기 전에 최근 가져오기를 계속 확인하세요.',
+                      )
+                    : status == Sh02ImportStatus.failed
+                    ? _copy(
+                        context,
+                        '这份资料没有完成导入。检查文件后重试。',
+                        'This document was not imported. Check the file and try again.',
+                        '자료를 가져오지 못했습니다. 파일을 확인한 뒤 다시 시도하세요.',
+                      )
+                    : _copy(
+                        context,
+                        '资料暂时无法打开；原有内容仍保留。',
+                        'This document cannot be opened right now. The saved copy is retained.',
+                        '자료를 지금 열 수 없습니다. 저장된 자료는 그대로 보존됩니다.',
+                      ),
+              ),
+            ),
+          ],
+          if (opened != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _copy(context, '资料内容', 'Document', '자료 내용'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ] else if (viewModel.recentImports.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              _copy(context, '最近导入', 'Recent imports', '최근 가져오기'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ],
+          if (!viewModel.importsVerificationComplete &&
+              !viewModel.importsFailed)
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 9),
+              child: _InfoMessage(
+                _copy(
+                  context,
+                  '部分记录无法核验或读取；下方只显示可确认的资料。',
+                  'Some records could not be verified or read. Only confirmed materials are shown below.',
+                  '일부 기록을 확인하거나 읽지 못했습니다. 아래에는 확인된 자료만 표시합니다.',
+                ),
+              ),
+            ),
+          if (viewModel.openingImport)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (opened != null)
+            _ImportedMaterialReader(
+              item: opened,
+              onClose: viewModel.closeImport,
+            )
+          else if (viewModel.importsLoading && viewModel.recentImports.isEmpty)
+            const LinearProgressIndicator(minHeight: 2)
+          else if (viewModel.importsFailed)
+            Row(
+              children: [
+                Expanded(
+                  child: _InfoMessage(
+                    _copy(
+                      context,
+                      '最近导入暂时无法读取。',
+                      'Recent imports are temporarily unavailable.',
+                      '최근 가져오기를 지금 읽을 수 없습니다.',
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: _copy(context, '重新读取', 'Read again', '다시 읽기'),
+                  onPressed: () => viewModel.loadRecentImports(),
+                  icon: const Icon(Icons.refresh_rounded),
+                ),
+              ],
+            )
+          else if (viewModel.recentImports.isNotEmpty) ...[
+            for (final item in viewModel.recentImports)
+              _ImportedMaterialCard(
+                item: item,
+                onOpen: () => unawaited(viewModel.openImport(item)),
+              ),
+            if (viewModel.importsHaveMore)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: viewModel.importsLoading
+                      ? null
+                      : viewModel.loadMoreImports,
+                  icon: const Icon(Icons.expand_more_rounded),
+                  label: Text(
+                    viewModel.importsLoading
+                        ? _copy(context, '读取中…', 'Loading…', '읽는 중…')
+                        : _copy(context, '更多资料', 'More imports', '더 보기'),
+                  ),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ImportedMaterialCard extends StatelessWidget {
+  const _ImportedMaterialCard({required this.item, required this.onOpen});
+
+  final Sh02ImportedMaterial item;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Material(
+      color: LumenisTheme.of(context).surfaceRaised,
+      borderRadius: BorderRadius.circular(11),
+      child: InkWell(
+        key: Key('sh02-import-${item.sourceSha256.substring(0, 12)}'),
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(11),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 76),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+          decoration: BoxDecoration(
+            border: Border.all(color: LumenisTheme.of(context).line),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.description_outlined,
+                color: LumenisTheme.of(context).shared,
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.filename,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 4,
+                      children: [
+                        Text(
+                          _copy(
+                            context,
+                            '${item.characterCount} 字',
+                            '${item.characterCount} characters',
+                            '${item.characterCount}자',
+                          ),
+                        ),
+                        Text(
+                          _copy(
+                            context,
+                            '${item.tableCount} 个表格',
+                            '${item.tableCount} tables',
+                            '표 ${item.tableCount}개',
+                          ),
+                        ),
+                        if (item.createdAt.isNotEmpty) Text(item.createdAt),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: onOpen,
+                child: Text(_copy(context, '打开', 'Open', '열기')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _ImportedMaterialReader extends StatelessWidget {
+  const _ImportedMaterialReader({required this.item, required this.onClose});
+
+  final Sh02ImportedMaterial item;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: onClose,
+          icon: const Icon(Icons.arrow_back_rounded),
+          label: Text(
+            _copy(context, '返回最近导入', 'Back to recent imports', '최근 가져오기로 돌아가기'),
+          ),
+        ),
+      ),
+      Text(item.filename, style: const TextStyle(fontWeight: FontWeight.w600)),
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 12,
+        runSpacing: 4,
+        children: [
+          Text(
+            _copy(
+              context,
+              '${item.characterCount} 字',
+              '${item.characterCount} characters',
+              '${item.characterCount}자',
+            ),
+          ),
+          Text(
+            _copy(
+              context,
+              '${item.tableCount} 个表格',
+              '${item.tableCount} tables',
+              '표 ${item.tableCount}개',
+            ),
+          ),
+          Text(
+            _copy(
+              context,
+              '来源信息未确认',
+              'Source details are unconfirmed',
+              '출처 정보가 확인되지 않았습니다',
+            ),
+          ),
+        ],
+      ),
+      if (item.excerpts.isNotEmpty) ...[
+        const SizedBox(height: 12),
+        Text(
+          _copy(context, '资料摘录', 'Excerpts', '자료 발췌'),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        for (final excerpt in item.excerpts)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Text(
+              excerpt,
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
+                height: 1.45,
+              ),
+            ),
+          ),
+      ],
+      const SizedBox(height: 12),
+      Text(
+        _copy(context, '原文', 'Original text', '원문'),
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: 6),
+      Container(
+        constraints: const BoxConstraints(maxHeight: 520),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: LumenisTheme.of(context).canvas,
+          border: Border.all(color: LumenisTheme.of(context).line),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: SingleChildScrollView(
+          child: SelectableText(
+            item.text.isEmpty
+                ? _copy(
+                    context,
+                    '没有可显示的文本。',
+                    'No readable text was returned.',
+                    '표시할 텍스트가 없습니다.',
+                  )
+                : item.text,
+          ),
+        ),
+      ),
+      if (item.limitations.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Text(
+          _copy(context, '说明', 'Notes', '안내'),
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        for (final limitation in item.limitations)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              limitation,
+              style: TextStyle(
+                color: LumenisTheme.of(context).muted,
+                fontSize: 12,
+              ),
+            ),
+          ),
+      ],
     ],
   );
 }

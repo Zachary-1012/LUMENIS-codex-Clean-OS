@@ -8,7 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 import hashlib
 import json
+import math
 import os
+import queue
 import re
 import shlex
 import stat
@@ -281,6 +283,126 @@ class AuthenticatedSSHTrainingTransport:
         self._last_stop = None
         self._stderr_thread = None
         self._stderr = bytearray()
+        self._transfer_lock = threading.RLock()
+        self._active_transfers = {}
+        self._transfers_cancelled = threading.Event()
+
+    @staticmethod
+    def _stop_transfer_process(record, *, timeout_seconds=2.0):
+        process = record["process"]
+        with record["stop_lock"]:
+            if process.poll() is None:
+                try:
+                    process.terminate()
+                except OSError:
+                    if process.poll() is None:
+                        raise RemoteTrainingError("CHECKPOINT_TRANSFER_STOP_NOT_CONFIRMED") from None
+                try:
+                    process.wait(timeout=timeout_seconds)
+                except subprocess.TimeoutExpired:
+                    try:
+                        process.kill()
+                    except OSError:
+                        if process.poll() is None:
+                            raise RemoteTrainingError("CHECKPOINT_TRANSFER_STOP_NOT_CONFIRMED") from None
+                    try:
+                        process.wait(timeout=timeout_seconds)
+                    except subprocess.TimeoutExpired:
+                        raise RemoteTrainingError("CHECKPOINT_TRANSFER_STOP_NOT_CONFIRMED") from None
+            if process.poll() is None:
+                raise RemoteTrainingError("CHECKPOINT_TRANSFER_STOP_NOT_CONFIRMED")
+            return process.returncode
+
+    def cancel_checkpoint_transfers(self):
+        """Stop only the exact locally-owned SSH byte-reader children."""
+        with self._transfer_lock:
+            self._transfers_cancelled.set()
+            records = list(self._active_transfers.values())
+        failures = []
+        for record in records:
+            record["cancelled"].set()
+            reader_stop = record.get("reader_stop")
+            if reader_stop is not None:
+                reader_stop.set()
+            try:
+                self._stop_transfer_process(record)
+            except RemoteTrainingError as exc:
+                failures.append(exc)
+            process = record["process"]
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream is not None:
+                    try:
+                        stream.close()
+                    except (OSError, ValueError):
+                        pass
+            for thread in record["threads"]:
+                thread.join(timeout=2.0)
+            if any(thread.is_alive() for thread in record["threads"]):
+                failures.append(RemoteTrainingError("CHECKPOINT_TRANSFER_READER_NOT_REAPED"))
+                continue
+            finished = record.get("finished")
+            if (finished is not None and record.get("owner_thread_id") != threading.get_ident()
+                    and not finished.wait(timeout=2.0)):
+                failures.append(RemoteTrainingError("CHECKPOINT_TRANSFER_NOT_FINISHED"))
+                continue
+            if process.poll() is None:
+                failures.append(RemoteTrainingError("CHECKPOINT_TRANSFER_STOP_NOT_CONFIRMED"))
+                continue
+            self._forget_checkpoint_transfer(
+                (process.pid, id(process)), record)
+        if failures:
+            raise failures[0]
+        return {"state": "CHECKPOINT_TRANSFER_READERS_STOPPED", "count": len(records)}
+
+    def _register_checkpoint_transfer(self, process):
+        record = {"process": process, "cancelled": threading.Event(),
+                  "stop_lock": threading.Lock(), "threads": [],
+                  "finished": threading.Event(), "owner_thread_id": threading.get_ident()}
+        key = (process.pid, id(process))
+        with self._transfer_lock:
+            self._active_transfers[key] = record
+        return key, record
+
+    def _forget_checkpoint_transfer(self, key, record):
+        with self._transfer_lock:
+            if self._active_transfers.get(key) is record:
+                self._active_transfers.pop(key, None)
+
+    @staticmethod
+    def _queue_reader(stream, chunks, stopped):
+        """Drain a blocking subprocess pipe without making the caller block on it."""
+        def put(item):
+            while not stopped.is_set():
+                try:
+                    chunks.put(item, timeout=0.1)
+                    return True
+                except queue.Full:
+                    continue
+            return False
+
+        try:
+            read_available = getattr(stream, "read1", stream.read)
+            while not stopped.is_set():
+                block = read_available(1024 * 1024)
+                if not block:
+                    put(("eof", None))
+                    return
+                if not put(("data", block)):
+                    return
+        except (OSError, ValueError) as exc:
+            put(("error", exc))
+
+    @staticmethod
+    def _drain_stderr(stream, stopped):
+        """Drain diagnostics so a full stderr pipe cannot stall the byte reader."""
+        try:
+            read_available = getattr(stream, "read1", stream.read)
+            while not stopped.is_set():
+                block = read_available(8192)
+                if not block:
+                    return
+        except (OSError, ValueError):
+            return
 
     def _command(self, code: str) -> str:
         return shlex.join([self.endpoint.remote_python, '-u', '-c', code])
@@ -320,6 +442,9 @@ class AuthenticatedSSHTrainingTransport:
         }
 
     def start_stdio(self):
+        with self._transfer_lock:
+            if self._active_transfers:
+                raise RemoteTrainingError('CHECKPOINT_TRANSFER_STOP_NOT_CONFIRMED')
         if self._channel is not None:
             prior = self._last_stop
             if (prior is None or prior['peer'] != self._peer
@@ -375,7 +500,11 @@ class AuthenticatedSSHTrainingTransport:
                 or observed['session_id']!=hello['session_id']
                 or observed['proc_start_ticks']!=hello['proc_start_ticks']):
             raise RemoteTrainingError('REMOTE_PEER_IDENTITY_MISMATCH')
-        self._peer=observed
+        with self._transfer_lock:
+            if self._active_transfers:
+                raise RemoteTrainingError('CHECKPOINT_TRANSFER_STOP_NOT_CONFIRMED')
+            self._peer=observed
+            self._transfers_cancelled.clear()
         return dict(observed)
 
     def require_live(self):
@@ -434,10 +563,26 @@ class AuthenticatedSSHTrainingTransport:
             raise RemoteTrainingError('REMOTE_TRAINING_INPUTS_CHANGED')
         return {'state':'PHYSICAL_TRAINING_INPUTS_VERIFIED','paths':paths,'files':expected_files,'remote_peer':peer}
 
-    def fetch_checkpoint_bytes(self, *, remote_root, local_root, files, max_bytes, authorize):
+    def fetch_checkpoint_bytes(self, *, remote_root, local_root, files, max_bytes, authorize,
+                               deadline=None, is_cancelled=None):
         remote_path(remote_root)
-        if not callable(authorize) or type(max_bytes) is not int or max_bytes<=0:
+        if (not callable(authorize) or type(max_bytes) is not int or max_bytes<=0
+                or deadline is not None and (type(deadline) not in {int, float}
+                    or not math.isfinite(deadline) or deadline <= time.monotonic())
+                or is_cancelled is not None and not callable(is_cancelled)):
             raise RemoteTrainingError('CURRENT_CHECKPOINT_ADMISSION_REQUIRED')
+        if deadline is None:
+            deadline = time.monotonic() + 300.0
+        if is_cancelled is None:
+            is_cancelled = lambda: False
+
+        def check_live_transfer(record=None):
+            if (self._transfers_cancelled.is_set()
+                    or record is not None and record["cancelled"].is_set() or is_cancelled()):
+                raise RemoteTrainingError("CHECKPOINT_TRANSFER_CANCELLED")
+            if time.monotonic() >= deadline:
+                raise RemoteTrainingError("CHECKPOINT_TRANSFER_DEADLINE_REACHED")
+
         regular=[]; total=0; seen=set()
         for item in files:
             if (type(item) is not dict or set(item)!={'path','role','size_bytes','sha256'}
@@ -451,34 +596,119 @@ class AuthenticatedSSHTrainingTransport:
         if not regular or total>max_bytes:raise RemoteTrainingError('CHECKPOINT_SIZE_LIMIT')
         if not local_root.is_absolute() or local_root.exists():
             raise RemoteTrainingError('CHECKPOINT_STAGING_ALREADY_EXISTS')
-        authorize(); self.require_live()
+        check_live_transfer()
+        authorize()
+        check_live_transfer()
+        self.require_live()
+        check_live_transfer()
         local_root.mkdir(parents=True,exist_ok=False)
         copied=[]
         for item in regular:
-            authorize(); self.require_live()
+            check_live_transfer()
+            authorize()
+            check_live_transfer()
+            self.require_live()
+            check_live_transfer()
             target=local_root.joinpath(*PurePosixPath(item['path']).parts)
             target.parent.mkdir(parents=True,exist_ok=True)
             request={'root':remote_root,'path':item['path'],'bytes':item['size_bytes'],'sha256':item['sha256']}
-            process=subprocess.Popen(self.endpoint.argv(self._command(_READ_FILE)),stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,stderr=subprocess.PIPE,
-                creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-            process.stdin.write(json.dumps(request).encode()+b'\n');process.stdin.close()
-            digest=hashlib.sha256(); count=0
+            with self._transfer_lock:
+                if self._transfers_cancelled.is_set():
+                    raise RemoteTrainingError("CHECKPOINT_TRANSFER_CANCELLED")
+                process=subprocess.Popen(self.endpoint.argv(self._command(_READ_FILE)),stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                    creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0), bufsize=0)
+                key, record = self._register_checkpoint_transfer(process)
+                reader_stop = threading.Event()
+                chunks = queue.Queue(maxsize=1)
+                record["reader_stop"] = reader_stop
+                reader = threading.Thread(target=self._queue_reader,
+                    args=(process.stdout, chunks, reader_stop), daemon=True)
+                stderr_reader = threading.Thread(target=self._drain_stderr,
+                    args=(process.stderr, reader_stop), daemon=True)
+                record["threads"].extend((reader, stderr_reader))
+                try:
+                    reader.start()
+                    stderr_reader.start()
+                except (RuntimeError, OSError):
+                    record["cancelled"].set()
+                    reader_stop.set()
+                    try:
+                        self._stop_transfer_process(record)
+                    finally:
+                        for stream in (process.stdin, process.stdout, process.stderr):
+                            if stream is not None:
+                                try:
+                                    stream.close()
+                                except (OSError, ValueError):
+                                    pass
+                        for thread in record["threads"]:
+                            if thread.ident is not None:
+                                thread.join(timeout=2.0)
+                        record["finished"].set()
+                        if (process.poll() is not None
+                                and all(not thread.is_alive() for thread in record["threads"])):
+                            self._forget_checkpoint_transfer(key, record)
+                    raise
             try:
+                digest=hashlib.sha256(); count=0
+                process.stdin.write(json.dumps(request).encode()+b'\n');process.stdin.close()
                 with target.open('xb') as output:
                     while True:
-                        block=process.stdout.read(1024*1024)
-                        if not block:break
+                        check_live_transfer(record)
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            raise RemoteTrainingError("CHECKPOINT_TRANSFER_DEADLINE_REACHED")
+                        try:
+                            kind, block = chunks.get(timeout=min(0.1, remaining))
+                        except queue.Empty:
+                            continue
+                        check_live_transfer(record)
+                        if kind == "error":
+                            raise RemoteTrainingError("CHECKPOINT_BYTES_NOT_VERIFIED") from None
+                        if kind == "eof":
+                            break
                         count+=len(block)
                         if count>item['size_bytes']:raise RemoteTrainingError('CHECKPOINT_SIZE_MISMATCH')
                         digest.update(block);output.write(block)
                     output.flush();os.fsync(output.fileno())
-                if process.wait(timeout=20)!=0 or count!=item['size_bytes'] or digest.hexdigest()!=item['sha256']:
+                while process.poll() is None:
+                    check_live_transfer(record)
+                    time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
+                if process.wait(timeout=0)!=0 or count!=item['size_bytes'] or digest.hexdigest()!=item['sha256']:
                     raise RemoteTrainingError('CHECKPOINT_BYTES_NOT_VERIFIED')
-                authorize(); self.require_live()
+                check_live_transfer(record)
+                authorize()
+                check_live_transfer(record)
+                self.require_live()
+                check_live_transfer(record)
                 copied.append(dict(item))
             finally:
-                if process.poll() is None:process.terminate();process.wait(timeout=10)
+                reader_stop.set()
+                cleanup_error = None
+                try:
+                    self._stop_transfer_process(record)
+                except RemoteTrainingError as exc:
+                    cleanup_error = exc
+                finally:
+                    for stream in (process.stdin, process.stdout, process.stderr):
+                        if stream is not None:
+                            try:
+                                stream.close()
+                            except (OSError, ValueError):
+                                pass
+                    readers_reaped = True
+                    for thread in record["threads"]:
+                        thread.join(timeout=2.0)
+                        readers_reaped = readers_reaped and not thread.is_alive()
+                    if process.poll() is not None and readers_reaped:
+                        self._forget_checkpoint_transfer(key, record)
+                    record["finished"].set()
+                if cleanup_error is not None:
+                    raise cleanup_error
+                if not readers_reaped:
+                    raise RemoteTrainingError("CHECKPOINT_TRANSFER_READER_NOT_REAPED")
+        check_live_transfer()
         return {'state':'PHYSICAL_CHECKPOINT_BYTES_VERIFIED','source_root':str(local_root),
                 'files':copied,'total_bytes':total,'remote_peer':dict(self._peer)}
 

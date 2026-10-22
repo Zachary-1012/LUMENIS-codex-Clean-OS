@@ -4,7 +4,7 @@
        → Effect Fence / Idempotency → Execute → Evidence → Evaluation → Trace
 """
 from __future__ import annotations
-import json, traceback, uuid
+import json, uuid
 from dataclasses import dataclass, field, asdict, replace
 from datetime import datetime, timezone
 from enum import Enum
@@ -467,8 +467,9 @@ def execute_skill(ctx, handler=None, skill_info=None):
                 "source": "custom_handler",
                 "error": None if success else _product_result_error(result),
             }
-        except Exception as e:
-            return {"success": False, "error": str(e), "traceback": traceback.format_exc()[-500:], "source": "custom_handler"}
+        except Exception:  # noqa: BLE001
+            return {"success": False, "error": "SKILL_HANDLER_FAILED",
+                    "code": "SKILL_HANDLER_FAILED", "source": "custom_handler"}
     # Registered MCP Skills use the same execution chain as built-ins.  The
     # adapter is deliberately read-only and fail-closed; the Skill metadata is
     # passed through the existing registry rather than creating a new one.
@@ -491,10 +492,9 @@ def execute_skill(ctx, handler=None, skill_info=None):
                 "source": "registered_mcp",
                 "error": None if success else _product_result_error(mcp_result),
             }
-        except Exception as e:
-            return {"success": False, "error": str(e),
-                    "traceback": traceback.format_exc()[-500:],
-                    "source": "registered_mcp"}
+        except Exception:  # noqa: BLE001
+            return {"success": False, "error": "SKILL_MCP_RUNTIME_FAILED",
+                    "code": "SKILL_MCP_RUNTIME_FAILED", "source": "registered_mcp"}
     try:
         from lumenis_skill_adapter import get_skill_adapter
         adapter = get_skill_adapter()
@@ -888,9 +888,9 @@ def write_trace(ctx, duration_ms=0, *, connection=None):
         finally:
             if connection is None:
                 conn.close()
-    except Exception:
+    except Exception:  # noqa: BLE001
         import logging
-        logging.getLogger(__name__).exception("Skill trace finalization failed")
+        logging.getLogger(__name__).error("Skill trace finalization failed; details suppressed")
         return False
 
 
@@ -1034,8 +1034,10 @@ def record_execution_evidence(ctx):
                 product_id=ctx.product or None,
             )
         return {"ok": True, "evidence_id": ev.evidence_id, "is_new": is_new}
-    except Exception as e:
-        return {"ok": False, "error": str(e), "note": "evidence bridge failed, main chain unaffected"}
+    except Exception:  # noqa: BLE001
+        return {"ok": False, "error": "SKILL_EVIDENCE_BRIDGE_FAILED",
+                "code": "SKILL_EVIDENCE_BRIDGE_FAILED",
+                "note": "evidence bridge failed, main chain unaffected"}
 
 
 def run_execution_chain(skill_id, task="", input_payload=None, action_type=ActionType.ANALYZE,
@@ -1398,9 +1400,10 @@ def start_registered_skill_job(execution_id):
     def work():
         try:
             run_registered_skill_job(execution_id)
-        except Exception:
+        except Exception:  # noqa: BLE001
             import logging
-            logging.getLogger(__name__).exception('Registered Skill worker interrupted; durable request can resume')
+            logging.getLogger(__name__).error(
+                'Registered Skill worker interrupted; durable request can resume; details suppressed')
     thread = threading.Thread(target=work, name='registered-skill-worker', daemon=True)
     thread.start()
     return thread

@@ -206,6 +206,33 @@ CREATE INDEX IF NOT EXISTS idx_tcn_campaign_topic_time ON topic_campaign_notes(c
 def _now():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+
+def _observed_count(value):
+    """Accept only an explicit, non-negative integral observation."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if 0 <= value <= (1 << 63) - 1 else None
+    if isinstance(value, str) and value.isascii() and value.isdigit():
+        try:
+            parsed = int(value)
+        except ValueError:
+            return None
+        return parsed if parsed <= (1 << 63) - 1 else None
+    return None
+
+
+def _observed_field(source, keys):
+    for key in keys:
+        if key in source:
+            return _observed_count(source[key])
+    return None
+
+
+def _sum_observed_results(results, key):
+    values = [_observed_count(row.get(key)) for row in results]
+    return sum(values) if values and all(value is not None for value in values) else None
+
 def _norm(t):
     return (t or '').strip().lstrip('#').strip().lower()
 
@@ -235,17 +262,18 @@ def _campaign_active():
 
 def _insert_snapshot(conn, campaign_key, topic, data, status='success', error=''):
     now = _now()
+    raw_json = json.dumps(data, ensure_ascii=False)
     conn.execute(
         """INSERT INTO topic_campaign_snapshots(campaign_key,topic,captured_at,browse_count,discussion_count,note_count,new_note_count,engagement_count,status,error,raw_json)
         VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
         (campaign_key, topic, now,
-         int(data.get('browse_count') or 0),
-         int(data.get('discussion_count') or 0),
-         int(data.get('note_count') or 0),
-         int(data.get('new_note_count') or 0),
-         int(data.get('engagement_count') or 0),
+         _observed_field(data, ('browse_count',)),
+         _observed_field(data, ('discussion_count',)),
+         _observed_field(data, ('note_count',)),
+         _observed_field(data, ('new_note_count',)),
+         _observed_field(data, ('engagement_count',)),
          status, error,
-         json.dumps(data, ensure_ascii=False)[:200000])
+         raw_json)
     )
 
 def _classify_note(n, subject_hit_flag):
@@ -282,14 +310,19 @@ def _classify_note(n, subject_hit_flag):
     else:
         ct = 'UGC'
 
-    # FUNC-CONTENT-02: 情感分析统一为单一真相源（canonical_data.unified_sentiment_analysis）
-    try:
-        from canonical_data import unified_sentiment_analysis
-        st = unified_sentiment_analysis(title, n.get('content') or n.get('desc') or '')
-        if isinstance(st, dict):
-            st = st.get('sentiment', 'neutral')
-    except Exception:
-        st = 'neutral'
+    # FUNC-CONTENT-02: missing text or analyzer failure is unknown, not neutral.
+    st = 'unknown'
+    content = n.get('content') or n.get('desc') or ''
+    if title.strip() or content.strip():
+        try:
+            from canonical_data import unified_sentiment_analysis
+            st = unified_sentiment_analysis(title, content)
+            if isinstance(st, dict):
+                st = st.get('sentiment', 'unknown')
+            if st not in ('positive', 'neutral', 'negative', 'unknown'):
+                st = 'unknown'
+        except Exception:
+            st = 'unknown'
 
     if subject_hit_flag and ct == '投诉':
         rl = 'high'
@@ -297,6 +330,8 @@ def _classify_note(n, subject_hit_flag):
         rl = 'medium'
     elif st == 'negative':
         rl = 'low'
+    elif st == 'unknown':
+        rl = 'unknown'
     else:
         rl = 'none'
 
@@ -325,13 +360,24 @@ def _save_notes(conn, campaign_key, topic, notes):
         s_hit = 1 if _subject_hit(subject_text) else 0
         ct, st, rl, eq = _classify_note(n, s_hit)
 
-        media_json = json.dumps(n.get('media') or n.get('images') or n.get('image_list') or [], ensure_ascii=False)[:50000]
-        comments_json = json.dumps(n.get('comments_detail') or n.get('comment_list') or [], ensure_ascii=False)[:50000]
+        media_json = json.dumps(n.get('media') or n.get('images') or n.get('image_list') or [], ensure_ascii=False)
+        comments_json = json.dumps(n.get('comments_detail') or n.get('comment_list') or [], ensure_ascii=False)
         detail_captured = n.get('detail_captured_at', '') or (now if eq in ('full', 'partial') else '')
+        raw_json = json.dumps(n, ensure_ascii=False)
+        metric_values = {
+            'likes': _observed_field(n, ('likes', 'liked_count')),
+            'comments': _observed_field(n, ('comments', 'comment_count')),
+            'collects': _observed_field(n, ('collects', 'collected_count', 'collect_count')),
+            'shares': _observed_field(n, ('shares', 'share_count')),
+        }
 
         cur = conn.execute(
             "SELECT id FROM topic_campaign_notes WHERE campaign_key=? AND topic=? AND note_id=?",
             (campaign_key, topic, nid)
+        ).fetchone()
+        campaign_note = conn.execute(
+            "SELECT first_seen_at FROM topic_campaign_notes WHERE campaign_key=? AND note_id=? ORDER BY id LIMIT 1",
+            (campaign_key, nid),
         ).fetchone()
         if cur:
             conn.execute(
@@ -340,12 +386,10 @@ def _save_notes(conn, campaign_key, topic, notes):
                     n.get('title', ''), n.get('content', n.get('desc', '')),
                     n.get('author', n.get('nickname', '')),
                     n.get('publish_datetime', n.get('publish_time', '')),
-                    int(n.get('likes', n.get('liked_count', 0)) or 0),
-                    int(n.get('comments', n.get('comment_count', 0)) or 0),
-                    int(n.get('collects', n.get('collected_count', 0)) or 0),
-                    int(n.get('shares', n.get('share_count', 0)) or 0),
+                    metric_values['likes'], metric_values['comments'],
+                    metric_values['collects'], metric_values['shares'],
                     n.get('note_url', n.get('url', '')) or '',
-                    now, json.dumps(n, ensure_ascii=False)[:100000],
+                    now, raw_json,
                     media_json, comments_json, s_hit, ct, st, rl, eq, detail_captured,
                     cur['id'],
                 )
@@ -359,16 +403,16 @@ def _save_notes(conn, campaign_key, topic, notes):
                     n.get('title', ''), n.get('content', n.get('desc', '')),
                     n.get('author', n.get('nickname', '')),
                     n.get('publish_datetime', n.get('publish_time', '')),
-                    int(n.get('likes', n.get('liked_count', 0)) or 0),
-                    int(n.get('comments', n.get('comment_count', 0)) or 0),
-                    int(n.get('collects', n.get('collected_count', 0)) or 0),
-                    int(n.get('shares', n.get('share_count', 0)) or 0),
+                    metric_values['likes'], metric_values['comments'],
+                    metric_values['collects'], metric_values['shares'],
                     n.get('note_url', n.get('url', '')) or '',
-                    now, now, json.dumps(n, ensure_ascii=False)[:100000],
+                    campaign_note['first_seen_at'] if campaign_note else now,
+                    now, raw_json,
                     media_json, comments_json, s_hit, ct, st, rl, eq, detail_captured,
                 )
             )
-            new += 1
+            if campaign_note is None:
+                new += 1
     return new
 
 def _run_collector(topic):
@@ -590,17 +634,14 @@ def run_campaign(campaign_key=CAMPAIGN_KEY, auto_trigger=False):
                 time.sleep(min(gap, CAMPAIGN_TOPIC_GAP_CAP))
             data = _run_collector(topic)
             if data.get('ok'):
+                notes = data.get('notes')
                 with db.get_db() as conn:
-                    new = _save_notes(conn, campaign_key, topic, data.get('notes', []))
-                    data['new_note_count'] = new
-                    data['note_count'] = len(data.get('notes', [])) or int(data.get('note_count') or 0)
-                    data['engagement_count'] = sum(
-                        int((n.get('likes', n.get('liked_count', 0)) or 0))
-                        + int((n.get('comments', n.get('comment_count', 0)) or 0))
-                        + int((n.get('collects', n.get('collected_count', 0)) or 0))
-                        + int((n.get('shares', n.get('share_count', 0)) or 0))
-                        for n in data.get('notes', [])
-                    )
+                    if isinstance(notes, list):
+                        data['new_note_count'] = _save_notes(conn, campaign_key, topic, notes)
+                    else:
+                        data['new_note_count'] = _observed_field(data, ('new_note_count',))
+                    data['note_count'] = _observed_field(data, ('note_count',))
+                    data['engagement_count'] = _observed_field(data, ('engagement_count',))
                     _insert_snapshot(conn, campaign_key, topic, data)
             else:
                 # 采集失败：记录真实状态快照，绝不伪造数据、绝不显示成 0 条
@@ -611,16 +652,17 @@ def run_campaign(campaign_key=CAMPAIGN_KEY, auto_trigger=False):
             results.append({
                 'topic': topic,
                 'ok': bool(data.get('ok')),
-                'browse_count': data.get('browse_count', 0),
-                'discussion_count': data.get('discussion_count', 0),
-                'note_count': data.get('note_count', 0),
-                'new_note_count': data.get('new_note_count', 0),
+                'browse_count': _observed_field(data, ('browse_count',)),
+                'discussion_count': _observed_field(data, ('discussion_count',)),
+                'note_count': _observed_field(data, ('note_count',)),
+                'new_note_count': _observed_field(data, ('new_note_count',)),
                 'error': data.get('error', '')
             })
             # 成功出数清零；成功但 0 笔记累计（用于下一话题退避）；失败不累计（失败另有错误快照）
-            if data.get('ok') and not data.get('note_count'):
+            observed_note_count = _observed_field(data, ('note_count',))
+            if data.get('ok') and observed_note_count == 0:
                 empty_streak += 1
-            elif data.get('ok'):
+            elif data.get('ok') and observed_note_count is not None:
                 empty_streak = 0
             # 命中安全验证/IP 风控：落熔断并立即终止本轮后续话题（停止危险请求，不继续撞击平台）
             if (not data.get('ok')) and data.get('risk_status') in ('NEED_VERIFY', 'IP_RISK', 'BLOCKED'):
@@ -632,8 +674,8 @@ def run_campaign(campaign_key=CAMPAIGN_KEY, auto_trigger=False):
         if _SCHEDULER_AVAILABLE:
             try:
                 _planner = get_planner()
-                _total_new = sum(int(r.get('new_note_count', 0) or 0) for r in results)
-                _total_notes = sum(int(r.get('note_count', 0) or 0) for r in results)
+                _total_new = _sum_observed_results(results, 'new_note_count')
+                _total_notes = _sum_observed_results(results, 'note_count')
                 _has_risk = any((not r.get('ok')) and r.get('error') for r in results)
                 _risk_status = ''
                 for r in results:
@@ -649,15 +691,15 @@ def run_campaign(campaign_key=CAMPAIGN_KEY, auto_trigger=False):
                     _canon = _planner.record_result('xhs', _risk_status, now=datetime.now(),
                                                      items_found=_total_new, xhs_code=_risk_status)
                     print(f'[Shadow][TopicCampaign] 回写风险状态: {_canon}, new_notes={_total_new}')
-                elif _total_new > 0:
+                elif _total_new is not None and _total_new > 0:
                     _canon = _planner.record_result('xhs', 'SUCCESS', now=datetime.now(),
                                                      items_found=_total_new)
                     print(f'[Shadow][TopicCampaign] 回写成功: {_canon}, new_notes={_total_new}')
-                elif _total_notes > 0:
+                elif _total_notes is not None and _total_notes > 0:
                     _canon = _planner.record_result('xhs', 'SUCCESS', now=datetime.now(),
                                                      items_found=0)
                     print(f'[Shadow][TopicCampaign] 回写无新数据(有历史): {_canon}')
-                else:
+                elif _total_new == 0 and _total_notes == 0:
                     _canon = _planner.record_result('xhs', 'NO_NEW_DATA', now=datetime.now(),
                                                      items_found=0)
                     print(f'[Shadow][TopicCampaign] 回写无新数据: {_canon}')
@@ -771,7 +813,143 @@ def _latest(conn, campaign_key):
         "SELECT * FROM topic_campaign_snapshots WHERE campaign_key=? AND id IN (SELECT MAX(id) FROM topic_campaign_snapshots WHERE campaign_key=? GROUP BY topic)",
         (campaign_key, campaign_key)
     ).fetchall()
-    return [dict(r) for r in rows]
+    return [_snapshot_view(r) for r in rows]
+
+
+_METRIC_LIMIT = (1 << 63) - 1
+_SNAPSHOT_METRICS = (
+    'browse_count', 'discussion_count', 'note_count',
+    'new_note_count', 'engagement_count',
+)
+_NOTE_METRICS = {
+    'likes': ('likes', 'liked_count'),
+    'comments': ('comments', 'comment_count'),
+    'collects': ('collects', 'collected_count', 'collect_count'),
+    'shares': ('shares', 'share_count'),
+}
+
+
+def _json_object(value):
+    try:
+        parsed = json.loads(value or '{}')
+    except (TypeError, ValueError):
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _explicit_count(source, keys):
+    """Return only a count explicitly preserved in source JSON; legacy SQL defaults are ambiguous."""
+    return _observed_field(source, keys)
+
+
+def _json_list(value):
+    try:
+        parsed = json.loads(value or '[]')
+    except (TypeError, ValueError):
+        return []
+    return parsed if isinstance(parsed, list) else []
+
+
+def _snapshot_view(row):
+    """Project a saved snapshot without treating pre-existing SQL defaults as observations."""
+    view = dict(row)
+    raw = _json_object(view.get('raw_json'))
+    for name in _SNAPSHOT_METRICS:
+        view[name] = _explicit_count(raw, (name,))
+    view['metric_basis'] = 'EXPLICIT_SAVED_INPUT' if any(view[name] is not None for name in _SNAPSHOT_METRICS) else 'UNKNOWN'
+    view['metric_freshness'] = 'UNKNOWN'
+    view['metric_completeness'] = 'UNKNOWN'
+    view['source_verification'] = 'NOT_ESTABLISHED'
+    return view
+
+
+def _note_view(row):
+    """Project a saved note; old integer-column zero defaults are not observations."""
+    view = dict(row)
+    raw = _json_object(view.get('raw_json'))
+    for name, aliases in _NOTE_METRICS.items():
+        view[name] = _explicit_count(raw, aliases)
+    view['media'] = _json_list(view.get('media_json'))
+    view['comments_detail'] = _json_list(view.get('comments_json'))
+    view['metric_basis'] = 'EXPLICIT_SAVED_INPUT' if any(view[name] is not None for name in _NOTE_METRICS) else 'UNKNOWN'
+    view['metric_freshness'] = 'UNKNOWN'
+    view['metric_completeness'] = 'UNKNOWN'
+    view['source_verification'] = 'NOT_ESTABLISHED'
+    return view
+
+
+def _parse_local_timestamp(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    candidate = value.strip()
+    local_tz = datetime.now().astimezone().tzinfo
+    try:
+        parsed = datetime.fromisoformat(candidate.replace('Z', '+00:00'))
+        return parsed.replace(tzinfo=local_tz) if parsed.tzinfo is None else parsed.astimezone(local_tz)
+    except ValueError:
+        for pattern in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+            try:
+                return datetime.strptime(candidate, pattern).replace(tzinfo=local_tz)
+            except ValueError:
+                pass
+    return None
+
+
+def _latest_note_views(rows):
+    """Return one row per note, retaining topic membership and never resolving tied metric conflicts."""
+    grouped = {}
+    for raw_row in rows:
+        view = _note_view(raw_row)
+        grouped.setdefault(str(view.get('note_id') or ''), []).append(view)
+    output = []
+    for note_id, observations in grouped.items():
+        if not note_id:
+            continue
+        dated = [(_parse_local_timestamp(row.get('last_seen_at')), row) for row in observations]
+        valid_times = [value for value, _ in dated if value is not None]
+        if valid_times and len(valid_times) == len(dated):
+            latest_time = max(valid_times)
+            latest = [row for value, row in dated if value == latest_time]
+        else:
+            latest = observations
+        latest.sort(key=lambda row: (str(row.get('topic') or ''), int(row.get('id') or 0)))
+        merged = dict(latest[-1])
+        merged['topics'] = sorted({str(row.get('topic') or '') for row in observations if row.get('topic')})
+        conflicts = []
+        metric_saved_at = {}
+        for metric in _NOTE_METRICS:
+            measured = [row for row in observations if row.get(metric) is not None]
+            if not measured:
+                merged[metric] = None
+                continue
+            measured_times = [(_parse_local_timestamp(row.get('last_seen_at')), row) for row in measured]
+            if all(value is not None for value, _ in measured_times):
+                metric_time = max(value for value, _ in measured_times)
+                metric_rows = [row for value, row in measured_times if value == metric_time]
+            else:
+                metric_rows = measured
+            known = {row.get(metric) for row in metric_rows}
+            merged[metric] = next(iter(known)) if len(known) == 1 else None
+            if len(known) == 1:
+                metric_saved_at[metric] = metric_time.isoformat(timespec='seconds') if all(
+                    value is not None for value, _ in measured_times
+                ) else None
+            else:
+                conflicts.append(metric)
+        for categorical in ('sentiment', 'risk_level', 'content_type'):
+            known = {str(row.get(categorical)) for row in latest if row.get(categorical) not in (None, '')}
+            if len(known) > 1:
+                merged[categorical] = 'unknown'
+        merged['metric_conflicts'] = sorted(conflicts)
+        merged['metric_observation_saved_at'] = metric_saved_at
+        merged['observation_count'] = len(observations)
+        merged['metric_basis'] = 'EXPLICIT_SAVED_INPUT' if any(merged.get(key) is not None for key in _NOTE_METRICS) else 'UNKNOWN'
+        merged['metric_freshness'] = 'UNKNOWN'
+        merged['metric_completeness'] = 'UNKNOWN'
+        merged['source_verification'] = 'NOT_ESTABLISHED'
+        output.append(merged)
+    output.sort(key=lambda row: (str(row.get('last_seen_at') or ''), str(row.get('note_id') or '')), reverse=True)
+    return output
 
 # ========== Flask 路由注册 ==========
 def register_topic_campaign(app, collect_lock=None):
@@ -919,23 +1097,16 @@ def register_topic_campaign(app, collect_lock=None):
         ck = request.args.get('campaign_key', CAMPAIGN_KEY).strip()
         db = _db()
         with db.get_db() as conn:
-            row = conn.execute(
+            rows = conn.execute(
                 'SELECT * FROM topic_campaign_notes WHERE campaign_key=? AND note_id=?',
                 (ck, note_id)
-            ).fetchone()
-        if not row:
+            ).fetchall()
+        if not rows:
             return jsonify({'ok': False, 'error': '笔记不存在'}), 404
-        d = dict(row)
-        # 解析 media_json 和 comments_json
-        try:
-            d['media'] = json.loads(d.get('media_json') or '[]')
-        except Exception:
-            d['media'] = []
-        try:
-            d['comments'] = json.loads(d.get('comments_json') or '[]')
-        except Exception:
-            d['comments'] = []
-        return jsonify({'ok': True, 'note': d})
+        note = _latest_note_views(rows)[0]
+        note['comments_count'] = note.get('comments')
+        note['comments'] = note.get('comments_detail', [])
+        return jsonify({'ok': True, 'note': note})
 
     @app.route('/api/topic-campaign/backfill-detail', methods=['POST'])
     def topic_backfill_detail():
@@ -959,8 +1130,9 @@ def register_topic_campaign(app, collect_lock=None):
                 p.append(topic)
             q += ' ORDER BY captured_at ASC LIMIT ?'
             p.append(limit)
-            rows = [dict(r) for r in conn.execute(q, tuple(p)).fetchall()]
-        return jsonify({'ok': True, 'snapshots': rows})
+            rows = [_snapshot_view(r) for r in conn.execute(q, tuple(p)).fetchall()]
+        return jsonify({'ok': True, 'snapshots': rows,
+                        'metric_freshness': 'UNKNOWN', 'metric_completeness': 'UNKNOWN'})
 
     @app.route('/api/topic-campaign/stats')
     def topic_stats():
@@ -970,55 +1142,74 @@ def register_topic_campaign(app, collect_lock=None):
         ck = request.args.get('campaign_key', CAMPAIGN_KEY).strip()
         db = _db()
         with db.get_db() as conn:
-            # 按话题聚合（SQLite兼容语法）
-            topic_stats = conn.execute("""
-                SELECT
-                    n.topic,
-                    COUNT(DISTINCT n.note_id) AS unique_notes,
-                    COUNT(DISTINCT CASE WHEN n.first_seen_at >= datetime('now','-24 hours') THEN n.note_id END) AS new_notes
-                FROM topic_campaign_notes n
-                WHERE n.campaign_key=?
-                GROUP BY n.topic
-                ORDER BY unique_notes DESC
-            """, (ck,)).fetchall()
+            note_rows = [dict(row) for row in conn.execute(
+                'SELECT * FROM topic_campaign_notes WHERE campaign_key=? ORDER BY topic,note_id', (ck,)
+            ).fetchall()]
+            snapshot_rows = [dict(row) for row in conn.execute(
+                'SELECT status FROM topic_campaign_snapshots WHERE campaign_key=?', (ck,)
+            ).fetchall()]
 
-            # Runs次数（按话题统计快照数）
-            runs_by_topic = dict(conn.execute("""
-                SELECT topic, COUNT(*) AS runs FROM topic_campaign_snapshots
-                WHERE campaign_key=? AND status='success' GROUP BY topic
-            """, (ck,)).fetchall())
+        now = datetime.now().astimezone()
+        cutoff = now.timestamp() - 24 * 60 * 60
 
-            # 全局汇总
-            total = conn.execute("""
-                SELECT
-                    COUNT(DISTINCT note_id) AS total_unique,
-                    COUNT(DISTINCT CASE WHEN first_seen_at >= datetime('now','-24 hours') THEN note_id END) AS total_new
-                FROM topic_campaign_notes WHERE campaign_key=?
-            """, (ck,)).fetchone()
+        def _new_count(rows):
+            grouped = {}
+            for row in rows:
+                note_id = str(row.get('note_id') or '')
+                if not note_id:
+                    continue
+                seen = _parse_local_timestamp(row.get('first_seen_at'))
+                if seen is None or seen > now:
+                    return None
+                grouped.setdefault(note_id, []).append(seen)
+            return sum(1 for values in grouped.values() if min(values).timestamp() >= cutoff)
 
-            total_runs = conn.execute(
-                "SELECT COUNT(*) FROM topic_campaign_snapshots WHERE campaign_key=? AND status='success'",
-                (ck,)
-            ).fetchone()[0]
-
+        unique_total = len({str(row.get('note_id')) for row in note_rows if row.get('note_id')})
+        total_new = _new_count(note_rows)
+        grouped_rows = {}
+        for row in note_rows:
+            if row.get('topic'):
+                grouped_rows.setdefault(str(row['topic']), []).append(row)
         topics = []
-        for ts in topic_stats:
-            t = dict(ts)
-            t['runs'] = runs_by_topic.get(t['topic'], 0)
-            topics.append(t)
+        for topic_name, rows in grouped_rows.items():
+            topics.append({
+                'topic': topic_name,
+                'unique_notes': len({str(row.get('note_id')) for row in rows if row.get('note_id')}),
+                'new_notes': _new_count(rows),
+                'runs': None,
+            })
+        topics.sort(key=lambda row: (-row['unique_notes'], row['topic']))
+
+        note_views = _latest_note_views(note_rows)
+        def _distribution(field):
+            counts = {}
+            for row in note_views:
+                value = row.get(field)
+                if value in (None, ''):
+                    value = 'unknown'
+                counts[str(value)] = counts.get(str(value), 0) + 1
+            return [{'name': name, 'count': count} for name, count in sorted(counts.items())]
+
+        snapshot_count = len(snapshot_rows)
+        successful_snapshot_count = sum(1 for row in snapshot_rows if row.get('status') == 'success')
 
         return jsonify({
             'ok': True,
             'campaign_key': ck,
             'total': {
-                'unique_notes': total['total_unique'] or 0,
-                'new_notes_24h': total['total_new'] or 0,
-                'runs': total_runs,
+                'unique_notes': unique_total,
+                'new_notes_24h': total_new,
+                'runs': None,
+                'snapshot_count': snapshot_count,
+                'successful_topic_snapshots': successful_snapshot_count,
             },
             'by_topic': topics,
-            'content_type_dist': [],
-            'sentiment_dist': [],
-            'note': '当前topic_campaign_notes表为精简结构，subject_hit/risk/evidence等字段待迁移补齐',
+            'content_type_dist': _distribution('content_type'),
+            'sentiment_dist': _distribution('sentiment'),
+            'metric_basis': 'DERIVED_FROM_SAVED_NOTE_ROWS',
+            'metric_freshness': 'UNKNOWN',
+            'metric_completeness': 'UNKNOWN',
+            'source_verification': 'NOT_ESTABLISHED',
         })
 
 
@@ -1036,8 +1227,9 @@ def register_topic_campaign(app, collect_lock=None):
                 p.append(topic)
             q += ' ORDER BY last_seen_at DESC LIMIT ?'
             p.append(limit)
-            rows = [dict(r) for r in conn.execute(q, tuple(p)).fetchall()]
-        return jsonify({'ok': True, 'notes': rows})
+            rows = conn.execute(q, tuple(p)).fetchall()
+        return jsonify({'ok': True, 'notes': _latest_note_views(rows),
+                        'metric_freshness': 'UNKNOWN', 'metric_completeness': 'UNKNOWN'})
 
     @app.route('/api/topic-campaign/export')
     def topic_export():
@@ -1045,18 +1237,20 @@ def register_topic_campaign(app, collect_lock=None):
         ck = request.args.get('campaign_key', CAMPAIGN_KEY).strip()
         db = _db()
         with db.get_db() as conn:
-            q = ('SELECT topic,note_id,title,author,publish_datetime,likes,comments,collects,shares,note_url,first_seen_at,last_seen_at '
-                 'FROM topic_campaign_notes WHERE campaign_key=?')
+            q = 'SELECT * FROM topic_campaign_notes WHERE campaign_key=?'
             p = [ck]
             if topic:
                 q += ' AND topic=?'
                 p.append(topic)
             q += ' ORDER BY publish_datetime DESC,last_seen_at DESC'
-            rows = conn.execute(q, tuple(p)).fetchall()
+            rows = _latest_note_views(conn.execute(q, tuple(p)).fetchall())
         out = io.StringIO()
         w = csv.writer(out)
         w.writerow(['话题', '笔记ID', '标题', '作者', '发布日期', '点赞', '评论', '收藏', '分享', '笔记链接', '首次发现', '最近发现'])
-        w.writerows([tuple(r) for r in rows])
+        w.writerows([tuple(r.get(k) for k in (
+            'topic', 'note_id', 'title', 'author', 'publish_datetime',
+            'likes', 'comments', 'collects', 'shares', 'note_url', 'first_seen_at', 'last_seen_at',
+        )) for r in rows])
         return Response(
             '\ufeff' + out.getvalue(),
             mimetype='text/csv',
@@ -1074,10 +1268,22 @@ def register_topic_campaign(app, collect_lock=None):
                 cm['topic_count'] = conn.execute('SELECT COUNT(*) n FROM topic_campaign_topics WHERE campaign_key=? AND enabled=1', (ck,)).fetchone()['n']
                 cm['note_count'] = conn.execute('SELECT COUNT(*) n FROM topic_campaign_notes WHERE campaign_key=?', (ck,)).fetchone()['n']
                 cm['snapshot_count'] = conn.execute('SELECT COUNT(*) n FROM topic_campaign_snapshots WHERE campaign_key=?', (ck,)).fetchone()['n']
-                agg = conn.execute("""SELECT COALESCE(SUM(note_count),0) notes,COALESCE(SUM(new_note_count),0) new,
-                    COALESCE(SUM(engagement_count),0) eng,COALESCE(SUM(discussion_count),0) dis,MAX(captured_at) last
-                    FROM topic_campaign_snapshots WHERE campaign_key=? AND status='success'""", (ck,)).fetchone()
-                cm['agg'] = dict(agg) if agg else {}
+                agg_rows = [_snapshot_view(row) for row in conn.execute(
+                    "SELECT * FROM topic_campaign_snapshots WHERE campaign_key=? AND status='success'",
+                    (ck,),
+                ).fetchall()]
+                def _sum_observed(field, snapshots=agg_rows):
+                    values = [row.get(field) for row in snapshots]
+                    return sum(values) if values and all(value is not None for value in values) else None
+                cm['agg'] = {
+                    'notes': _sum_observed('note_count'),
+                    'new': _sum_observed('new_note_count'),
+                    'eng': _sum_observed('engagement_count'),
+                    'dis': _sum_observed('discussion_count'),
+                    'last': max((row.get('captured_at') or '' for row in agg_rows), default=''),
+                    'metric_freshness': 'UNKNOWN',
+                    'metric_completeness': 'UNKNOWN',
+                }
                 cm['in_window'] = _campaign_in_window(ck)
         return jsonify({'ok': True, 'campaigns': cams})
 

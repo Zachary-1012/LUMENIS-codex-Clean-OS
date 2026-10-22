@@ -14,6 +14,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -360,17 +361,28 @@ def _instagram_media_observations(raw_record: Dict[str, Any]) -> Optional[List[D
 
 
 def _wechat_media_observations(raw_record: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
-    """Map public article image URL/alt observations to the existing media_list."""
-    images = raw_record.get("images")
-    if not isinstance(images, list):
-        return None
-    observations = [
-        observation for image in images
-        if (observation := _native_media_url_observation(image)) is not None
-    ]
+    """Map observed public article images and media hints without inference."""
+    observations = []
+    lists_observed = False
+    nonempty_seen = False
+    seen = set()
+    for key in ("images", "media_hints"):
+        values = raw_record.get(key)
+        if not isinstance(values, list):
+            continue
+        lists_observed = True
+        nonempty_seen = nonempty_seen or bool(values)
+        for value in values:
+            observation = _native_media_url_observation(value)
+            if observation is None:
+                continue
+            identity = json.dumps(observation, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            if identity not in seen:
+                seen.add(identity)
+                observations.append(observation)
     if observations:
         return observations
-    return [] if not images else None
+    return [] if lists_observed and not nonempty_seen else None
 
 
 def _normalize_author_identity(value: Any) -> Optional[str]:

@@ -108,8 +108,46 @@ def _send(proc: subprocess.Popen, message: Dict[str, Any], deadline=None) -> Non
     if proc.stdin is None:
         raise RuntimeError("MCP process stdin is unavailable")
     deadline = deadline if deadline is not None else time.monotonic() + 10
+    if deadline <= time.monotonic():
+        raise TimeoutError("MCP request write timed out")
     data = (raw + "\n").encode("utf-8")
     fd = proc.stdin.fileno()
+
+    def write_all():
+        remaining_data = data
+        while remaining_data:
+            sent = os.write(fd, remaining_data)
+            if sent <= 0:
+                raise BrokenPipeError("MCP request pipe closed")
+            remaining_data = remaining_data[sent:]
+
+    if os.name == "nt":
+        # select() cannot wait on Windows anonymous subprocess pipes. A single
+        # bounded writer thread lets the protocol deadline remain effective;
+        # process cleanup terminates the child to release an in-flight write.
+        failures = []
+
+        def write_in_background():
+            try:
+                write_all()
+            except OSError as exc:
+                failures.append(exc)
+
+        writer = threading.Thread(
+            target=write_in_background,
+            name="lumenis-mcp-stdin-writer",
+            daemon=True,
+        )
+        proc._lumenis_mcp_writer_thread = writer
+        writer.start()
+        writer.join(max(0, deadline - time.monotonic()))
+        if writer.is_alive():
+            raise TimeoutError("MCP request write timed out")
+        del proc._lumenis_mcp_writer_thread
+        if failures:
+            raise failures[0]
+        return
+
     os.set_blocking(fd, False)
     while data:
         remaining = deadline - time.monotonic()
@@ -119,6 +157,8 @@ def _send(proc: subprocess.Popen, message: Dict[str, Any], deadline=None) -> Non
             sent = os.write(fd, data)
         except BlockingIOError:
             continue
+        if sent <= 0:
+            raise BrokenPipeError("MCP request pipe closed")
         data = data[sent:]
 
 
@@ -352,20 +392,52 @@ def _list_all(request, field):
 def _close_process(proc):
     if proc is None:
         return
-    try:
-        if proc.stdin:
-            proc.stdin.close()
-    except OSError:
-        pass
-    try:
-        proc.wait(timeout=0.2)
-    except subprocess.TimeoutExpired:
-        proc.terminate()
+    writer = getattr(proc, "_lumenis_mcp_writer_thread", None)
+    if writer is not None and writer.is_alive():
+        # Closing a pipe while its Windows writer is blocked is not guaranteed
+        # to interrupt the OS write. Stop/reap this exact child first.
+        try:
+            proc.terminate()
+        except OSError:
+            pass
         try:
             proc.wait(timeout=0.5)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=1)
+    else:
+        try:
+            if proc.stdin:
+                proc.stdin.close()
+        except OSError:
+            pass
+        try:
+            proc.wait(timeout=0.2)
+        except subprocess.TimeoutExpired:
+            proc.terminate()
+            try:
+                proc.wait(timeout=0.5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=1)
+    try:
+        if proc.stdin and not proc.stdin.closed:
+            proc.stdin.close()
+    except OSError:
+        pass
+    if writer is not None:
+        writer.join(timeout=1)
+        if writer.is_alive():
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            writer.join(timeout=1)
+        if not writer.is_alive():
+            try:
+                del proc._lumenis_mcp_writer_thread
+            except AttributeError:
+                pass
     for stream in (proc.stdout, proc.stderr):
         if stream:
             stream.close()
@@ -466,7 +538,7 @@ def discover_mcp_stdio(
             },
         )
         capabilities = _initialize(initialized)
-        _send(proc, {"jsonrpc": "2.0", "method": "notifications/initialized"})
+        _send(proc, {"jsonrpc": "2.0", "method": "notifications/initialized"}, deadline)
         discovered = {
             field: _list_all(request, field) if field in capabilities else []
             for field in ("tools", "resources", "prompts")
@@ -692,7 +764,7 @@ def call_mcp_stdio(
             },
         )
         capabilities = _initialize(initialized)
-        _send(proc, {"jsonrpc": "2.0", "method": "notifications/initialized"})
+        _send(proc, {"jsonrpc": "2.0", "method": "notifications/initialized"}, deadline)
         if "tools" not in capabilities:
             return blocked("MCP tools capability not advertised", "CAPABILITY_UNAVAILABLE")
         tools = _list_all(request, "tools")

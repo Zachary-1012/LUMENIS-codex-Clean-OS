@@ -10,7 +10,7 @@ import hashlib
 import re
 from datetime import datetime, timezone
 from typing import Any, Callable
-from urllib.parse import parse_qs, quote, urljoin, urlsplit
+from urllib.parse import parse_qs, parse_qsl, quote, urljoin, urlsplit, urlunsplit
 
 from bs4 import BeautifulSoup
 
@@ -25,6 +25,104 @@ def _challenge(soup: BeautifulSoup) -> bool:
         return True
     text = soup.get_text(' ', strip=True)
     return any(marker in text for marker in ('访问过于频繁', '环境异常', '访问异常，请完成验证', '请输入验证码', '请完成安全验证'))
+
+
+_MEDIA_QUERY_SECRET_NAMES = frozenset({
+    'key', 'api_key', 'apikey', 'access_key', 'appkey', 'auth_key', 'dis_k',
+    'token', 'auth', 'authorization', 'cookie', 'session', 'session_id',
+    'password', 'signature', 'sign', 'sig',
+})
+
+
+def _public_media_hint_url(value: Any, article_url: str) -> str | None:
+    """Retain a visible public URL without resolving or fetching it."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parts = urlsplit(urljoin(article_url, value.strip()))
+        secret_query = any(
+            key.lower() in _MEDIA_QUERY_SECRET_NAMES or key.lower().endswith('_token')
+            for key, _ in parse_qsl(parts.query, keep_blank_values=True)
+        )
+        if (
+            parts.scheme not in {'http', 'https'}
+            or not parts.hostname
+            or parts.username
+            or parts.password
+            or parts.port not in {None, 80, 443}
+            or secret_query
+        ):
+            return None
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, parts.query, ''))
+    except ValueError:
+        return None
+
+
+def _article_media_hints(node, article_url: str) -> list[dict[str, Any]]:
+    """Capture native DOM clues only; hints do not establish playable media."""
+    hints: list[dict[str, Any]] = []
+    tags = node.select('video, audio, mpvideo, mpvoice, iframe, mp-common-videosnap')
+    for index, tag in enumerate(tags):
+        tag_name = tag.name
+        media_type = (
+            'audio' if tag_name in {'audio', 'mpvoice'}
+            else 'embed' if tag_name == 'iframe' and not tag.get('data-mpvid')
+            else 'video'
+        )
+        locator = {
+            'container': '#js_content',
+            'media_element_index': index,
+            'native_tag': tag_name,
+        }
+        attributes = {
+            key: tag[key]
+            for key in (
+                'data-mpvid', 'data-vid', 'vid', 'voice_encode_fileid', 'data-id',
+                'name', 'title', 'data-title', 'data-desc', 'data-duration',
+                'duration', 'width', 'height', 'type',
+            )
+            if isinstance(tag.get(key), str) and tag[key].strip()
+        }
+        media_id = next((
+            attributes[key]
+            for key in ('data-mpvid', 'data-vid', 'vid', 'voice_encode_fileid', 'data-id')
+            if key in attributes
+        ), None)
+        source_url = tag.get('data-src') or tag.get('src')
+        hint = {
+            'media_type': media_type,
+            'native_tag': tag_name,
+            'media_id': media_id,
+            'url': _public_media_hint_url(source_url, article_url),
+            'url_role': 'EMBED_PAGE' if tag_name == 'iframe' else 'MEDIA_RESOURCE',
+            'native_locator': locator,
+            'native_attributes': attributes,
+            'observation_kind': 'NATIVE_EMBED_HINT',
+        }
+        poster = tag.get('poster') or tag.get('data-cover')
+        if poster:
+            hint['cover_url'] = _public_media_hint_url(poster, article_url)
+        if tag_name == 'mp-common-videosnap':
+            hint['observed_data_url'] = _public_media_hint_url(tag.get('data-url'), article_url)
+            hint['observed_data_url_role'] = 'UNKNOWN'
+        hints.append(hint)
+        if tag_name in {'video', 'audio'}:
+            for source_index, source in enumerate(tag.select('source')):
+                source_hint = {
+                    **hint,
+                    'native_tag': 'source',
+                    'url': _public_media_hint_url(
+                        source.get('data-src') or source.get('src'), article_url
+                    ),
+                    'native_locator': {**locator, 'source_element_index': source_index},
+                    'native_attributes': {
+                        key: source[key]
+                        for key in ('type', 'media')
+                        if isinstance(source.get(key), str) and source[key].strip()
+                    },
+                }
+                hints.append(source_hint)
+    return hints
 
 
 def parse_public_article(response: PublicResponse) -> dict[str, Any] | None:
@@ -78,7 +176,8 @@ def parse_public_article(response: PublicResponse) -> dict[str, Any] | None:
            'ct': original_ct, 'publish_time_literal': time_literal, 'published_at': published,
            'native_publication_precision': 'NATIVE_EPOCH' if published else 'UNKNOWN',
            'read_num': None, 'like_num': None, 'comment_count': None, 'share_count': None,
-           'images': images, 'body_locator': '#js_content', 'author_locator': '#js_name, .profile_nickname',
+           'images': images, 'media_hints': _article_media_hints(body_soup, response.url),
+           'body_locator': '#js_content', 'author_locator': '#js_name, .profile_nickname',
            'native_document_sha256': hashlib.sha256(response.content).hexdigest(),
            'body_sha256': hashlib.sha256(body.encode('utf-8')).hexdigest()}
     return {'platform': 'wechat', 'platform_content_id': native_id, 'title': title, 'content': body,

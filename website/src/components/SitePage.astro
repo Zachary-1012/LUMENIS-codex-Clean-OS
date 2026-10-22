@@ -1,6 +1,7 @@
 ---
 import { copy, locales, type Locale } from "../i18n";
 import { publicDestinations } from "../site-config.mjs";
+import CreativePaths from "./CreativePaths.astro";
 import "../styles/site.css";
 
 interface Props {
@@ -238,6 +239,8 @@ const workflows = [
           </div>
         </div>
       </section>
+
+      <CreativePaths locale={locale} />
 
       <section class="scenarios-section section-pad" id="scenarios" aria-labelledby="scenarios-title">
         <div class="wrap">

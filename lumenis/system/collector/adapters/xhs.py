@@ -57,7 +57,11 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 continue
             item = {"phase": phase}
             observed_at = source.get("observed_at")
-            if isinstance(observed_at, str) and len(observed_at) <= 40:
+            if (isinstance(observed_at, str) and len(observed_at) <= 40
+                    and re.fullmatch(
+                        r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+                        r"(?:\.[0-9]{1,9})?(?:Z|[+-][0-9]{2}:[0-9]{2})",
+                        observed_at)):
                 try:
                     datetime.datetime.fromisoformat(observed_at.replace("Z", "+00:00"))
                     item["observed_at"] = observed_at
@@ -74,12 +78,12 @@ class XiaohongshuAdapter(BasePlatformAdapter):
             item["selector_counts"] = {
                 selector: (selector_counts.get(selector)
                            if type(selector_counts.get(selector)) is int
-                           and selector_counts.get(selector) >= 0 else None)
+                           and 0 <= selector_counts.get(selector) <= 1_000_000 else None)
                 for selector in selector_names
             }
             for key in integer_fields:
                 count = source.get(key)
-                item[key] = count if type(count) is int and count >= 0 else None
+                item[key] = count if type(count) is int and 0 <= count <= 1_000_000 else None
             markers = source.get("native_empty_indicators")
             item["native_empty_indicators"] = (
                 [marker for marker in markers if isinstance(marker, str) and marker in empty_markers][:4]
