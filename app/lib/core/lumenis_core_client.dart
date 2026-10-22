@@ -1164,6 +1164,7 @@ class LumenisCoreClient {
     String? previousArtifactId,
     String? title,
     bool renderMedia = true,
+    Map<String, double> renderOptions = const {},
   }) {
     if (outputKind != 'video' && outputKind != 'audio') {
       throw const FormatException('Unsupported content output kind.');
@@ -1186,6 +1187,7 @@ class LumenisCoreClient {
           'previous_artifact_id': previousArtifactId,
           'title': ?title,
           if (!renderMedia) 'render_media': false,
+          if (renderOptions.isNotEmpty) 'render_options': renderOptions,
         },
       },
     ).timeout(

@@ -2,17 +2,17 @@
 import hashlib
 import json
 import math
-from pathlib import Path
 import sqlite3
 import struct
 import subprocess
 import wave
 import zipfile
+from pathlib import Path
 
 import pytest
 
 import shared_artifacts as artifacts
-from lumenis.shared.content_creation.video_editing import Timeline, fingerprint_local_media
+from lumenis.shared.content_creation.video_editing import Timeline
 from lumenis.shared.database import DatabaseRepository
 from lumenis.system.security import permission as p
 
@@ -144,9 +144,8 @@ def test_account_source_manifest_is_not_implicitly_transferred_to_local_workspac
         assert type(principal) is p.LocalWorkspacePrincipal
         with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_CONTEXT_MISMATCH"):
             artifacts.read_content_source_artifact(artifact_id, actor=principal, **SCOPE)
-        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_CONTEXT_MISMATCH"):
-            with artifacts.resolve_content_source_assets([artifact_id], actor=principal, **SCOPE):
-                raise AssertionError("account source was implicitly reassigned to workspace")
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_CONTEXT_MISMATCH"), artifacts.resolve_content_source_assets([artifact_id], actor=principal, **SCOPE):
+            raise AssertionError("account source was implicitly reassigned to workspace")
     assert package.read_bytes() == original
     assert artifacts.read_content_source_artifact(artifact_id, actor=ACTOR, **SCOPE) == source
 
@@ -438,9 +437,8 @@ def test_local_ownership_rechecks_the_workspace_flag_without_discarding_principa
 def test_saved_local_principal_does_not_authorize_another_transport(local_store, headers, remote_addr):
     with local_store["app"].test_request_context(
         "/", headers=headers, environ_overrides={"REMOTE_ADDR": remote_addr},
-    ):
-        with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
-            local_scope(local_store)
+    ), pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+        local_scope(local_store)
 
 
 @pytest.mark.parametrize("changes", [
@@ -703,3 +701,31 @@ def test_project_save_intent_is_permission_bound():
         artifacts._validate_content_project_save("Draft", "false")
     with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_TITLE_INVALID"):
         artifacts._validate_content_project_save("", False)
+
+
+def test_processing_only_revision_preserves_original_and_exact_scope(media_store):
+    approve(media_store)
+    source_id = import_source(media_store)["artifact"]["artifact_id"]
+    with artifacts.resolve_content_source_assets([source_id], actor=ACTOR, **SCOPE) as sources:
+        timeline = Timeline.from_assets([sources[0]["asset"]]).add_audio_track("voice", audio_role="voiceover")
+        timeline = timeline.add_clip(sources[0]["asset"].asset_id, track_id="voice", source_out=.4)
+        args = dict(actor=ACTOR, **SCOPE, source_execution_id="processing-revision",
+                    output_kind="audio", source_artifact_refs=[source_id], title="Episode", render_media=False)
+        first = artifacts.stage_timeline_artifact(timeline, **args)
+        first_id = first["artifact"]["artifact_id"]
+        original = (media_store["root"] / f"{first_id}.zip").read_bytes()
+        options = {"loudness_target_lufs": -16}
+        second = artifacts.stage_timeline_artifact(timeline, previous_artifact_id=first_id, render_options=options, **args)
+        second_id = second["artifact"]["artifact_id"]
+        assert second["project"]["timeline"] == first["project"]["timeline"]
+        assert second["project"]["project_revision"] == 2
+        assert second["render"]["state"] == "not_rendered"
+        assert artifacts.read_content_project(second_id, actor=ACTOR, **SCOPE)["project"]["render_options"] == options
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_PARENT_REVISION_REQUIRED"):
+            artifacts.stage_timeline_artifact(timeline, previous_artifact_id=second_id, render_options=options, **args)
+        reverted = artifacts.stage_timeline_artifact(timeline, previous_artifact_id=second_id, **args)
+        assert reverted["project"]["project_revision"] == 3
+        assert reverted["project"].get("render_options", {}) == {}
+        assert (media_store["root"] / f"{first_id}.zip").read_bytes() == original
+        base = dict(actor=ACTOR, **SCOPE, source_artifact_refs=[source_id], output_kind="audio", title="Episode", render_media=False)
+        assert artifacts.content_project_export_resource(timeline, **base) != artifacts.content_project_export_resource(timeline, render_options=options, **base)

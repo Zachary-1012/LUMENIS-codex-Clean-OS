@@ -951,6 +951,16 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.waveform_retry": "波形未能读取，重试",
     "sh01.media.waveform_previous": "上一段波形",
     "sh01.media.waveform_next": "下一段波形",
+    "sh01.media.mastering": "响度",
+    "sh01.media.loudness_target": "目标响度",
+    "sh01.media.master_off": "保持原音量",
+    "sh01.media.master_on_export": "保存保留此设置；导出时处理音频。",
+    "sh01.media.measured_audio": "已保存音频",
+    "sh01.media.master_before": "处理前",
+    "sh01.media.master_after": "处理后",
+    "sh01.media.master_unreachable": "该目标会超过安全峰值或需要改变动态。请选择更低响度，或调整音轨后重试。",
+    "sh01.media.master_unverified": "处理后的音频未达到目标，原版本已保留。请调整音轨后重试。",
+    "sh01.media.master_silent": "这段音频无法测得有效响度，请检查音轨或保留原音量。",
   },
   "en": {
     "product.mother": "OEVIRA",
@@ -2104,6 +2114,20 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.waveform_retry": "Waveform unavailable. Retry",
     "sh01.media.waveform_previous": "Previous waveform segment",
     "sh01.media.waveform_next": "Next waveform segment",
+    "sh01.media.mastering": "Loudness",
+    "sh01.media.loudness_target": "Target loudness",
+    "sh01.media.master_off": "Keep original level",
+    "sh01.media.master_on_export":
+        "Save keeps this setting; export processes the audio.",
+    "sh01.media.measured_audio": "Saved audio",
+    "sh01.media.master_before": "Before",
+    "sh01.media.master_after": "After",
+    "sh01.media.master_unreachable":
+        "This target exceeds the safe peak or requires changing dynamics. Choose a lower loudness or adjust the tracks and retry.",
+    "sh01.media.master_unverified":
+        "The processed audio did not meet the target. The original version is preserved. Adjust the tracks and retry.",
+    "sh01.media.master_silent":
+        "Loudness could not be measured. Check the tracks or keep the original level.",
   },
   "ko": {
     "product.mother": "OEVIRA",
@@ -3096,5 +3120,17 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "sh01.media.waveform_retry": "파형을 불러오지 못했습니다. 다시 시도",
     "sh01.media.waveform_previous": "이전 파형 구간",
     "sh01.media.waveform_next": "다음 파형 구간",
+    "sh01.media.mastering": "음량",
+    "sh01.media.loudness_target": "목표 음량",
+    "sh01.media.master_off": "원래 음량 유지",
+    "sh01.media.master_on_export": "저장하면 설정이 유지되고 내보낼 때 오디오를 처리합니다.",
+    "sh01.media.measured_audio": "저장된 오디오",
+    "sh01.media.master_before": "처리 전",
+    "sh01.media.master_after": "처리 후",
+    "sh01.media.master_unreachable":
+        "목표가 안전 피크를 초과하거나 다이내믹 변경이 필요합니다. 더 낮은 음량을 선택하거나 트랙을 조정한 뒤 다시 시도하세요.",
+    "sh01.media.master_unverified":
+        "처리한 오디오가 목표에 도달하지 못했습니다. 원본 버전은 유지됩니다. 트랙을 조정한 뒤 다시 시도하세요.",
+    "sh01.media.master_silent": "유효한 음량을 측정할 수 없습니다. 트랙을 확인하거나 원래 음량을 유지하세요.",
   },
 };

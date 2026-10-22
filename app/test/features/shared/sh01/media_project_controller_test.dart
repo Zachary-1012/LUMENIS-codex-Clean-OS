@@ -125,6 +125,7 @@ final class _Repository implements MediaProjectRepository {
     String? previousArtifactId,
     String? title,
     bool renderMedia = true,
+    Map<String, double> renderOptions = const {},
   }) async {
     observedDomains.add(domain);
     calls++;
@@ -140,6 +141,7 @@ final class _Repository implements MediaProjectRepository {
       if (title != null) 'project_revision': 1,
       'output_kind': outputKind,
       'timeline': timeline.toJson(),
+      'render_options': renderOptions,
       'rights': legacyRightsFormat
           ? {
               'state': 'unknown',
@@ -288,6 +290,51 @@ void main() {
     expect(controller.version!.rendered, isTrue);
     expect(repository.parent, 'ART-2');
     expect(controller.hasUnsavedChanges, isFalse);
+  });
+
+  test('mastering settings revise independently and reopen without applying twice', () async {
+    await controller.importFile('chosen.mp4', Uint8List.fromList([1]));
+    controller.edit((s) => s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4));
+    controller.setTitle('Episode');
+    await controller.export(outputKind: 'video', renderMedia: false);
+    final original = repository.savedProject!;
+    final timelineVersion = controller.timeline!.version;
+    controller.setLoudnessTarget(-16);
+    expect(controller.hasUnsavedChanges, isTrue);
+    expect(repository.calls, 1);
+    expect(controller.timeline!.version, timelineVersion);
+    await controller.export(outputKind: 'video', renderMedia: false);
+    expect(repository.parent, 'ART-1');
+    expect(controller.version!.renderOptions, {'loudness_target_lufs': -16.0});
+    expect(controller.hasUnsavedChanges, isFalse);
+    await controller.reopen('ART-2');
+    expect(controller.renderOptions, {'loudness_target_lufs': -16.0});
+    await controller.export(outputKind: 'video', renderMedia: false);
+    expect(repository.calls, 2);
+    expect(controller.failureCode, 'CONTENT_PROJECT_NO_CHANGES');
+    controller.setLoudnessTarget(-14);
+    expect(controller.hasUnsavedChanges, isTrue);
+    repository.savedProject = original;
+    await controller.reopen('ART-1', discardExisting: true);
+    expect(controller.renderOptions, isEmpty);
+    expect(controller.hasUnsavedChanges, isFalse);
+    expect(() => controller.setLoudnessTarget(-99), throwsFormatException);
+    expect(controller.renderOptions, isEmpty);
+  });
+
+  test('master settings stay bound to context and source reset', () async {
+    await create();
+    controller.setLoudnessTarget(-16);
+    repository.contextKey = 'CTH:other';
+    expect(controller.renderOptions, isEmpty);
+    controller.setLoudnessTarget(-14);
+    repository.contextKey = 'BMP:GLOBAL';
+    expect(controller.sourcesNeedRevalidation, isTrue);
+    expect(controller.renderOptions, isEmpty);
+    await controller.relinkOriginalFiles(['chosen.mp4']);
+    expect(controller.renderOptions, {'loudness_target_lufs': -16.0});
+    await controller.createFromLocalFiles(['fresh.mp4'], discardExisting: true);
+    expect(controller.renderOptions, isEmpty);
   });
 
   test('independent media imports edits exports and reopens with null domain', () async {

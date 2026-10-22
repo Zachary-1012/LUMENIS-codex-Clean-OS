@@ -38,6 +38,7 @@ abstract interface class MediaProjectRepository {
     String? previousArtifactId,
     String? title,
     bool renderMedia = true,
+    Map<String, double> renderOptions = const {},
   });
   Future<Map<String, dynamic>> reopen(String? domain, String artifactId);
 }
@@ -76,6 +77,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     String? previousArtifactId,
     String? title,
     bool renderMedia = true,
+    Map<String, double> renderOptions = const {},
   }) => client.exportContentProject(
     domainId: domain,
     assetPaths: refs == null ? paths : null,
@@ -85,6 +87,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     previousArtifactId: previousArtifactId,
     title: title,
     renderMedia: renderMedia,
+    renderOptions: renderOptions,
   );
 
   @override
@@ -147,7 +150,14 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
   );
 }
 
-enum MediaProjectOperation { idle, importing, inspecting, saving, exporting, reopening }
+enum MediaProjectOperation {
+  idle,
+  importing,
+  inspecting,
+  saving,
+  exporting,
+  reopening,
+}
 
 /// A registered server result, not a claim that the user has downloaded it.
 final class MediaProjectVersion {
@@ -162,6 +172,11 @@ final class MediaProjectVersion {
     required this.title,
     required this.projectRevision,
     required this.rendered,
+    required this.renderOptions,
+    required this.inputLufs,
+    required this.inputTruePeak,
+    required this.outputLufs,
+    required this.outputTruePeak,
   });
 
   final String artifactId;
@@ -171,6 +186,11 @@ final class MediaProjectVersion {
   final String? title;
   final int? projectRevision;
   final bool rendered;
+  final Map<String, double> renderOptions;
+  final double? inputLufs;
+  final double? inputTruePeak;
+  final double? outputLufs;
+  final double? outputTruePeak;
   final int timelineVersion;
   final bool? evidenceRecorded;
   final List<String> sourceRefs;
@@ -202,8 +222,11 @@ final class MediaProjectVersion {
     final revision = project['project_revision'];
     if (!const [1, 2].contains(project['schema_version']) ||
         (project['schema_version'] == 2 &&
-            (title is! String || title.trim().isEmpty || title.length > 200 ||
-             revision is! int || revision < 1)) ||
+            (title is! String ||
+                title.trim().isEmpty ||
+                title.length > 200 ||
+                revision is! int ||
+                revision < 1)) ||
         !const ['video', 'audio'].contains(kind) ||
         timeline is! Map ||
         timeline['version'] is! int ||
@@ -214,11 +237,18 @@ final class MediaProjectVersion {
             rights['demo_acknowledged'] != true) ||
         render['output_kind'] != kind ||
         (rendered
-            ? (duration is! num || !duration.isFinite || duration <= 0 ||
-               size is! int || size <= 0 ||
-               !RegExp(r'^[0-9a-f]{64}$').hasMatch('${render['media_sha256']}'))
-            : (project['schema_version'] != 2 || render['state'] != 'not_rendered' ||
-               render.length != 3 || render['timeline_version'] != timeline['version'])) ||
+            ? (duration is! num ||
+                  !duration.isFinite ||
+                  duration <= 0 ||
+                  size is! int ||
+                  size <= 0 ||
+                  !RegExp(
+                    r'^[0-9a-f]{64}$',
+                  ).hasMatch('${render['media_sha256']}'))
+            : (project['schema_version'] != 2 ||
+                  render['state'] != 'not_rendered' ||
+                  render.length != 3 ||
+                  render['timeline_version'] != timeline['version'])) ||
         refs is! List ||
         refs.length > 64 ||
         refs.any(
@@ -229,6 +259,18 @@ final class MediaProjectVersion {
     }
     // Detach server JSON from the mutable response used by the transport caller.
     final detached = jsonDecode(jsonEncode(timeline)) as Map<String, dynamic>;
+    final processing = render['audio_processing'];
+    final mastering = processing is Map ? processing['mastering'] : null;
+    final input = mastering is Map ? mastering['input_measurement'] : null;
+    final loudness = measurement is Map ? measurement['loudness'] : null;
+    double? measured(Object? value) {
+      if (value == null) return null;
+      final number = value is num
+          ? value.toDouble()
+          : double.tryParse('$value');
+      return number != null && number.isFinite ? number : null;
+    }
+
     return MediaProjectVersion._(
       artifactId: artifactId,
       timelineJson: Map<String, dynamic>.unmodifiable(detached),
@@ -237,11 +279,52 @@ final class MediaProjectVersion {
       title: title as String?,
       projectRevision: revision as int?,
       rendered: rendered,
+      renderOptions: _readRenderOptions(project['render_options']),
+      inputLufs: measured(input is Map ? input['input_i'] : null),
+      inputTruePeak: measured(input is Map ? input['input_tp'] : null),
+      outputLufs: measured(
+        loudness is Map ? loudness['integrated_lufs'] : null,
+      ),
+      outputTruePeak: measured(
+        loudness is Map ? loudness['true_peak_dbtp'] : null,
+      ),
       timelineVersion: timeline['version'] as int,
       evidenceRecorded: evidenceRecorded,
       sourceRefs: List<String>.unmodifiable(refs.cast<String>()),
     );
   }
+}
+
+Map<String, double> _readRenderOptions(Object? value) {
+  if (value == null) return const {};
+  if (value is! Map ||
+      value.keys.any(
+        (key) => !const {
+          'loudness_target_lufs',
+          'noise_reduction_db',
+          'noise_floor_db',
+        }.contains(key),
+      )) {
+    throw const FormatException('Invalid audio processing options.');
+  }
+  final result = <String, double>{};
+  for (final entry in value.entries) {
+    final number = entry.value;
+    if (number is! num || !number.isFinite) {
+      throw const FormatException('Invalid audio processing value.');
+    }
+    result[entry.key as String] = number.toDouble();
+  }
+  final target = result['loudness_target_lufs'];
+  final reduction = result['noise_reduction_db'];
+  final floor = result['noise_floor_db'];
+  if (target != null && !const {-16, -14, -23}.contains(target) ||
+      reduction != null && (reduction < 3 || reduction > 18) ||
+      floor != null && (reduction == null || floor < -80 || floor > -20)) {
+    throw const FormatException('Unsupported audio processing values.');
+  }
+  if (reduction != null) result['noise_floor_db'] = floor ?? -50;
+  return Map.unmodifiable(result);
 }
 
 /// A validated, in-memory preview tied to one controller and one exact draft.
@@ -271,11 +354,13 @@ final class MediaProjectController extends ChangeNotifier {
   }
 
   final MediaProjectRepository repository;
+
   /// Null explicitly selects independent Shared creation, not a business domain.
   final String? domain;
   MediaProjectSnapshot? _timeline;
   MediaProjectVersion? _version;
   String? _title;
+  Map<String, double> _renderOptions = const {};
   List<String> _paths = const [];
   List<String>? _sourceRefs;
   List<String>? _suspendedSourceRefs;
@@ -292,6 +377,8 @@ final class MediaProjectController extends ChangeNotifier {
   MediaProjectSnapshot? get timeline => contextMatches ? _timeline : null;
   MediaProjectVersion? get version => contextMatches ? _version : null;
   String? get title => contextMatches ? _title : null;
+  Map<String, double> get renderOptions =>
+      contextMatches ? _renderOptions : const {};
   String? get selectedClipId => _selectedClipId;
   String? get failureCode => _failureCode;
   MediaProjectOperation get operation => _operation;
@@ -303,17 +390,36 @@ final class MediaProjectController extends ChangeNotifier {
       ? List<String>.unmodifiable(_sourceRefs ?? const [])
       : const [];
   bool get hasUnsavedChanges =>
-      _timeline != null && (_timeline!.version != _version?.timelineVersion || _title != _version?.title);
+      _timeline != null &&
+      (_timeline!.version != _version?.timelineVersion ||
+          _title != _version?.title ||
+          !mapEquals(_renderOptions, _version?.renderOptions));
   bool get contextMatches =>
       _draftContext == null ||
       (_matchesContext(_draftContext!) && !_sourcesNeedRevalidation);
 
-  String get _contextKey => '${domain ?? 'shared_workspace:v1'}:${repository.contextKey}';
+  String get _contextKey =>
+      '${domain ?? 'shared_workspace:v1'}:${repository.contextKey}';
+
+  void setLoudnessTarget(double? target) {
+    if (_disposed || busy || !contextMatches || _timeline == null) return;
+    final options = Map<String, double>.from(_renderOptions);
+    if (target == null) {
+      options.remove('loudness_target_lufs');
+    } else {
+      options['loudness_target_lufs'] = target;
+    }
+    _renderOptions = _readRenderOptions(options);
+    _failureCode = null;
+    notifyListeners();
+  }
 
   void setTitle(String value) {
     if (_disposed || busy || !contextMatches) return;
     final title = value.trim();
-    if (title.isEmpty || title.length > 200 || RegExp(r'[\x00-\x1f]').hasMatch(title)) {
+    if (title.isEmpty ||
+        title.length > 200 ||
+        RegExp(r'[\x00-\x1f]').hasMatch(title)) {
       _fail('CONTENT_PROJECT_TITLE_INVALID');
       return;
     }
@@ -414,7 +520,11 @@ final class MediaProjectController extends ChangeNotifier {
         throw const FormatException('Batch preview did not advance the draft.');
       }
       return MediaProjectBatchPreview._(
-        this, base, context, candidate, frozen.length,
+        this,
+        base,
+        context,
+        candidate,
+        frozen.length,
       );
     } catch (error) {
       if (_acceptContext(context)) _capture(error);
@@ -474,6 +584,7 @@ final class MediaProjectController extends ChangeNotifier {
       _suspendedSourceRefs = null;
       _sourcesNeedRevalidation = false;
       _version = null;
+      _renderOptions = const {};
       _draftContext = context;
       _selectedClipId = null;
       _completionUnknown = false;
@@ -590,7 +701,10 @@ final class MediaProjectController extends ChangeNotifier {
     }
   }
 
-  Future<void> export({required String outputKind, bool renderMedia = true}) async {
+  Future<void> export({
+    required String outputKind,
+    bool renderMedia = true,
+  }) async {
     if (_disposed || busy || _timeline == null) return;
     if (!contextMatches) {
       _fail('CONTENT_CONTEXT_CHANGED');
@@ -600,12 +714,19 @@ final class MediaProjectController extends ChangeNotifier {
       _fail('CONTENT_EXPORT_COMPLETION_UNKNOWN');
       return;
     }
-    if (_version != null && !hasUnsavedChanges && (!renderMedia || _version!.rendered)) {
+    if (_version != null &&
+        !hasUnsavedChanges &&
+        (!renderMedia || _version!.rendered)) {
       _fail('CONTENT_PROJECT_NO_CHANGES');
       return;
     }
-    _begin(renderMedia ? MediaProjectOperation.exporting : MediaProjectOperation.saving);
+    _begin(
+      renderMedia
+          ? MediaProjectOperation.exporting
+          : MediaProjectOperation.saving,
+    );
     final title = _title;
+    final renderOptions = _renderOptions;
     final snapshot = _timeline!;
     final context = _contextKey;
     try {
@@ -618,12 +739,14 @@ final class MediaProjectController extends ChangeNotifier {
         previousArtifactId: _version?.artifactId,
         title: title,
         renderMedia: renderMedia,
+        renderOptions: renderOptions,
       );
       final result = response['result'];
       if (response['ok'] != true ||
           response['publish_status'] != 'not_performed' ||
           result is! Map ||
-          result['status'] != (renderMedia ? 'rendered_staged' : 'project_saved') ||
+          result['status'] !=
+              (renderMedia ? 'rendered_staged' : 'project_saved') ||
           result['artifact'] is! Map) {
         throw const FormatException(
           'Export returned no registered content project.',
@@ -639,7 +762,10 @@ final class MediaProjectController extends ChangeNotifier {
         version.timelineJson,
         inspectedAssets: snapshot.assets,
       );
-      if (version.outputKind != outputKind || version.title != title || version.rendered != renderMedia ||
+      if (version.outputKind != outputKind ||
+          version.title != title ||
+          version.rendered != renderMedia ||
+          !mapEquals(version.renderOptions, renderOptions) ||
           jsonEncode(returned.toJson()) != jsonEncode(snapshot.toJson())) {
         throw const FormatException(
           'Export does not match the submitted edit.',
@@ -700,6 +826,7 @@ final class MediaProjectController extends ChangeNotifier {
       if (!_acceptContext(context)) return;
       _version = version;
       _title = version.title;
+      _renderOptions = version.renderOptions;
       _timeline = timeline;
       _paths = const [];
       _sourceRefs = version.sourceRefs.isEmpty ? null : version.sourceRefs;

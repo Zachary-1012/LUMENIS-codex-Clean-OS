@@ -24,6 +24,17 @@ versioned operation. The actual podcast save/export/revision/restart evidence an
 current UI observations are recorded in
 [podcast continuity](evidence/round-15/podcast-continuity-20261023.json).
 
+Explicit loudness targets now persist as editable project settings, including a
+settings-only revision with an unchanged timeline. Export applies the selected
+target and reports the saved output's measured loudness/true peak; reopening an
+older version restores its original settings. The default preserves original
+volume. Temporary rendering now stays inside the existing authorized Artifact
+root, fixing the delivery path without broadening file access. Actual save,
+export, playback, download and restart/readback evidence belongs to
+[media mastering continuity](evidence/round-15/media-mastering-continuity-20261023.json).
+This bounded adoption does not accept denoising, all delivery codecs, final voice
+quality or the complete media frontend.
+
 The former local TTS failure was traced to the essentials FFmpeg build lacking
 libflite. An official full-build variant was verified and bound only to the owned
 manual-workspace runtime using existing path settings. Real English synthetic

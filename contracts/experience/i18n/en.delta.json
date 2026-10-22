@@ -944,6 +944,16 @@
   "sh01.media.waveform_source": "Original audio",
   "sh01.media.waveform_retry": "Waveform unavailable. Retry",
   "sh01.media.waveform_previous": "Previous waveform segment",
-  "sh01.media.waveform_next": "Next waveform segment"
+  "sh01.media.waveform_next": "Next waveform segment",
+  "sh01.media.mastering": "Loudness",
+  "sh01.media.loudness_target": "Target loudness",
+  "sh01.media.master_off": "Keep original level",
+  "sh01.media.master_on_export": "Save keeps this setting; export processes the audio.",
+  "sh01.media.measured_audio": "Saved audio",
+  "sh01.media.master_before": "Before",
+  "sh01.media.master_after": "After",
+  "sh01.media.master_unreachable": "This target exceeds the safe peak or requires changing dynamics. Choose a lower loudness or adjust the tracks and retry.",
+  "sh01.media.master_unverified": "The processed audio did not meet the target. The original version is preserved. Adjust the tracks and retry.",
+  "sh01.media.master_silent": "Loudness could not be measured. Check the tracks or keep the original level."
  }
 }

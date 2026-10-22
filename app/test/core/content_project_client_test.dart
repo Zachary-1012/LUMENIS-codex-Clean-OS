@@ -267,9 +267,11 @@ void main() {
         timeline: {'version': 1},
         outputKind: 'video',
         demoAcknowledged: true,
+        renderOptions: {'loudness_target_lufs': -16},
       );
       final input = (calls.last['body'] as Map)['input'] as Map;
       expect(input['asset_refs'], ['ART-source']);
+      expect(input['render_options'], {'loudness_target_lufs': -16});
       expect(input.containsKey('asset_paths'), isFalse);
       expect(
         () => client.inspectContentMedia(
