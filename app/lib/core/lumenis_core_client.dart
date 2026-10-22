@@ -201,7 +201,10 @@ final class SharedWorkspaceScope extends LumenisWorkspaceScope {
   };
 
   @override
-  Map<String, String> toQueryParameters() => const {};
+  Map<String, String> toQueryParameters() => const {
+    'scope_kind': 'shared_workspace',
+    'version': '1',
+  };
 
   @override
   Map<String, String> get requestHeaders => _sharedWorkspaceScopeHeaders;

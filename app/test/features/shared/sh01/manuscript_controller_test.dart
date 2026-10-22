@@ -43,6 +43,23 @@ void main() {
 
   tearDown(() => controller.dispose());
 
+  test(
+    'unknown prepare state reads back without starting or retrying work',
+    () async {
+      client.prepareState = 'prepared';
+
+      await controller.save();
+
+      expect(client.runCalls, 0);
+      expect(client.readCalls, 1);
+      expect(controller.savedWork, isNull);
+      expect(controller.hasUnresolvedSave, isTrue);
+      expect(controller.runRetryAvailable, isFalse);
+      await controller.retryRun();
+      expect(client.runCalls, 0);
+    },
+  );
+
   test('saves a normal revision against the verified parent version', () async {
     await controller.save();
     final first = controller.savedWork!;
@@ -180,7 +197,7 @@ void main() {
 
       expect(client.runCalls, 1);
       expect(client.readCalls, 1);
-      expect(controller.taskState, 'prepared');
+      expect(controller.taskState, 'pending');
       expect(controller.savedWork, isNull);
       expect(controller.runRetryAvailable, isTrue);
 
@@ -319,7 +336,7 @@ void main() {
     client.commitOnCancel = true;
 
     await controller.save();
-    expect(controller.taskState, 'prepared');
+    expect(controller.taskState, 'pending');
     expect(controller.savedWork, isNull);
 
     await controller.cancel();
@@ -557,7 +574,7 @@ final class _PitchTask {
   bool committed = false;
   Map<String, dynamic>? work;
   Map<String, dynamic>? actionReceipt;
-  String state = 'prepared';
+  String state = 'pending';
 }
 
 final class _PitchClient extends LumenisCoreClient {
@@ -583,6 +600,7 @@ final class _PitchClient extends LumenisCoreClient {
   bool normalizeBmpReadback = false;
   bool omitFirstCommittedReadback = false;
   String? runStateOverride;
+  String prepareState = 'pending';
   Completer<void>? prepareStarted;
   Completer<void>? prepareGate;
   Map<String, dynamic>? reopenResult;
@@ -607,7 +625,8 @@ final class _PitchClient extends LumenisCoreClient {
     prepareCalls.add(call);
     final task = _tasksByRequest.putIfAbsent(requestId, () {
       final taskId = _taskId(_sequence++);
-      final created = _PitchTask(taskId: taskId, call: call);
+      final created = _PitchTask(taskId: taskId, call: call)
+        ..state = prepareState;
       _tasksById[taskId] = created;
       return created;
     });
@@ -618,7 +637,7 @@ final class _PitchClient extends LumenisCoreClient {
       loseFirstPrepareAcknowledgement = false;
       throw const SocketException('prepare response was lost');
     }
-    return _taskReply(task, state: 'prepared');
+    return _taskReply(task, state: task.state);
   }
 
   @override
@@ -633,14 +652,14 @@ final class _PitchClient extends LumenisCoreClient {
       if (commitFirstLostRun) {
         _commit(task);
       } else {
-        task.state = 'prepared';
+        task.state = 'pending';
       }
       throw const SocketException('run response was lost');
     }
     if (commitOnRun) {
       _commit(task);
     } else {
-      task.state = runStateOverride ?? 'prepared';
+      task.state = runStateOverride ?? 'pending';
     }
     return _taskReply(task, state: task.state);
   }

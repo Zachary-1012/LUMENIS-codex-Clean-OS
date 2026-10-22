@@ -100,7 +100,7 @@ void main() {
   );
 
   test(
-    'Shared pitch uses body scope for writes and the typed header for reads/export',
+    'Shared pitch carries the exact server scope for writes, reads and export',
     () async {
       final server = await _InternalPitchStub.start();
       addTearDown(server.close);
@@ -141,8 +141,9 @@ void main() {
       expect(server.requests[3].body, {
         'scope': {'scope_kind': 'shared_workspace', 'version': 1},
       });
-      expect(server.requests[1].query, isEmpty);
-      expect(server.requests.last.query, isEmpty);
+      const readScope = {'scope_kind': 'shared_workspace', 'version': '1'};
+      expect(server.requests[1].query, readScope);
+      expect(server.requests.last.query, readScope);
       for (final request in [server.requests[1], server.requests.last]) {
         expect(
           request.headers['x-lumenis-workspace-scope'],

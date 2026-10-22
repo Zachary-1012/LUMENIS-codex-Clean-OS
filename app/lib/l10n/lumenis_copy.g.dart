@@ -902,7 +902,7 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "shared.read_aloud.purpose.sourceBrief": "研究稿朗读预览；使用本机语音，不会生成或保存音频。",
     "shared.read_aloud.purpose.podcastScript": "播客脚本朗读仅用于预听，不是最终播客音频。",
     "shared.read_aloud.purpose.videoCaption": "视频字幕朗读仅用于预听，不是视频配音。",
-    "shared.read_aloud.purpose.savedPreview": "已保存成果文本预览，不会修改或重新生成成果。",
+    "shared.read_aloud.purpose.savedPreview": "朗读当前预览文字。",
     "shell.connecting": "正在连接",
     "shell.offline": "服务未连接",
     "shell.auth_unavailable": "连接授权已失效",
@@ -2030,8 +2030,7 @@ const Map<String, Map<String, String>> lumenisCopy = {
         "Podcast script read aloud is a preview, not final podcast audio.",
     "shared.read_aloud.purpose.videoCaption":
         "Video caption read aloud is a preview, not video voiceover.",
-    "shared.read_aloud.purpose.savedPreview":
-        "Saved output text preview. The output is not changed or regenerated.",
+    "shared.read_aloud.purpose.savedPreview": "Read the current preview aloud.",
     "shell.connecting": "Connecting",
     "shell.offline": "Service offline",
     "shell.auth_unavailable": "Connection authorization expired",
@@ -3017,8 +3016,7 @@ const Map<String, Map<String, String>> lumenisCopy = {
     "shared.read_aloud.purpose.podcastScript":
         "팟캐스트 대본 미리 듣기이며 최종 팟캐스트 오디오가 아닙니다.",
     "shared.read_aloud.purpose.videoCaption": "영상 자막 미리 듣기이며 영상 음성 더빙이 아닙니다.",
-    "shared.read_aloud.purpose.savedPreview":
-        "저장된 결과 텍스트 미리 듣기입니다. 결과를 수정하거나 다시 생성하지 않습니다.",
+    "shared.read_aloud.purpose.savedPreview": "현재 미리보기의 글을 읽습니다.",
     "shell.connecting": "연결 중",
     "shell.offline": "서비스 연결 끊김",
     "shell.auth_unavailable": "연결 승인 만료",

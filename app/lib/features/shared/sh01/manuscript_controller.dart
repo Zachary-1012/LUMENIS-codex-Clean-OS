@@ -122,7 +122,7 @@ final class ManuscriptController extends ChangeNotifier {
   bool get runRetryAvailable {
     final attempt = _activeAttempt;
     if (attempt == null || attempt.taskId == null) return false;
-    return attempt.taskState == 'prepared' &&
+    return attempt.taskState == 'pending' &&
         (attempt.runOutcomeUnknown || attempt.runAttempted);
   }
 
@@ -510,7 +510,7 @@ final class ManuscriptController extends ChangeNotifier {
     int generation,
   ) async {
     if (!_isCurrent(generation, attempt.scope)) return;
-    if (attempt.taskState == 'prepared' && !attempt.runAttempted) {
+    if (attempt.taskState == 'pending' && !attempt.runAttempted) {
       await _runAndRead(attempt, generation);
       return;
     }
