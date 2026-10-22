@@ -311,6 +311,16 @@ class Sh02ViewModel extends ChangeNotifier {
     }
     if (!_disposed && generation == _readGeneration) {
       _openedImport = reopened;
+      if (const {
+        'xlsx',
+        'xls',
+        'docx',
+        'doc',
+        'pdf',
+        'csv',
+      }.contains(reopened.filename.split('.').last.toLowerCase())) {
+        await loadSourcePage(0);
+      }
     }
     _pendingImportRequestId = null;
     _resetPendingImportSearch();
@@ -344,6 +354,16 @@ class Sh02ViewModel extends ChangeNotifier {
         throw const FormatException('Imported document version changed.');
       }
       _openedImport = reopened;
+      if (const {
+        'xlsx',
+        'xls',
+        'docx',
+        'doc',
+        'pdf',
+        'csv',
+      }.contains(reopened.filename.split('.').last.toLowerCase())) {
+        await loadSourcePage(0);
+      }
       if (_pendingImportRequestId == reopened.requestId) {
         _pendingImportRequestId = null;
         _resetPendingImportSearch();
@@ -375,7 +395,7 @@ class Sh02ViewModel extends ChangeNotifier {
       if (!_disposed && generation == _readGeneration) {
         _rowsFailed = true;
         if (error is LumenisCoreException &&
-            {401, 403, 404, 409}.contains(error.statusCode)) {
+            {401, 403, 404, 409, 410}.contains(error.statusCode)) {
           _openedImport = null;
           _importOpenFailed = true;
         }
