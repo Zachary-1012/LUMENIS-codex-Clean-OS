@@ -6,22 +6,35 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 2026-10-23 Material reading — bounded source and actual operation
 
-The retained SH-02 work now binds the existing scoped Canonical/Evidence reader
-and independent Shared original-file pagination. CSV files without social-post
-columns retain every logical row, including blanks, duplicates and multiline
-cells. Current Permission and original-version checks remain mandatory. Late
-page replies cannot restore content after the reader closes. Material cards
-have bounded lift/drag/flip/return behavior with reduced-motion support.
+The retained SH-02 work now connects scoped material reading to independent
+Shared research, persisted tasks and versioned SavedWork. Real selected files
+are calculated by the existing Reporting owner without AI. Reports present
+field completeness, category frequencies, exact duplicate counts and explicit
+metric totals, with header assumptions, denominators and unknowns preserved.
+Internal source IDs remain in provenance; normal reading presents the result.
+The user can save, edit, save a new version, reopen either version and resume
+server-persisted work. Uncertain saves retain the same request and exact draft.
+Original byte checks, current Permission, source revalidation and parent-version
+verification remain mandatory. Historical reports without the new material
+profile remain readable under their existing exact validation contract.
 
-Actual normal Web operations imported a real research CSV, reopened its saved
-original after restarting only the isolated manual-workspace Core, and displayed
-all 17 logical records. No AI, scheduler, collection or production DB was used.
-This proves the bounded original-reading path, not complete research, analyzed
-results, revision, full visual upgrade or four-surface acceptance. The overall
-frontend remains NOT_ACCEPTED. The existing complete plan and SH-02 contract
-retain those obligations. The exact source/check/runtime limits are in
-[the material-reading receipt](evidence/round-15/material-reading-20261023.json).
-No unchanged CI or prior runtime acceptance is inherited by this composition.
+Actual Web operation used the retained Korean research directory CSV: 17 rows
+including the candidate header, 16 directory entries, with original decisions
+11 retained / 4 pending semantic-version review / 1 pending heritage review.
+The directory labels do not establish completed review of those source bodies.
+The report and a user-authored revision were saved separately, reopened, and
+read back unchanged after restarting only the isolated manual-workspace Core.
+No AI, scheduler, live collection or production DB was used. See the exact
+[source/runtime/outcome receipt](evidence/round-15/research-workspace-20261023.json)
+and the preceding [original-reading receipt](evidence/round-15/material-reading-20261023.json).
+
+This is a bounded material-to-research version/recovery result, not full research,
+CTH/BMP integration, semantic verification, four-surface or whole-product closure.
+Overall frontend remains NOT_ACCEPTED; the full planned visual upgrade, per-material
+analysis cards, larger/batch intake, native devices and production 8201 alignment
+remain open. Existing complete plans and source contracts retain every obligation.
+Current-head protected PR checks and remote readback remain required; no prior CI
+or separate owner receipt transfers acceptance to this composition.
 
 ## 2026-10-23 Runtime startup — bounded implementation and real operation
 

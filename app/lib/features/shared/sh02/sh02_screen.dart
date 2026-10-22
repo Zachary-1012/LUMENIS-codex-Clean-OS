@@ -12,6 +12,8 @@ import '../../../l10n/lumenis_localizations.dart';
 import 'sh02_repository.dart';
 import 'sh02_snapshot.dart';
 import 'sh02_view_model.dart';
+import '../research/shared_research_repository.dart';
+import '../research/shared_research_workspace.dart';
 
 class Sh02Screen extends StatefulWidget {
   const Sh02Screen({
@@ -47,6 +49,17 @@ class _Sh02ScreenState extends State<Sh02Screen> {
     super.dispose();
   }
 
+  void _research() => unawaited(
+    openSharedResearch(
+      context,
+      repository: CoreSharedResearchRepository(widget.client),
+      sources: {
+        for (final item in _viewModel.recentImports)
+          item.artifactId: item.filename,
+      },
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => ColoredBox(
     color: LumenisTheme.of(context).canvas,
@@ -55,10 +68,12 @@ class _Sh02ScreenState extends State<Sh02Screen> {
         animation: _viewModel,
         builder: (context, _) => switch (_viewModel.phase) {
           Sh02LoadPhase.loading => _IndependentImportWorkspace(
+            onResearch: _research,
             viewModel: _viewModel,
             state: _LoadingState(),
           ),
           Sh02LoadPhase.blocked => _IndependentImportWorkspace(
+            onResearch: _research,
             viewModel: _viewModel,
             state: _BlockedState(
               error: _viewModel.scopeError,
@@ -66,13 +81,17 @@ class _Sh02ScreenState extends State<Sh02Screen> {
             ),
           ),
           Sh02LoadPhase.failed => _IndependentImportWorkspace(
+            onResearch: _research,
             viewModel: _viewModel,
             state: _FailureState(
               kind: _viewModel.failureKind!,
               onRetry: _viewModel.refresh,
             ),
           ),
-          Sh02LoadPhase.ready => _Workspace(viewModel: _viewModel),
+          Sh02LoadPhase.ready => _Workspace(
+            viewModel: _viewModel,
+            onResearch: _research,
+          ),
         },
       ),
     ),
@@ -85,10 +104,12 @@ class _IndependentImportWorkspace extends StatelessWidget {
   const _IndependentImportWorkspace({
     required this.viewModel,
     required this.state,
+    required this.onResearch,
   });
 
   final Sh02ViewModel viewModel;
   final Widget state;
+  final VoidCallback onResearch;
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
@@ -101,7 +122,7 @@ class _IndependentImportWorkspace extends StatelessWidget {
           children: [
             _Header(),
             const SizedBox(height: 16),
-            _ImportPanel(viewModel: viewModel),
+            _ImportPanel(viewModel: viewModel, onResearch: onResearch),
             const SizedBox(height: 16),
             state,
           ],
@@ -112,9 +133,10 @@ class _IndependentImportWorkspace extends StatelessWidget {
 }
 
 class _Workspace extends StatefulWidget {
-  const _Workspace({required this.viewModel});
+  const _Workspace({required this.viewModel, required this.onResearch});
 
   final Sh02ViewModel viewModel;
+  final VoidCallback onResearch;
 
   @override
   State<_Workspace> createState() => _WorkspaceState();
@@ -313,7 +335,10 @@ class _WorkspaceState extends State<_Workspace> {
               children: [
                 _Header(),
                 const SizedBox(height: 18),
-                _ImportPanel(viewModel: viewModel),
+                _ImportPanel(
+                  viewModel: viewModel,
+                  onResearch: widget.onResearch,
+                ),
                 const SizedBox(height: 16),
                 _ScopeBanner(scope: snapshot.scope),
                 if (snapshot.partial)
@@ -428,9 +453,10 @@ class _Header extends StatelessWidget {
 }
 
 class _ImportPanel extends StatelessWidget {
-  const _ImportPanel({required this.viewModel});
+  const _ImportPanel({required this.viewModel, required this.onResearch});
 
   final Sh02ViewModel viewModel;
+  final VoidCallback onResearch;
 
   @override
   Widget build(BuildContext context) {
@@ -446,6 +472,13 @@ class _ImportPanel extends StatelessWidget {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
+              TextButton.icon(
+                onPressed: onResearch,
+                icon: const Icon(Icons.auto_stories_outlined),
+                label: Text(
+                  _copy(context, '研究与成果', 'Research & results', '연구와 결과'),
+                ),
+              ),
               OutlinedButton.icon(
                 key: const Key('sh02-import-document'),
                 onPressed: status == Sh02ImportStatus.uploading

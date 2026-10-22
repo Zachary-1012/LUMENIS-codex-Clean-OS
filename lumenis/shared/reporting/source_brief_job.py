@@ -896,7 +896,7 @@ def _shared_identity(actor, actor_id, *, action="read", connection=None):
     return identity
 
 
-def _shared_typed_analysis(brief, *, actor, connection=None):
+def _shared_typed_analysis(brief, *, actor, connection=None, material_profile=False):
     """Current original-byte projection; supplied SavedWork parsed payload is ignored."""
     from lumenis.importer.documents import read_private_document_typed_source
     from .business_brief import analyze_shared_typed_source_records
@@ -913,28 +913,90 @@ def _shared_typed_analysis(brief, *, actor, connection=None):
     result = (analyze_shared_typed_source_records(question="Review explicit source fields", sources=sources)
               if sources else {"schema": "lumenis.shared-typed-source-analysis/v1",
                                "state": "NOT_APPLICABLE", "ai_analysis": "NOT_PERFORMED"})
+    if material_profile:
+        from .business_brief import profile_shared_source_materials
+        result["material_profile"] = profile_shared_source_materials(sources)
     return {**result, "omitted_sources": omitted,
             "coverage": "PARTIAL" if omitted else "COMPLETE_INPUTS_ONLY"}
 
 
-def _append_typed_summary(brief, analysis):
-    """Human-readable deterministic results on the existing report artifact."""
+def _append_typed_summary(brief, analysis, question=None):
     from .operational_brief import _markdown_text
-    if "row_coverage" not in analysis:
-        return brief
-    coverage = analysis["row_coverage"]
-    lines = [brief["markdown"], "", "## Explicit source fields (not independently verified facts)",
-             "Data rows: " + str(coverage["total_rows"]),
-             "Preserved header rows: " + str(coverage["preserved_header_rows"]),
-             "Formula values are not evaluated; missing values are not zero."]
-    for metric in analysis["metrics"]:
+
+    language = "ko" if re.search(r"[가-힣]", question or "") else (
+        "zh" if re.search(r"[\u3400-\u9fff]", question or "") else "en")
+
+    def copy(zh, en, ko):
+        return {"zh": zh, "en": en, "ko": ko}[language]
+
+    def text(value):
+        return _markdown_text(str(value).replace("|", " / ").replace("\n", " "))
+
+    records = brief["records"]
+    lines = [brief["markdown"], copy("## 资料概况", "## Material overview", "## 자료 개요"), "",
+        copy(f"本次核对 {len(records)} 份已选资料。以下计算仅覆盖这些文件；原文可从资料库重新打开。",
+             f"Reviewed {len(records)} selected sources. Calculations cover these files only; originals remain available in the library.",
+             f"선택한 자료 {len(records)}개를 확인했습니다. 계산 범위는 이 파일들이며 원문은 자료실에서 다시 열 수 있습니다."), ""]
+    profiled = set()
+    for source in analysis.get("material_profile", {}).get("sources", []):
+        profiled.add(source["source_id"])
+        lines.extend(["### " + text(source["title"]), ""])
+        for table in source["tables"]:
+            label = table["locator"].get("sheet_name")
+            if label:
+                lines.append("**" + text(label) + "**")
+            retained, count = table["retained_rows"], table["data_rows"]
+            if table["header_basis"] == "first_row_assumption":
+                lines.append(copy(
+                    f"保留 {retained} 行。下面暂按首行为字段名统计其余 {count} 行；请对照原文确认表头。",
+                    f"All {retained} rows retained. The profile below assumes the first row labels the remaining {count} rows; confirm this against the original.",
+                    f"전체 {retained}행을 보존했습니다. 첫 행을 열 이름으로 가정해 나머지 {count}행을 집계했습니다. 원문에서 확인해 주세요."))
+            else:
+                lines.append(copy(f"保留 {retained} 行，统计 {count} 行；表头另行保留。",
+                                  f"Retained {retained} rows; profiled {count} rows, with headers preserved separately.",
+                                  f"{retained}행을 보존하고 {count}행을 집계했습니다. 머리글은 별도로 보존됩니다."))
+            lines.extend(["", copy("| 字段 | 已填写 | 空缺 | 公式待计算 | 不同值 |", "| Field | Present | Missing | Unevaluated formulas | Distinct values |", "| 필드 | 값 있음 | 누락 | 미계산 수식 | 고유 값 |"),
+                          "| --- | ---: | ---: | ---: | ---: |"])
+            for field in table["columns"]:
+                label = field["label"] or copy(f"第{field['column']}列", f"Column {field['column']}", f"{field['column']}열")
+                lines.append(f"| {text(label)} | {field['known']} | {field['missing']} | {field['formula']} | {field['distinct']} |")
+            lines.append("")
+            for field in table["columns"]:
+                if not field["known"] or field["distinct"] == field["known"]:
+                    continue
+                label = field["label"] or copy(f"第{field['column']}列", f"Column {field['column']}", f"{field['column']}열")
+                values = "; ".join(f"{text(item['value'])}: {item['count']}" for item in field["frequencies"])
+                lines.append(f"- **{text(label)}** — {values}")
+                if field["remaining_values"]:
+                    lines.append(copy(f"  另有 {field['remaining_values']} 种值、{field['remaining_rows']} 行，可在原文查看。",
+                                      f"  Another {field['remaining_values']} values across {field['remaining_rows']} rows remain in the original.",
+                                      f"  나머지 {field['remaining_values']}개 값, {field['remaining_rows']}행은 원문에서 볼 수 있습니다."))
+            groups, excess = table["exact_duplicate_groups"], table["duplicate_excess_rows"]
+            lines.extend(["", copy(f"完全相同的行有 {groups} 组，多出 {excess} 行；未删除任何原始记录。",
+                                   f"Found {groups} groups of identical rows, with {excess} repeated rows. No records were removed.",
+                                   f"동일한 행 {groups}그룹, 중복 {excess}행을 발견했습니다. 원문은 삭제하지 않았습니다."), ""])
+        if source["non_table_rows"]:
+            lines.append(copy(f"另保留 {source['non_table_rows']} 个正文片段；未将正文推断为指标或已证实的结论。",
+                              f"Retained {source['non_table_rows']} text sections; these are not inferred metrics or verified conclusions.",
+                              f"본문 {source['non_table_rows']}개 구간을 보존했습니다. 추론된 지표나 검증된 결론이 아닙니다."))
+    for record in records:
+        if record["source_id"] not in profiled:
+            lines.extend(["### " + text(record["title"]), copy("此资料已保留，未发现适用的表格字段。请打开原文核阅。",
+                "This source is retained; no applicable table fields were found. Open the original to review it.",
+                "자료는 보존되었으나 해당 표 필드는 없습니다. 원문을 열어 검토하세요."), ""])
+    for metric in analysis.get("metrics", []):
         for field in metric["explicit_fields"]:
-            label = _markdown_text(str(field["table_locator"]))
-            lines.append(f"{metric['metric']} / {label} / column {field['column_index']}: "
-                         f"known={field['known_count']}, missing={field['missing_count']}, "
-                         f"formula={field['formula_count']}, invalid={field['invalid_count']}, "
-                         f"sum of imported known values={field['sum_of_known_imported_values']}")
-    lines.append("These counts do not establish audience, demand, causality, sales or outcomes.")
+            label = field["explicit_header"]
+            total = field["sum_of_known_imported_values"]
+            value = "—" if total is None else total
+            lines.append(copy(
+                f"- {text(label)}：已知值合计 {value}；已知 {field['known_count']}、空缺 {field['missing_count']}、公式 {field['formula_count']}、无法识别 {field['invalid_count']}。未去重。",
+                f"- {text(label)}: sum of known imported values {value}; present {field['known_count']}, missing {field['missing_count']}, formulas {field['formula_count']}, invalid {field['invalid_count']}. Not deduplicated.",
+                f"- {text(label)}: 확인된 값 합계 {value}; 값 있음 {field['known_count']}, 누락 {field['missing_count']}, 수식 {field['formula_count']}, 해석 불가 {field['invalid_count']}. 중복 포함."))
+    lines.extend(["", copy("## 核阅与下一步", "## Review and next steps", "## 검토 및 다음 단계"), "",
+        copy("先确认表头、字段含义和资料范围，再核对缺项与重复记录。分类名称来自原文件；本次统计不证明资料内容真实，也不推断市场规模、情绪、因果或业务效果。可保存本次结果、补充判断并另存新版本。",
+             "Confirm headers, field meanings and scope, then check missing and duplicate records. Category labels come from the original files. These calculations do not verify source claims or infer market size, sentiment, causality or business outcomes. Save this result, add your judgment and retain a new version.",
+             "머리글과 필드 의미, 자료 범위를 확인한 뒤 누락과 중복을 검토하세요. 분류명은 원문에 따릅니다. 집계는 원문의 진실성, 시장 규모, 감정, 인과 또는 사업 성과를 검증하지 않습니다. 결과를 저장하고 판단을 추가해 새 버전으로 남길 수 있습니다.")])
     markdown = "\n".join(lines)
     return {**brief, "markdown": markdown, "content_hash": hashlib.sha256(markdown.encode()).hexdigest()}
 
@@ -965,7 +1027,8 @@ def _verify_shared_report(row, snapshot, *, job_id, actor_id, expected_scope, ac
         if current != source:
             raise PermissionError("SOURCE_BRIEF_CURRENT_SOURCE_CHANGED")
     if "typed_source_analysis" in snapshot:
-        current_typed = _shared_typed_analysis(brief, actor=actor, connection=connection)
+        current_typed = _shared_typed_analysis(brief, actor=actor, connection=connection,
+            material_profile="material_profile" in snapshot["typed_source_analysis"])
         if current_typed != snapshot["typed_source_analysis"]:
             raise PermissionError("SOURCE_BRIEF_TYPED_SOURCE_CHANGED")
     _read_research_reference(snapshot.get("reference"), actor=actor, scope=SHARED_SCOPE, connection=connection)
@@ -1012,8 +1075,8 @@ def _create_shared_report(*, actor, actor_id, scope, job_id, permission_audit_re
         revision_context = inherited["revision_context"]
         hypothesis_origin = inherited["hypothesis_review_origin"]
     brief = build_shared_source_brief(actor=actor, source_ids=source_ids, limit=limit, question=question)
-    typed_analysis = _shared_typed_analysis(brief, actor=actor)
-    brief = _append_typed_summary(brief, typed_analysis)
+    typed_analysis = _shared_typed_analysis(brief, actor=actor, material_profile=True)
+    brief = _append_typed_summary(brief, typed_analysis, question)
     from agent_research.source_bound import analyze_source_records
     analysis = analyze_source_records(question or "Review the selected sources", brief["records"],
                                      actor_id=actor_id, scope=scope, **(research or {}))
@@ -1035,8 +1098,8 @@ def _create_shared_report(*, actor, actor_id, scope, job_id, permission_audit_re
         before_persist()
     # Revalidate each original after analysis and immediately before persistence.
     current = build_shared_source_brief(actor=actor, source_ids=source_ids, limit=limit, question=question)
-    current_typed = _shared_typed_analysis(current, actor=actor)
-    current = _append_typed_summary(current, current_typed)
+    current_typed = _shared_typed_analysis(current, actor=actor, material_profile=True)
+    current = _append_typed_summary(current, current_typed, question)
     if current != brief or current_typed != typed_analysis:
         raise PermissionError("SOURCE_BRIEF_CURRENT_SOURCE_CHANGED")
     _shared_identity(actor, actor_id, action="write")

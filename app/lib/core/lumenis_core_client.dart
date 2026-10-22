@@ -1915,6 +1915,82 @@ class LumenisCoreClient {
     );
   }
 
+  Future<Map<String, dynamic>> startSharedResearch({
+    required String question,
+    required List<String> sourceIds,
+    required String requestId,
+  }) {
+    _validateSavedWorkRequestId(requestId);
+    if (question.trim().length < 4 ||
+        question.length > 1500 ||
+        sourceIds.isEmpty ||
+        sourceIds.length > 100 ||
+        sourceIds.toSet().length != sourceIds.length) {
+      throw const FormatException('Invalid research request.');
+    }
+    for (final id in sourceIds) {
+      _validateSavedWorkArtifactId(id);
+    }
+    return _request(
+      'POST',
+      '/api/experience/reports/source-brief/start',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'business_question': question.trim(),
+        'source_ids': sourceIds,
+        'limit': sourceIds.length,
+        'request_id': requestId,
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> sharedResearchTasks({String? cursor}) {
+    final query = Uri(
+      queryParameters: {'limit': '30', 'cursor': ?cursor},
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/reports/source-brief/tasks?$query',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> sharedResearchTask(
+    String taskId, {
+    bool resume = false,
+  }) {
+    _validateSourceBriefTaskId(taskId);
+    return _request(
+      resume ? 'POST' : 'GET',
+      '/api/experience/reports/source-brief/tasks/$taskId${resume ? '/resume' : ''}',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: resume ? const <String, Object?>{} : null,
+    );
+  }
+
+  Future<Map<String, dynamic>> saveSharedResearch({
+    required String jobId,
+    required String requestId,
+    required String title,
+  }) {
+    _validateSourceBriefJobId(jobId);
+    _validateSavedWorkRequestId(requestId);
+    if (title.trim().isEmpty || title.length > 300) {
+      throw const FormatException('Invalid research title.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/reports/source-brief/jobs/$jobId/save',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {'request_id': requestId, 'title': title},
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
   /// Lists the existing SavedWork records created by Shared document import.
   /// The server still resolves the actor and applies the Shared read boundary.
   Future<Map<String, dynamic>> listSharedDocumentImports({
