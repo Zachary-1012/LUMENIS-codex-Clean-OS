@@ -251,6 +251,7 @@ void main() {
         assetRefs: ['ART-source'],
         timeline: {'version': 1},
         outputKind: 'audio',
+        renderOptions: {'loudness_target_lufs': -16},
       );
       await client.listContentProjects(domainId: null);
       await client.reopenContentProject(

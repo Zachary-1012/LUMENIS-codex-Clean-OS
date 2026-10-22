@@ -1211,6 +1211,17 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     if (code.contains('CONTEXT')) return 'context';
     if (code.contains('AUTH') || code.contains('DENIED')) return 'denied';
     if (code == 'CONTENT_SOURCE_ALREADY_ADDED') return 'duplicate';
+    if (code == 'LINEAR_MASTER_TARGET_NOT_FEASIBLE') {
+      return 'master_unreachable';
+    }
+    if (code == 'AUDIO_MASTER_TARGET_NOT_REACHED' ||
+        code == 'LINEAR_MASTER_NOT_CONFIRMED') {
+      return 'master_unverified';
+    }
+    if (code == 'AUDIO_MASTER_MEASUREMENT_FAILED' ||
+        code == 'AUDIO_MASTER_REQUIRES_MEASURABLE_AUDIO') {
+      return 'master_silent';
+    }
     return 'failure';
   }
 
@@ -1968,13 +1979,21 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       .where((clip) => clip.clipId == _controller.selectedClipId)
       .firstOrNull;
 
-  Widget _inspector(MediaProjectSnapshot? timeline, MediaProjectClip? clip) =>
-      _pane(
-        context,
-        'properties',
-        _selectedOverlayId != null || _newOverlayKind != null
-            ? _overlayInspector(timeline)
-            : _ClipInspector(
+  Widget _inspector(
+    MediaProjectSnapshot? timeline,
+    MediaProjectClip? clip,
+  ) => _pane(
+    context,
+    'properties',
+    _selectedOverlayId != null || _newOverlayKind != null
+        ? _overlayInspector(timeline)
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (timeline != null &&
+                  timeline.assets.any((asset) => asset.audioStreamCount > 0))
+                _audioMastering(),
+              _ClipInspector(
                 timeline: timeline,
                 clip: clip,
                 onEdit: _edit,
@@ -1991,7 +2010,87 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   _choose();
                 },
               ),
-      );
+            ],
+          ),
+  );
+
+  Widget _audioMastering() {
+    final target = _controller.renderOptions['loudness_target_lufs'];
+    final version = _controller.version;
+    String value(double? number, String unit) =>
+        number == null ? '—' : '${number.toStringAsFixed(2)} $unit';
+    return ExpansionTile(
+      key: const Key('media-mastering'),
+      trailing: const LumenisExpansionIndicator(),
+      tilePadding: EdgeInsets.zero,
+      title: Text(_copy(context, 'mastering')),
+      maintainState: true,
+      children: [
+        const SizedBox(height: 12),
+        DropdownButtonFormField<double>(
+          key: ValueKey('media-loudness-target-$target'),
+          initialValue: target ?? 0,
+          isExpanded: true,
+          icon: const LumenisIcon(Icons.keyboard_arrow_down_rounded, size: 18),
+          decoration: InputDecoration(
+            labelText: _copy(context, 'loudness_target'),
+          ),
+          items: [
+            DropdownMenuItem(
+              value: 0,
+              child: Text(_copy(context, 'master_off')),
+            ),
+            for (final target in [-16.0, -14.0, -23.0])
+              DropdownMenuItem(
+                value: target,
+                child: Text('${target.toInt()} LUFS'),
+              ),
+          ],
+          onChanged: _isBusy || !_canUseCurrentContext
+              ? null
+              : (value) {
+                  if (value != null) {
+                    _controller.setLoudnessTarget(value == 0 ? null : value);
+                  }
+                },
+        ),
+        const SizedBox(height: 8),
+        Text(_copy(context, 'master_on_export')),
+        if (version?.rendered == true) ...[
+          const SizedBox(height: 12),
+          Text(
+            '${_copy(context, 'measured_audio')} · v${version!.projectRevision ?? version.timelineVersion}',
+          ),
+          const SizedBox(height: 8),
+          for (final row in [
+            (
+              'master_before',
+              value(version.inputLufs, 'LUFS'),
+              value(version.inputTruePeak, 'dBTP'),
+            ),
+            (
+              'master_after',
+              value(version.outputLufs, 'LUFS'),
+              value(version.outputTruePeak, 'dBTP'),
+            ),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 4,
+                children: [
+                  Text(_copy(context, row.$1)),
+                  Text(row.$2),
+                  Text(row.$3),
+                ],
+              ),
+            ),
+        ],
+        const SizedBox(height: 12),
+      ],
+    );
+  }
 
   Future<void> _openPropertiesLayer() => _openLayerSheet(
     layer: _MediaProjectWorkbenchLayer.properties,

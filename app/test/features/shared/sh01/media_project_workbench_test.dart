@@ -307,6 +307,7 @@ class _Client extends LumenisCoreClient {
     String? previousArtifactId,
     String? title,
     bool renderMedia = true,
+    Map<String, double> renderOptions = const {},
   }) async {
     exports++;
     exportedRefs = assetRefs;
@@ -334,6 +335,7 @@ class _Client extends LumenisCoreClient {
             if (title != null) 'project_revision': 1,
             'output_kind': outputKind,
             'timeline': timeline,
+            'render_options': renderOptions,
             'rights': {'state': 'unknown', 'label': 'rights unknown'},
             'source_artifact_refs': assetRefs ?? const <String>[],
           },
@@ -3115,6 +3117,28 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('loudness selection remains explicit and does not process before export', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await _prepareEditableProject(client, controller);
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    final mastering = find.byKey(const Key('media-mastering'));
+    await tester.ensureVisible(mastering);
+    await tester.tap(mastering);
+    await tester.pumpAndSettle();
+    expect(find.text('保持原音量'), findsOneWidget);
+    final target = find.byKey(const ValueKey('media-loudness-target-null'));
+    await tester.ensureVisible(target);
+    await tester.tap(target);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('-16 LUFS').last);
+    await tester.pumpAndSettle();
+    expect(controller.renderOptions, {'loudness_target_lufs': -16});
+    expect(client.exports, 0);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('no-change and stale-parent rejects use safe editor copy', (
     tester,

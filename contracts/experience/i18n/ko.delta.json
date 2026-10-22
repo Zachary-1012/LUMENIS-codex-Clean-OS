@@ -944,6 +944,16 @@
   "sh01.media.waveform_source": "원본 오디오",
   "sh01.media.waveform_retry": "파형을 불러오지 못했습니다. 다시 시도",
   "sh01.media.waveform_previous": "이전 파형 구간",
-  "sh01.media.waveform_next": "다음 파형 구간"
+  "sh01.media.waveform_next": "다음 파형 구간",
+  "sh01.media.mastering": "음량",
+  "sh01.media.loudness_target": "목표 음량",
+  "sh01.media.master_off": "원래 음량 유지",
+  "sh01.media.master_on_export": "저장하면 설정이 유지되고 내보낼 때 오디오를 처리합니다.",
+  "sh01.media.measured_audio": "저장된 오디오",
+  "sh01.media.master_before": "처리 전",
+  "sh01.media.master_after": "처리 후",
+  "sh01.media.master_unreachable": "목표가 안전 피크를 초과하거나 다이내믹 변경이 필요합니다. 더 낮은 음량을 선택하거나 트랙을 조정한 뒤 다시 시도하세요.",
+  "sh01.media.master_unverified": "처리한 오디오가 목표에 도달하지 못했습니다. 원본 버전은 유지됩니다. 트랙을 조정한 뒤 다시 시도하세요.",
+  "sh01.media.master_silent": "유효한 음량을 측정할 수 없습니다. 트랙을 확인하거나 원래 음량을 유지하세요."
  }
 }

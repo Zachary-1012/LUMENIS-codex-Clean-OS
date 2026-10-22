@@ -1678,6 +1678,8 @@ def stage_timeline_artifact(
         metadata_revision = (
             timeline_data == parent_timeline
             and (title is not None and title != parent_project.get("title")
+                 or render_options != parent_project.get("render_options", {})
+                 or delivery_options != parent_project.get("delivery_options", {})
                  or render_media and parent_render.get("state") == "not_rendered")
         )
         if (
@@ -1752,7 +1754,7 @@ def stage_timeline_artifact(
     render_result: Optional[Mapping[str, Any]] = None
     package_created = False
     try:
-        with tempfile.TemporaryDirectory(prefix="content-project-") as work_dir:
+        with tempfile.TemporaryDirectory(prefix="content-project-", dir=str(root)) as work_dir:
             rendered_path = Path(work_dir) / media_name
             from lumenis.shared.content_creation.rendering import render_timeline, subtitle_documents
 

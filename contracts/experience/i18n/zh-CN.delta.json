@@ -944,6 +944,16 @@
   "sh01.media.waveform_source": "原始音频",
   "sh01.media.waveform_retry": "波形未能读取，重试",
   "sh01.media.waveform_previous": "上一段波形",
-  "sh01.media.waveform_next": "下一段波形"
+  "sh01.media.waveform_next": "下一段波形",
+  "sh01.media.mastering": "响度",
+  "sh01.media.loudness_target": "目标响度",
+  "sh01.media.master_off": "保持原音量",
+  "sh01.media.master_on_export": "保存保留此设置；导出时处理音频。",
+  "sh01.media.measured_audio": "已保存音频",
+  "sh01.media.master_before": "处理前",
+  "sh01.media.master_after": "处理后",
+  "sh01.media.master_unreachable": "该目标会超过安全峰值或需要改变动态。请选择更低响度，或调整音轨后重试。",
+  "sh01.media.master_unverified": "处理后的音频未达到目标，原版本已保留。请调整音轨后重试。",
+  "sh01.media.master_silent": "这段音频无法测得有效响度，请检查音轨或保留原音量。"
  }
 }
