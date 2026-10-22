@@ -1,0 +1,333 @@
+{
+  "captured_at": "2026-10-22T23:41:05.195739+00:00",
+  "base_main": "c186fb0df8deccaa913a3cdaffba2223936a1878",
+  "classification": "BOUNDED_AUDIO_DELIVERY_OPERATION_VERIFIED_NOT_WHOLE_PRODUCT",
+  "whole_product": "OPEN",
+  "overall_frontend": "NOT_ACCEPTED",
+  "preserved_scope": {
+    "outcomes": 30,
+    "coverage_rows": 396
+  },
+  "requirements": [
+    "contracts/experience/screen-specifications/SH-01.md",
+    "contracts/experience/screen-specifications/BMP-08.md",
+    "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md"
+  ],
+  "existing_owners": "Shared Timeline/rendering/Artifact, SYSTEM Permission and Flutter SH-01; no new runtime, store or renderer.",
+  "actual_operations": [
+    "Reopen podcast v6 through the normal creation workspace; explicitly enable denoising at 12 dB / -50 dB and select MP3 plus M4A.",
+    "Save settings-only v7, retaining timeline v9 and source bytes; archive contains project/render records only and no encoded audio.",
+    "Explicit export creates v8 with WAV master and selected MP3/M4A copies. Download actual package through browser.",
+    "Independently hash, probe, fully decode and remeasure all three downloaded audio files; package matches registered Artifact bytes.",
+    "Back up and restart only the identified manual Core on port 57946. Reopen v7 with saved settings/formats and no false playback; reopen v6 with denoise off and no added formats.",
+    "Reopen v8 with source timeline, denoising and format measurements restored. Actual player runs past 22 seconds of the 35.38-second saved result."
+  ],
+  "versions": [
+    {
+      "artifact": "ART-8fe2e9f851904860",
+      "package_sha256": "f4f66dd66a7602cd68afaa2673a84d251f4a271d530359c0e9bfc5ca38ab0638",
+      "revision": 6,
+      "parent": "ART-44a7fd8bb4394fd4",
+      "timeline_version": 9,
+      "render_options": {
+        "loudness_target_lufs": -16.0
+      },
+      "delivery_options": {},
+      "members": [
+        "project.json",
+        "render.json",
+        "media.wav"
+      ],
+      "render_state": "rendered_verified"
+    },
+    {
+      "artifact": "ART-845c075bf6ca417e",
+      "package_sha256": "8bde467b2c94c8e7fa236d210c9e0fb8836d9fbfc75755caa095c23d23ed1bc8",
+      "revision": 7,
+      "parent": "ART-8fe2e9f851904860",
+      "timeline_version": 9,
+      "render_options": {
+        "loudness_target_lufs": -16.0,
+        "noise_floor_db": -50.0,
+        "noise_reduction_db": 12.0
+      },
+      "delivery_options": {
+        "audio_formats": [
+          "m4a",
+          "mp3"
+        ]
+      },
+      "members": [
+        "project.json",
+        "render.json"
+      ],
+      "render_state": "not_rendered"
+    },
+    {
+      "artifact": "ART-c239d9cd24c94294",
+      "package_sha256": "acd0e900314d95cf36b490c71149a60479260534f60bcf7c698a46e023e952d5",
+      "revision": 8,
+      "parent": "ART-845c075bf6ca417e",
+      "timeline_version": 9,
+      "render_options": {
+        "loudness_target_lufs": -16.0,
+        "noise_floor_db": -50.0,
+        "noise_reduction_db": 12.0
+      },
+      "delivery_options": {
+        "audio_formats": [
+          "m4a",
+          "mp3"
+        ]
+      },
+      "members": [
+        "project.json",
+        "render.json",
+        "media.wav",
+        "episode.m4a",
+        "episode.mp3"
+      ],
+      "render_state": "rendered_verified"
+    }
+  ],
+  "download": {
+    "package_sha256": "acd0e900314d95cf36b490c71149a60479260534f60bcf7c698a46e023e952d5",
+    "independent_files": {
+      "media.wav": {
+        "sha256": "c2bd5852c263963d079ec8be483448cb56fe005391c314c397c46b4fb4f86e03",
+        "bytes": 10189542,
+        "codec": "pcm_s24le",
+        "duration": "35.380000",
+        "channels": 2,
+        "full_decode_exit": 0,
+        "independent_loudness": {
+          "input_i": "-16.00",
+          "input_tp": "-5.94",
+          "input_lra": "2.20",
+          "input_thresh": "-26.04",
+          "output_i": "-16.59",
+          "output_tp": "-6.59",
+          "output_lra": "1.50",
+          "output_thresh": "-26.62",
+          "normalization_type": "dynamic",
+          "target_offset": "0.59"
+        }
+      },
+      "episode.mp3": {
+        "sha256": "b60b5229309008fd6b6e97b0b66914ea907d9437e44c03f8bc83847afe868ffd",
+        "bytes": 850796,
+        "codec": "mp3",
+        "duration": "35.380000",
+        "channels": 2,
+        "full_decode_exit": 0,
+        "independent_loudness": {
+          "input_i": "-16.27",
+          "input_tp": "-6.21",
+          "input_lra": "2.20",
+          "input_thresh": "-26.30",
+          "output_i": "-16.59",
+          "output_tp": "-6.59",
+          "output_lra": "1.50",
+          "output_thresh": "-26.62",
+          "normalization_type": "dynamic",
+          "target_offset": "0.59"
+        }
+      },
+      "episode.m4a": {
+        "sha256": "4e7eb70ae3fd59e369b7e4c84092241fd254a1f39ce9d324289093462c367b41",
+        "bytes": 856555,
+        "codec": "aac",
+        "duration": "35.380000",
+        "channels": 2,
+        "full_decode_exit": 0,
+        "independent_loudness": {
+          "input_i": "-16.01",
+          "input_tp": "-5.95",
+          "input_lra": "2.20",
+          "input_thresh": "-26.04",
+          "output_i": "-16.59",
+          "output_tp": "-6.58",
+          "output_lra": "1.50",
+          "output_thresh": "-26.62",
+          "normalization_type": "dynamic",
+          "target_offset": "0.59"
+        }
+      }
+    },
+    "denoising": {
+      "automatic_noise_tracking": false,
+      "input_measurement": {
+        "integrated_lufs": -17.72,
+        "loudness_range_lu": 2.2,
+        "method": "ffmpeg_loudnorm_input_ebu_r128",
+        "state": "measured",
+        "target_lufs": null,
+        "true_peak_dbtp": -7.64
+      },
+      "method": "ffmpeg_afftdn",
+      "noise_floor_db": -50.0,
+      "noise_reduction_db": 12.0,
+      "original_sources_modified": false,
+      "output_measurement": {
+        "integrated_lufs": -17.71,
+        "loudness_range_lu": 2.2,
+        "method": "ffmpeg_loudnorm_input_ebu_r128",
+        "state": "measured",
+        "target_lufs": null,
+        "true_peak_dbtp": -7.65
+      },
+      "perceptual_quality_verified": false
+    },
+    "delivery_reports": {
+      "m4a": {
+        "codec": "aac",
+        "decode_all_frames": "passed",
+        "duration_sec": 35.38,
+        "format": "m4a",
+        "loudness": {
+          "integrated_lufs": -16.01,
+          "loudness_range_lu": 2.2,
+          "method": "ffmpeg_loudnorm_input_ebu_r128",
+          "state": "measured",
+          "target_lufs": null,
+          "true_peak_dbtp": -5.95
+        },
+        "publish_status": "not_performed",
+        "sha256": "4e7eb70ae3fd59e369b7e4c84092241fd254a1f39ce9d324289093462c367b41",
+        "size_bytes": 856555
+      },
+      "mp3": {
+        "codec": "mp3",
+        "decode_all_frames": "passed",
+        "duration_sec": 35.38,
+        "format": "mp3",
+        "loudness": {
+          "integrated_lufs": -16.27,
+          "loudness_range_lu": 2.2,
+          "method": "ffmpeg_loudnorm_input_ebu_r128",
+          "state": "measured",
+          "target_lufs": null,
+          "true_peak_dbtp": -6.21
+        },
+        "publish_status": "not_performed",
+        "sha256": "b60b5229309008fd6b6e97b0b66914ea907d9437e44c03f8bc83847afe868ffd",
+        "size_bytes": 850796
+      }
+    }
+  },
+  "runtime": {
+    "at": "2026-10-22T23:39:21.736162+00:00",
+    "pid": 22652,
+    "parent": 34768,
+    "created": 1792711975.9603531,
+    "port": 57946,
+    "served_web_sha256": "448b4dcf70eadd59b1e6da1b1f5defeba7e09e1da025f92117c0ea632d37218e",
+    "prior_artifacts_unchanged": 27,
+    "db_binding_matches": true,
+    "health": {
+      "core_instance": {
+        "boot_id": "72005f28410c4d56a6a09c985612114d",
+        "entry_sha256": "f4eb9cb4aab6e1fb4c45030cb859eb853b220ab23cfbbbb7a878167f129ae8a4",
+        "launch_id": ""
+      },
+      "dependencies": {
+        "database": "ok"
+      },
+      "ok": true,
+      "runtime": {
+        "scheduler": "not_started",
+        "web_server": "waitress"
+      },
+      "service": "lumenis-core",
+      "status": "healthy",
+      "version": "5.9.9"
+    },
+    "source_pins": {
+      "app.py": "b38b505064c4f283f3f574d3b1d83361b62212130972784354b1062e61648ccb",
+      "shared_artifacts.py": "5d55795434100bc585f72d51d59f69ea2dcd88c651cd3e5cdf13aff88119fe70",
+      "experience_runtime.py": "3eb660d61709bd7450474293b347897805245c5f615e4930087d769e3d8fd2b8",
+      "app/lib/core/lumenis_core_client.dart": "bb8bf1ebbaf1b93475f883aeccd715a876946cc8c11924f8d679c06e76081899",
+      "app/lib/features/shared/sh01/media_project_controller.dart": "8e1643f25663621a577ee3bbae65beb6cd85dd42d90c6a80dc8c89a9edf69044",
+      "app/lib/features/shared/sh01/media_project_workbench.dart": "bb187ca0ce1c2be0cb4eb1d5cd25c65fefe8a1357bfd3f5079176b5689b186c4",
+      "app/lib/l10n/lumenis_copy.g.dart": "095d6874e1467f36c4e6f7e60e165cb304ec06afcee25eb3b60b460ad535688f"
+    },
+    "browser_playback": [
+      {
+        "currentTime": 22.516999,
+        "duration": 35.38,
+        "error": null,
+        "paused": false,
+        "readyState": 4
+      }
+    ],
+    "limits": "Restart/process, served build and normal operation are observed together. Disk hashes alone do not prove loaded memory. Production 8201 was not restarted."
+  },
+  "preservation": {
+    "prior_artifacts_unchanged": 27,
+    "backup_sha256": "de0ccd055c1c80b083cbca43868036c3a578fa6aa33d423d00b18754a96a8e44",
+    "production_service_database": "NOT_MODIFIED",
+    "external_ai_collection_training_deployment": "NOT_PERFORMED"
+  },
+  "verification": {
+    "python": "95 PASS, 2 POSIX-fork-only skips in 97 isolated storage/media cases; no production DB use.",
+    "flutter": "Combined client/controller/workbench 126 PASS plus one newly-added fixture missing title. Fixture corrected; exact affected test rerun 1 PASS. Earlier failures retained locally.",
+    "dart_analysis": "PASS on changed source/test paths",
+    "web_build": "PASS; served main.dart.js 448b4dcf70eadd59b1e6da1b1f5defeba7e09e1da025f92117c0ea632d37218e",
+    "ruff": "Changed Python test PASS. shared_artifacts.py retains 81 baseline findings, zero new findings; not repository-wide clean.",
+    "compile": "shared_artifacts.py and affected Python test PASS",
+    "governance": "Constitution, machine, Experience authority, anti-template, blueprints and source-adoption PASS; not visual acceptance.",
+    "user_operation": "Bounded normal Web revision/export/download/play/reopen and controlled manual-runtime recovery observed; all other outcomes retain their own acceptance."
+  },
+  "source_origin": "Existing author-written English research workflow guide synthesized with local TTS; not human recording, external fact or owned-model proof.",
+  "remaining": [
+    "Pre-adoption A/B listening and explicit adoption remain to be bound before full denoise capability acceptance.",
+    "Subjective programme/voice quality, remaining cover/chapter/feed/transcript/media tools and actual native surfaces remain OPEN under full plan.",
+    "Complete product visual upgrade and all 30 user outcomes remain OPEN. Exact-head CI, reviewed merge and remote/local readback are separate publication gates."
+  ],
+  "screenshots": [
+    "00-GOVERNANCE/evidence/round-15/podcast-delivery-v8.png",
+    "00-GOVERNANCE/evidence/round-15/podcast-delivery-recovered-v8.png"
+  ],
+  "local_evidence": [
+    {
+      "file": "audio-delivery-python.txt",
+      "sha256": "f45ee56fa30a25915f99ae82111ad69b3b0bae1e11e0c3bcd1127c7fb48e3862"
+    },
+    {
+      "file": "audio-delivery-flutter.txt",
+      "sha256": "94d0b91472bba2c5b2206565b9f074e543c9ff9859b11b9fc02ee5254ffe1f9c"
+    },
+    {
+      "file": "audio-delivery-flutter-final.txt",
+      "sha256": "100e3a720acc21b12955e85ddc8831e9e3e403cf03254f872eeada00219c2e46"
+    },
+    {
+      "file": "audio-delivery-widget-corrected.txt",
+      "sha256": "bb3e6108e201f112ee49aad0354ab1bdec47834c42b33966955d06f8a2cc934b"
+    },
+    {
+      "file": "audio-delivery-analyze-final.txt",
+      "sha256": "0bbca77f6078ceca351a549bee9a64785033b17891437ee78b87a1c88d8ea8b0"
+    },
+    {
+      "file": "audio-delivery-web-build.txt",
+      "sha256": "b8b715e8f0a2a0631dd1911a7b784b86fd581f643595a9bfd7504c201759029c"
+    },
+    {
+      "file": "audio-delivery-download.json",
+      "sha256": "4cd3d2dc461a88ecba9841dadc8cdd80f02fd52d48c67c8927fe6fda0e4fd4ec"
+    },
+    {
+      "file": "audio-delivery-recovered-runtime.json",
+      "sha256": "18d1b1e4801ac499971d72d1cb21e5021dd796a9d933cc424552376b35082bf6"
+    },
+    {
+      "file": "audio-delivery-recovered-playback.json",
+      "sha256": "29679f9ad31b7ff0c4146d35ecb6d7ec63286d464b11261937df59b2f867a382"
+    },
+    {
+      "file": "audio-delivery-gates.json",
+      "sha256": "b361a1550df60284d8faf12f3380348a307f52f0aac784cb127d21f69ccf636a"
+    }
+  ]
+}

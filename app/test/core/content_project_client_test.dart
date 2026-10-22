@@ -268,10 +268,16 @@ void main() {
         outputKind: 'video',
         demoAcknowledged: true,
         renderOptions: {'loudness_target_lufs': -16},
+        deliveryOptions: {
+          'audio_formats': ['mp3', 'm4a'],
+        },
       );
       final input = (calls.last['body'] as Map)['input'] as Map;
       expect(input['asset_refs'], ['ART-source']);
       expect(input['render_options'], {'loudness_target_lufs': -16});
+      expect(input['delivery_options'], {
+        'audio_formats': ['mp3', 'm4a'],
+      });
       expect(input.containsKey('asset_paths'), isFalse);
       expect(
         () => client.inspectContentMedia(

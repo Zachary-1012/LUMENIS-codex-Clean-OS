@@ -126,6 +126,7 @@ final class _Repository implements MediaProjectRepository {
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
+    Map<String, dynamic> deliveryOptions = const {},
   }) async {
     observedDomains.add(domain);
     calls++;
@@ -142,6 +143,7 @@ final class _Repository implements MediaProjectRepository {
       'output_kind': outputKind,
       'timeline': timeline.toJson(),
       'render_options': renderOptions,
+      'delivery_options': deliveryOptions,
       'rights': legacyRightsFormat
           ? {
               'state': 'unknown',
@@ -321,6 +323,56 @@ void main() {
     expect(() => controller.setLoudnessTarget(-99), throwsFormatException);
     expect(controller.renderOptions, isEmpty);
   });
+
+  test(
+    'noise and delivery settings save without processing and restore exact versions',
+    () async {
+      await create();
+      controller.setTitle('Episode');
+      await controller.export(outputKind: 'video', renderMedia: false);
+      final original = repository.savedProject!;
+      controller.setLoudnessTarget(-16);
+      controller.setNoiseReduction(enabled: true, reduction: 9, floor: -55);
+      controller.setAudioDeliveryFormat('mp3', true);
+      controller.setAudioDeliveryFormat('m4a', true);
+      expect(repository.calls, 1);
+      expect(controller.hasUnsavedChanges, isTrue);
+      expect(
+        () => controller.setNoiseReduction(enabled: true, reduction: 20),
+        throwsFormatException,
+      );
+      expect(controller.renderOptions['noise_reduction_db'], 9);
+      expect(
+        () => controller.setAudioDeliveryFormat('exe', true),
+        throwsFormatException,
+      );
+      await controller.export(outputKind: 'video', renderMedia: false);
+      expect(controller.version!.rendered, isFalse);
+      expect(controller.deliveryOptions['audio_formats'], ['m4a', 'mp3']);
+      expect(
+        () => (controller.deliveryOptions['audio_formats'] as List).add('wav'),
+        throwsUnsupportedError,
+      );
+      expect(controller.hasUnsavedChanges, isFalse);
+      await controller.reopen('ART-2');
+      await controller.relinkOriginalFiles(['chosen.mp4']);
+      expect(controller.renderOptions['noise_floor_db'], -55);
+      expect(controller.deliveryOptions['audio_formats'], ['m4a', 'mp3']);
+      controller.setNoiseReduction(enabled: false);
+      expect(controller.renderOptions, {'loudness_target_lufs': -16});
+      repository.contextKey = 'CTH:other';
+      expect(controller.deliveryOptions, isEmpty);
+      controller.setAudioDeliveryFormat('mp3', false);
+      repository.contextKey = 'BMP:GLOBAL';
+      await controller.relinkOriginalFiles(['chosen.mp4']);
+      expect(controller.deliveryOptions['audio_formats'], ['m4a', 'mp3']);
+      repository.savedProject = original;
+      await controller.reopen('ART-1', discardExisting: true);
+      expect(controller.deliveryOptions, isEmpty);
+      expect(controller.renderOptions, isEmpty);
+      expect(controller.hasUnsavedChanges, isFalse);
+    },
+  );
 
   test('master settings stay bound to context and source reset', () async {
     await create();

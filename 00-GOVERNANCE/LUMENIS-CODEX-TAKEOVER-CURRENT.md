@@ -32,7 +32,12 @@ volume. Temporary rendering now stays inside the existing authorized Artifact
 root, fixing the delivery path without broadening file access. Actual save,
 export, playback, download and restart/readback evidence belongs to
 [media mastering continuity](evidence/round-15/media-mastering-continuity-20261023.json).
-This bounded adoption does not accept denoising, all delivery codecs, final voice
+Explicit denoising and MP3/M4A delivery selection now use that same project
+revision and Permission contract. Settings-only saves do not encode; explicit
+export preserves the original sources and produces the selected files with
+separate measured results. Actual saved version, downloaded bytes and recovery
+evidence belongs to [audio delivery continuity](evidence/round-15/audio-delivery-continuity-20261023.json).
+This does not accept pre-adoption A/B preview, all delivery tools, subjective voice
 quality or the complete media frontend.
 
 The former local TTS failure was traced to the essentials FFmpeg build lacking

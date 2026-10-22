@@ -954,6 +954,14 @@
   "sh01.media.master_after": "After",
   "sh01.media.master_unreachable": "This target exceeds the safe peak or requires changing dynamics. Choose a lower loudness or adjust the tracks and retry.",
   "sh01.media.master_unverified": "The processed audio did not meet the target. The original version is preserved. Adjust the tracks and retry.",
-  "sh01.media.master_silent": "Loudness could not be measured. Check the tracks or keep the original level."
+  "sh01.media.master_silent": "Loudness could not be measured. Check the tracks or keep the original level.",
+  "sh01.media.denoise": "Noise reduction",
+  "sh01.media.denoise_enable": "Reduce noise",
+  "sh01.media.denoise_amount": "Reduction",
+  "sh01.media.denoise_floor": "Noise floor",
+  "sh01.media.denoise_original": "Original audio is kept. Noise reduction applies on export.",
+  "sh01.media.audio_files": "Audio files",
+  "sh01.media.wav_included": "The project package includes WAV. Also include:",
+  "sh01.media.audio_delivery_failed": "Audio export did not finish. Your draft and saved versions are kept. Adjust processing settings and retry."
  }
 }

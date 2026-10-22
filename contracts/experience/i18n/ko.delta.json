@@ -954,6 +954,14 @@
   "sh01.media.master_after": "처리 후",
   "sh01.media.master_unreachable": "목표가 안전 피크를 초과하거나 다이내믹 변경이 필요합니다. 더 낮은 음량을 선택하거나 트랙을 조정한 뒤 다시 시도하세요.",
   "sh01.media.master_unverified": "처리한 오디오가 목표에 도달하지 못했습니다. 원본 버전은 유지됩니다. 트랙을 조정한 뒤 다시 시도하세요.",
-  "sh01.media.master_silent": "유효한 음량을 측정할 수 없습니다. 트랙을 확인하거나 원래 음량을 유지하세요."
+  "sh01.media.master_silent": "유효한 음량을 측정할 수 없습니다. 트랙을 확인하거나 원래 음량을 유지하세요.",
+  "sh01.media.denoise": "노이즈 감소",
+  "sh01.media.denoise_enable": "노이즈 감소 사용",
+  "sh01.media.denoise_amount": "감소 강도",
+  "sh01.media.denoise_floor": "노이즈 기준",
+  "sh01.media.denoise_original": "원본 오디오는 유지되며 내보낼 때 노이즈 감소가 적용됩니다.",
+  "sh01.media.audio_files": "오디오 파일",
+  "sh01.media.wav_included": "프로젝트 패키지에는 WAV가 포함됩니다. 추가 형식:",
+  "sh01.media.audio_delivery_failed": "오디오를 내보내지 못했습니다. 초안과 저장된 버전은 유지됩니다. 처리 설정을 조정한 후 다시 시도하세요."
  }
 }
