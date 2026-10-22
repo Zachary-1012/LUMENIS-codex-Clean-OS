@@ -19,6 +19,15 @@ server-persisted work. Uncertain saves retain the same request and exact draft.
 Original byte checks, current Permission, source revalidation and parent-version
 verification remain mandatory. Historical reports without the new material
 profile remain readable under their existing exact validation contract.
+The material library now opens on the user's own imports, grouped by ingest date.
+It keeps the scoped source library in a separate view, retains the timeline query,
+return position and invoking focus, and separates originals from material overview.
+Supported structured originals fetch the first page on opening; a withdrawn
+source clears the reader. Same-day dates from different years stay separate.
+The [layout operation receipt](evidence/round-15/material-timeline-20261023.json)
+records the actual original read, return and saved-result reopen, 29 bounded
+regressions and the exact Web build. This layout does not establish full per-material
+analysis, four-surface visual acceptance or the whole product upgrade.
 
 Actual Web operation used the retained Korean research directory CSV: 17 rows
 including the candidate header, 16 directory entries, with original decisions

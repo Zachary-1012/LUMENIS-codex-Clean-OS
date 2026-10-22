@@ -12,6 +12,125 @@ import 'package:lumenis_app/features/shared/sh02/sh02_view_model.dart';
 import '../shared_test_support.dart';
 
 void main() {
+  testWidgets(
+    'material timeline keeps identical dates in different years separate',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(_DatedMaterialsRepository()));
+      await tester.pumpAndSettle();
+      final context = tester.element(
+        find.byKey(const Key('sh02-import-search')),
+      );
+      final labels = MaterialLocalizations.of(context);
+      expect(
+        find.text(labels.formatFullDate(DateTime(2026, 10, 22))),
+        findsOneWidget,
+      );
+      expect(
+        find.text(labels.formatFullDate(DateTime(2020, 10, 22))),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('material timeline returns to its scroll position and focus', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(_ReadableMaterialsRepository()));
+    await tester.pumpAndSettle();
+    final timeline = tester
+        .widget<CustomScrollView>(
+          find.byKey(const PageStorageKey('sh02-material-timeline')),
+        )
+        .controller!;
+    timeline.jumpTo(timeline.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+    final offset = timeline.offset;
+    final card = find.byKey(const ValueKey('ART-0000000100000013'));
+    final entry = tester.widget<InkWell>(
+      find.descendant(
+        of: card,
+        matching: find.byKey(const Key('sh02-import-0123456789ab')),
+      ),
+    );
+    await tester.tap(
+      find.descendant(
+        of: card,
+        matching: find.byKey(const Key('sh02-import-0123456789ab')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('资料内容'), findsOneWidget);
+    await tester.tap(find.text('返回最近导入'));
+    await tester.pumpAndSettle();
+    expect(timeline.offset, offset);
+    expect(entry.focusNode!.hasFocus, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final language in ['zh', 'en', 'ko']) {
+    testWidgets('material reader and overview fit narrow $language', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _app(_ReadableMaterialsRepository(), locale: Locale(language)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('sh02-import-search')),
+        'existing-1-0',
+      );
+      await tester.pumpAndSettle();
+      final card = find.byKey(const ValueKey('ART-0000000100000000'));
+      await tester.tap(
+        find.descendant(
+          of: card,
+          matching: find.byKey(const Key('sh02-import-0123456789ab')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('原始研究内容'), findsOneWidget);
+      final overview = {'zh': '概况', 'en': 'Overview', 'ko': '개요'}[language]!;
+      await tester.tap(find.text(overview));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          {
+            'zh': '原发布时间',
+            'en': 'Original publication',
+            'ko': '원래 게시 시간',
+          }[language]!,
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  test('withdrawn original clears the opened document', () async {
+    final item = _importedMaterial(requestId: 'withdrawn-document-001');
+    final repository = _DelayedPageRepository(item);
+    final model = Sh02ViewModel(
+      repository: repository,
+      documentPicker: _FakeSh02DocumentPicker(null),
+    );
+    await model.openImport(item);
+    final pending = model.loadSourcePage(0);
+    repository.page.completeError(
+      const LumenisCoreException('HTTP 410', statusCode: 410),
+    );
+    await pending;
+    expect(model.openedImport, isNull);
+    expect(model.importOpenFailed, isTrue);
+    model.dispose();
+  });
+
   for (final denied in [false, true]) {
     test('late original page cannot restore closed content: $denied', () async {
       final item = _importedMaterial(requestId: 'late-original-001');
@@ -385,6 +504,8 @@ void main() {
           final repository = _RecoveringSh02Repository(statusCode);
           await tester.pumpWidget(_app(repository, locale: copy.locale));
           await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('sh02-sources-tab')));
+          await tester.pumpAndSettle();
 
           final expected = statusCode == 401
               ? copy.authentication
@@ -417,6 +538,8 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('sh02-sources-tab')));
       await tester.pumpAndSettle();
 
       expect(find.text('资料库'), findsOneWidget);
@@ -455,6 +578,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('sh02-space-zoom-in')));
@@ -522,6 +647,8 @@ void main() {
       _app(_FakeSh02Repository(_readyResponseWithItems(20))),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('列表'));
     await tester.pumpAndSettle();
 
@@ -563,6 +690,8 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('列表'));
     await tester.pumpAndSettle();
@@ -613,6 +742,8 @@ void main() {
 
     await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('列表'));
     await tester.pumpAndSettle();
 
@@ -650,6 +781,8 @@ void main() {
 
     await tester.pumpWidget(_app(_FakeSh02Repository(_readyResponse)));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
+    await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('sh02-search')), '市场信号');
     await tester.pumpAndSettle();
     await tester.tap(find.text('列表'));
@@ -686,6 +819,8 @@ void main() {
     };
     await tester.pumpWidget(_app(_FakeSh02Repository(emptyResponse)));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
+    await tester.pumpAndSettle();
 
     expect(find.text('当前范围没有匹配的已核实资料。'), findsOneWidget);
     expect(find.byType(InteractiveViewer), findsNothing);
@@ -711,6 +846,8 @@ void main() {
     };
     await tester.pumpWidget(_app(_FakeSh02Repository(unscoped)));
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
+    await tester.pumpAndSettle();
 
     expect(find.text('资料暂不显示'), findsOneWidget);
     expect(find.text('EV-PRIVATE-ID'), findsNothing);
@@ -728,6 +865,8 @@ void main() {
       _app(_FakeSh02Repository(_readyResponse), locale: const Locale('en')),
     );
     await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
+    await tester.pumpAndSettle();
 
     expect(find.text('Library'), findsOneWidget);
     await tester.tap(find.text('List'));
@@ -743,6 +882,8 @@ void main() {
     await tester.pumpWidget(
       _app(_FakeSh02Repository(_readyResponse), locale: const Locale('ko')),
     );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sh02-sources-tab')));
     await tester.pumpAndSettle();
 
     expect(find.text('자료실'), findsOneWidget);
@@ -1103,6 +1244,7 @@ Sh02ImportedMaterial _importedMaterial({
   required String requestId,
   String filename = '研究资料.txt',
   String artifactId = 'ART-0123456789abcdef',
+  String createdAt = '2026-10-22T12:00:00Z',
 }) => Sh02ImportedMaterial(
   artifactId: artifactId,
   artifactSha256: 'a' * 64,
@@ -1111,7 +1253,7 @@ Sh02ImportedMaterial _importedMaterial({
   sourceSha256:
       '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
   sizeBytes: 3,
-  createdAt: '2026-10-22T12:00:00Z',
+  createdAt: createdAt,
   characterCount: 6,
   tableCount: 0,
   text: '原始研究内容',
@@ -1218,4 +1360,37 @@ class _DelayedPageRepository extends _FakeSh02Repository {
     Sh02ImportedMaterial item,
     int offset,
   ) => page.future;
+}
+
+class _ReadableMaterialsRepository extends _ImportingSh02Repository {
+  _ReadableMaterialsRepository() : super(pageSize: 20);
+  @override
+  Future<Sh02ImportedMaterial> reopenImport(String artifactId) async {
+    final index = int.parse(artifactId.substring(12), radix: 16);
+    return _importedMaterial(
+      artifactId: artifactId,
+      requestId: 'existing-1-$index',
+      filename: 'existing-1-$index.txt',
+    );
+  }
+}
+
+class _DatedMaterialsRepository extends _FakeSh02Repository {
+  _DatedMaterialsRepository() : super(_readyResponse);
+  @override
+  Future<Sh02ImportPage> loadRecentImports({String? cursor}) async =>
+      Sh02ImportPage(
+        items: [
+          for (final year in [2026, 2020])
+            _importedMaterial(
+              requestId: 'year-$year',
+              artifactId: 'ART-0123456789ab$year',
+              filename: '$year.txt',
+              createdAt: '$year-10-22T12:00:00Z',
+            ),
+        ],
+        hasMore: false,
+        verificationComplete: true,
+        unverifiedCandidates: 0,
+      );
 }
