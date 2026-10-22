@@ -6,6 +6,29 @@ from tests.test_saved_document_workflow import workspace
 PRIVATE = {"scope_kind": "shared_workspace", "version": 1}
 
 
+def test_csv_reading_preserves_unmapped_columns_blank_records_and_newlines(request):
+    ws = request.getfixturevalue('workspace')
+    path = ws['root'] / 'research-index.csv'
+    path.write_bytes(b'revision,decision,flag\nabc,KEEP,false\n\nabc,KEEP,false\n"two\nlines",,0\n')
+    saved = ws['documents'].save_private_document(str(path), actor=ws['actor'],
+        scope=PRIVATE, request_id='unmapped-csv-reading')
+    ref = saved['artifact']['artifact_id']
+    params = {'actor': ws['actor'], 'scope': PRIVATE, 'limit': 2, 'source_version': ref,
+              'source_sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+    before = (ws['root'] / 'isolated.sqlite3').read_bytes()
+    pages = [ws['documents'].read_document_source_rows(ref, offset=n, **params) for n in (0, 2, 4)]
+    rows = [row for page in pages for row in page['source_rows']]
+    assert [row['source_record']['values'] for row in rows] == [
+        ['revision', 'decision', 'flag'], ['abc', 'KEEP', 'false'], [],
+        ['abc', 'KEEP', 'false'], ['two\nlines', '', '0']]
+    assert [row['source_locator']['row_index'] for row in rows] == list(range(1, 6))
+    assert pages[-1]['has_more'] is False
+    assert pages[0]['source_row_count'] == 5
+    assert (ws['root'] / 'isolated.sqlite3').read_bytes() == before
+    typed = ws['documents'].read_private_document_typed_source(ref, actor=ws['actor'], scope=PRIVATE)
+    assert [{key: row[key] for key in rows[0]} for row in typed['source_rows']] == rows
+
+
 def make_source(ws, private):
     from openpyxl import Workbook
     path = ws['root'] / '原行.xlsx'

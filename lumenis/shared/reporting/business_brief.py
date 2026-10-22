@@ -1888,6 +1888,67 @@ def _shared_explicit_header_rows(rows):
     return rows, bindings
 
 
+def profile_shared_source_materials(sources):
+    from collections import Counter
+
+    profiles = []
+    for source in sources:
+        rows, _ = _shared_explicit_header_rows(source["source_rows"])
+        tables = {}
+        for row in rows:
+            if _shared_source_fields(row):
+                tables.setdefault(_shared_table_key(0, row["source_locator"]), []).append(row)
+        summaries = []
+        for table_rows in tables.values():
+            first = table_rows[0]
+            headers = [r for r in table_rows if r.get("source_record", {}).get("row_role") == "header"]
+            basis = "retained_header" if headers else "unlabeled_columns"
+            fields = _shared_source_fields(headers[0] if headers else first)
+            labels = [_shared_field_value(f)[0] for f in fields] if headers else []
+            if not headers:
+                possible = [_shared_field_value(f)[0] for f in fields]
+                if (len(possible) > 1 and len(set(map(str, possible))) == len(possible)
+                        and all(isinstance(v, str) and v.strip() and len(v) <= 80 for v in possible)
+                        and len(table_rows) > 1):
+                    headers, labels, basis = [first], possible, "first_row_assumption"
+            header_indexes = {r["index"] for r in headers}
+            data = [r for r in table_rows if r["index"] not in header_indexes]
+            width = max((len(_shared_source_fields(r)) for r in table_rows), default=0)
+            columns = []
+            for index in range(width):
+                counts, values = Counter(), {}
+                missing = formula = 0
+                for row in data:
+                    row_fields = _shared_source_fields(row)
+                    value, kind, is_formula = _shared_field_value(row_fields[index] if index < len(row_fields) else {})
+                    if is_formula:
+                        formula += 1
+                    elif value is None or isinstance(value, str) and not value.strip():
+                        missing += 1
+                    else:
+                        key = _json([kind, type(value).__name__, value])
+                        counts[key] += 1
+                        values[key] = value
+                frequent = sorted(counts, key=lambda key: (-counts[key], key))[:5]
+                columns.append({"column": index + 1,
+                    "label": str(labels[index]) if index < len(labels) else None,
+                    "known": sum(counts.values()), "missing": missing, "formula": formula,
+                    "distinct": len(counts),
+                    "frequencies": [{"value": values[k], "count": counts[k]} for k in frequent],
+                    "remaining_values": max(0, len(counts) - len(frequent)),
+                    "remaining_rows": sum(counts.values()) - sum(counts[k] for k in frequent)})
+            fingerprints = Counter(_json([_shared_field_value(f) for f in _shared_source_fields(row)]) for row in data)
+            summaries.append({"locator": first["source_locator"], "retained_rows": len(table_rows),
+                "header_basis": basis, "header_locators": [r["source_locator"] for r in headers],
+                "data_rows": len(data), "columns": columns,
+                "exact_duplicate_groups": sum(count > 1 for count in fingerprints.values()),
+                "duplicate_excess_rows": sum(count - 1 for count in fingerprints.values())})
+        profiles.append({"source_id": source["source_record"]["source_id"], "title": source["title"],
+            "retained_rows": source["source_row_count"], "tables": summaries,
+            "non_table_rows": len(rows) - sum(len(t) for t in tables.values())})
+    return {"schema": "shared-material-profile/v1", "sources": profiles}
+
+
 def analyze_shared_typed_source_records(*, question, sources):
     """Compute bounded, reproducible aggregates over every owner-verified source row.
 
@@ -1896,7 +1957,7 @@ def analyze_shared_typed_source_records(*, question, sources):
     formula cells as unknown and computes only explicit typed fields.
     """
     if (not isinstance(question, str) or not 4 <= len(question.strip()) <= 1500
-            or not isinstance(sources, list) or not 1 <= len(sources) <= 30):
+            or not isinstance(sources, list) or not 1 <= len(sources) <= 100):
         raise ValueError("SHARED_TYPED_SOURCE_INPUT_INVALID")
 
     inventory = []

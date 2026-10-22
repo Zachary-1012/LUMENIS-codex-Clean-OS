@@ -44,6 +44,13 @@ class Sh02ViewModel extends ChangeNotifier {
   bool _reconcilingImport = false;
   Sh02ImportedMaterial? _pendingImportCandidate;
   bool _disposed = false;
+  int _readGeneration = 0;
+  Sh02SourcePage? _sourcePage;
+  bool _rowsLoading = false;
+  bool _rowsFailed = false;
+  Sh02SourcePage? get sourcePage => _sourcePage;
+  bool get rowsLoading => _rowsLoading;
+  bool get rowsFailed => _rowsFailed;
 
   Sh02LoadPhase get phase => _phase;
   Sh02FailureKind? get failureKind => _failureKind;
@@ -85,6 +92,11 @@ class Sh02ViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    _readGeneration++;
+    _sourcePage = null;
+    _rowsLoading = false;
+    _rowsFailed = false;
+    _openingImport = false;
     _phase = Sh02LoadPhase.loading;
     _failureKind = null;
     _scopeError = null;
@@ -183,6 +195,11 @@ class Sh02ViewModel extends ChangeNotifier {
     }
     final requestId = _pendingImportRequestId ?? _newRequestId();
     _pendingImportRequestId = requestId;
+    _readGeneration++;
+    _sourcePage = null;
+    _rowsLoading = false;
+    _rowsFailed = false;
+    _openingImport = false;
     _openedImport = null;
     _importOpenFailed = false;
     _importStatus = Sh02ImportStatus.uploading;
@@ -276,6 +293,11 @@ class Sh02ViewModel extends ChangeNotifier {
   }
 
   Future<void> _verifyAndOpen(Sh02ImportedMaterial uploaded) async {
+    final generation = ++_readGeneration;
+    _sourcePage = null;
+    _rowsLoading = false;
+    _rowsFailed = false;
+    _openingImport = false;
     _openedImport = null;
     _notifyIfAlive();
     final reopened = await _repository.reopenImport(uploaded.artifactId);
@@ -287,7 +309,9 @@ class Sh02ViewModel extends ChangeNotifier {
         reopened.sizeBytes != uploaded.sizeBytes) {
       throw const FormatException('Imported document readback changed.');
     }
-    _openedImport = reopened;
+    if (!_disposed && generation == _readGeneration) {
+      _openedImport = reopened;
+    }
     _pendingImportRequestId = null;
     _resetPendingImportSearch();
     _importStatus = Sh02ImportStatus.idle;
@@ -300,12 +324,17 @@ class Sh02ViewModel extends ChangeNotifier {
   }
 
   Future<void> openImport(Sh02ImportedMaterial item) async {
+    final generation = ++_readGeneration;
+    _sourcePage = null;
+    _rowsLoading = false;
+    _rowsFailed = false;
     _openedImport = null;
     _importOpenFailed = false;
     _openingImport = true;
     _notifyIfAlive();
     try {
       final reopened = await _repository.reopenImport(item.artifactId);
+      if (_disposed || generation != _readGeneration) return;
       if (reopened.artifactId != item.artifactId ||
           reopened.artifactSha256 != item.artifactSha256 ||
           reopened.requestId != item.requestId ||
@@ -321,14 +350,50 @@ class Sh02ViewModel extends ChangeNotifier {
         _importStatus = Sh02ImportStatus.idle;
       }
     } catch (_) {
+      if (_disposed || generation != _readGeneration) return;
       _importOpenFailed = true;
     } finally {
-      _openingImport = false;
-      _notifyIfAlive();
+      if (!_disposed && generation == _readGeneration) {
+        _openingImport = false;
+        _notifyIfAlive();
+      }
+    }
+  }
+
+  Future<void> loadSourcePage(int offset) async {
+    final item = _openedImport;
+    if (item == null || _rowsLoading) return;
+    final generation = _readGeneration;
+    _rowsLoading = true;
+    _rowsFailed = false;
+    _sourcePage = null;
+    _notifyIfAlive();
+    try {
+      final page = await _repository.readSourceRows(item, offset);
+      if (!_disposed && generation == _readGeneration) _sourcePage = page;
+    } catch (error) {
+      if (!_disposed && generation == _readGeneration) {
+        _rowsFailed = true;
+        if (error is LumenisCoreException &&
+            {401, 403, 404, 409}.contains(error.statusCode)) {
+          _openedImport = null;
+          _importOpenFailed = true;
+        }
+      }
+    } finally {
+      if (!_disposed && generation == _readGeneration) {
+        _rowsLoading = false;
+        _notifyIfAlive();
+      }
     }
   }
 
   void closeImport() {
+    _readGeneration++;
+    _sourcePage = null;
+    _rowsLoading = false;
+    _rowsFailed = false;
+    _openingImport = false;
     _openedImport = null;
     _notifyIfAlive();
   }

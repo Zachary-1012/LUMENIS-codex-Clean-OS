@@ -794,6 +794,19 @@ def screen_viewmodel(screen_id: str):
             if denial is not None or current != binding:
                 raise PermissionError("BMP_SCREEN_SCOPE_CHANGED")
             return jsonify(result)
+        if screen_id == "SH-02":
+            binding, denial = _sh06_read_scope(module="evidence")
+            if binding is None:
+                status = 401 if denial == "AUTH_REQUIRED" else 400 if denial.startswith("INVALID_CONTEXT") else 503 if denial == "AUTHORIZATION_UNAVAILABLE" else 403
+                return jsonify({"ok": False, "screen": screen_id, "bound": False,
+                                "code": denial}), status
+            result = builder(binding=binding)
+            current, denial = _sh06_read_scope(module="evidence")
+            if denial is not None or current != binding:
+                raise PermissionError("MATERIAL_SCOPE_CHANGED")
+            response = jsonify(result)
+            response.headers["Cache-Control"] = "no-store"
+            return response
         if screen_id in {"SH-06", "AI-02"}:
             # Scope/permission failure renders the honest "not shown" state, never items.
             binding, _error = _sh06_read_scope() if screen_id == "SH-06" else _sh06_read_scope(module="skills")
@@ -811,6 +824,12 @@ def screen_viewmodel(screen_id: str):
             status = 403 if isinstance(exc, PermissionError) or code.startswith(("AUTH_", "SHARED_WORKSPACE_", "CONTENT_SCOPE_")) else 400 if isinstance(exc, ValueError) else 503
             return jsonify({"ok": False, "screen": screen_id, "bound": False,
                             "code": "CONTENT_SCOPE_DENIED" if status == 403 else "CONTENT_DATA_UNAVAILABLE"}), status
+        if screen_id == "SH-02":
+            from flask import current_app
+            current_app.logger.warning("Material library unavailable: %s", type(exc).__name__)
+            denied = isinstance(exc, PermissionError)
+            return jsonify({"ok": False, "screen": screen_id, "bound": False,
+                            "code": "MATERIAL_SCOPE_DENIED" if denied else "MATERIAL_DATA_UNAVAILABLE"}), 403 if denied else 503
         if screen_id == "SH-05":
             from flask import current_app
             current_app.logger.exception("SH-05 scoped learning projection unavailable")
@@ -898,9 +917,9 @@ def _sh06_read_scope(*, module="operational_inbox"):
     actor = get_current_user(read_only=True)
     principal = None
     if not isinstance(actor, dict) or type(actor.get("id")) is not int:
-        if module == "skills":
+        if module in {"skills", "evidence"}:
             from lumenis.system.security.permission import resolve_local_workspace_principal
-            principal = resolve_local_workspace_principal(module="skills", action="read")
+            principal = resolve_local_workspace_principal(module=module, action="read")
         if principal is None:
             return None, "AUTH_REQUIRED"
     brand_focus = None
@@ -953,6 +972,7 @@ def _sh06_read_scope(*, module="operational_inbox"):
         "brand_focus_id": brand_focus, "display_name": display_name,
         "applied": True, "read_allowed": True, "scope_verified": True,
         "actor_scope": "sealed_local" if principal is not None else "authenticated", "global_all_granted": mode == "GLOBAL_ALL",
+        "actor_id": actor["id"] if principal is None else None,
     }, None
 
 

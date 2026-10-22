@@ -480,6 +480,26 @@ def extract_source_rows(parsed) -> List[AnalyzedNote]:
     return result
 
 
+def extract_document_reading_rows(parsed) -> list[AnalyzedNote]:
+    if parsed.metadata.get("format") != "csv":
+        return extract_source_rows(parsed)
+    result = []
+    for table_index, table in enumerate(parsed.tables):
+        headers = table[0] if table and _looks_like_header(table[0]) else []
+        for row_index, values in enumerate(table, 1):
+            locator = {"unit": "parsed_table_row", "table_index": table_index,
+                       "row_index": row_index, "row_index_basis": "logical_record_one_based"}
+            fields = [{"column_index": index + 1,
+                       "header": headers[index] if index < len(headers) else None,
+                       "value": value} for index, value in enumerate(values)]
+            record = {"schema": "csv-source-row/v1", "headers": headers, "values": values,
+                      "row_index": row_index, "source_fields": fields,
+                      "source_sha256": parsed.metadata["source_fingerprint"]}
+            result.append(_retained_source_note(record, locator=locator, fields=fields,
+                                                content=" | ".join(values)))
+    return result
+
+
 def source_rows_fingerprint(parsed, rows: List[AnalyzedNote], *, count: int) -> str:
     """Bind preview row order and locators to the exact parsed source snapshot."""
     if type(count) is not int or count < 0 or count > len(rows):

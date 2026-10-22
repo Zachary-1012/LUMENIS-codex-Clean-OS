@@ -4,6 +4,40 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Material reading — bounded source and actual operation
+
+The retained SH-02 work now connects scoped material reading to independent
+Shared research, persisted tasks and versioned SavedWork. The existing request
+accepts up to 100 selected originals from the loaded material list; larger/batch
+intake is not accepted by this limit. Selected files are calculated by the
+existing Reporting owner without AI. Reports present
+field completeness, category frequencies, exact duplicate counts and explicit
+metric totals, with header assumptions, denominators and unknowns preserved.
+Internal source IDs remain in provenance; normal reading presents the result.
+The user can save, edit, save a new version, reopen either version and resume
+server-persisted work. Uncertain saves retain the same request and exact draft.
+Original byte checks, current Permission, source revalidation and parent-version
+verification remain mandatory. Historical reports without the new material
+profile remain readable under their existing exact validation contract.
+
+Actual Web operation used the retained Korean research directory CSV: 17 rows
+including the candidate header, 16 directory entries, with original decisions
+11 retained / 4 pending semantic-version review / 1 pending heritage review.
+The directory labels do not establish completed review of those source bodies.
+The report and a user-authored revision were saved separately, reopened, and
+read back unchanged after restarting only the isolated manual-workspace Core.
+No AI, scheduler, live collection or production DB was used. See the exact
+[source/runtime/outcome receipt](evidence/round-15/research-workspace-20261023.json)
+and the preceding [original-reading receipt](evidence/round-15/material-reading-20261023.json).
+
+This is a bounded material-to-research version/recovery result, not full research,
+CTH/BMP integration, semantic verification, four-surface or whole-product closure.
+Overall frontend remains NOT_ACCEPTED; the full planned visual upgrade, per-material
+analysis cards, larger/batch intake, native devices and production 8201 alignment
+remain open. Existing complete plans and source contracts retain every obligation.
+Current-head protected PR checks and remote readback remain required; no prior CI
+or separate owner receipt transfers acceptance to this composition.
+
 ## 2026-10-23 Runtime startup — bounded implementation and real operation
 
 The approved complete product work continues in the current single controller
@@ -915,7 +949,7 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 
 2026-10-23 current-document alignment starts from GitHub/main
 `343ec0cc10231dc38005c77feaf4e907097b974f`, independently matched to origin/main

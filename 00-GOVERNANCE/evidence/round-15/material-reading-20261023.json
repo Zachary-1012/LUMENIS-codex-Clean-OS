@@ -1,0 +1,87 @@
+{
+  "observed_at": "2026-10-22T18:01:16.246549+00:00",
+  "base_commit": "67def1cca1e320b87a205c04ecfc0d4e7bf1e87d",
+  "scope": "Existing SH-02 and Importer original reading; bounded source/operation, not full product closure",
+  "source_sha256_lf": {
+    "app/lib/core/lumenis_core_client.dart": "551e8099185f05fb3edb1dc8a2834107338fa939eb5d1a38b6484c2944447ccf",
+    "app/lib/features/shared/sh02/sh02_repository.dart": "43236eff858b2b86d77b72703a022caa13c0e59dabc0c46d3ec3ce2848936f77",
+    "app/lib/features/shared/sh02/sh02_screen.dart": "7058e1010fab0135d646f07d1ed57f5b1e1dd7a3ae5501cbffe14e998b5da39f",
+    "app/lib/features/shared/sh02/sh02_snapshot.dart": "28da163ada1025e58b03fe4d33823774ac70e3ddfce0f64ece6bb32a7421b534",
+    "app/lib/features/shared/sh02/sh02_view_model.dart": "e672a4ec136acd3631bfcb746032ff619c38af7c122a8190dea35780adb9a1b3",
+    "app/lib/l10n/lumenis_copy.g.dart": "eeb058f0cba4ad2972a9364f61c20b2d54446342a1073188ea3824626f7cd862",
+    "app/test/features/shared/sh02/sh02_screen_test.dart": "d272cf6cc8e0fc66ab4cdc462959bc7eef3e8ae24f281a696e5aeb55e809ed6e",
+    "experience_runtime.py": "1bc7e7afabed630a746d7824ce0031ae6ee4eb2ba0004f6c8da9063a8cb2e449",
+    "experience_screens.py": "25cc7b498973c5cfb873b0ceae57e0eaf3ab0789298e77d21e78587823f793ce",
+    "lumenis/importer/analyzer.py": "411945ea263abf18b45e368a1a1bee52d439cba7b76c77124af1715b564b5ff7",
+    "lumenis/importer/documents.py": "497fd92b355957c7dfcd6037d24c998ee15d283b1fd0d3e12c2151b286605efd",
+    "tests/test_document_row_pages.py": "cf436fe4cae6d93e5c4fe64a6c93b2237000e4fdae3d5f5d6b2ad282fce2ba23",
+    "tests/test_sh02_material_scope.py": "7145ab815b953dcb202576f719ac7022fb472a8024e4d6e6b7dd5c004904cbca"
+  },
+  "backend_regression": {
+    "tests": 112,
+    "passed": 111,
+    "skipped": 1,
+    "failed": 0,
+    "skip": "Existing optional binary DOC decoder requires LibreOffice; not changed or accepted by this batch"
+  },
+  "frontend_regression": {
+    "passed": 23,
+    "scope": "SH-02 widget/model, locale, scope, identity, late reply, motion and import recovery"
+  },
+  "dart_analysis": "PASS scoped SH-02 and Core client",
+  "web_build": "PASS rebuilt final Dart source; PDF location uses actual page_index owner field",
+  "ruff": {
+    "baseline_findings": 386,
+    "current_findings": 385,
+    "added": [],
+    "scope": [
+      "lumenis/importer/analyzer.py",
+      "lumenis/importer/documents.py",
+      "tests/test_document_row_pages.py",
+      "experience_runtime.py",
+      "experience_screens.py",
+      "tests/test_sh02_material_scope.py"
+    ]
+  },
+  "runtime": {
+    "profile": "owned isolated manual-workspace, same real product API/Permission/SavedWork, no mocks; production 8201 untouched",
+    "port": 57946,
+    "boot_id": "6545c51f3a274c049187be5f5987ef04",
+    "entry_sha256": "f4eb9cb4aab6e1fb4c45030cb859eb853b220ab23cfbbbb7a878167f129ae8a4",
+    "entry_hash_limit": "An entry hash is not evidence for all loaded modules. Fresh owned process and actual page operation establish only the observed path.",
+    "scheduler": "not_started",
+    "external_ai": "not_invoked"
+  },
+  "real_input": {
+    "path": "research/intelligence/03_language_content_intelligence/Korean_Content_Intelligence_Collection/KOREAN_SOURCE_POINTERS.csv",
+    "sha256": "62f329be284c33309c820554118d0f76dfe3fd700b7574beb0fddcf5149890da",
+    "identity": "Existing original research index, not a commercial market sample",
+    "logical_records_including_header": 17
+  },
+  "actual_ui_operations": [
+    "Normal file chooser -> existing Shared upload -> SavedWork readback",
+    "Core restart after verified isolated DB backup, no active work at switch",
+    "Existing imported original reopened after page reload",
+    "Original page rendered 17 logical records; no social-column requirement"
+  ],
+  "recovery_backup": {
+    "path": "C:\\Users\\28049\\AppData\\Local\\Temp\\oevira-product-operation-a31d71840ead4806b3e1f0f1ed50cee0\\before-material-reload-20261023T014417.sqlite",
+    "sha256": "fd5fb115339a25b81fc50c95f1242fee073b6be0dead9e24f5ae2a60980b1939",
+    "active_tasks": 0,
+    "isolated_database": "C:\\Users\\28049\\AppData\\Local\\Temp\\oevira-product-operation-a31d71840ead4806b3e1f0f1ed50cee0\\monitor.db",
+    "verified_at": "2026-10-22T17:44:17.587122+00:00"
+  },
+  "first_failures_retained": [
+    "work/product-closure-20261011/material-csv-newline-first-failure.xml",
+    "work/product-closure-20261011/material-reading-shape-first-failure.xml"
+  ],
+  "screenshot": "00-GOVERNANCE/evidence/round-15/material-reading-20261023.png",
+  "limits": [
+    "Source selection to research is not yet bound in SH-02",
+    "Complete per-material analysis and result revision are OPEN",
+    "Overall frontend NOT_ACCEPTED; this physical-card behavior does not accept the full visual upgrade",
+    "90ms actual first-feedback latency not measured",
+    "Production 8201 source/runtime alignment and Windows/macOS/iOS acceptance NOT_VERIFIED",
+    "Source claims are not Canonical facts or training permission"
+  ]
+}

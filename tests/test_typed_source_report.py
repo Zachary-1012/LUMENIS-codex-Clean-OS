@@ -45,7 +45,8 @@ def test_typed_report_real_session_all_sheets_metrics_reopen_and_revoke(real_app
     assert by_sheet['comments']['sum_of_known_imported_values']=='5'
     assert analysis['comment_parent_links']['matched_exactly']==1
     assert analysis['source_reported_sentiment']['fields'][0]['labels']=={'negative':1,'positive':1}
-    assert 'sum of imported known values=5' in report['source_brief']['markdown']
+    assert 'sum of known imported values 5' in report['source_brief']['markdown']
+    assert source['artifact']['artifact_id'] not in report['source_brief']['markdown']
     reopened=ws['api'].get(BASE+'/jobs/'+report['job_id'],headers=headers(201))
     assert reopened.status_code==200,reopened.get_json()
     assert reopened.get_json()['result']['typed_source_analysis']==analysis
@@ -205,3 +206,33 @@ def test_exact_sum_isolates_ambient_exponent_limits_and_traps():
         context.traps[Rounded] = True
         context.traps[Inexact] = True
         assert total(['123456789012345678901234567890', '0.00000001']) == '123456789012345678901234567890.00000001'
+
+
+def test_generic_material_profile_retains_assumption_and_all_value_counts(real_app):
+    _, report = report_csv(real_app, 'name,state,score\none,ready,0\ntwo,pending,\nthree,ready,3\nthree,ready,3\n')
+    profile = report['typed_source_analysis']['material_profile']['sources'][0]['tables'][0]
+    assert profile['retained_rows'] == 5 and profile['data_rows'] == 4
+    assert profile['header_basis'] == 'first_row_assumption'
+    assert profile['columns'][1]['frequencies'] == [{'value':'ready','count':3}, {'value':'pending','count':1}]
+    assert profile['columns'][2]['known'] == 3 and profile['columns'][2]['missing'] == 1
+    assert profile['exact_duplicate_groups'] == 1 and profile['duplicate_excess_rows'] == 1
+    assert 'assumes the first row' in report['source_brief']['markdown']
+    reopened = real_app['api'].get(BASE+'/jobs/'+report['job_id'], headers=headers(201))
+    assert reopened.status_code == 200
+    assert reopened.get_json()['result']['typed_source_analysis'] == report['typed_source_analysis']
+
+
+def test_historical_report_without_material_profile_still_reopens(real_app):
+    from lumenis.shared.reporting import source_brief_job as owner
+    _, report = report_csv(real_app, 'title,likes\none,4\n')
+    with real_app['repo'].transaction() as con:
+        row = dict(con.execute('SELECT * FROM daily_reports WHERE report_id=?', (report['job_id'],)).fetchone())
+        snapshot = json.loads(row['source_snapshot'])
+        snapshot['typed_source_analysis'].pop('material_profile')
+        encoded = owner._json(snapshot)
+        digest = owner._hash_artifact(report_id=row['report_id'], report_type=row['report_type'],
+            report_date=row['report_date'], total_notes=row['total_notes'], summary=row['summary'], source_snapshot=encoded)
+        con.execute('UPDATE daily_reports SET source_snapshot=?,artifact_hash=? WHERE report_id=?', (encoded,digest,row['report_id']))
+    reopened = real_app['api'].get(BASE+'/jobs/'+report['job_id'], headers=headers(201))
+    assert reopened.status_code == 200, reopened.get_json()
+    assert 'material_profile' not in reopened.get_json()['result']['typed_source_analysis']

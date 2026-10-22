@@ -1236,36 +1236,68 @@ def _build_sys08() -> Dict[str, Any]:
     return _envelope("SYS-08", sections)
 
 
-def _build_sh02() -> Dict[str, Any]:
-    """证据库：evidence_store 真实只读列表 + 统计。"""
-    from lumenis.shared.evidence import store as es
+def _build_sh02(*, binding: dict[str, Any]) -> dict[str, Any]:
+    from canonical_data import list_scoped_canonical
+    from lumenis.shared.database import get_repository
 
-    recs = _safe(es.query_evidence, limit=30, default=[])
-    stats = _safe(es.get_stats, default={})
-    recs = recs if isinstance(recs, list) else []
-    stats = stats if isinstance(stats, dict) and not _is_err(stats) else {}
-    total = _int_or_none(stats.get("total"))
-    if total is None:
-        total = len(recs) or None
-    kpi = metric("sh02.total", "证据总量", value=total,
-                 state=STATE_READY if total is not None else STATE_EMPTY, icon="link",
-                 source="evidence_store.get_stats/query_evidence")
-    rows = [{
-        "ID": f"EV:{r.get('id')}",
-        "级别": r.get("level") or "—",
-        "来源": r.get("source") or r.get("account") or "—",
-        "特征": str(r.get("feature_id") or "")[:28] or "—",
-        "结果": r.get("result") or "—",
-        "时间": str(r.get("created_at") or "")[:16],
-    } for r in recs if isinstance(r, dict)]
-    tbl = section("table", STATE_READY if rows else STATE_EMPTY, title="证据库记录（真实只读）",
-                  columns=[{"label": "ID", "key": "ID"}, {"label": "级别", "key": "级别"},
-                           {"label": "来源", "key": "来源"}, {"label": "特征", "key": "特征"},
-                           {"label": "结果", "key": "结果"}, {"label": "时间", "key": "时间"}], rows=rows)
-    ev = section("evidence", STATE_READY if recs else STATE_EMPTY,
-                 title="证据链（最近）", items=_evidence_items(recs, 4))
-    sections = [_head("SH-02"), section("kpis", STATE_READY, items=[kpi]), tbl, ev]
-    return _envelope("SH-02", sections, truth={"stats": stats})
+    if (binding.get("contract") != "lumenis.scope-read-binding.v1"
+            or binding.get("module") != "evidence"
+            or binding.get("scope_verified") is not True
+            or binding.get("read_allowed") is not True):
+        raise PermissionError("MATERIAL_SCOPE_REQUIRED")
+    mode = binding["canonical_scope"]
+    scope = {"mode": mode, "global_all_granted": binding["global_all_granted"]}
+    if mode == "FOCUS":
+        domain = binding["domain_id"]
+        scope.update(domain_id=domain, display_name=binding["display_name"])
+        key = "subject_id" if domain == "CTH" else "brand_focus_id"
+        scope[key] = binding[key]
+        domains = [domain]
+    elif mode == "GLOBAL_ALL" and binding["global_all_granted"] is True:
+        domains = ["CTH", "BMP"]
+    else:
+        raise PermissionError("MATERIAL_SCOPE_REQUIRED")
+    rows, coverage = [], {}
+    with get_repository().connection(read_only=True) as con:
+        for domain in domains:
+            result = list_scoped_canonical(
+                con, product_id=domain, limit=100,
+                subject_id=binding.get("subject_id") if domain == "CTH" else None,
+                brand_focus_id=binding.get("brand_focus_id") if domain == "BMP" else None,
+            )
+            coverage[domain] = {key: value for key, value in result.items() if key != "records"}
+            for record in result["records"]:
+                proof = record["scope_evidence"]
+                rows.append({
+                    "id": record["canonical_id"], "kind": "SOURCE",
+                    "summary": (record["title"] or record["content"])[:180],
+                    "source": record["source_platform"],
+                    "captured_at": record["captured_at"] or None,
+                    "published_at": record["publish_datetime"] or None,
+                    "freshness": "UNKNOWN", "origin": domain,
+                    "lineage": ["SOURCE", "EVIDENCE", "CANONICAL"],
+                    "projection": {
+                        "contract": "lumenis.shared.experience-row-projection", "version": 2,
+                        "read_allowed": True, "scope": dict(scope),
+                        "canonical_reference": record["canonical_id"],
+                        "stored_scope": {**proof["stored_scope"], "global": False},
+                        "evidence": {
+                            "canonical_reference": f"evidence:canonical:{proof['id']}",
+                            "evidence_id": str(proof["id"]), "source_id": proof["source_id"],
+                        },
+                        "integrity": proof["integrity"],
+                    },
+                })
+    rows.sort(key=lambda row: (row["captured_at"] or "", row["id"]), reverse=True)
+    partial = any(value["truncated"] or value["rejected_count"] for value in coverage.values())
+    response = _envelope("SH-02", [_head("SH-02")], truth={
+        "data_state": "partial" if partial else "available" if rows else "empty",
+        "coverage": coverage,
+    })
+    response["scope"] = scope
+    response["permission"] = {"decision": "ALLOW", "read": True, "module": "evidence"}
+    response["data"] = {"evidence": rows, "partial": partial}
+    return response
 
 
 def _build_sh04() -> Dict[str, Any]:

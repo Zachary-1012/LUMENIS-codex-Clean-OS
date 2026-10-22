@@ -567,14 +567,7 @@ def build_shared_source_brief(*, actor, source_ids=None, limit=30, question=None
     selected = canonical_data.validate_source_ids(source_ids, limit=limit)
     records = [read_private_document_source(ref, actor=actor, scope=scope)
                for ref in selected or []]
-    # Absence is actionable, never a completed study or market observation.
-    lines = ["# Private source research", "", question or "Source review", ""]
-    for record in records:
-        lines.extend(["## " + _markdown_text(record["title"]),
-                      "Source: " + record["source_id"],
-                      "Statement from uploaded material; factual verification not established.",
-                      _markdown_text(record["content_excerpt"]), ""])
-    lines.append("Rights UNKNOWN. Private analysis only. No external fact or permission grant.")
+    lines = ["# " + _markdown_text(question or "Source review"), ""]
     if not records:
         lines.append("Add permitted source materials to continue. No findings established.")
     markdown = "\n".join(lines)
