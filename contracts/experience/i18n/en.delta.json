@@ -791,7 +791,7 @@
   "sh01.media.download": "Download project",
   "sh01.media.download_handoff": "Sent to the browser. Check your downloads.",
   "sh01.media.download_saved": "File saved to the selected location.",
-  "sh01.media.draft": "Local edits, not exported",
+  "sh01.media.draft": "Unsaved changes",
   "sh01.media.duplicate": "This media is already in this project.",
   "sh01.media.earlier": "Move earlier",
   "sh01.media.empty": "Choose media, then add it to the timeline.",
@@ -823,7 +823,7 @@
   "sh01.media.relink_hint": "The export is viewable. Select the matching originals to resume editing.",
   "sh01.media.reopen": "Reopen",
   "sh01.media.rights": "Rights unverified · Demo only",
-  "sh01.media.saved": "Version created, not published",
+  "sh01.media.saved": "Saved",
   "sh01.media.select": "Select a clip to edit.",
   "sh01.media.sfx": "Sound effects",
   "sh01.media.source_in": "Source start (s)",
@@ -869,7 +869,7 @@
   "sh01.media.player.retry": "Retry playback",
   "sh01.media.player.releasing": "Closing the previous playback…",
   "sh01.media.player.cleanup_failure": "Temporary playback files could not be removed. Close playback and try again.",
-  "sh01.media.rendered_preview": "Exported video",
+  "sh01.media.rendered_preview": "Video preview",
   "sh01.media.previous_render": "This is the previous export. Export a new version to see draft changes.",
   "sh01.media.versions_export": "Versions & export",
   "sh01.media.sound_settings": "Sound",
@@ -935,6 +935,10 @@
   "sh01.media.batch_preview_description": "Review the pending clip adjustments below. Adoption changes this draft only, as one undo step. It does not render or save a version.",
   "sh01.media.batch_unsupported": "Apply or cancel pending stream, replacement, or split changes with their clip controls first. All drafts are retained.",
   "sh01.media.batch_stale": "The draft or access changed. Preview the adjustments again.",
-  "sh01.media.batch_inspecting": "Checking adjustments…"
+  "sh01.media.batch_inspecting": "Checking adjustments…",
+  "sh01.media.project_name": "Project name",
+  "sh01.media.untitled": "Untitled project",
+  "sh01.media.save_project": "Save project",
+  "sh01.media.saving": "Saving"
  }
 }

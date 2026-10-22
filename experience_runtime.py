@@ -4016,7 +4016,7 @@ def export_content_project():
         if not isinstance(body, dict) or body.get("action_type") != "EXPORT":
             raise LocalArtifactError("CONTENT_EXPORT_REQUIRES_EXPORT")
         payload = body.get("input")
-        allowed = {"asset_paths", "asset_refs", "timeline", "output_kind", "demo_acknowledged", "previous_artifact_id", "render_options", "delivery_options"}
+        allowed = {"asset_paths", "asset_refs", "timeline", "output_kind", "demo_acknowledged", "previous_artifact_id", "render_options", "delivery_options", "title", "render_media"}
         if not isinstance(payload, dict) or set(payload) - allowed:
             raise LocalArtifactError("INVALID_CONTENT_INPUT")
         task = str(body.get("task") or "导出可继续编辑的内容工程")[:2000]
@@ -4033,12 +4033,14 @@ def export_content_project():
             normalized = {"render_options": render_options, "delivery_options": delivery_options,"timeline": timeline.to_dict(), "scope": scope,
                           "source_artifact_refs": source_refs,
                           "output_kind": payload.get("output_kind", "video"),
-                          "previous_artifact_id": payload.get("previous_artifact_id")}
+                          "previous_artifact_id": payload.get("previous_artifact_id"),
+                          "title": payload.get("title"), "render_media": payload.get("render_media", True)}
             from shared_artifacts import content_project_export_resource
 
             normalized["target"] = content_project_export_resource(
                 timeline, actor=actor, source_artifact_refs=source_refs,
                 output_kind=normalized["output_kind"],
+                title=normalized["title"], render_media=normalized["render_media"],
                 previous_artifact_id=normalized["previous_artifact_id"], render_options=render_options, delivery_options=delivery_options, **scope,
             )
 
@@ -4046,6 +4048,7 @@ def export_content_project():
                 staged = stage_timeline_artifact(
                     timeline, actor=actor, **scope, source_execution_id=ctx.execution_id,
                     output_kind=normalized["output_kind"],
+                title=normalized["title"], render_media=normalized["render_media"],
                     previous_artifact_id=normalized["previous_artifact_id"],
                     source_artifact_refs=source_refs, render_options=render_options, delivery_options=delivery_options,
                 )
@@ -4053,11 +4056,11 @@ def export_content_project():
                 verified_project,verified_render,verified_record,_=_verified_content_project(staged["artifact"]["artifact_id"],actor=actor,**scope)
                 reopened={"project":verified_project,"render":verified_render}
                 if (verified_record["sha256"]!=staged["artifact"]["sha256"]
-                        or reopened["render"]["state"]!="rendered_verified"
-                        or reopened["render"]["media_sha256"]!=staged["render"]["media_sha256"]):
+                        or reopened["render"] != staged["render"]
+                        or reopened["project"] != staged["project"]):
                     raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
                 return {"success":True,"result":{"artifact":staged["artifact"],
-                    "render_receipt":{key:reopened["render"][key] for key in ("state","media_sha256","size_bytes","timeline_version")}},
+                    "render_receipt":{key:reopened["render"][key] for key in ("state","media_sha256","size_bytes","timeline_version") if key in reopened["render"]}},
                     "diagnostics":staged}
 
             ctx = run_execution_chain(
@@ -4148,7 +4151,8 @@ def content_project_detail(artifact_id: str):
         project = read_content_project(artifact_id, actor=actor, **scope)
         return jsonify({"ok": True, "project": project,
                         "package_url": f"/api/experience/content-projects/{artifact_id}/package",
-                        "preview_url": f"/api/experience/content-projects/{artifact_id}/media",
+                        "preview_url": (f"/api/experience/content-projects/{artifact_id}/media"
+                                        if project["render"]["state"] == "rendered_verified" else None),
                         "publish_status": "not_performed"})
     except ValueError as exc:
         return _content_project_error(exc)

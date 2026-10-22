@@ -123,16 +123,21 @@ final class _Repository implements MediaProjectRepository {
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
+    String? title,
+    bool renderMedia = true,
   }) async {
     observedDomains.add(domain);
     calls++;
     exported = timeline;
+    savedRendered = renderMedia;
     parent = previousArtifactId;
     await pending?.future;
     if (failure != null) throw failure!;
     savedProject = {
       'source_artifact_refs': ?refs,
-      'schema_version': 1,
+      'schema_version': title == null ? 1 : 2,
+      'title': ?title,
+      if (title != null) 'project_revision': 1,
       'output_kind': outputKind,
       'timeline': timeline.toJson(),
       'rights': legacyRightsFormat
@@ -148,7 +153,7 @@ final class _Repository implements MediaProjectRepository {
       'publish_status': 'not_performed',
       'evidence_recorded': false,
       'result': {
-        'status': 'rendered_staged',
+        'status': renderMedia ? 'rendered_staged' : 'project_saved',
         'artifact': {'artifact_id': 'ART-$calls'},
         'project': savedProject,
         'render': render,
@@ -156,7 +161,11 @@ final class _Repository implements MediaProjectRepository {
     };
   }
 
-  Map<String, dynamic> get render => {
+  bool savedRendered = true;
+  Map<String, dynamic> get render => !savedRendered ? {
+    'state': 'not_rendered', 'output_kind': 'video',
+    'timeline_version': savedProject!['timeline']['version'],
+  } : {
     'state': 'rendered_verified',
     'output_kind': 'video',
     'size_bytes': 8,
@@ -258,6 +267,28 @@ void main() {
     'source_in': 0.0, 'source_out': 3.0,
   }];
 
+
+  test('project-only save reopens unchanged and can later render', () async {
+    await controller.importFile('chosen.mp4', Uint8List.fromList([1]));
+    controller.edit((s) => s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4));
+    controller.setTitle('My edit');
+    await controller.export(outputKind: 'video', renderMedia: false);
+    expect(controller.version!.rendered, isFalse);
+    expect(controller.version!.durationSec, isNull);
+    expect(controller.hasUnsavedChanges, isFalse);
+    await controller.reopen('ART-1');
+    expect(controller.title, 'My edit');
+    expect(controller.version!.rendered, isFalse);
+    controller.setTitle('New title');
+    expect(controller.hasUnsavedChanges, isTrue);
+    await controller.export(outputKind: 'video', renderMedia: false);
+    expect(repository.parent, 'ART-1');
+    expect(controller.version!.title, 'New title');
+    await controller.export(outputKind: 'video');
+    expect(controller.version!.rendered, isTrue);
+    expect(repository.parent, 'ART-2');
+    expect(controller.hasUnsavedChanges, isFalse);
+  });
 
   test('independent media imports edits exports and reopens with null domain', () async {
     final shared = MediaProjectController(repository: repository, domain: null);

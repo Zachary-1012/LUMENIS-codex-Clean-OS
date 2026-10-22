@@ -118,6 +118,7 @@ def test_local_projects_are_filtered_by_exact_focus_and_reopen_after_new_connect
     assert [item["artifact_id"] for item in b["projects"]] == [second["artifact_id"]]
     assert set(a["projects"][0]) == {
         "artifact_id", "output_kind", "created_at", "updated_at", "status",
+        "title", "project_revision", "render_state",
     }
     assert second["artifact_id"] not in repr(a)
 

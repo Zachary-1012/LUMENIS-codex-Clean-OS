@@ -306,6 +306,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       ? 'saved_loading'
       : switch (_controller.operation) {
           MediaProjectOperation.exporting => 'exporting',
+          MediaProjectOperation.saving => 'saving',
           MediaProjectOperation.reopening => 'saved_loading',
           MediaProjectOperation.inspecting =>
             _batchPreviewOpen ? 'batch_inspecting' : 'importing',
@@ -1415,6 +1416,45 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     );
   }
 
+  Future<void> _renameProject() async {
+    if (_isBusy || !_canUseCurrentContext) return;
+    final controller = _controller;
+    final currentContext = controller.repository.contextKey;
+    var input = _controller.title ?? '';
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(_copy(context, 'project_name')),
+        content: TextFormField(
+          key: const Key('media-project-name-input'),
+          initialValue: input,
+          onChanged: (value) => input = value,
+          autofocus: true,
+          maxLength: 200,
+          decoration: InputDecoration(hintText: _copy(context, 'untitled')),
+          onFieldSubmitted: (value) => Navigator.pop(dialogContext, value),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_copy(context, 'cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, input), child: Text(_copy(context, 'apply'))),
+        ],
+      ),
+    );
+    if (mounted && identical(controller, _controller) && _canUseCurrentContext &&
+        currentContext == controller.repository.contextKey && name != null) {
+      controller.setTitle(name);
+    }
+  }
+
+  void _persistProject({required bool render}) {
+    if (_isBusy || !_canUseCurrentContext || _hasUnappliedInspectorDrafts) return;
+    if (_controller.title == null) _controller.setTitle(_copy(context, 'untitled'));
+    _controller.export(
+      outputKind: _controller.version?.outputKind ?? widget.initialOutputKind,
+      renderMedia: render,
+    );
+  }
+
   Widget _editorHeader(
     MediaProjectSnapshot? timeline, {
     required bool wide,
@@ -1446,13 +1486,24 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    _editorCopy(context, 'title'),
-                    style: Theme.of(context).textTheme.titleMedium,
+                  TextButton(
+                    key: const Key('media-project-name'),
+                    onPressed: _isBusy || !_canUseCurrentContext ? null : _renameProject,
+                    child: Text(_controller.title ?? _editorCopy(context, 'title'),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
-                  Text(status, style: Theme.of(context).textTheme.bodySmall),
+                  Text('$status${version?.projectRevision == null ? '' : ' · v${version!.projectRevision}'}', style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
+            ),
+            IconButton(
+              key: const Key('media-save-project'),
+              tooltip: _copy(context, 'save_project'),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: timeline == null || _isBusy || !_canUseCurrentContext ||
+                  _hasUnappliedInspectorDrafts || _controller.completionUnknown ||
+                  !_controller.hasUnsavedChanges ? null : () => _persistProject(render: false),
+              icon: const Icon(Icons.save_outlined),
             ),
             if (wide) _editorTools(timeline, wide: wide),
             const SizedBox(width: 8),
@@ -1605,7 +1656,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   Widget _previewArea() {
     final version = _controller.version;
     final available = _canUseCurrentContext && _preview != null;
-    final canPreview = _canUseCurrentContext && version != null;
+    final canPreview = _canUseCurrentContext && version != null && version.rendered;
     final theme = Theme.of(context);
     final mediaTheme = theme.copyWith(
       brightness: Brightness.dark,
@@ -1638,7 +1689,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               Expanded(
                 child: Text(
                   '${_editorCopy(context, 'rendered_preview')}'
-                  '${canPreview ? ' · v${version.timelineVersion} · ${_seconds(version.durationSec)} s' : ''}',
+                  '${canPreview ? ' · v${version.projectRevision ?? version.timelineVersion}${version.rendered ? ' · ${_seconds(version.durationSec!)} s' : ''}' : ''}',
                   style: theme.textTheme.labelLarge,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -2104,11 +2155,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                       _hasUnappliedInspectorDrafts ||
                       _controller.completionUnknown
                   ? null
-                  : () => _controller.export(
-                      outputKind:
-                          _controller.version?.outputKind ??
-                          widget.initialOutputKind,
-                    ),
+                  : () => _persistProject(render: true),
               icon: const LumenisIcon(Icons.file_download_outlined),
               label: Text(_copy(context, 'export')),
             ),
@@ -2187,7 +2234,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                         ? null
                         : () => _reopen(version.artifactId),
                     child: Text(
-                      '${_copy(context, 'reopen')} · v${version.timelineVersion} · ${_seconds(version.durationSec)} s',
+                      '${_copy(context, 'reopen')} · v${version.projectRevision ?? version.timelineVersion}${version.rendered ? ' · ${_seconds(version.durationSec!)} s' : ''}',
                     ),
                   ),
                 )
@@ -2203,7 +2250,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size(48, 48),
                 ),
-                onPressed: _retrieving
+                onPressed: _retrieving || _controller.version?.rendered != true
                     ? null
                     : () => _retrieve(
                         download: false,

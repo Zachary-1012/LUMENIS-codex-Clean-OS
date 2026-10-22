@@ -16,11 +16,17 @@ final class SavedMediaProject {
     required this.artifactId,
     required this.outputKind,
     required this.createdAt,
+    this.title,
+    this.projectRevision,
+    this.renderState,
   });
 
   final String artifactId;
   final String outputKind;
   final String createdAt;
+  final String? title;
+  final int? projectRevision;
+  final String? renderState;
 }
 
 final class SavedMediaProjectsController extends ChangeNotifier {
@@ -255,10 +261,21 @@ final class SavedMediaProjectsController extends ChangeNotifier {
     if (recordStatus is! String || recordStatus.trim().isEmpty) {
       throw const FormatException('Invalid saved-project record status.');
     }
+    final title = row['title'];
+    final revision = row['project_revision'];
+    final state = row['render_state'];
+    if (title != null && (title is! String || title.trim().isEmpty || title.length > 200) ||
+        revision != null && (revision is! int || revision < 1) ||
+        state != null && !const ['rendered_verified', 'not_rendered'].contains(state)) {
+      throw const FormatException('Invalid saved-project metadata.');
+    }
     return SavedMediaProject(
       artifactId: artifactId,
       outputKind: outputKind,
       createdAt: createdAt,
+      title: title as String?,
+      projectRevision: revision as int?,
+      renderState: state as String?,
     );
   }
 
@@ -297,7 +314,9 @@ final class SavedMediaProjectsController extends ChangeNotifier {
   }
 
   bool _sameProject(SavedMediaProject left, SavedMediaProject right) =>
-      left.outputKind == right.outputKind && left.createdAt == right.createdAt;
+      left.outputKind == right.outputKind && left.createdAt == right.createdAt &&
+      left.title == right.title && left.projectRevision == right.projectRevision &&
+      left.renderState == right.renderState;
 
   SavedMediaProjectsStatus _combinedStatus(
     SavedMediaProjectsStatus previous,

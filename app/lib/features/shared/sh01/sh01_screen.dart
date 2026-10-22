@@ -557,10 +557,11 @@ class _Sh01ScreenState extends State<Sh01Screen> {
             ))
               _SavedCreationRow(
                 key: Key('sh01-saved-${item.artifactId}'),
-                title: item.outputKind == 'audio'
+                title: item.title ?? (item.outputKind == 'audio'
                     ? _copy('播客作品', 'Podcast', '팟캐스트')
-                    : _copy('视频作品', 'Video', '영상'),
-                detail: _savedDate(item.createdAt),
+                    : _copy('视频作品', 'Video', '영상')),
+                detail: '${_savedDate(item.createdAt)}${item.projectRevision == null ? '' : ' · v${item.projectRevision}'}'
+                    '${item.renderState == 'not_rendered' ? ' · ${_copy('工程', 'Project', '프로젝트')}' : ''}',
                 icon: item.outputKind == 'audio'
                     ? Icons.mic_none_rounded
                     : Icons.movie_outlined,
