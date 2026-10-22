@@ -230,6 +230,8 @@ jobs:
               'tests/test_brand_propagation_statistics.py',
               'tests/test_brand_stats_recompute.py',
               'tests/test_supervisor_lifecycle.py',
+              'tests/test_runtime_health_endpoint_contract.py',
+              'tests/test_general_browser_startup_owner.py',
               'tests/test_human_browser_endpoint_identity.py',
               'tests/test_internal_beta_startup_gate.py',
               'tests/test_owned_final_candidate_transfer.py',

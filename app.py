@@ -5,6 +5,24 @@ import uuid
 from pathlib import Path
 from types import MappingProxyType
 
+_CORE_SERVER_KIND = 'not_started'
+
+
+def _serve_product_core(application, host, port):
+    global _CORE_SERVER_KIND
+    server = os.environ.get('ZB_WSGI', '').strip().lower() or 'waitress'
+    if server == 'flask':
+        _CORE_SERVER_KIND = 'flask_development'
+        return application.run(host=host, port=port, debug=False, threaded=True)
+    if server != 'waitress':
+        raise ValueError('ZB_WSGI must be waitress or explicit development mode flask')
+    from waitress import serve
+    threads = int(os.environ.get('ZB_WSGI_THREADS', '8') or '8')
+    if not 1 <= threads <= 256:
+        raise ValueError('ZB_WSGI_THREADS must be between 1 and 256')
+    _CORE_SERVER_KIND = 'waitress'
+    return serve(application, host=host, port=port, threads=threads)
+
 
 def _core_instance_identity(entry_file, environ):
     """Freeze the Core entry bytes and process attempt before startup effects."""
@@ -3930,6 +3948,10 @@ def healthz():
         'version': APP_VERSION,
         'service': CORE_SERVICE_NAME,
         'core_instance': dict(_CORE_INSTANCE),
+        'runtime': {
+            'web_server': _CORE_SERVER_KIND,
+            'scheduler': _scheduler_runtime_state(),
+        },
     }), (200 if healthy else 503)
 
 @app.route('/api/health')
@@ -5709,6 +5731,15 @@ def _automatic_collection_opted_in():
 _SCHEDULER_STOP = threading.Event()
 _SCHEDULER_LOCK = threading.RLock()
 _SCHEDULER_THREAD = None
+
+
+def _scheduler_runtime_state():
+    thread = _SCHEDULER_THREAD
+    if thread is None:
+        return 'not_started'
+    if _SCHEDULER_STOP.is_set():
+        return 'stopping' if thread.is_alive() else 'stopped'
+    return 'running' if thread.is_alive() else 'unavailable'
 
 
 def _start_scheduler():
@@ -8228,24 +8259,11 @@ if __name__ == '__main__':
     try:
         _start_hang_watchdog()
         _start_optional_runtime_services(INTERNAL_BETA_SAFE_STARTUP, no_scheduler=args.no_scheduler)
-        # T-P1-1 waitress 可配置化：ZB_WSGI=waitress 时用生产级多线程 WSGI（waitress.serve），
-        # 默认仍 Flask dev server（零影响）。先 Staging 验证再切生产；缺 waitress 自动回落 Flask。
-        _wsgi = os.environ.get('ZB_WSGI', '').strip().lower()
-        if _wsgi == 'waitress':
-            try:
-                from waitress import serve as _waitress_serve
-                _threads = int(os.environ.get('ZB_WSGI_THREADS', '8') or '8')
-                print(f'[System] 生产 WSGI: waitress.serve(host={RUN_HOST}, port={RUN_PORT}, threads={_threads})')
-                _waitress_serve(app, host=RUN_HOST, port=RUN_PORT, threads=_threads)
-            except ImportError:
-                print('[System] waitress 未安装，回落 Flask dev server')
-                app.run(host=RUN_HOST, port=RUN_PORT, debug=False, threaded=True)
-        else:
-            # 使用多线程模式，支持并发请求
-            app.run(host=RUN_HOST, port=RUN_PORT, debug=False, threaded=True)
+        _serve_product_core(app, RUN_HOST, RUN_PORT)
     except Exception as e:
         logging.critical(f"[System] 系统启动失败: {e}", exc_info=True)
         print(f"系统启动失败: {e}")
+        raise SystemExit(1) from e
     finally:
         if not _stop_scheduler():
             logging.warning("[System] scheduler task still running at shutdown deadline; no completion assumed")

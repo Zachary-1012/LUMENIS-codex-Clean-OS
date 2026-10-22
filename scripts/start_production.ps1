@@ -26,7 +26,6 @@ try {
 # Resolve the repository from this script instead of depending on one developer-machine path.
 $Root   = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Py     = Join-Path $Root '.venv\Scripts\python.exe'
-$Edge   = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe'
 $LogDir = Join-Path $Root 'logs'
 New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 
@@ -72,6 +71,11 @@ function Get-CoreStartupDecision([bool]$Healthy, [bool]$EntryMatches, [int]$Supe
     if (-not $EntryMatches) { return 'BLOCKED_SOURCE_IDENTITY' }
     if ($SupervisorCount -ne 1) { return 'BLOCKED_PROCESS_OWNERSHIP' }
     return 'REUSE_MATCHING_CORE_ENTRY'
+}
+function Get-StartupReadiness([bool]$CoreHealthy, [int]$ResidentExitCode) {
+    if (-not $CoreHealthy) { return 'CORE_UNAVAILABLE' }
+    if ($ResidentExitCode -ne 0) { return 'CORE_READY_BROWSER_UNAVAILABLE' }
+    return 'CORE_AND_BROWSER_READY'
 }
 function Test-CorePortListening {
     $client = New-Object System.Net.Sockets.TcpClient
@@ -179,19 +183,31 @@ if ($startupDecision -eq 'REUSE_MATCHING_CORE_ENTRY') {
 # XHS_CN_PRIMARY is not an eligible production browser identity.
 # The launcher reuses only a verified owner/profile/kernel/endpoint binding.
 $resident = Join-Path $Root 'scripts\start_resident_browsers.py'
+$residentExitCode = 2
 if (Test-Path $resident) {
     Write-Output '[LUMENIS-Resident] ensuring registered HK collector + 9224 general browser ...'
     & $Py $resident
+    $residentExitCode = $LASTEXITCODE
 } else {
     Write-Output "[LUMENIS-Resident] launcher missing: $resident"
 }
 
+$coreHealthy = Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedEntrySha256 $entrySha256
+$readiness = Get-StartupReadiness $coreHealthy $residentExitCode
 Write-Output ''
 Write-Output '============================================================'
-Write-Output '  UP  ->  http://127.0.0.1:8201/'
+Write-Output "  Startup state: $readiness"
+if ($coreHealthy) { Write-Output '  Core -> http://127.0.0.1:8201/' }
 Write-Output '  HZ  ->  http://127.0.0.1:8201/healthz'
 Write-Output '  CDP -> registered XHS_RETINAUT (HK) | 9224 GENERAL_BROWSE'
+Write-Output '  Collection, AI and product task readiness require their own runtime evidence.'
 Write-Output '============================================================'
+if (-not $coreHealthy) { exit 1 }
+if ($residentExitCode -ne 0) {
+    Write-Output '[LUMENIS-Resident] unavailable; Core remains available for independent work. No visible-browser fallback was started.'
+    exit 3
+}
+exit 0
 
 } finally {
     [void]$mutex.ReleaseMutex()
