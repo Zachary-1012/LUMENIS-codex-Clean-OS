@@ -1105,6 +1105,30 @@ class LumenisCoreClient {
     },
   );
 
+  Future<Map<String, dynamic>> inspectContentWaveform({
+    required String? domainId,
+    required String assetRef,
+    required double startSec,
+    required double endSec,
+    required int audioStreamIndex,
+  }) => _request(
+    'POST',
+    '/api/experience/shared-skills/shared.content_project/inspect',
+    operationContext: _mediaContentContext(domainId),
+    payload: {
+      'action_type': 'READ',
+      'input': {
+        'asset_refs': [assetRef],
+        'waveform': {
+          'start_sec': startSec,
+          'end_sec': endSec,
+          'audio_stream_index': audioStreamIndex,
+          'bins': 256,
+        },
+      },
+    },
+  );
+
   /// Read-only batch preview through the existing media inspection owner.
   Future<Map<String, dynamic>> inspectContentEditBatch({
     required String? domainId,

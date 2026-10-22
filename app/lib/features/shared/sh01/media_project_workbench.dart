@@ -14,6 +14,7 @@ import '../../../core/lumenis_icon.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import '../../../navigation/lumenis_leave_guard.dart';
 import 'media_preview.dart';
+import 'media_source_waveform.dart';
 import '../read_aloud_action.dart';
 import 'media_project_controller.dart';
 import 'media_project_files.dart';
@@ -540,14 +541,17 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _copy(
-                        context,
-                        project.outputKind == 'video'
-                            ? 'saved_video'
-                            : 'saved_audio',
-                      ),
+                      project.title ??
+                          _copy(
+                            context,
+                            project.outputKind == 'video'
+                                ? 'saved_video'
+                                : 'saved_audio',
+                          ),
                     ),
-                    Text(project.artifactId),
+                    if (project.projectRevision != null)
+                      Text('v${project.projectRevision}'),
+                    if (project.title == null) Text(project.artifactId),
                     Text(project.createdAt),
                   ],
                 ),
@@ -1093,6 +1097,16 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         sourceOut: result.end,
         audioStreamIndex: result.stream,
         audioRole: role == 'video' ? 'original' : role,
+        timelineStart: role == 'voiceover'
+            ? next.tracks
+                  .where((t) => t.trackId == role)
+                  .expand((t) => t.clips)
+                  .fold<double>(
+                    0,
+                    (end, clip) =>
+                        math.max(end, clip.timelineStart + clip.durationSec),
+                  )
+            : 0,
       );
     });
     final clips = _controller.timeline?.tracks
@@ -1435,20 +1449,31 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           onFieldSubmitted: (value) => Navigator.pop(dialogContext, value),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(_copy(context, 'cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, input), child: Text(_copy(context, 'apply'))),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(_copy(context, 'cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, input),
+            child: Text(_copy(context, 'apply')),
+          ),
         ],
       ),
     );
-    if (mounted && identical(controller, _controller) && _canUseCurrentContext &&
-        currentContext == controller.repository.contextKey && name != null) {
+    if (mounted &&
+        identical(controller, _controller) &&
+        _canUseCurrentContext &&
+        currentContext == controller.repository.contextKey &&
+        name != null) {
       controller.setTitle(name);
     }
   }
 
   void _persistProject({required bool render}) {
-    if (_isBusy || !_canUseCurrentContext || _hasUnappliedInspectorDrafts) return;
-    if (_controller.title == null) _controller.setTitle(_copy(context, 'untitled'));
+    if (_isBusy || !_canUseCurrentContext || _hasUnappliedInspectorDrafts)
+      return;
+    if (_controller.title == null)
+      _controller.setTitle(_copy(context, 'untitled'));
     _controller.export(
       outputKind: _controller.version?.outputKind ?? widget.initialOutputKind,
       renderMedia: render,
@@ -1488,11 +1513,19 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 children: [
                   TextButton(
                     key: const Key('media-project-name'),
-                    onPressed: _isBusy || !_canUseCurrentContext ? null : _renameProject,
-                    child: Text(_controller.title ?? _editorCopy(context, 'title'),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                    onPressed: _isBusy || !_canUseCurrentContext
+                        ? null
+                        : _renameProject,
+                    child: Text(
+                      _controller.title ?? _editorCopy(context, 'title'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  Text('$status${version?.projectRevision == null ? '' : ' · v${version!.projectRevision}'}', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    '$status${version?.projectRevision == null ? '' : ' · v${version!.projectRevision}'}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),
@@ -1500,9 +1533,15 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               key: const Key('media-save-project'),
               tooltip: _copy(context, 'save_project'),
               constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              onPressed: timeline == null || _isBusy || !_canUseCurrentContext ||
-                  _hasUnappliedInspectorDrafts || _controller.completionUnknown ||
-                  !_controller.hasUnsavedChanges ? null : () => _persistProject(render: false),
+              onPressed:
+                  timeline == null ||
+                      _isBusy ||
+                      !_canUseCurrentContext ||
+                      _hasUnappliedInspectorDrafts ||
+                      _controller.completionUnknown ||
+                      !_controller.hasUnsavedChanges
+                  ? null
+                  : () => _persistProject(render: false),
               icon: const Icon(Icons.save_outlined),
             ),
             if (wide) _editorTools(timeline, wide: wide),
@@ -1654,9 +1693,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   );
 
   Widget _previewArea() {
+    if (_isAudio) return _audioPreviewArea();
     final version = _controller.version;
     final available = _canUseCurrentContext && _preview != null;
-    final canPreview = _canUseCurrentContext && version != null && version.rendered;
+    final canPreview =
+        _canUseCurrentContext && version != null && version.rendered;
     final theme = Theme.of(context);
     final mediaTheme = theme.copyWith(
       brightness: Brightness.dark,
@@ -1790,6 +1831,79 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _audioPreviewArea() {
+    final timeline = _canUseCurrentContext ? _controller.timeline : null;
+    final selected = _selectedClip(timeline);
+    final clip =
+        selected ??
+        timeline?.tracks
+            .where((t) => t.kind != 'video')
+            .expand((t) => t.clips)
+            .firstOrNull;
+    final index = clip == null
+        ? -1
+        : timeline!.assets.indexWhere((a) => a.assetId == clip.mediaAssetId);
+    final asset = index < 0 ? null : timeline!.assets[index];
+    final refs = _controller.sourceRefs;
+    final ref = asset != null && refs.length == timeline!.assets.length
+        ? refs[index]
+        : null;
+    final version = _controller.version;
+    final canPreview = _canUseCurrentContext && version?.rendered == true;
+    return Container(
+      key: _previewKey,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: asset != null && clip != null && ref != null
+                ? MediaSourceWaveform(
+                    key: ValueKey(
+                      '$_savedContextKey:${widget.contextAvailable}:$ref:${asset.sha256}:${clip.sourceIn}:${clip.sourceOut}:${clip.audioStreamIndex}',
+                    ),
+                    client: widget.client,
+                    domain: _controller.domain,
+                    asset: asset,
+                    assetRef: ref,
+                    sourceIn: clip.sourceIn,
+                    sourceOut: clip.sourceOut,
+                    streamIndex: clip.audioStreamIndex ?? 0,
+                  )
+                : Center(child: Text(_copy(context, 'waveform_select'))),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${_editorCopy(context, 'rendered_preview')}${canPreview ? ' · v${version!.projectRevision ?? version.timelineVersion}' : ''}',
+          ),
+          if (_preview != null && _canUseCurrentContext) ...[
+            if (_hasUnsavedChanges) Text(_copy(context, 'previous_render')),
+            SizedBox(
+              height: 64,
+              child: MediaPreview(
+                file: _preview!,
+                seekPosition: _previewSeekPosition,
+                seekRequest: _previewSeekRequest,
+                onPositionChanged: _onPreviewPosition,
+              ),
+            ),
+          ] else if (canPreview)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const Key('media-load-preview'),
+                onPressed: _isBusy ? null : () => _retrieve(download: false),
+                icon: const Icon(Icons.play_circle_outline_rounded),
+                label: Text(_editorCopy(context, 'preview')),
+              ),
+            )
+          else
+            Text(_editorCopy(context, 'preview_empty')),
         ],
       ),
     );
@@ -2359,7 +2473,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     final textSize = MediaQuery.textScalerOf(context).scale(14);
     final rowHeight = math.max(72.0, textSize * 3 + 20);
     final rulerHeight = math.max(28.0, textSize + 10);
-    final tracks = timeline?.tracks ?? <MediaProjectTrack>[];
+    final tracks = (timeline?.tracks ?? <MediaProjectTrack>[])
+        .where((t) => !_isAudio || t.kind != 'video' || t.clips.isNotEmpty)
+        .toList();
     final overlays = timeline?.overlays ?? <MediaProjectOverlay>[];
     return Material(
       color: palette.surface,

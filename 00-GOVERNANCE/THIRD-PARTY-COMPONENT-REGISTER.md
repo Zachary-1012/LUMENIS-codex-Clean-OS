@@ -259,7 +259,23 @@ existing LUMENIS_FFMPEG_PATH and LUMENIS_FFPROBE_PATH deployment settings. No ne
 runtime, store, platform library or bundled binary is introduced. Replacement can
 use a separately verified compatible executable behind the same adapter.
 
-Before distributing this exact build, reconcile its corresponding source/build
+The 2026-10-23 local media recovery additionally verified Gyan's **9.0.2 full
+build** from its official release archive. The essentials build lacks libflite;
+the full build exposes that existing local speech adapter. Archive SHA256
+`f0e46253c70dfe902bac915dfb4224f0cf1b7c6eeab9da2ccc9a5581f9a71b13`;
+ffmpeg `589e50b766d251afdf181dd664d40bd94407e200b019989fd7468c7d118a28d0`;
+ffprobe `02264dfa4f56baaa31e443ece8aa16d397f6b008200e7fd184d22b9009e75fd3`.
+The archive's LICENSE and README remain beside the isolated local tools.
+Only the owned manual-workspace runtime was bound using the existing two path
+settings. The essentials binaries, production runtime and global settings were
+unchanged and remain the rollback route. This is installed local capability,
+not shipped binaries, natural-speech quality acceptance or an AI-model result.
+English synthetic output and normal podcast import/save/export/reopen were
+observed; missing eSpeak voices are not claimed available. No external speech
+service or parallel adapter was introduced. See the current podcast operation
+receipt for actual versions and remaining acceptance.
+
+Before distributing either exact build, reconcile its corresponding source/build
 configuration, retained license/notices and compiled-library obligations against
 the actual package. Distribution/commercial packaging clearance is NOT VERIFIED;
 local execution/version checks do not establish that release gate.

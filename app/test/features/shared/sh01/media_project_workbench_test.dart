@@ -91,6 +91,34 @@ class _Client extends LumenisCoreClient {
   String? batchFailureCode;
 
   @override
+  Future<Map<String, dynamic>> inspectContentWaveform({
+    required String? domainId,
+    required String assetRef,
+    required double startSec,
+    required double endSec,
+    required int audioStreamIndex,
+  }) async => {
+    'ok': true,
+    'assets': [asset],
+    'source_artifact_refs': [assetRef],
+    'waveforms': [
+      {
+        'state': 'measured',
+        'stage': 'source_pre_mix',
+        'source_sha256': asset['sha256'],
+        'audio_stream_index': audioStreamIndex,
+        'start_sec': startSec,
+        'end_sec': endSec,
+        'sample_rate': 8000,
+        'decoded_samples': ((endSec - startSec) * 8000).round(),
+        'bins': [
+          {'min': -.25, 'max': .4, 'rms': .2},
+        ],
+      },
+    ],
+  };
+
+  @override
   Future<Map<String, dynamic>> inspectContentEditBatch({
     required String? domainId,
     List<String>? assetPaths,
@@ -302,20 +330,26 @@ class _Client extends LumenisCoreClient {
           'artifact': {'artifact_id': 'ART-version'},
           'project': {
             'schema_version': title == null ? 1 : 2,
-      'title': ?title,
-      if (title != null) 'project_revision': 1,
+            'title': ?title,
+            if (title != null) 'project_revision': 1,
             'output_kind': outputKind,
             'timeline': timeline,
             'rights': {'state': 'unknown', 'label': 'rights unknown'},
             'source_artifact_refs': assetRefs ?? const <String>[],
           },
-          'render': !renderMedia ? {'state': 'not_rendered', 'output_kind': outputKind, 'timeline_version': timeline['version']} : {
-            'state': 'rendered_verified',
-            'output_kind': outputKind,
-            'measurement': {'actual_duration_sec': 1.0},
-            'size_bytes': 2,
-            'media_sha256': 'f' * 64,
-          },
+          'render': !renderMedia
+              ? {
+                  'state': 'not_rendered',
+                  'output_kind': outputKind,
+                  'timeline_version': timeline['version'],
+                }
+              : {
+                  'state': 'rendered_verified',
+                  'output_kind': outputKind,
+                  'measurement': {'actual_duration_sec': 1.0},
+                  'size_bytes': 2,
+                  'media_sha256': 'f' * 64,
+                },
         },
       };
       savedExport = response;
@@ -354,6 +388,11 @@ class _Client extends LumenisCoreClient {
             'created_at': '2026-10-02 09:00:00',
             'updated_at': '2026-10-02 09:00:00',
             'status': 'staged',
+            'title':
+                ((savedExport!['result'] as Map)['project'] as Map)['title'],
+            'project_revision':
+                ((savedExport!['result'] as Map)['project']
+                    as Map)['project_revision'],
           },
       ],
       'next_cursor': null,
@@ -557,14 +596,21 @@ void main() {
     );
   }
 
-  testWidgets('named project saves independently with no rendered preview', (tester) async {
+  testWidgets('named project saves independently with no rendered preview', (
+    tester,
+  ) async {
     client.successfulExport = true;
     await controller.importFile('chosen.mp4', Uint8List.fromList([1]));
-    controller.edit((s) => s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 1));
+    controller.edit(
+      (s) => s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 1),
+    );
     await tester.pumpWidget(_app(client, controller));
     await tester.tap(find.byKey(const Key('media-project-name')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byKey(const Key('media-project-name-input')), 'An editable film');
+    await tester.enterText(
+      find.byKey(const Key('media-project-name-input')),
+      'An editable film',
+    );
     await tester.tap(find.text('应用调整').last);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('media-save-project')));
@@ -573,8 +619,18 @@ void main() {
     expect(controller.version!.rendered, isFalse);
     expect(controller.hasUnsavedChanges, isFalse);
     expect(find.text('An editable film'), findsOneWidget);
-    await _openActionsForTarget(tester, find.byKey(const Key('media-version-preview')));
-    expect(tester.widget<OutlinedButton>(find.byKey(const Key('media-version-preview'))).onPressed, isNull);
+    await _openActionsForTarget(
+      tester,
+      find.byKey(const Key('media-version-preview')),
+    );
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const Key('media-version-preview')),
+          )
+          .onPressed,
+      isNull,
+    );
   });
 
   testWidgets('selected landscape format is exported and can be undone', (
@@ -602,10 +658,70 @@ void main() {
 
   testWidgets('podcast does not expose video format controls', (tester) async {
     await prepareAudioProject();
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       _app(client, controller, initialOutputKind: 'audio'),
     );
     expect(find.byKey(const Key('media-format-ratio')), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.text('画面'), findsNothing);
+    expect(find.byKey(const Key('media-source-waveform')), findsOneWidget);
+  });
+
+  testWidgets('new voiceover follows the existing clip and undo preserves it', (
+    tester,
+  ) async {
+    await prepareAudioProject();
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _app(client, controller, initialOutputKind: 'audio'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('添加片段 · voice.wav'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加片段').last);
+    await tester.pumpAndSettle();
+    final clips = controller.timeline!.tracks
+        .singleWhere((t) => t.trackId == 'voiceover')
+        .clips;
+    expect(clips.length, 2);
+    expect(clips.last.timelineStart, 8);
+    controller.edit((s) => s.undo());
+    await tester.pumpAndSettle();
+    expect(
+      controller.timeline!.tracks
+          .singleWhere((t) => t.trackId == 'voiceover')
+          .clips
+          .length,
+      1,
+    );
+  });
+
+  testWidgets('saved project chooser shows its real name and revision', (
+    tester,
+  ) async {
+    client.successfulExport = true;
+    await prepareAudioProject();
+    controller.setTitle('An actual programme');
+    await controller.export(outputKind: 'audio', renderMedia: false);
+    await tester.pumpWidget(
+      _app(client, controller, initialOutputKind: 'audio'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('media-open-saved')));
+    await tester.pumpAndSettle();
+    final row = find.byKey(const Key('media-saved-project-ART-version'));
+    expect(
+      find.descendant(of: row, matching: find.text('An actual programme')),
+      findsOneWidget,
+    );
+    expect(find.descendant(of: row, matching: find.text('v1')), findsOneWidget);
+    expect(
+      find.descendant(of: row, matching: find.text('ART-version')),
+      findsNothing,
+    );
   });
 
   Future<void> prepareBatch(WidgetTester tester) async {
