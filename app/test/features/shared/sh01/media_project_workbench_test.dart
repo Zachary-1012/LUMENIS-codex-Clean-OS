@@ -553,6 +553,37 @@ void main() {
     );
   }
 
+  testWidgets('selected landscape format is exported and can be undone', (
+    tester,
+  ) async {
+    await _prepareEditableProject(client, controller);
+    await tester.binding.setSurfaceSize(const Size(1440, 1000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await tester.tap(find.byKey(const Key('media-format-ratio')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('media-format-16:9')));
+    await tester.pumpAndSettle();
+    expect(controller.timeline!.formatRatio, '16:9');
+    client.successfulExport = true;
+    await controller.export(outputKind: 'video');
+    await tester.pumpAndSettle();
+    expect(controller.version!.timelineJson['format_ratio'], '16:9');
+    controller.edit((s) => s.undo());
+    await tester.pumpAndSettle();
+    expect(controller.timeline!.formatRatio, '9:16');
+    expect(controller.hasUnsavedChanges, isTrue);
+    expect(controller.version!.timelineJson['format_ratio'], '16:9');
+  });
+
+  testWidgets('podcast does not expose video format controls', (tester) async {
+    await prepareAudioProject();
+    await tester.pumpWidget(
+      _app(client, controller, initialOutputKind: 'audio'),
+    );
+    expect(find.byKey(const Key('media-format-ratio')), findsNothing);
+  });
+
   Future<void> prepareBatch(WidgetTester tester) async {
     await _prepareEditableProject(client, controller);
     controller.edit(

@@ -4,6 +4,26 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Video creation — actual render and version continuity
+
+The existing Shared media editor now exposes the renderer's five supported
+aspect ratios through its existing versioned timeline and undo path; audio
+projects do not inherit video controls. Explicit selection preserves source
+fingerprints, permissions and saved parents. No new renderer or media store was
+introduced. The already registered FFmpeg/ffprobe 9.0.2 local tools were restored
+with the exact registered hashes; distribution licensing is a separate gate.
+
+Normal Web operation imported two authored product-interface still clips,
+exported a 10-second portrait version, then selected landscape and trimmed the
+second clip to export a 9-second revision. Downloads were independently probed;
+source fingerprints and the parent Artifact were preserved. See
+[the bounded media operation receipt](evidence/round-15/media-continuity-20261023.json)
+for restart recovery and exact build/artifact evidence. These clips are not
+screen-operation recordings and do not close Website operation-video acceptance.
+Full media creation, final visuals, podcast, native operation and production
+runtime alignment remain open under the complete plan. No production service,
+database, collection, external AI, training or deployment was changed.
+
 ## 2026-10-23 Independent creation — work entry and manuscript continuity
 
 The existing SH-01 manuscript caller now follows the server's pending task state

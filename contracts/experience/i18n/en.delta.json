@@ -767,6 +767,7 @@
   "sh01.media.approval_subject_id": "Subject ID",
   "sh01.media.approval_technical_details": "Technical confirmation details",
   "sh01.media.approval_title": "Confirm importing this source as a draft",
+  "sh01.media.format_ratio": "Aspect ratio",
   "sh01.media.podcast_title": "Podcast editing",
   "sh01.media.rendered_audio": "Audio preview",
   "sh01.media.preview_audio_empty": "Save audio to listen.",

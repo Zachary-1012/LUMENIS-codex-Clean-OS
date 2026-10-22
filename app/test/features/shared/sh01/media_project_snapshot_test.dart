@@ -201,6 +201,29 @@ Map<String, Object?> pythonTimelinePayload() => <String, Object?>{
 };
 
 void main() {
+  test('format edits preserve sources and survive serialization and undo', () {
+    final original = _videoProject();
+    for (final ratio in MediaProjectSnapshot.formatRatios) {
+      final changed = original.setFormatRatio(ratio);
+      final reopened = MediaProjectSnapshot.fromJson(
+        changed.toJson(),
+        inspectedAssets: original.assets,
+      );
+      expect(reopened.formatRatio, ratio);
+      expect(reopened.durationSec, original.durationSec);
+      expect(reopened.toJson()['tracks'], original.toJson()['tracks']);
+      expect(reopened.toJson()['assets'], original.toJson()['assets']);
+      if (ratio == original.formatRatio) {
+        expect(identical(changed, original), isTrue);
+      } else {
+        expect(changed.version, original.version + 1);
+        expect(changed.undo().formatRatio, original.formatRatio);
+      }
+    }
+    expect(() => original.setFormatRatio('0:0'), throwsFormatException);
+    expect(original.formatRatio, '9:16');
+  });
+
   test(
     'inspector adjustment is atomic and one undo restores the prior edit',
     () {
@@ -360,45 +383,46 @@ void main() {
   test(
     'video edits preserve valid transitions and reject broken handles or adjacency atomically',
     () {
-    final initial = _videoProject();
-    final clips = initial.tracks.first.clips;
-    final before = _withTransitions(initial, [
-      _dissolve(clips[0].clipId, clips[1].clipId),
-    ]);
+      final initial = _videoProject();
+      final clips = initial.tracks.first.clips;
+      final before = _withTransitions(initial, [
+        _dissolve(clips[0].clipId, clips[1].clipId),
+      ]);
 
-    final trimmed = before.trimClip(
-      clips[1].clipId,
-      sourceIn: 0.5,
-      sourceOut: 5.5,
-    );
-    expect(trimmed.transitions, before.transitions);
-    expect(trimmed.tracks.first.clips[1].sourceIn, 0.5);
+      final trimmed = before.trimClip(
+        clips[1].clipId,
+        sourceIn: 0.5,
+        sourceOut: 5.5,
+      );
+      expect(trimmed.transitions, before.transitions);
+      expect(trimmed.tracks.first.clips[1].sourceIn, 0.5);
 
-    expect(
-      () => before.trimClip(clips[1].clipId, sourceIn: 0.1, sourceOut: 5.1),
-      throwsFormatException,
-    );
-    expect(
-      before.toJson(),
-      equals(
-        _withTransitions(initial, [
-          _dissolve(clips[0].clipId, clips[1].clipId),
-        ]).toJson(),
-      ),
-    );
+      expect(
+        () => before.trimClip(clips[1].clipId, sourceIn: 0.1, sourceOut: 5.1),
+        throwsFormatException,
+      );
+      expect(
+        before.toJson(),
+        equals(
+          _withTransitions(initial, [
+            _dissolve(clips[0].clipId, clips[1].clipId),
+          ]).toJson(),
+        ),
+      );
 
-    final shiftedPair = before.reorderVideoClip(clips[2].clipId, newIndex: 0);
-    expect(shiftedPair.transitions, before.transitions);
-    expect(
-      () => before.reorderVideoClip(clips[1].clipId, newIndex: 2),
-      throwsFormatException,
-    );
-    expect(before.tracks.first.clips.map((clip) => clip.clipId), [
-      'video-0',
-      'video-1',
-      'video-2',
-    ]);
-  });
+      final shiftedPair = before.reorderVideoClip(clips[2].clipId, newIndex: 0);
+      expect(shiftedPair.transitions, before.transitions);
+      expect(
+        () => before.reorderVideoClip(clips[1].clipId, newIndex: 2),
+        throwsFormatException,
+      );
+      expect(before.tracks.first.clips.map((clip) => clip.clipId), [
+        'video-0',
+        'video-1',
+        'video-2',
+      ]);
+    },
+  );
 
   test('split, delete, and undo keep transition references coherent', () {
     final initial = _videoProject(clipCount: 4);

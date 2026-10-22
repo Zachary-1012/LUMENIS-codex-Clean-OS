@@ -767,6 +767,7 @@
   "sh01.media.approval_subject_id": "主体 ID",
   "sh01.media.approval_technical_details": "技术确认详情",
   "sh01.media.approval_title": "确认将所选素材导入为草稿",
+  "sh01.media.format_ratio": "画幅",
   "sh01.media.podcast_title": "播客编辑",
   "sh01.media.rendered_audio": "音频预览",
   "sh01.media.preview_audio_empty": "保存音频后可试听。",
