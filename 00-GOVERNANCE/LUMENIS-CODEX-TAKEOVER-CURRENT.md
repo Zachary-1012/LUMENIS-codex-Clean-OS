@@ -4,6 +4,32 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Media project saving — editable versions independent of rendering
+
+The existing media owner now saves named editable projects without invoking the
+renderer. It retains the same execution/Permission, registered source, immutable
+Artifact and exact parent/readback contracts. The saved-project revision and
+its timeline edit version are distinct. Existing rendered packages remain
+readable; omitted titles on older callers inherit a named parent's title.
+The editor and list expose actual names and revisions. An unrendered project
+shows saved status and no rendered preview, rather than claiming a finished film.
+
+Normal Web operation saved a nine-second project, trimmed the second source and
+saved an 8.5-second revision. Both reopened unchanged after restarting only the
+owned isolated manual-workspace Core. Rendering the recovered revision produced
+a third version and a downloaded 1280×720, 8.5-second H.264 file that played in
+the browser. The first two editable packages and prior outputs remained intact.
+See [the operation evidence](evidence/round-15/media-project-save-20261023.json).
+
+This closes the bounded Web save/revision/reopen/recovery operation, not full
+SH-01, podcast, native surfaces or visual acceptance. The current full plan and
+sketch retain their scope. The affected Python files retain 258 existing Ruff
+findings, with no additional findings in this change. A wider local media probe
+also exposed `TTS_SYNTHESIS_FAILED`: the registered FFmpeg build lacks flite;
+that failure remains OPEN and is not included in this batch's passing checks.
+Production 8201/database, collection, external AI, training and deployment were
+not changed. Current-head protected checks and online readback remain separate.
+
 ## 2026-10-23 Video creation — actual render and version continuity
 
 The existing Shared media editor now exposes the renderer's five supported

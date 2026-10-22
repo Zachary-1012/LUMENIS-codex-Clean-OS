@@ -426,6 +426,7 @@ def _content_project_export_resource_for_context(
     context: Mapping[str, Any], timeline_data: Mapping[str, Any],
     source_refs: list[str], output_kind: str, previous_artifact_id: str | None,
     render_options: dict | None = None, delivery_options: dict | None = None,
+    title: str | None = None, render_media: bool = True,
 ) -> str:
     return "content-project-export:v1:" + hashlib.sha256(_json_bytes({
         "context": dict(context), "timeline": dict(timeline_data),
@@ -433,6 +434,8 @@ def _content_project_export_resource_for_context(
         "parent_artifact_id": previous_artifact_id,
         **({"render_options": render_options} if render_options else {}),
         **({"delivery_options": delivery_options} if delivery_options else {}),
+        **({"title": title} if title is not None else {}),
+        **({"render_media": False} if not render_media else {}),
     })).hexdigest()
 
 
@@ -443,11 +446,13 @@ def content_project_export_resource(
     domain_id: str | None = None, subject_id: str | None = None,
     brand_focus_id: str | None = None, global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
+    title: str | None = None, render_media: bool = True,
 ) -> str:
     """Bind the existing export Permission request to the exact project inputs."""
     from lumenis.shared.content_creation.rendering import validate_render_options
     render_options = validate_render_options(render_options)
     delivery_options = _validate_content_delivery_options(delivery_options)
+    _validate_content_project_save(title, render_media, delivery_options)
     actor_id, scope = _authorize_content_project(
         actor, domain_id=domain_id, subject_id=subject_id,
         brand_focus_id=brand_focus_id, global_scope=global_scope,
@@ -468,7 +473,20 @@ def content_project_export_resource(
     return _content_project_export_resource_for_context(
         _content_artifact_context(actor, actor_id, scope), timeline_data,
         refs, output_kind, previous_artifact_id, render_options, delivery_options,
+        title, render_media,
     )
+
+
+def _validate_content_project_save(title, render_media, delivery_options=None):
+    if type(render_media) is not bool or (not render_media and delivery_options):
+        raise LocalArtifactError("INVALID_CONTENT_INPUT")
+    if title is not None and (
+        not isinstance(title, str) or not title.strip() or title != title.strip()
+        or len(title) > 200 or any(ord(char) < 32 for char in title)
+    ):
+        raise LocalArtifactError("CONTENT_PROJECT_TITLE_INVALID")
+    if not render_media and title is None:
+        raise LocalArtifactError("CONTENT_PROJECT_TITLE_INVALID")
 
 
 def _artifact_record(artifact_id: str, *, read_only: bool = False) -> Optional[Dict[str, Any]]:
@@ -560,14 +578,14 @@ def _verified_content_project(
             infos = archive.infolist()
             names = [info.filename for info in infos]
             basic_names = {"project.json", "render.json", "media.mp4", "media.wav", "captions.srt", "captions.vtt"}
-            if (not 3 <= len(names) <= 85 or len(set(names)) != len(names)
+            if (not 2 <= len(names) <= 85 or len(set(names)) != len(names)
                     or any(name not in basic_names and not _content_delivery_filename(name) for name in names)
                     or (("captions.srt" in names) != ("captions.vtt" in names))):
                 raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
             project_infos = [info for info in infos if info.filename == "project.json"]
             render_infos = [info for info in infos if info.filename == "render.json"]
             media_infos = [info for info in infos if info.filename in {"media.mp4", "media.wav"}]
-            if len(project_infos) != 1 or len(render_infos) != 1 or len(media_infos) != 1:
+            if len(project_infos) != 1 or len(render_infos) != 1 or len(media_infos) > 1:
                 raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
             for info in infos:
                 limit = (
@@ -600,7 +618,7 @@ def _verified_content_project(
     if (
         not isinstance(project_data, dict)
         or type(project_data.get("schema_version")) is not int
-        or project_data.get("schema_version") != 1
+        or project_data.get("schema_version") not in {1, 2}
         or project_data.get("context") != expected_context
         or project_data.get("output_kind") not in {"video", "audio"}
         or project_data.get("rights") not in ({"state": "unknown", "label": "rights unknown"}, {
@@ -617,11 +635,24 @@ def _verified_content_project(
         or len(set(source_artifact_refs)) != len(source_artifact_refs)
         or not isinstance(render_data, dict)
         or render_data.get("output_kind") != project_data.get("output_kind")
-        or render_data.get("state") != "rendered_verified"
-        or not isinstance(render_data.get("measurement"), dict)
         or _contains_local_path_field(render_data)
     ):
         raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
+    draft = render_data.get("state") == "not_rendered"
+    if project_data["schema_version"] == 2:
+        _validate_content_project_save(project_data.get("title"), not draft)
+        if (project_data.get("title") is None or type(project_data.get("project_revision")) is not int
+                or project_data["project_revision"] < 1):
+            raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
+    if draft:
+        if (project_data["schema_version"] != 2 or not source_artifact_refs or media_infos
+                or set(names) - {"project.json", "render.json", "credits.json", "credits.txt"}
+                or render_data != {"state": "not_rendered", "output_kind": project_data["output_kind"],
+                                   "timeline_version": project_data["timeline"].get("version")}):
+            raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
+    elif (render_data.get("state") != "rendered_verified" or len(media_infos) != 1
+          or not isinstance(render_data.get("measurement"), dict)):
+        raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
     _, verified_sources, _ = _validate_content_source_refs(
         source_artifact_refs, actor=actor,
         domain_id=scope.get("domain_id"),
@@ -642,7 +673,7 @@ def _verified_content_project(
     expected_media = "media.mp4" if project_data["output_kind"] == "video" else "media.wav"
     claimed_media_hash = render_data.get("media_sha256")
     claimed_media_size = render_data.get("size_bytes")
-    if (
+    if not draft and (
         media_infos[0].filename != expected_media
         or media_infos[0].file_size <= 0
         or media_infos[0].file_size > _MAX_CONTENT_PROJECT_MEDIA_BYTES
@@ -659,7 +690,7 @@ def _verified_content_project(
     ):
         raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
     _authorize_content_project(actor, action="read", **scope)
-    return project_data, render_data, {**record, "media_member": expected_media}, candidate
+    return project_data, render_data, {**record, "media_member": None if draft else expected_media}, candidate
 
 
 _MEDIA_LICENSE_MAX_BYTES = 16 * 1024
@@ -1558,6 +1589,8 @@ def stage_timeline_artifact(
     render_options: dict | None = None,
     delivery_options: dict | None = None,
     operation_binding: dict | None = None,
+    title: str | None = None,
+    render_media: bool = True,
 ) -> Dict[str, Any]:
     """Render a permission-scoped project without an additional demo checkbox.
 
@@ -1568,6 +1601,9 @@ def stage_timeline_artifact(
     from lumenis.shared.content_creation.rendering import validate_render_options
     render_options = validate_render_options(render_options)
     delivery_options = _validate_content_delivery_options(delivery_options)
+    _validate_content_project_save(title, render_media, delivery_options)
+    if operation_binding and (title is not None or not render_media):
+        raise LocalArtifactError("CONTENT_EDL_OPERATION_BINDING_INVALID")
     actor_id, scope = _authorize_content_project(
         actor,
         domain_id=domain_id,
@@ -1612,6 +1648,8 @@ def stage_timeline_artifact(
         global_scope=global_scope,
         shared_workspace_scope=shared_workspace_scope,
     )
+    if not render_media and not source_refs:
+        raise LocalArtifactError("CONTENT_ORIGINAL_FILES_REQUIRED")
     if source_refs:
         source_assets = [entry["metadata"]["asset"] for entry in source_entries]
         if [asset.to_dict() for asset in timeline.assets] != source_assets:
@@ -1620,7 +1658,7 @@ def stage_timeline_artifact(
     expected_context = _content_artifact_context(actor, actor_id, scope)
     parent_project: Optional[Dict[str, Any]] = None
     if previous_artifact_id is not None:
-        parent_project, _, _, _ = _verified_content_project(
+        parent_project, parent_render, _, _ = _verified_content_project(
             previous_artifact_id,
             actor=actor,
             domain_id=domain_id,
@@ -1637,12 +1675,20 @@ def stage_timeline_artifact(
         parent_timeline = parent_project.get("timeline")
         parent_version = parent_timeline.get("version") if isinstance(parent_timeline, dict) else None
         current_version = getattr(timeline, "version", None)
+        metadata_revision = (
+            timeline_data == parent_timeline
+            and (title is not None and title != parent_project.get("title")
+                 or render_media and parent_render.get("state") == "not_rendered")
+        )
         if (
             type(parent_version) is not int
             or type(current_version) is not int
-            or current_version <= parent_version
+            or current_version < parent_version
+            or current_version == parent_version and not metadata_revision
         ):
             raise LocalArtifactError("CONTENT_PROJECT_PARENT_REVISION_REQUIRED")
+
+    stored_title = title if title is not None else (parent_project or {}).get("title")
 
     from lumenis.system.security.permission import OperationType, get_permission_gate, is_testing_bypass_enabled
 
@@ -1650,6 +1696,7 @@ def stage_timeline_artifact(
         raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_UNVERIFIED")
     export_resource = _content_project_export_resource_for_context(
         expected_context, timeline_data, source_refs, output_kind, previous_artifact_id, render_options, delivery_options,
+        title, render_media,
     )
     gate = get_permission_gate()
     caller = expected_context["principal_ref"] if actor_id is None else f"actor:{actor_id}"
@@ -1709,38 +1756,43 @@ def stage_timeline_artifact(
             rendered_path = Path(work_dir) / media_name
             from lumenis.shared.content_creation.rendering import render_timeline, subtitle_documents
 
-            measured = render_timeline(timeline, rendered_path, output_kind=output_kind,
-                                       check_continue=check_export_permission,
-                                       **({"render_options": render_options} if render_options else {}))
-            if (
-                not isinstance(measured, Mapping)
-                or measured.get("state") != "rendered_verified"
-                or measured.get("output_kind") != output_kind
-                or not rendered_path.is_file()
-            ):
-                raise LocalArtifactError("CONTENT_RENDER_UNVERIFIED")
-            media_size = rendered_path.stat().st_size
-            media_hash = _hash_file(rendered_path)
-            if (
-                media_size <= 0
-                or media_size > _MAX_CONTENT_PROJECT_MEDIA_BYTES
-                or measured.get("size_bytes") != media_size
-                or measured.get("media_sha256") != media_hash
-            ):
-                raise LocalArtifactError("CONTENT_RENDER_INTEGRITY_FAILED")
-            render_result = dict(measured)
-            try:
-                subtitle_output = subtitle_documents(timeline)
-                render_result["subtitle_export"] = {"state": "exported" if subtitle_output else "not_applicable",
-                                                    "files": list(subtitle_output)}
-            except ValueError as exc:
-                if str(exc) != "SUBTITLE_TEXT_NOT_SUPPORTED":
-                    raise
-                subtitle_output = {}
-                render_result["subtitle_export"] = {"state": "unsupported", "reason": str(exc), "files": []}
-            delivery_files, delivery_reports = _build_content_delivery(
-                timeline, rendered_path, output_kind=output_kind, options=delivery_options,
-                render_options=render_options, check_continue=check_export_permission)
+            if render_media:
+                measured = render_timeline(timeline, rendered_path, output_kind=output_kind,
+                                           check_continue=check_export_permission,
+                                           **({"render_options": render_options} if render_options else {}))
+                if (
+                    not isinstance(measured, Mapping)
+                    or measured.get("state") != "rendered_verified"
+                    or measured.get("output_kind") != output_kind
+                    or not rendered_path.is_file()
+                ):
+                    raise LocalArtifactError("CONTENT_RENDER_UNVERIFIED")
+                media_size = rendered_path.stat().st_size
+                media_hash = _hash_file(rendered_path)
+                if (
+                    media_size <= 0
+                    or media_size > _MAX_CONTENT_PROJECT_MEDIA_BYTES
+                    or measured.get("size_bytes") != media_size
+                    or measured.get("media_sha256") != media_hash
+                ):
+                    raise LocalArtifactError("CONTENT_RENDER_INTEGRITY_FAILED")
+                render_result = dict(measured)
+                try:
+                    subtitle_output = subtitle_documents(timeline)
+                    render_result["subtitle_export"] = {"state": "exported" if subtitle_output else "not_applicable",
+                                                        "files": list(subtitle_output)}
+                except ValueError as exc:
+                    if str(exc) != "SUBTITLE_TEXT_NOT_SUPPORTED":
+                        raise
+                    subtitle_output = {}
+                    render_result["subtitle_export"] = {"state": "unsupported", "reason": str(exc), "files": []}
+                delivery_files, delivery_reports = _build_content_delivery(
+                    timeline, rendered_path, output_kind=output_kind, options=delivery_options,
+                    render_options=render_options, check_continue=check_export_permission)
+            else:
+                render_result = {"state": "not_rendered", "output_kind": output_kind,
+                                 "timeline_version": timeline.version}
+                subtitle_output, delivery_files, delivery_reports = {}, {}, {}
             credits = _content_license_credits(source_entries, timeline_data, render_options)
             if credits is not None:
                 delivery_files.update(_content_license_credit_files(credits))
@@ -1751,7 +1803,9 @@ def stage_timeline_artifact(
             if delivery_reports:
                 render_result["delivery_reports"] = delivery_reports
             project = {
-                "schema_version": 1,
+                "schema_version": 2 if stored_title is not None else 1,
+                **({"title": stored_title, "project_revision": (parent_project or {}).get("project_revision", 0) + 1}
+                   if stored_title is not None else {}),
                 **({"operation_binding": operation_binding} if operation_binding else {}),
                 **({"delivery_options": delivery_options, "delivery_manifest": delivery_manifest} if delivery_manifest or delivery_options else {}),
                 **({"media_credits": credits} if credits is not None else {}),
@@ -1781,7 +1835,8 @@ def stage_timeline_artifact(
                 ) as archive:
                     archive.writestr("project.json", project_bytes)
                     archive.writestr("render.json", render_bytes)
-                    archive.write(rendered_path, media_name)
+                    if render_media:
+                        archive.write(rendered_path, media_name)
                     for name, data in delivery_files.items():
                         archive.writestr(name, data)
                     for name, text in subtitle_output.items():
@@ -1818,7 +1873,7 @@ def stage_timeline_artifact(
         )
     }
     return {
-        "status": "rendered_staged",
+        "status": "rendered_staged" if render_media else "project_saved",
         "artifact": public_record,
         "project": project,
         "render": dict(render_result or {}),
@@ -1947,7 +2002,7 @@ def list_content_projects(*, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
         if not isinstance(artifact_id, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(artifact_id):
             return _content_project_list_result("integrity_incomplete", projects, identity, candidate)
         try:
-            project, _, record, _ = _verified_content_project(
+            project, render, record, _ = _verified_content_project(
                 artifact_id,
                 actor=actor,
                 domain_id=domain_id,
@@ -1974,6 +2029,9 @@ def list_content_projects(*, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
         projects.append({
             "artifact_id": artifact_id,
             "output_kind": project["output_kind"],
+            "title": project.get("title"),
+            "project_revision": project.get("project_revision"),
+            "render_state": render["state"],
             "created_at": record["created_at"],
             "updated_at": record["updated_at"],
             "status": record["status"],
@@ -2007,6 +2065,8 @@ def authorized_project_media(
         global_scope=global_scope,
         shared_workspace_scope=shared_workspace_scope,
     )
+    if render["state"] != "rendered_verified":
+        raise LocalArtifactError("CONTENT_PROJECT_NOT_RENDERED")
     try:
         with zipfile.ZipFile(package_path, "r") as archive:
             info = archive.getinfo(record["media_member"])

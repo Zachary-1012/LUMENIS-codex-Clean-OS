@@ -791,7 +791,7 @@
   "sh01.media.download": "下载工程包",
   "sh01.media.download_handoff": "已交给浏览器下载，请检查下载记录。",
   "sh01.media.download_saved": "文件已保存到所选位置。",
-  "sh01.media.draft": "本地编辑，尚未导出",
+  "sh01.media.draft": "尚未保存",
   "sh01.media.duplicate": "该素材已在当前工程中。",
   "sh01.media.earlier": "前移",
   "sh01.media.empty": "先选择素材，再手动加入时间线。",
@@ -823,7 +823,7 @@
   "sh01.media.relink_hint": "成片可查看；继续编辑需重新选择匹配的原素材。",
   "sh01.media.reopen": "重新打开",
   "sh01.media.rights": "版权尚未确认 · 仅作 Demo",
-  "sh01.media.saved": "已生成版本，未发布",
+  "sh01.media.saved": "已保存",
   "sh01.media.select": "选择一个片段进行调整。",
   "sh01.media.sfx": "音效",
   "sh01.media.source_in": "素材起点（秒）",
@@ -869,7 +869,7 @@
   "sh01.media.player.retry": "重试播放",
   "sh01.media.player.releasing": "正在关闭上一次播放…",
   "sh01.media.player.cleanup_failure": "上一次播放的临时文件尚未清理。关闭播放后可再次重试。",
-  "sh01.media.rendered_preview": "已导出成片",
+  "sh01.media.rendered_preview": "成片预览",
   "sh01.media.previous_render": "正在预览上次成片。草稿修改需导出新版本后才能呈现。",
   "sh01.media.versions_export": "版本与导出",
   "sh01.media.sound_settings": "声音",
@@ -935,6 +935,10 @@
   "sh01.media.batch_preview_description": "请核对下列待应用片段调整。采用只更新当前草稿，可一次撤销；不会渲染或保存版本。",
   "sh01.media.batch_unsupported": "请先在对应片段中应用或取消待处理的音轨选择、素材替换或拆分调整。所有草稿均已保留。",
   "sh01.media.batch_stale": "草稿或访问权限已变化，请重新预览调整。",
-  "sh01.media.batch_inspecting": "正在检查调整…"
+  "sh01.media.batch_inspecting": "正在检查调整…",
+  "sh01.media.project_name": "作品名称",
+  "sh01.media.untitled": "未命名作品",
+  "sh01.media.save_project": "保存工程",
+  "sh01.media.saving": "正在保存"
  }
 }

@@ -36,6 +36,8 @@ abstract interface class MediaProjectRepository {
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
+    String? title,
+    bool renderMedia = true,
   });
   Future<Map<String, dynamic>> reopen(String? domain, String artifactId);
 }
@@ -72,6 +74,8 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
+    String? title,
+    bool renderMedia = true,
   }) => client.exportContentProject(
     domainId: domain,
     assetPaths: refs == null ? paths : null,
@@ -79,6 +83,8 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     timeline: timeline.toJson(),
     outputKind: outputKind,
     previousArtifactId: previousArtifactId,
+    title: title,
+    renderMedia: renderMedia,
   );
 
   @override
@@ -141,7 +147,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
   );
 }
 
-enum MediaProjectOperation { idle, importing, inspecting, exporting, reopening }
+enum MediaProjectOperation { idle, importing, inspecting, saving, exporting, reopening }
 
 /// A registered server result, not a claim that the user has downloaded it.
 final class MediaProjectVersion {
@@ -153,12 +159,18 @@ final class MediaProjectVersion {
     required this.timelineVersion,
     required this.evidenceRecorded,
     required this.sourceRefs,
+    required this.title,
+    required this.projectRevision,
+    required this.rendered,
   });
 
   final String artifactId;
   final Map<String, dynamic> timelineJson;
   final String outputKind;
-  final double durationSec;
+  final double? durationSec;
+  final String? title;
+  final int? projectRevision;
+  final bool rendered;
   final int timelineVersion;
   final bool? evidenceRecorded;
   final List<String> sourceRefs;
@@ -185,7 +197,13 @@ final class MediaProjectVersion {
         : null;
     final size = render['size_bytes'];
     final refs = project['source_artifact_refs'] ?? const <String>[];
-    if (project['schema_version'] != 1 ||
+    final rendered = render['state'] == 'rendered_verified';
+    final title = project['title'];
+    final revision = project['project_revision'];
+    if (!const [1, 2].contains(project['schema_version']) ||
+        (project['schema_version'] == 2 &&
+            (title is! String || title.trim().isEmpty || title.length > 200 ||
+             revision is! int || revision < 1)) ||
         !const ['video', 'audio'].contains(kind) ||
         timeline is! Map ||
         timeline['version'] is! int ||
@@ -194,14 +212,13 @@ final class MediaProjectVersion {
         rights['state'] != 'unknown' ||
         (rights.containsKey('demo_acknowledged') &&
             rights['demo_acknowledged'] != true) ||
-        render['state'] != 'rendered_verified' ||
         render['output_kind'] != kind ||
-        duration is! num ||
-        !duration.isFinite ||
-        duration <= 0 ||
-        size is! int ||
-        size <= 0 ||
-        !RegExp(r'^[0-9a-f]{64}$').hasMatch('${render['media_sha256']}') ||
+        (rendered
+            ? (duration is! num || !duration.isFinite || duration <= 0 ||
+               size is! int || size <= 0 ||
+               !RegExp(r'^[0-9a-f]{64}$').hasMatch('${render['media_sha256']}'))
+            : (project['schema_version'] != 2 || render['state'] != 'not_rendered' ||
+               render.length != 3 || render['timeline_version'] != timeline['version'])) ||
         refs is! List ||
         refs.length > 64 ||
         refs.any(
@@ -216,7 +233,10 @@ final class MediaProjectVersion {
       artifactId: artifactId,
       timelineJson: Map<String, dynamic>.unmodifiable(detached),
       outputKind: kind as String,
-      durationSec: duration.toDouble(),
+      durationSec: rendered ? (duration as num).toDouble() : null,
+      title: title as String?,
+      projectRevision: revision as int?,
+      rendered: rendered,
       timelineVersion: timeline['version'] as int,
       evidenceRecorded: evidenceRecorded,
       sourceRefs: List<String>.unmodifiable(refs.cast<String>()),
@@ -255,6 +275,7 @@ final class MediaProjectController extends ChangeNotifier {
   final String? domain;
   MediaProjectSnapshot? _timeline;
   MediaProjectVersion? _version;
+  String? _title;
   List<String> _paths = const [];
   List<String>? _sourceRefs;
   List<String>? _suspendedSourceRefs;
@@ -270,6 +291,7 @@ final class MediaProjectController extends ChangeNotifier {
 
   MediaProjectSnapshot? get timeline => contextMatches ? _timeline : null;
   MediaProjectVersion? get version => contextMatches ? _version : null;
+  String? get title => contextMatches ? _title : null;
   String? get selectedClipId => _selectedClipId;
   String? get failureCode => _failureCode;
   MediaProjectOperation get operation => _operation;
@@ -281,12 +303,24 @@ final class MediaProjectController extends ChangeNotifier {
       ? List<String>.unmodifiable(_sourceRefs ?? const [])
       : const [];
   bool get hasUnsavedChanges =>
-      _timeline != null && _timeline!.version != _version?.timelineVersion;
+      _timeline != null && (_timeline!.version != _version?.timelineVersion || _title != _version?.title);
   bool get contextMatches =>
       _draftContext == null ||
       (_matchesContext(_draftContext!) && !_sourcesNeedRevalidation);
 
   String get _contextKey => '${domain ?? 'shared_workspace:v1'}:${repository.contextKey}';
+
+  void setTitle(String value) {
+    if (_disposed || busy || !contextMatches) return;
+    final title = value.trim();
+    if (title.isEmpty || title.length > 200 || RegExp(r'[\x00-\x1f]').hasMatch(title)) {
+      _fail('CONTENT_PROJECT_TITLE_INVALID');
+      return;
+    }
+    _title = title;
+    _failureCode = null;
+    notifyListeners();
+  }
 
   void selectClip(String? id) {
     if (_disposed) return;
@@ -556,7 +590,7 @@ final class MediaProjectController extends ChangeNotifier {
     }
   }
 
-  Future<void> export({required String outputKind}) async {
+  Future<void> export({required String outputKind, bool renderMedia = true}) async {
     if (_disposed || busy || _timeline == null) return;
     if (!contextMatches) {
       _fail('CONTENT_CONTEXT_CHANGED');
@@ -566,11 +600,12 @@ final class MediaProjectController extends ChangeNotifier {
       _fail('CONTENT_EXPORT_COMPLETION_UNKNOWN');
       return;
     }
-    if (_version != null && !hasUnsavedChanges) {
+    if (_version != null && !hasUnsavedChanges && (!renderMedia || _version!.rendered)) {
       _fail('CONTENT_PROJECT_NO_CHANGES');
       return;
     }
-    _begin(MediaProjectOperation.exporting);
+    _begin(renderMedia ? MediaProjectOperation.exporting : MediaProjectOperation.saving);
+    final title = _title;
     final snapshot = _timeline!;
     final context = _contextKey;
     try {
@@ -581,12 +616,14 @@ final class MediaProjectController extends ChangeNotifier {
         timeline: snapshot,
         outputKind: outputKind,
         previousArtifactId: _version?.artifactId,
+        title: title,
+        renderMedia: renderMedia,
       );
       final result = response['result'];
       if (response['ok'] != true ||
           response['publish_status'] != 'not_performed' ||
           result is! Map ||
-          result['status'] != 'rendered_staged' ||
+          result['status'] != (renderMedia ? 'rendered_staged' : 'project_saved') ||
           result['artifact'] is! Map) {
         throw const FormatException(
           'Export returned no registered content project.',
@@ -602,7 +639,7 @@ final class MediaProjectController extends ChangeNotifier {
         version.timelineJson,
         inspectedAssets: snapshot.assets,
       );
-      if (version.outputKind != outputKind ||
+      if (version.outputKind != outputKind || version.title != title || version.rendered != renderMedia ||
           jsonEncode(returned.toJson()) != jsonEncode(snapshot.toJson())) {
         throw const FormatException(
           'Export does not match the submitted edit.',
@@ -662,6 +699,7 @@ final class MediaProjectController extends ChangeNotifier {
       // and every required source reference have passed validation.
       if (!_acceptContext(context)) return;
       _version = version;
+      _title = version.title;
       _timeline = timeline;
       _paths = const [];
       _sourceRefs = version.sourceRefs.isEmpty ? null : version.sourceRefs;

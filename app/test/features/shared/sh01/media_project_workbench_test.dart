@@ -277,6 +277,8 @@ class _Client extends LumenisCoreClient {
     required String outputKind,
     bool? demoAcknowledged,
     String? previousArtifactId,
+    String? title,
+    bool renderMedia = true,
   }) async {
     exports++;
     exportedRefs = assetRefs;
@@ -296,16 +298,18 @@ class _Client extends LumenisCoreClient {
         'publish_status': 'not_performed',
         'evidence_recorded': true,
         'result': {
-          'status': 'rendered_staged',
+          'status': renderMedia ? 'rendered_staged' : 'project_saved',
           'artifact': {'artifact_id': 'ART-version'},
           'project': {
-            'schema_version': 1,
+            'schema_version': title == null ? 1 : 2,
+      'title': ?title,
+      if (title != null) 'project_revision': 1,
             'output_kind': outputKind,
             'timeline': timeline,
             'rights': {'state': 'unknown', 'label': 'rights unknown'},
             'source_artifact_refs': assetRefs ?? const <String>[],
           },
-          'render': {
+          'render': !renderMedia ? {'state': 'not_rendered', 'output_kind': outputKind, 'timeline_version': timeline['version']} : {
             'state': 'rendered_verified',
             'output_kind': outputKind,
             'measurement': {'actual_duration_sec': 1.0},
@@ -552,6 +556,26 @@ void main() {
           ),
     );
   }
+
+  testWidgets('named project saves independently with no rendered preview', (tester) async {
+    client.successfulExport = true;
+    await controller.importFile('chosen.mp4', Uint8List.fromList([1]));
+    controller.edit((s) => s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 1));
+    await tester.pumpWidget(_app(client, controller));
+    await tester.tap(find.byKey(const Key('media-project-name')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('media-project-name-input')), 'An editable film');
+    await tester.tap(find.text('应用调整').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('media-save-project')));
+    await tester.pumpAndSettle();
+    expect(controller.version!.title, 'An editable film');
+    expect(controller.version!.rendered, isFalse);
+    expect(controller.hasUnsavedChanges, isFalse);
+    expect(find.text('An editable film'), findsOneWidget);
+    await _openActionsForTarget(tester, find.byKey(const Key('media-version-preview')));
+    expect(tester.widget<OutlinedButton>(find.byKey(const Key('media-version-preview'))).onPressed, isNull);
+  });
 
   testWidgets('selected landscape format is exported and can be undone', (
     tester,
@@ -2853,7 +2877,7 @@ void main() {
     final load = find.byKey(const Key('media-load-preview'));
     expect(load, findsOneWidget);
     expect(find.text('导出后可预览真实成片。'), findsNothing);
-    expect(find.textContaining('已导出成片 · v'), findsOneWidget);
+    expect(find.textContaining('成片预览 · v'), findsOneWidget);
     expect(tester.getSize(load).shortestSide, greaterThanOrEqualTo(48));
 
     client.retrievalFailureCode = 'CONTENT_PROJECT_READ_UNAVAILABLE';

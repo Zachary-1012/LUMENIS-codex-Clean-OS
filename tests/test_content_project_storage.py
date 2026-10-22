@@ -642,3 +642,64 @@ def test_legacy_source_inner_digest_is_verified_on_read(media_store):
         )
     with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_SOURCE_INTEGRITY_FAILED"):
         artifacts.read_content_source_artifact(artifact_id, actor=ACTOR, **SCOPE)
+
+
+def test_editable_project_saves_without_render_and_keeps_immutable_parent(media_store, monkeypatch):
+    from lumenis.shared.content_creation import rendering
+
+    approve(media_store)
+    source = import_source(media_store)
+    source_id = source["artifact"]["artifact_id"]
+    with artifacts.resolve_content_source_assets([source_id], actor=ACTOR, **SCOPE) as sources:
+        asset = sources[0]["asset"]
+        timeline = Timeline.from_assets([asset]).add_audio_track("voice", audio_role="voiceover")
+        timeline = timeline.add_clip(asset.asset_id, track_id="voice", audio_role="voiceover", source_out=0.4)
+        args = dict(actor=ACTOR, **SCOPE, source_execution_id="isolated-save",
+                    output_kind="audio", source_artifact_refs=[source_id], title="Episode draft")
+        original_render = rendering.render_timeline
+        def no_render(*args, **kwargs):
+            raise AssertionError("saving must not run the media renderer")
+        monkeypatch.setattr(rendering, "render_timeline", no_render)
+        first = artifacts.stage_timeline_artifact(timeline, render_media=False, **args)
+        first_id = first["artifact"]["artifact_id"]
+        original_bytes = (media_store["root"] / f"{first_id}.zip").read_bytes()
+        assert first["status"] == "project_saved"
+        assert first["render"] == {"state": "not_rendered", "output_kind": "audio", "timeline_version": timeline.version}
+        assert first["project"]["project_revision"] == 1
+        reopened = artifacts.read_content_project(first_id, actor=ACTOR, **SCOPE)
+        assert reopened["project"] == first["project"]
+        listed = artifacts.list_content_projects(actor=ACTOR, **SCOPE)
+        assert listed["projects"][0]["title"] == "Episode draft"
+        assert listed["projects"][0]["render_state"] == "not_rendered"
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_NOT_RENDERED"):
+            artifacts.authorized_project_media(first_id, actor=ACTOR, **SCOPE)
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_PARENT_REVISION_REQUIRED"):
+            artifacts.stage_timeline_artifact(timeline, render_media=False, previous_artifact_id=first_id, **args)
+        args["title"] = "Episode final"
+        second = artifacts.stage_timeline_artifact(timeline, render_media=False, previous_artifact_id=first_id, **args)
+        assert second["project"]["project_revision"] == 2
+        assert second["project"]["timeline"] == first["project"]["timeline"]
+        with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+            artifacts.read_content_project(first_id, actor={"id": 999}, **SCOPE)
+        monkeypatch.setattr(rendering, "render_timeline", original_render)
+        args.pop("title")
+        rendered = artifacts.stage_timeline_artifact(timeline, previous_artifact_id=second["artifact"]["artifact_id"], **args)
+        assert rendered["project"]["title"] == "Episode final"
+        assert rendered["render"]["state"] == "rendered_verified"
+        assert rendered["project"]["project_revision"] == 3
+        assert artifacts.authorized_project_media(rendered["artifact"]["artifact_id"], actor=ACTOR, **SCOPE)["data"]
+        assert (media_store["root"] / f"{first_id}.zip").read_bytes() == original_bytes
+        assert artifacts.read_content_project(first_id, actor=ACTOR, **SCOPE) == reopened
+
+
+def test_project_save_intent_is_permission_bound():
+    # Resource encoding is deterministic, without touching a database or source.
+    base = {"context": {}, "timeline_data": {}, "source_refs": [], "output_kind": "audio", "previous_artifact_id": None}
+    rendered = artifacts._content_project_export_resource_for_context(**base)
+    saved = artifacts._content_project_export_resource_for_context(**base, title="Draft", render_media=False)
+    renamed = artifacts._content_project_export_resource_for_context(**base, title="Revised", render_media=False)
+    assert len({rendered, saved, renamed}) == 3
+    with pytest.raises(artifacts.LocalArtifactError, match="INVALID_CONTENT_INPUT"):
+        artifacts._validate_content_project_save("Draft", "false")
+    with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_TITLE_INVALID"):
+        artifacts._validate_content_project_save("", False)

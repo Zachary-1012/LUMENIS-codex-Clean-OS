@@ -769,7 +769,7 @@
   "sh01.media.approval_title": "선택한 소스를 초안으로 가져올지 확인",
   "sh01.media.format_ratio": "화면 비율",
   "sh01.media.podcast_title": "팟캐스트 편집",
-  "sh01.media.rendered_audio": "오디오 미리 듣기",
+  "sh01.media.rendered_audio": "오디오 미리보기",
   "sh01.media.preview_audio_empty": "오디오를 저장한 뒤 들어볼 수 있습니다.",
   "sh01.media.preview_audio": "듣기",
   "sh01.media.back": "창작으로 돌아가기",
@@ -791,7 +791,7 @@
   "sh01.media.download": "프로젝트 다운로드",
   "sh01.media.download_handoff": "브라우저에 전달했습니다. 다운로드 내역을 확인하세요.",
   "sh01.media.download_saved": "선택한 위치에 파일을 저장했습니다.",
-  "sh01.media.draft": "로컬 편집 · 내보내지 않음",
+  "sh01.media.draft": "저장되지 않은 변경 사항",
   "sh01.media.duplicate": "이 미디어는 현재 프로젝트에 이미 있습니다.",
   "sh01.media.earlier": "앞으로 이동",
   "sh01.media.empty": "미디어를 선택한 다음 타임라인에 추가하세요.",
@@ -823,7 +823,7 @@
   "sh01.media.relink_hint": "결과는 볼 수 있습니다. 편집을 계속하려면 일치하는 원본을 선택하세요.",
   "sh01.media.reopen": "다시 열기",
   "sh01.media.rights": "권리 미확인 · 데모 전용",
-  "sh01.media.saved": "버전 생성됨 · 게시되지 않음",
+  "sh01.media.saved": "저장됨",
   "sh01.media.select": "편집할 클립을 선택하세요.",
   "sh01.media.sfx": "효과음",
   "sh01.media.source_in": "원본 시작(초)",
@@ -869,7 +869,7 @@
   "sh01.media.player.retry": "재생 다시 시도",
   "sh01.media.player.releasing": "이전 재생을 종료하는 중…",
   "sh01.media.player.cleanup_failure": "임시 재생 파일을 삭제하지 못했습니다. 재생을 종료한 후 다시 시도하세요.",
-  "sh01.media.rendered_preview": "내보낸 영상",
+  "sh01.media.rendered_preview": "영상 미리보기",
   "sh01.media.previous_render": "이전에 내보낸 영상입니다. 초안 변경 사항을 보려면 새 버전을 내보내세요.",
   "sh01.media.versions_export": "버전 및 내보내기",
   "sh01.media.sound_settings": "사운드",
@@ -935,6 +935,10 @@
   "sh01.media.batch_preview_description": "아래의 보류 중인 클립 조정을 확인하세요. 적용은 현재 초안만 변경하며 한 번에 실행 취소할 수 있습니다. 렌더링하거나 버전을 저장하지 않습니다.",
   "sh01.media.batch_unsupported": "먼저 해당 클립에서 대기 중인 오디오 스트림 선택, 소스 교체 또는 분할 변경을 적용하거나 취소하세요. 모든 초안은 유지됩니다.",
   "sh01.media.batch_stale": "초안이나 접근 권한이 변경되었습니다. 조정을 다시 미리 보세요.",
-  "sh01.media.batch_inspecting": "조정 확인 중…"
+  "sh01.media.batch_inspecting": "조정 확인 중…",
+  "sh01.media.project_name": "작품 이름",
+  "sh01.media.untitled": "제목 없는 작품",
+  "sh01.media.save_project": "프로젝트 저장",
+  "sh01.media.saving": "저장 중"
  }
 }
