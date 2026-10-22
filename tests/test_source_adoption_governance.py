@@ -1,5 +1,6 @@
 from __future__ import annotations
 import copy
+import hashlib
 import json
 from pathlib import Path
 from unittest.mock import patch
@@ -170,3 +171,73 @@ def test_all_reconciled_owner_routes_have_independent_exact_expectations():
     assert set(data['source_routing_contract']['changed_coverage_refs']) == RECONCILED_SOURCE_OWNERS.keys()
     for ref, expected in RECONCILED_SOURCE_OWNERS.items():
         assert set(rows[ref]['source_owners']) == expected
+
+
+@pytest.fixture
+def document_handoff(tmp_path):
+    content = '# Plan\n\n## Work\nSave and reopen the result.\n\n## Next\nOther work.\n'
+    (tmp_path / 'plan.md').write_text(content, encoding='utf-8', newline='\n')
+    binding = {'path': 'plan.md', 'sha256': hashlib.sha256(content.encode()).hexdigest(),
+               'heading': '## Work', 'start_line': 3, 'end_line': 5,
+               'expected_start_line_text': '## Work',
+               'historical_bindings': [{'path': 'old-missing.md', 'sha256': '0' * 64}]}
+    data = {'scope_sources': [], 'requirements': [], 'coverage': [{
+        'coverage_ref': 'original-G:G1', 'source_requirement': binding,
+        'specific_changes': {'item_requirement_text': '## Work\nSave and reopen the result.\n'},
+    }]}
+    return tmp_path, data
+
+
+def test_current_binding_accepts_git_lf_and_preserves_historical_identity(document_handoff):
+    from scripts.audit_tools.verify_source_adoption import (
+        validate_handoff_document_bindings,
+    )
+    root, data = document_handoff
+    original = copy.deepcopy(data)
+    validate_handoff_document_bindings(root, data)
+    path = root / 'plan.md'
+    path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))
+    validate_handoff_document_bindings(root, data)
+    assert data == original
+
+
+@pytest.mark.parametrize('mutation,reason', [
+    ('content', 'Stale current document hash'),
+    ('digest', 'Stale current document hash'),
+    ('missing', 'Missing current document'),
+    ('anchor', 'Missing or ambiguous current anchor'),
+    ('duplicate_anchor', 'Missing or ambiguous current anchor'),
+    ('start', 'Stale current anchor line'),
+    ('end', 'Stale or truncated current range'),
+    ('copied_text', 'Stale copied requirement'),
+    ('outside', 'Document escapes repository'),
+])
+def test_current_document_drift_blocks_handoff(document_handoff, mutation, reason):
+    from scripts.audit_tools.verify_source_adoption import (
+        validate_handoff_document_bindings,
+    )
+    root, data = document_handoff
+    binding = data['coverage'][0]['source_requirement']
+    path = root / 'plan.md'
+    if mutation == 'content':
+        path.write_bytes(path.read_bytes() + b'Changed requirement.\n')
+    elif mutation == 'digest':
+        binding['sha256'] = '0' * 64
+    elif mutation == 'missing':
+        binding['path'] = 'missing.md'
+    elif mutation == 'anchor':
+        binding['heading'] = '## Missing'
+    elif mutation == 'duplicate_anchor':
+        content = path.read_bytes() + b'## Work\nAnother result.\n'
+        path.write_bytes(content)
+        binding['sha256'] = hashlib.sha256(content).hexdigest()
+    elif mutation == 'start':
+        binding['start_line'] = 4
+    elif mutation == 'end':
+        binding['end_line'] = 3
+    elif mutation == 'copied_text':
+        data['coverage'][0]['specific_changes']['item_requirement_text'] = 'Old product requirement'
+    elif mutation == 'outside':
+        binding['path'] = '../other-project.md'
+    with pytest.raises(AssertionError, match=reason):
+        validate_handoff_document_bindings(root, data)

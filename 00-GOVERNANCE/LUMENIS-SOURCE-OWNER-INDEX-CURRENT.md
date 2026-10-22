@@ -20,7 +20,7 @@ Copying Subject/BrandFocus or campaign configuration must not copy source/histor
 > Status: **CURRENT EXECUTION INDEX / FIVE ARCHITECTURE ROUNDS / COMPLETE LEGACY COVERAGE**
 > 实际窗口开工、暂停、恢复、模型与推理档位由PO决定。本索引不固定窗口数量、单业务席位或模型；只记录有时间和证据的观察，不能核实时 NOT_VERIFIED。历史审批和工作原件保留但无当前派工效力。
 > 六文件治理发布不唤醒窗口；后续直接授权的 SYSTEM 浏览器弹窗 P0 沿既有 Owner 与预约单独执行。原J/R/U、44屏、权益、Permission/Evidence/Canonical、成本、生产数据及共享写入保护保留。
-> C1保留完整采集闭环和已有必要Core/Runtime/Scheduler/Permission依赖的获准源码范围；M保留原非C1候选、未集成成果及资料采用责任。实际执行须核验当前PO授权及Writer，不能用旧暂停或旧复工代替。按2026-10-10 PO批准恢复隔离单元/集成回归，保留静态、安全、数据一致性和真正E2E。
+> C1保留完整采集及必要Core/Runtime/Scheduler/Permission接口责任，其他Owner保留各自完整成果和M/W6集成验收责任。实际开发者按最新直接PO指令承担相应范围；该映射不限制当前总控跨Owner完成获准任务，也不自动派工。
 
 ### 最新 PO 当前成果要求 — 四表面并行建设，2026-10-11
 
@@ -31,7 +31,7 @@ Copying Subject/BrandFocus or campaign configuration must not copy source/histor
 
 ### 2026-10-13 PO personnel clarification — engineering peers and independent research
 
-Codex and **Akang (GrokBot)** are **equal-level engineering agents**, each eligible for any of the existing C1–C6/F/M product-development and integration assignments **only when directly allocated by the Product Owner**. PO Zachary personally partitions their tasks; neither agent is the other's manager, and this index must not auto-assign or invent a division of their product scope. Existing Owner identifiers are *source responsibilities*, not permanent agent appointments. The 2026-10-18 PO-authorized cloud dot continuation and local frontend/machine-verification split are recorded in [CURRENT §1](LUMENIS-CODEX-TAKEOVER-CURRENT.md#1-online-readers-current-state-snapshot); they reuse these owners and confer no dispatch authority over Codex, Akang or Brio. Shared-file exclusivity, Permission, exact-SHA review, source/data protection and real user acceptance remain unchanged.
+Codex and **Akang (GrokBot)** are **equal-level engineering agents**, each eligible for any of the existing C1–C6/F/M product-development and integration assignments **only when directly allocated by the Product Owner**. PO Zachary personally partitions their tasks; neither agent is the other's manager, and this index must not auto-assign or invent a division of their product scope. Existing Owner identifiers are *source responsibilities*, not permanent agent appointments. Current executor and order follow the latest direct PO instruction recorded in [CURRENT §1](LUMENIS-CODEX-TAKEOVER-CURRENT.md#1-online-readers-current-state-snapshot). The 2026-10-18 cloud/local split is historical; source-role labels do not require separate windows or grant dispatch authority over Codex, Akang or Brio. Shared-file exclusivity, Permission, exact-SHA review, source/data protection and real user acceptance remain unchanged.
 
 **Brio (Muse)** is reassigned to **global data-source research, usable source/field/legal-access inventory and concrete acquisition target lists**, with a one-time verified Markdown handoff to Codex/Akang. Research is not authorized live collection or implementation. Upon delivery Brio is on-call **only for new direct PO instructions**; GPT/Codex/Akang do not control, automatically schedule or requisition its further work. GPT may advise when asked but has no standing dispatch authority.
 

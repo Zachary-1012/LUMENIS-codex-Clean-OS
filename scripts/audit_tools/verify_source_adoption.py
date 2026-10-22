@@ -1,5 +1,7 @@
 """Validate the local source provenance attachment, not a second runtime contract."""
 from __future__ import annotations
+
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -218,12 +220,96 @@ def _owner_roles(values) -> set[str]:
     return set(re.findall(r'\b(?:C[1-6]|F|M)\b', ' '.join(values)))
 
 
+def current_handoff_bindings(data):
+    yield from data['scope_sources']
+    for row in data['requirements']:
+        if 'source_contract' in row:
+            yield row['source_contract']
+    for row in data['coverage']:
+        if 'source_requirement' in row:
+            source = row['source_requirement']
+            if row.get('namespace') == 'convenience' and set(source) == {'title', 'subitems'}:
+                assert source['title'], f"Missing inline requirement: {row['coverage_ref']}"
+            elif 'source_snapshot' in source and 'comparison_sha256' in source and 'path' not in source:
+                assert source.get('source_excerpt'), f"Missing historical comparison: {row['coverage_ref']}"
+            else:
+                yield source
+        for field, key in (
+            ('dependencies', 'exact_contract_dependencies'),
+            ('specific_changes', 'complete_item_contracts'),
+            ('deliverables', 'contracts_and_source'),
+            ('acceptance', 'exact_item_criteria'),
+        ):
+            value = row.get(field)
+            if isinstance(value, dict) and key in value:
+                assert value[key], f"Missing current contracts: {row['coverage_ref']} / {key}"
+                yield from value[key]
+
+
+def validate_handoff_document_bindings(root: Path, data) -> None:
+    root = root.resolve()
+    documents = {}
+    anchors = {}
+    ranges = {}
+    paths = {}
+    for binding in current_handoff_bindings(data):
+        assert isinstance(binding, dict) and binding.get('path') and binding.get('sha256'), 'Incomplete current document binding'
+        name = binding['path']
+        if name not in paths:
+            paths[name] = (root / name).resolve()
+            assert paths[name].is_relative_to(root), f"Document escapes repository: {name}"
+        path = paths[name]
+        if path not in documents:
+            assert path.is_file(), f"Missing current document: {binding['path']}"
+            content = path.read_bytes().replace(b'\r\n', b'\n')
+            documents[path] = (hashlib.sha256(content).hexdigest(), content.decode('utf-8').splitlines())
+            anchors[path] = {}
+            for number, line in enumerate(documents[path][1], 1):
+                anchors[path].setdefault(line, []).append(number)
+        digest, lines = documents[path]
+        assert binding['sha256'] == digest, f"Stale current document hash: {binding['path']}"
+        heading = binding.get('heading')
+        if heading:
+            positions = anchors[path].get(heading, [])
+            assert len(positions) == 1, f"Missing or ambiguous current anchor: {binding['path']} / {heading}"
+            if 'start_line' in binding:
+                assert binding['start_line'] == positions[0], f"Stale current anchor line: {binding['path']} / {heading}"
+        if 'start_line' in binding or 'end_line' in binding:
+            start, end = binding.get('start_line'), binding.get('end_line')
+            assert type(start) is int and type(end) is int and 1 <= start <= end <= len(lines), f"Invalid current range: {binding['path']}"
+            if heading:
+                key = (path, heading)
+                if key not in ranges:
+                    level = re.match(r'^(#{1,6}) ', heading)
+                    if level and len(level[1]) == 1:
+                        ranges[key] = len(lines)
+                    elif level:
+                        ranges[key] = next((i for i in range(start, len(lines))
+                                            if (next_heading := re.match(r'^(#{1,6}) ', lines[i]))
+                                            and len(next_heading[1]) <= len(level[1])), len(lines))
+                    else:
+                        ranges[key] = start
+                assert end == ranges[key], f"Stale or truncated current range: {binding['path']} / {heading}"
+            if 'expected_start_line_text' in binding:
+                assert lines[start - 1] == binding['expected_start_line_text'], f"Stale current start text: {binding['path']}"
+        if 'line' in binding:
+            line = binding['line']
+            assert type(line) is int and 1 <= line <= len(lines), f"Invalid current line: {binding['path']}"
+            assert lines[line - 1] == binding['text'], f"Stale current row: {binding['path']}"
+    for row in data['coverage']:
+        changes, source = row.get('specific_changes'), row.get('source_requirement')
+        if isinstance(changes, dict) and changes.get('item_requirement_text') and isinstance(source, dict) and 'start_line' in source:
+            _, lines = documents[paths[source['path']]]
+            current = '\n'.join(lines[source['start_line'] - 1:source['end_line']]).strip()
+            assert changes['item_requirement_text'].strip() == current, f"Stale copied requirement: {row['coverage_ref']}"
+
+
 def validate_owner_handoff_routing(root: Path) -> None:
     """Guard source ownership separately from journey participation and dispatch.
 
     This validates the existing handoff, not a second requirement register or an
-    implementation/acceptance gate. Exact document hashes are bound by the
-    publication workflow after canonical content is frozen.
+    implementation/acceptance gate. Current document bindings are checked
+    separately; historical bindings retain their original identity.
     """
     data = json.loads((root / HANDOFF).read_text(encoding='utf-8'))
     rows = {row['coverage_ref']: row for row in data['coverage']}
@@ -265,6 +351,7 @@ def validate_owner_handoff_routing(root: Path) -> None:
 def validate_local_adoption(root: Path) -> None:
     root = root.resolve()
     validate_owner_handoff_routing(root)
+    validate_handoff_document_bindings(root, json.loads((root / HANDOFF).read_text(encoding='utf-8')))
     data = json.loads((root / RECORD).read_text(encoding='utf-8'))
     assert data['schema'] == 'lumenis.source-adoption-record/v1'
     assert data['record_version'] == '1.0.0'
