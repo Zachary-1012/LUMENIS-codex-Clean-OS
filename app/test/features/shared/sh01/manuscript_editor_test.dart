@@ -97,6 +97,31 @@ String _value(WidgetTester tester, String key) =>
     tester.widget<TextField>(find.byKey(Key(key))).controller!.text;
 
 void main() {
+  testWidgets(
+    'writing keeps the page wide and makes outline and preview optional',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 850));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(files: _DraftFiles()));
+      await tester.pumpAndSettle();
+      await _menu(tester, '打开草稿文件');
+      final body = find.byKey(const Key('manuscript-body-0'));
+      expect(tester.getSize(body).width, greaterThan(650));
+      expect(find.text('阅读预览'), findsNothing);
+      await tester.tap(find.byKey(const Key('manuscript-preview-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.text('阅读预览'), findsOneWidget);
+      expect(find.byKey(const Key('manuscript-title')), findsNothing);
+      await tester.tap(find.byKey(const Key('manuscript-preview-toggle')));
+      await tester.pumpAndSettle();
+      expect(_value(tester, 'manuscript-body-0'), '周六清晨的街道。\n保留现场声音。');
+      await tester.tap(find.byKey(const Key('manuscript-outline-toggle')));
+      await tester.pumpAndSettle();
+      expect(find.widgetWithText(ListTile, '访谈'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('independent writing works without a selected business scope', (
     tester,
   ) async {
@@ -212,6 +237,8 @@ void main() {
     await tester.pumpAndSettle();
     await _menu(tester, '打开草稿文件');
     await tester.tap(find.byTooltip('移除段落'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('manuscript-outline-toggle')));
     await tester.pumpAndSettle();
     final add = find.widgetWithText(TextButton, '添加段落');
     expect(tester.widget<TextButton>(add).onPressed, isNull);

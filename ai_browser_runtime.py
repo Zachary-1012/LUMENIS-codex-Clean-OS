@@ -1821,6 +1821,7 @@ class AIBrowserRuntime:
         from lumenis.system.collector.runtime.browser_extract import (
             BrowserExtractionError, CAPTURE_SCRIPT, check_deadline,
             format_capture, validate_extract_request, same_document_url, capture_structure,
+            select_page_context,
         )
         options = validate_extract_request(options)
         deadline = (_capture_context['deadline'] if _capture_context is not None
@@ -1855,12 +1856,22 @@ class AIBrowserRuntime:
             try:
                 if self.status != SessionStatus.RUNNING or self._closed or self._page is None:
                     raise BrowserExtractionError('BROWSER_EXTRACTION_SESSION_NOT_RUNNING')
-                if not same_document_url(self._page.url, options['url']):
+                self._check_bound_task_operation(BrowserActionType.OBSERVE)
+                expected_url = options['url']
+                if expected_url is None:
+                    expected_url = validate_extract_request({
+                        'url': self._page.url, 'formats': options['formats'],
+                        'timeout_ms': options['timeout_ms'],
+                    })['url']
+                if not same_document_url(self._page.url, expected_url):
                     raise BrowserExtractionError('BROWSER_EXTRACTION_NAVIGATION_REQUIRED')
                 revision = self._page_revision
                 target_id = self._target_id
+                if ('question' in options and (
+                        revision != options['page_revision'] or target_id != options['target_id'])):
+                    raise BrowserExtractionError('BROWSER_EXTRACTION_PAGE_CHANGED')
                 allowed, _reason = self.firewall.check_action(
-                    BrowserActionType.OBSERVE, url=options['url'])
+                    BrowserActionType.OBSERVE, url=expected_url)
                 if not allowed:
                     raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED')
                 check_deadline(deadline)
@@ -1886,7 +1897,7 @@ class AIBrowserRuntime:
                     raise BrowserExtractionError('BROWSER_EXTRACTION_CAPTURE_INVALID')
                 if capture.get('interaction_required') is True:
                     raise BrowserExtractionError('BROWSER_EXTRACTION_HUMAN_REQUIRED')
-                if (not same_document_url(capture.get('url'), options['url']) or not same_document_url(self._page.url, options['url'])
+                if (not same_document_url(capture.get('url'), expected_url) or not same_document_url(self._page.url, expected_url)
                         or self._page_revision != revision or self._target_id != target_id
                         or self.status != SessionStatus.RUNNING or self._closed):
                     raise BrowserExtractionError('BROWSER_EXTRACTION_PAGE_CHANGED')
@@ -1895,6 +1906,8 @@ class AIBrowserRuntime:
                     return redact_browser_url_queries(sanitize_sensitive(scanned.sanitized_text))
                 formats = format_capture(capture, options['formats'], safe_text)
                 structure = capture_structure(capture, safe_text)
+                page_context = (select_page_context(structure, safe_text(options['question']))
+                                if 'question' in options else None)
                 check_deadline(deadline)
                 captured_at = datetime.now(timezone.utc).isoformat()
                 metadata = {
@@ -1931,6 +1944,7 @@ class AIBrowserRuntime:
                 if time.monotonic() >= deadline:
                     raise timeout_error()
                 self.last_activity = time.time()
+                self._check_bound_task_operation(BrowserActionType.OBSERVE)
                 return {
                     'ok': True, 'session_id': self.session_id, 'formats': formats, 'structure': structure,
                     'operation_id': operation_id, 'persistence_outcome': 'COMMITTED',
@@ -1940,6 +1954,7 @@ class AIBrowserRuntime:
                     'partial': truncated, 'truncated': truncated,
                     'format_semantics': 'sanitized_visible_document',
                     'capture_scope': 'main_frame_visible_light_dom',
+                    **({'page_context': page_context} if page_context is not None else {}),
                 }
             except BrowserExtractionError as exc:
                 if exc.code == 'BROWSER_EXTRACTION_TIMEOUT':
@@ -1947,6 +1962,8 @@ class AIBrowserRuntime:
                 raise
             except BrowserHumanControlError:
                 raise
+            except PermissionError:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_PERMISSION_DENIED') from None
             except Exception:
                 if time.monotonic() >= deadline:
                     raise timeout_error() from None

@@ -9,6 +9,7 @@ import '../../../features/ai01/ai01_conversations.dart';
 import '../../../navigation/lumenis_workspace_routes.dart';
 import 'acc03_repository.dart';
 import 'acc03_snapshot.dart';
+import 'acc03_recent_work.dart';
 
 class Acc03Screen extends StatefulWidget {
   const Acc03Screen({
@@ -19,6 +20,8 @@ class Acc03Screen extends StatefulWidget {
     this.onOpenScreenId,
     this.draftController,
     this.scopeLabel,
+    this.onOpenWork,
+    this.onStartCreation,
     super.key,
   });
 
@@ -32,6 +35,8 @@ class Acc03Screen extends StatefulWidget {
   final ValueChanged<String>? onOpenScreenId;
   final TextEditingController? draftController;
   final String? scopeLabel;
+  final void Function(String kind, String artifactId)? onOpenWork;
+  final ValueChanged<String>? onStartCreation;
 
   @override
   State<Acc03Screen> createState() => _Acc03ScreenState();
@@ -88,12 +93,12 @@ class _Acc03ScreenState extends State<Acc03Screen> {
   Widget build(BuildContext context) {
     final lastPage = _safeLastOpenedScreenId;
 
-    return ColoredBox(
-      color: LumenisTheme.of(context).canvas,
+    return DecoratedBox(
+      decoration: LumenisTheme.chassis(LumenisTheme.of(context)),
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 940),
+            constraints: const BoxConstraints(maxWidth: 840),
             child: Ai01ConversationPanel(
               key: ObjectKey(_conversations),
               viewModel: _conversations,
@@ -107,34 +112,93 @@ class _Acc03ScreenState extends State<Acc03Screen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Wrap(
-                    spacing: 4,
-                    runSpacing: 4,
+                    spacing: 12,
+                    runSpacing: 12,
                     alignment: WrapAlignment.start,
                     children: [
-                      for (final destination in acc03HomeDestinations)
+                      _StartWork(
+                        id: 'research',
+                        label: _copy(
+                          context,
+                          zh: '研究',
+                          en: 'Research',
+                          ko: '리서치',
+                        ),
+                        icon: Icons.auto_stories_outlined,
+                        color: LumenisTheme.of(context).shared,
+                        onPressed: widget.onOpen == null
+                            ? null
+                            : () => widget.onOpen!(Acc03Destination.research),
+                      ),
+                      for (final (id, zh, en, ko, icon) in const [
+                        (
+                          'manuscript',
+                          '文稿提案',
+                          'Write',
+                          '글과 제안서',
+                          Icons.edit_note_rounded,
+                        ),
+                        (
+                          'video',
+                          '视频',
+                          'Video',
+                          '영상',
+                          Icons.movie_creation_outlined,
+                        ),
+                        (
+                          'audio',
+                          '播客',
+                          'Podcast',
+                          '팟캐스트',
+                          Icons.mic_none_rounded,
+                        ),
+                      ])
+                        _StartWork(
+                          id: id,
+                          label: _copy(context, zh: zh, en: en, ko: ko),
+                          icon: icon,
+                          color: switch (id) {
+                            'manuscript' => LumenisTheme.of(context).cth,
+                            'video' => LumenisTheme.of(context).bmp,
+                            _ => LumenisTheme.of(context).ai,
+                          },
+                          onPressed: widget.onStartCreation == null
+                              ? null
+                              : () => widget.onStartCreation!(id),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    children: [
+                      for (final destination in acc03HomeDestinations.where(
+                        (item) => item.destination != Acc03Destination.research,
+                      ))
                         _BusinessDestination(
                           destination: destination,
                           onOpen: widget.onOpen,
                         ),
-                    ],
-                  ),
-                  if (widget.onOpen != null)
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
-                        key: const ValueKey('acc03-analysis'),
-                        onPressed: () => widget.onOpen!(Acc03Destination.ai),
-                        icon: const LumenisIcon(Icons.search_rounded, size: 18),
-                        label: Text(
-                          _copy(
-                            context,
-                            zh: '分析问题',
-                            en: 'Analyze a question',
-                            ko: '질문 분석',
+                      if (widget.onOpen != null)
+                        TextButton.icon(
+                          key: const ValueKey('acc03-analysis'),
+                          onPressed: () => widget.onOpen!(Acc03Destination.ai),
+                          icon: const LumenisIcon(
+                            Icons.search_rounded,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _copy(
+                              context,
+                              zh: '分析资料',
+                              en: 'Analyze materials',
+                              ko: '자료 분석',
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                    ],
+                  ),
                   if (lastPage != null && widget.onOpenScreenId != null) ...[
                     const SizedBox(height: 6),
                     _ContinueLastPage(
@@ -142,12 +206,65 @@ class _Acc03ScreenState extends State<Acc03Screen> {
                       onOpen: () => widget.onOpenScreenId!(lastPage),
                     ),
                   ],
+                  const SizedBox(height: 28),
+                  Acc03RecentWork(
+                    client: widget.client,
+                    onOpen: widget.onOpenWork,
+                  ),
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _StartWork extends StatelessWidget {
+  const _StartWork({
+    required this.id,
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final String id, label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = LumenisTheme.of(context);
+    return OutlinedButton.icon(
+      key: ValueKey(
+        id == 'research' ? 'acc03-destination-SH-02' : 'acc03-start-$id',
+      ),
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(48, 56),
+        foregroundColor: palette.foreground,
+        padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+      ),
+      icon: DecoratedBox(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .10),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(12),
+            topRight: Radius.circular(9),
+            bottomLeft: Radius.circular(8),
+            bottomRight: Radius.circular(12),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(9),
+          child: LumenisIcon(icon, size: 22, color: color),
+        ),
+      ),
+      label: Text(label),
     );
   }
 }

@@ -143,6 +143,8 @@ class Sh01Screen extends StatefulWidget {
     this.contextAvailable = true,
     this.initialWorkspaceEntry,
     this.returnScreenId,
+    this.initialArtifactId,
+    this.onSavedManuscript,
     this.onNavigate,
     super.key,
   });
@@ -153,6 +155,8 @@ class Sh01Screen extends StatefulWidget {
   final bool contextAvailable;
   final String? initialWorkspaceEntry;
   final String? returnScreenId;
+  final String? initialArtifactId;
+  final ValueChanged<String>? onSavedManuscript;
   final ValueChanged<String>? onNavigate;
 
   @override
@@ -191,6 +195,30 @@ class _Sh01ScreenState extends State<Sh01Screen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialArtifactId != null) {
+      _initialArtifact = widget.initialArtifactId;
+      _writing = widget.initialWorkspaceEntry == 'manuscript';
+      _editing = const {
+        'audio',
+        'video',
+      }.contains(widget.initialWorkspaceEntry);
+      _mediaOutputKind = widget.initialWorkspaceEntry == 'audio'
+          ? 'audio'
+          : 'video';
+      return;
+    }
+    if (const {
+      'manuscript',
+      'video',
+      'audio',
+    }.contains(widget.initialWorkspaceEntry)) {
+      _writing = widget.initialWorkspaceEntry == 'manuscript';
+      _editing = !_writing;
+      _mediaOutputKind = widget.initialWorkspaceEntry == 'audio'
+          ? 'audio'
+          : 'video';
+      return;
+    }
     _editing =
         widget.initialWorkspaceEntry == 'media' &&
         widget.returnScreenId == 'BMP-08';
@@ -215,6 +243,12 @@ class _Sh01ScreenState extends State<Sh01Screen> {
 
   void _leaveWorkspace() {
     final returnTo = widget.returnScreenId;
+    if (widget.initialArtifactId != null &&
+        returnTo != null &&
+        widget.onNavigate != null) {
+      widget.onNavigate!(returnTo);
+      return;
+    }
     final shouldReturnToPodcast =
         _editing &&
         widget.initialWorkspaceEntry == 'media' &&
@@ -284,6 +318,7 @@ class _Sh01ScreenState extends State<Sh01Screen> {
       return ManuscriptEditor(
         client: widget.client,
         initialArtifactId: _initialArtifact,
+        onSaved: widget.onSavedManuscript,
         contextAvailable: widget.contextAvailable,
         onBack: _leaveWorkspace,
       );
@@ -557,10 +592,13 @@ class _Sh01ScreenState extends State<Sh01Screen> {
             ))
               _SavedCreationRow(
                 key: Key('sh01-saved-${item.artifactId}'),
-                title: item.title ?? (item.outputKind == 'audio'
-                    ? _copy('播客作品', 'Podcast', '팟캐스트')
-                    : _copy('视频作品', 'Video', '영상')),
-                detail: '${_savedDate(item.createdAt)}${item.projectRevision == null ? '' : ' · v${item.projectRevision}'}'
+                title:
+                    item.title ??
+                    (item.outputKind == 'audio'
+                        ? _copy('播客作品', 'Podcast', '팟캐스트')
+                        : _copy('视频作品', 'Video', '영상')),
+                detail:
+                    '${_savedDate(item.createdAt)}${item.projectRevision == null ? '' : ' · v${item.projectRevision}'}'
                     '${item.renderState == 'not_rendered' ? ' · ${_copy('工程', 'Project', '프로젝트')}' : ''}',
                 icon: item.outputKind == 'audio'
                     ? Icons.mic_none_rounded

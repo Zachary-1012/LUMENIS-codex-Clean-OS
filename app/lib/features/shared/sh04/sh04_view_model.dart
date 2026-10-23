@@ -69,6 +69,37 @@ class Sh04ViewModel extends ChangeNotifier {
     _notifyIfAlive();
   }
 
+  Future<void> openArtifact(String id) async {
+    if (_disposed) return;
+    final generation = ++_generation;
+    _snapshot = null;
+    _selectedArtifactId = null;
+    _phase = Sh04LoadPhase.loading;
+    _failureKind = null;
+    _operationBusy = true;
+    _scopeError = null;
+    _loadMoreFailureKind = null;
+    _notifyIfAlive();
+    try {
+      final item = await _repository.reopen(id);
+      if (!_isCurrent(generation)) return;
+      if (item.internalId != id) {
+        throw const FormatException('Wrong work version');
+      }
+      _phase = Sh04LoadPhase.ready;
+      _mergeItem(item);
+    } catch (error) {
+      if (!_isCurrent(generation)) return;
+      _failureKind = _classifyFailure(error);
+      _phase = Sh04LoadPhase.failed;
+    } finally {
+      if (_isCurrent(generation)) {
+        _operationBusy = false;
+        _notifyIfAlive();
+      }
+    }
+  }
+
   Future<void> loadMore() async {
     final current = _snapshot;
     if (_disposed || current == null || !current.hasMore || _operationBusy) {

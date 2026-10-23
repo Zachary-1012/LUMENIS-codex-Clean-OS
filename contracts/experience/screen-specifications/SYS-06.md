@@ -1,5 +1,16 @@
 # SYS-06 — Internal browser capability
 
+## Current page-context outcome — 2026-10-23
+
+User need → same authorized page/target/revision → relevant live context → grounded answer or editable result → existing save/revise/reopen/recovery. This is the priority outcome; a generic crawler or manual note alone cannot close it. User refresh or a named task triggers acquisition; page entry/navigation alone does not collect the registry.
+
+The current bounded change connects `阅读网页 / Read page / 웹페이지 읽기` to the existing session extraction endpoint. It reads current loaded visible DOM, preserves source/time and partial coverage, rejects changed targets/revisions and human-control conflicts, and reuses Shared's lexical context window. The excerpt is explicitly source text, not an analyzed answer or a semantic-accuracy claim. Model generation, Source-use admission and question-to-saved-result binding remain OPEN until actually connected and operated. No parallel Browser/Collector/Truth owner, personal browser access or external inference is enabled.
+
+The recorded reference uses a fixed question entry, concise activity messages and an editable inline deliverable with source/actions. Adopt these operations and original OEVIRA visual treatment; do not copy personal content, email or query tokens. Existing motion preferences and four-surface acceptance remain required.
+
+The browser is a full working surface: compact real-page tabs and address/history controls, an uninterrupted page viewport and an optional opaque question/result pane. It must not inherit a dashboard card frame, selected-chip tab styling, an always-open inspector or overlapping translucent text. Narrow layouts switch between page and question without losing either state. Wide layouts reserve the majority of space for the actual page. The global route remains reachable through the compact workspace navigation rather than a second permanent sidebar. An actual result has its own readable body, sources and local actions; a DOM excerpt stays explicitly an excerpt until the analysis and saved-result contracts are connected. UI composition and backend completion are separate required checks; neither substitutes for the other.
+
+
 ## 2026-10-11 当前目标：业务任务中的真实内置浏览器
 
 用户从原帖/引用/研究任务进入真实网页，能看到安全网址、当前页面和操作状态，进行获准导航与网页操作、独占接管、停止并返回原任务。默认在序境内呈现，外部浏览器由用户明确选择；无AI也可正常浏览。自动采集保持后台无头，不占用桌面焦点。
@@ -11,7 +22,7 @@
 ```yaml
 screen_id: SYS-06
 status: IMPLEMENTED_SOURCE_LIVE_NOT_VERIFIED
-revision: 7
+revision: 8
 owner_domain: SYSTEM Browser / CDP
 binding_ids:
   - BACKEND-GAP-041
@@ -29,9 +40,10 @@ approval_reference: Product Owner direct internal-browser repair approval
 - Product contract: SYSTEM browser capability supports controlled acquisition; it is not a user personal browser and does not authorize collection effects.
 - References: `KEEP_AS_EXPLORATION`; no external browser UI is copied.
 - Anti-template check: normal-browser use (address bar, back/forward/refresh, tabs, collapsible, modeled on OpenAI in-app browser) over server-owned sessions plus an optional view-original external jump; not a generic dashboard.
-- Current source decision: the bounded reader below is implemented; runtime,
-  full accessibility and whole-screen real-user acceptance remain open. Revision 7
-  has the bounded local-Web manual-note runtime evidence described below.
+- Current source decision: revision 8 replaces the card-based reader composition
+  and binds current-page extraction. Full browser actions, grounded answers,
+  accessibility and whole-screen real-user acceptance remain open. Revision 7's
+  local-Web manual-note evidence below is historical and does not accept revision 8.
 
 ## 0.1b Current revision-7 source delta — 2026-10-09
 

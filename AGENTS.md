@@ -161,6 +161,8 @@ Figma delivery and per-screen M DESIGN_READY are not coding prerequisites. Reuse
 update specs alongside code, and record DESIGN_READY only after real review. Actual
 usability, visual quality, security and E2E remain mandatory.
 
+PO 2026-10-23: execute Website/Web/Windows; defer macOS/iOS until devices and new PO dispatch. Retain all planned scope and shared contracts.
+
 Desktop targets Windows/macOS; native mobile targets iOS. Android/Linux clients are
 removed from active requirements, not deferred; preserve source/history. Linux servers,
 CI, browser access and narrow-screen Web remain. Website families and all R/J/U coverage
@@ -320,7 +322,7 @@ Current Production Source
 
 Never use old chat, old commit messages, stale README text, static prototypes or handoff claims to override executable truth.
 
-Documentation merged into `main` proves only that the rule/document exists. It does not prove the production capability is implemented, tested, live-verified or released.
+Merged documentation proves publication only, not implementation, testing, live verification or release.
 
 For implementation decisions, apply this routing order without turning it into a
 second product or design authority:
@@ -747,12 +749,9 @@ composition, Chinese/English/Korean localization and accessibility through all
 five architecture rounds. Backend owners provide field and behavior contracts; F owns
 screen layout and user interaction.
 
-The root controller M retains review, cross-owner integration and acceptance.
-Product Owner chooses its model/effort; repository role labels prescribe no model.
-M freezes scope and resolves architecture/owner/interface conflicts, retains actual
-design-review evidence without a DESIGN_READY coding prerequisite, and accepts or
-returns complete outcomes. When no authorized unfinished work remains, M waits.
-Product Owner human decisions remain distinct.
+M reviews scope, cross-owner interfaces, integration and complete-outcome acceptance;
+retains actual design-review evidence without a DESIGN_READY coding prerequisite;
+and waits when authorized work is complete. PO owns model/effort and human decisions.
 
 W6 is the sole writer for accepted shared composition and mainline integration
 paths, including app.py, lumenis_app_api.py, experience_runtime.py and
@@ -930,6 +929,8 @@ The user-facing product abbreviation is **BMP**. Existing account and storage in
 
 User-facing App text and accessibility labels use product and business language, not implementation or governance terminology. Preserve distinct business states (such as no records, not collected, unavailable and access restricted); never merge them into a misleading empty state or fabricate zero values.
 
+Avoid unnecessary secondary labels and descriptions. Let the layout do the explaining.
+
 AI enhances the product; AI is not Production Truth.
 
 Canonical production chain:
@@ -1001,8 +1002,8 @@ renderers remain retired; reference study does not grant third-party code/asset
 rights. The Product Owner's 2026-10-03 correction requires full four-surface creative
 UI/UX/AIGC, useful rich interaction and no unnecessary scrolling. The 2026-10-12
 clarification confines painted style to icons and suitable page elements;
-overall visuals follow approved research and task needs, without fixed 2D/3D
-style or a storyboard-only/reduced-interaction limit.
+overall visuals use the PO-selected digital skeuomorphic style. Preserve the
+approved task layouts, workflows and full interaction scope.
 
 The approved audit PDF, its 44 sketches and any later AI/Figma/wireframe output are
 `DESIGN_EXPLORATION` unless the applicable `<SCREEN-ID>.md` has been reviewed and
@@ -1671,8 +1672,8 @@ Do not limit adoption to AI chat, a homepage or decorative result cards. Each
 screen records its real job, source/action/version contract, task-specific visual
 interaction, four-surface differences and normal-success/recovery acceptance in
 its existing specification. Preserve full scope; paint icons and suitable page
-elements. Overall visuals follow approved research and task needs, without a
-fixed 2D/3D style. AI-independent deterministic work remains operable when
+elements. Overall visuals use the PO-selected digital skeuomorphic style with the
+existing task-specific layouts and full interaction scope. AI-independent deterministic work remains operable when
 inference is unavailable. The sole blueprint, Experience, surface decision,
 Owner index, screen specs, the unique full-product plan/sketch and README are co-published.
 Historical sketches remain evidence; amendments do not self-promote to

@@ -1105,6 +1105,45 @@ class LumenisCoreClient {
     },
   );
 
+  Future<Map<String, dynamic>> contentSpeechCapabilities(String? domainId) =>
+      _request(
+        'GET',
+        '/api/experience/content-sources/tts/capabilities',
+        operationContext: _mediaContentContext(domainId),
+      );
+
+  Future<Map<String, dynamic>> previewContentSpeech({
+    required String? domainId,
+    required String text,
+    required String engine,
+    required String language,
+    required String voice,
+  }) => _request(
+    'POST',
+    '/api/experience/content-sources/tts/preview',
+    operationContext: _mediaContentContext(domainId),
+    connectionTimeout: const Duration(minutes: 3),
+    payload: {
+      'text': text,
+      'engine': engine,
+      'language': language,
+      'voice': voice,
+      'response_format': 'json',
+    },
+  );
+
+  Future<Map<String, dynamic>> contentSourceDetail(
+    String? domainId,
+    String artifactId,
+  ) {
+    _validateContentArtifactId(artifactId);
+    return _request(
+      'GET',
+      '/api/experience/content-sources/$artifactId',
+      operationContext: _mediaContentContext(domainId),
+    );
+  }
+
   Future<Map<String, dynamic>> inspectContentWaveform({
     required String? domainId,
     required String assetRef,
@@ -1432,9 +1471,7 @@ class LumenisCoreClient {
   /// loopback workspace transport and refuses forged identity headers, cookies
   /// and remote origins.  A client credential must never become a substitute
   /// for a Browser actor/session boundary.
-  /// Optional manual collection for the selected scope. Automatic
-  /// collection of every registered subject stays the default; this only
-  /// queues one human-confirmed read-only run in the system background.
+  /// User-requested refresh for the selected scope.
   Future<Map<String, dynamic>> startManualCollection() => _request(
     'POST',
     '/api/collect',
@@ -1451,6 +1488,7 @@ class LumenisCoreClient {
       '/api/browser/sessions',
       payload: const <String, Object?>{},
       withContext: false,
+      connectionTimeout: const Duration(seconds: 45),
     );
   }
 
@@ -1532,10 +1570,8 @@ class LumenisCoreClient {
     );
   }
 
-  /// Reads the existing Shared SavedWork registry for Browser-authored notes.
-  /// The server still resolves and authorizes the actor and exact CTH/BMP scope.
   Future<Map<String, dynamic>> listBrowserResearchNotes({
-    required String domainId,
+    required String? domainId,
     int limit = 100,
     String? cursor,
   }) {
@@ -1557,13 +1593,13 @@ class LumenisCoreClient {
     return _request(
       'GET',
       '/api/experience/saved-work?$query',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
       requestHeaders: const {'Cache-Control': 'no-store'},
     );
   }
 
   Future<Map<String, dynamic>> saveBrowserResearchNote({
-    required String domainId,
+    required String? domainId,
     required String title,
     required String markdown,
     required Map<String, Object?> payload,
@@ -1573,7 +1609,7 @@ class LumenisCoreClient {
     return _request(
       'POST',
       '/api/experience/saved-work',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
       requestHeaders: const {'Cache-Control': 'no-store'},
       payload: {
         'title': title,
@@ -1587,20 +1623,20 @@ class LumenisCoreClient {
   }
 
   Future<Map<String, dynamic>> reopenBrowserResearchNote({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
   }) {
     _validateSavedWorkArtifactId(artifactId);
     return _request(
       'GET',
       '/api/experience/saved-work/$artifactId',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
       requestHeaders: const {'Cache-Control': 'no-store'},
     );
   }
 
   Future<Map<String, dynamic>> reviseBrowserResearchNote({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
     required String requestId,
     required String expectedSha256,
@@ -1618,7 +1654,7 @@ class LumenisCoreClient {
     return _request(
       'POST',
       '/api/experience/saved-work/$artifactId/revise',
-      operationContext: _contentContext(domainId),
+      operationContext: _mediaContentContext(domainId),
       requestHeaders: const {'Cache-Control': 'no-store'},
       payload: {
         'request_id': requestId,
@@ -1949,6 +1985,19 @@ class LumenisCoreClient {
   /// Reads user-authored reports from the independent Shared workspace.
   /// This deliberately never inherits the selected CTH/BMP business context;
   /// the server resolves the actor and checks Shared Permission on every call.
+  Future<Map<String, dynamic>> listLatestSharedWork({String? cursor}) {
+    _validateSavedWorkPage(6, cursor);
+    final query = Uri(
+      queryParameters: {'limit': '6', 'latest_only': 'true', 'cursor': ?cursor},
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/saved-work?$query',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
   Future<Map<String, dynamic>> listSharedSavedWork({
     int limit = 100,
     String? cursor,
@@ -2413,6 +2462,32 @@ class LumenisCoreClient {
       '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/navigate',
       payload: <String, Object?>{'url': url},
       withContext: false,
+      connectionTimeout: const Duration(seconds: 20),
+    );
+  }
+
+  Future<Map<String, dynamic>> readBrowserPageContext({
+    required String sessionId,
+    required String targetId,
+    required int pageRevision,
+    required String question,
+  }) {
+    _validateBrowserSessionId(sessionId);
+    _requireLocalBrowserEndpoint();
+    if (question.trim().isEmpty || question.trim().length > 2000) {
+      throw const FormatException('A bounded question is required.');
+    }
+    return _request(
+      'POST',
+      '/api/browser/sessions/${Uri.encodeComponent(sessionId)}/extract',
+      payload: <String, Object?>{
+        'formats': {'text': true},
+        'question': question.trim(),
+        'target_id': targetId,
+        'page_revision': pageRevision,
+      },
+      withContext: false,
+      requestHeaders: const {'Cache-Control': 'no-store'},
       connectionTimeout: const Duration(seconds: 20),
     );
   }

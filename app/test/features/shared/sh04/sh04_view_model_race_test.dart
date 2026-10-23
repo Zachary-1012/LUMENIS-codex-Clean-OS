@@ -26,6 +26,38 @@ void main() {
     await pending;
   }
 
+  test(
+    'direct opening selects the exact version and clears previous selection',
+    () async {
+      await seed();
+      final opening = model.openArtifact('chosen');
+      expect(model.exports, isEmpty);
+      repository.openings.single.complete(_item('chosen'));
+      await opening;
+      expect(model.selected?.internalId, 'chosen');
+      expect(model.phase, Sh04LoadPhase.ready);
+    },
+  );
+
+  test(
+    'direct opening rejects a mismatched version and late denied-context results',
+    () async {
+      final first = model.openArtifact('old');
+      final second = model.openArtifact('new');
+      repository.openings[1].completeError(_denied);
+      await second;
+      repository.openings[0].complete(_item('old'));
+      await first;
+      expect(model.exports, isEmpty);
+      expect(model.failureKind, Sh04FailureKind.permissionDenied);
+      final mismatch = model.openArtifact('expected');
+      repository.openings.last.complete(_item('wrong'));
+      await mismatch;
+      expect(model.exports, isEmpty);
+      expect(model.phase, Sh04LoadPhase.failed);
+    },
+  );
+
   testWidgets(
     'screen client replacement hides old context and ignores its late read',
     (tester) async {

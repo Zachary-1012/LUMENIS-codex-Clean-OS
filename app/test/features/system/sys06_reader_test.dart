@@ -11,6 +11,89 @@ import 'package:lumenis_app/features/system/sys06/sys06_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 void main() {
+  testWidgets('a policy refusal preserves the typed address without retrying', (
+    tester,
+  ) async {
+    final repository = _ReaderRepository()
+      ..navigationError = const LumenisCoreException(
+        'Navigation denied',
+        errorCode: 'BROWSER_NAVIGATION_POLICY_DENIED',
+      );
+    await tester.pumpWidget(
+      _host(
+        Sys06Screen(client: LumenisCoreClient(), browserRepository: repository),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('sys06-address')),
+      'https://example.com/blocked',
+    );
+    await tester.tap(find.byKey(const ValueKey('sys06-go')));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const ValueKey('sys06-address')))
+          .controller!
+          .text,
+      'https://example.com/blocked',
+    );
+    expect(find.text('当前浏览访问规则未允许此地址。网址已保留，请核对地址或联系管理员。'), findsOneWidget);
+    expect(repository.navigateCalls, 1);
+  });
+
+  testWidgets('entering an address opens the page with exclusive control', (
+    tester,
+  ) async {
+    final repository = _ReaderRepository();
+    await tester.pumpWidget(
+      _host(
+        Sys06Screen(client: LumenisCoreClient(), browserRepository: repository),
+      ),
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('sys06-address')),
+      'https://example.com/article',
+    );
+    await tester.tap(find.byKey(const ValueKey('sys06-go')));
+    await tester.pumpAndSettle();
+    expect(repository.openCalls, 1);
+    expect(repository.acquireCalls, 1);
+    expect(repository.navigateCalls, 1);
+    expect(find.byKey(const ValueKey('sys06-frame')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+    'narrow browser retains the question when the sidebar is closed',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = _ReaderRepository();
+      await tester.pumpWidget(
+        _host(
+          Sys06Screen(
+            client: LumenisCoreClient(),
+            browserRepository: repository,
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('sys06-read-page')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('sys06-context-question')),
+        'Find opening hours',
+      );
+      await tester.tap(find.byKey(const ValueKey('sys06-read-page')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('sys06-context-question')),
+        findsNothing,
+      );
+      await tester.tap(find.byKey(const ValueKey('sys06-read-page')));
+      await tester.pumpAndSettle();
+      expect(find.text('Find opening hours'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
   testWidgets(
     'SYS-06 reads an authorized frame inside the product without exposing browser identity',
     (tester) async {
@@ -115,7 +198,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 120));
 
     expect(find.byKey(const ValueKey('sys06-frame')), findsNothing);
-    expect(find.text('正在读取已授权页面。'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -162,7 +245,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sys06-go')));
     await tester.pump();
 
-    final stop = tester.widget<OutlinedButton>(
+    final stop = tester.widget<IconButton>(
       find.byKey(const ValueKey('sys06-stop')),
     );
     expect(stop.onPressed, isNotNull);
@@ -194,7 +277,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('sys06-acquire-control')));
     await tester.pump();
 
-    final stop = tester.widget<OutlinedButton>(
+    final stop = tester.widget<IconButton>(
       find.byKey(const ValueKey('sys06-stop')),
     );
     expect(stop.onPressed, isNotNull);
@@ -222,10 +305,12 @@ void main() {
     final repository = _ReaderRepository();
     await _openReaderPage(tester, repository);
     repository.framePending = Completer<Sys06BrowserFrame>();
+    await tester.tap(find.byKey(const ValueKey('sys06-more')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('sys06-refresh-frame')));
     await tester.pump();
 
-    final stop = tester.widget<OutlinedButton>(
+    final stop = tester.widget<IconButton>(
       find.byKey(const ValueKey('sys06-stop')),
     );
     expect(stop.onPressed, isNotNull);
@@ -248,6 +333,8 @@ void main() {
       final repository = _ReaderRepository();
       await _openReaderPage(tester, repository);
       repository.framePending = Completer<Sys06BrowserFrame>();
+      await tester.tap(find.byKey(const ValueKey('sys06-more')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('sys06-refresh-frame')));
       await tester.pump();
       repository.stopPending = Completer<void>();
@@ -265,7 +352,7 @@ void main() {
 
       expect(repository.stopCalls, 1);
       expect(find.byKey(const ValueKey('sys06-address')), findsOneWidget);
-      expect(find.text('受控阅读暂时不可用。'), findsOneWidget);
+      expect(find.text('网页暂时无法打开，请重试。'), findsOneWidget);
       expect(find.byKey(const ValueKey('sys06-frame')), findsNothing);
 
       repository.framePending!.completeError(
@@ -276,7 +363,7 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 120));
-      expect(find.text('受控阅读暂时不可用。'), findsOneWidget);
+      expect(find.text('网页暂时无法打开，请重试。'), findsOneWidget);
       expect(find.byKey(const ValueKey('sys06-frame')), findsNothing);
 
       repository.stopPending = null;
@@ -385,6 +472,7 @@ class _ReaderRepository
   final bool staleFrame;
   int openCalls = 0;
   int navigateCalls = 0;
+  Object? navigationError;
   int reloadCalls = 0;
   int frameCalls = 0;
   int stopCalls = 0;
@@ -400,7 +488,7 @@ class _ReaderRepository
     targetId: 'target_approved',
     pageRevision: 0,
     currentTitle: '',
-    currentUrl: '',
+    currentUrl: 'about:blank',
     allowedActions: {'navigate', 'reload', 'frame'},
     humanControlActive: false,
     humanActionsRequireLease: true,
@@ -420,7 +508,7 @@ class _ReaderRepository
       targetId: 'target_approved',
       pageRevision: 0,
       currentTitle: '',
-      currentUrl: '',
+      currentUrl: 'about:blank',
       allowedActions: {'navigate', 'reload', 'frame'},
       humanControlActive: true,
       humanActionsRequireLease: true,
@@ -448,6 +536,7 @@ class _ReaderRepository
     required LumenisBrowserFrameBinding frameBinding,
   }) async {
     navigateCalls++;
+    if (navigationError != null) throw navigationError!;
     if (navigatePending != null) {
       await navigatePending!.future;
       return;

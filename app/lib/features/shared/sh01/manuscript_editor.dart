@@ -24,6 +24,7 @@ class ManuscriptEditor extends StatefulWidget {
     this.draftFiles,
     this.outputFiles,
     this.initialArtifactId,
+    this.onSaved,
     super.key,
   });
 
@@ -35,6 +36,7 @@ class ManuscriptEditor extends StatefulWidget {
   final ManuscriptDraftFiles? draftFiles;
   final MediaProjectFiles? outputFiles;
   final String? initialArtifactId;
+  final ValueChanged<String>? onSaved;
 
   @override
   State<ManuscriptEditor> createState() => _ManuscriptEditorState();
@@ -63,6 +65,7 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
   int _selected = 0;
   int _revision = 0;
   bool _preview = false;
+  bool _outlineVisible = false;
   bool _fileBusy = false;
   bool _loadingDraft = false;
   String _language = 'zh';
@@ -326,6 +329,9 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
         '저장되었습니다. 계속 수정할 수 있습니다.',
       ),
     );
+    if (jsonEncode(_draft) == accepted && sent == accepted) {
+      widget.onSaved?.call(saved.artifactId);
+    }
   }
 
   Future<void> _recover(Future<void> Function() action) async {
@@ -755,11 +761,11 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                       ? Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            SizedBox(width: 208, child: _outline()),
-                            const VerticalDivider(width: 1),
-                            Expanded(flex: 5, child: _editor()),
-                            const VerticalDivider(width: 1),
-                            Expanded(flex: 4, child: _document()),
+                            if (_outlineVisible) ...[
+                              SizedBox(width: 208, child: _outline()),
+                              const VerticalDivider(width: 1),
+                            ],
+                            Expanded(child: _writingSurface()),
                           ],
                         )
                       : _preview
@@ -851,6 +857,31 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                   onPressed: open,
                   icon: const LumenisIcon(Icons.folder_open_outlined, size: 18),
                   label: Text(_t('打开', 'Open', '열기')),
+                ),
+                IconButton(
+                  key: const Key('manuscript-outline-toggle'),
+                  tooltip: _t('目录', 'Outline', '목차'),
+                  isSelected: _outlineVisible,
+                  onPressed: () =>
+                      setState(() => _outlineVisible = !_outlineVisible),
+                  icon: const LumenisIcon(
+                    Icons.format_list_bulleted_rounded,
+                    size: 20,
+                  ),
+                ),
+                IconButton(
+                  key: const Key('manuscript-preview-toggle'),
+                  tooltip: _preview
+                      ? _t('编辑', 'Edit', '편집')
+                      : _t('预览', 'Preview', '미리보기'),
+                  isSelected: _preview,
+                  onPressed: () => setState(() => _preview = !_preview),
+                  icon: LumenisIcon(
+                    _preview
+                        ? Icons.edit_outlined
+                        : Icons.chrome_reader_mode_outlined,
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 FilledButton(
@@ -947,36 +978,90 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
     ],
   );
 
-  Widget _editor({bool compact = false}) => ListView(
-    padding: EdgeInsets.all(compact ? 16 : 24),
-    children: [
-      TextField(
-        key: const Key('manuscript-title'),
-        controller: _title,
-        readOnly: _busy,
-        maxLines: null,
-        decoration: InputDecoration(
-          labelText: _t('标题', 'Title', '제목'),
-          errorText: _title.text.trim().runes.length > 300
-              ? _t(
-                  '标题最多 300 字符；内容未截断。',
-                  'Title limit is 300 characters; nothing was truncated.',
-                  '제목은 300자까지입니다. 입력 내용은 잘리지 않았습니다.',
-                )
-              : null,
+  Widget _writingSurface() {
+    final palette = LumenisTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 860),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: palette.surface,
+              border: Border.all(color: palette.line),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(4),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: palette.foreground.withValues(alpha: 0.035),
+                  blurRadius: 28,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: _preview ? _document() : _editor(compact: !_outlineVisible),
+          ),
         ),
-        style: Theme.of(
-          context,
-        ).textTheme.titleLarge?.copyWith(fontSize: 22, height: 1.4),
+      ),
+    );
+  }
+
+  InputDecoration _writingField(String label, {String? error}) =>
+      InputDecoration(
+        labelText: label,
+        floatingLabelBehavior: FloatingLabelBehavior.never,
+        errorText: error,
+        filled: false,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      );
+
+  Widget _editor({bool compact = false}) => ListView(
+    padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 20 : 44),
+    children: [
+      Semantics(
+        label: _t('标题', 'Title', '제목'),
+        child: TextField(
+          key: const Key('manuscript-title'),
+          controller: _title,
+          readOnly: _busy,
+          maxLines: null,
+          decoration: _writingField(
+            _t('标题', 'Title', '제목'),
+            error: _title.text.trim().runes.length > 300
+                ? _t(
+                    '标题最多 300 字符；内容未截断。',
+                    'Title limit is 300 characters; nothing was truncated.',
+                    '제목은 300자까지입니다. 입력 내용은 잘리지 않았습니다.',
+                  )
+                : null,
+          ),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 30,
+            fontWeight: FontWeight.w600,
+            height: 1.45,
+          ),
+        ),
       ),
       const SizedBox(height: 16),
-      TextField(
-        key: const Key('manuscript-summary'),
-        controller: _summary,
-        readOnly: _busy,
-        minLines: 2,
-        maxLines: 5,
-        decoration: InputDecoration(labelText: _t('概要', 'Summary', '개요')),
+      Semantics(
+        label: _t('概要', 'Summary', '개요'),
+        child: TextField(
+          key: const Key('manuscript-summary'),
+          controller: _summary,
+          readOnly: _busy,
+          minLines: 2,
+          maxLines: 5,
+          decoration: _writingField(_t('概要', 'Summary', '개요')),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: LumenisTheme.of(context).muted,
+            height: 1.8,
+          ),
+        ),
       ),
       const SizedBox(height: 16),
       if (compact)
@@ -1043,26 +1128,32 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
             ),
         ],
       ),
-      TextField(
-        key: ValueKey('manuscript-heading-$_selected'),
-        controller: _sections[_selected].heading,
-        readOnly: _busy,
-        decoration: InputDecoration(
-          labelText: _t('段落标题', 'Section heading', '문단 제목'),
+      Semantics(
+        label: _t('段落标题', 'Section heading', '문단 제목'),
+        child: TextField(
+          key: ValueKey('manuscript-heading-$_selected'),
+          controller: _sections[_selected].heading,
+          readOnly: _busy,
+          decoration: _writingField(_t('段落标题', 'Section heading', '문단 제목')),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 21,
+            fontWeight: FontWeight.w500,
+            height: 1.6,
+          ),
         ),
       ),
       const SizedBox(height: 12),
-      TextField(
-        key: ValueKey('manuscript-body-$_selected'),
-        controller: _sections[_selected].body,
-        readOnly: _busy,
-        minLines: 10,
-        maxLines: null,
-        decoration: InputDecoration(
-          labelText: _t('正文', 'Body', '본문'),
-          alignLabelWithHint: true,
+      Semantics(
+        label: _t('正文', 'Body', '본문'),
+        child: TextField(
+          key: ValueKey('manuscript-body-$_selected'),
+          controller: _sections[_selected].body,
+          readOnly: _busy,
+          minLines: 10,
+          maxLines: null,
+          decoration: _writingField(_t('正文', 'Body', '본문')),
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.9),
         ),
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.7),
       ),
       const SizedBox(height: 20),
       DropdownButtonFormField<String>(

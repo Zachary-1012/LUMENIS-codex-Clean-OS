@@ -994,14 +994,14 @@ class _SourceBriefClient extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> listBrowserResearchNotes({
-    required String domainId,
+    required String? domainId,
     int limit = 100,
     String? cursor,
   }) async => savedResearchHistory;
 
   @override
   Future<Map<String, dynamic>> reopenBrowserResearchNote({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
   }) async {
     reopenResearchArtifactIds.add(artifactId);
@@ -1011,7 +1011,7 @@ class _SourceBriefClient extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> reviseBrowserResearchNote({
-    required String domainId,
+    required String? domainId,
     required String artifactId,
     required String requestId,
     required String expectedSha256,

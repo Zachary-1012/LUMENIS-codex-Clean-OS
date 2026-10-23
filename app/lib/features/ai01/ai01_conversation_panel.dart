@@ -4,6 +4,7 @@ import '../../core/lumenis_icon.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import 'ai01_conversations.dart';
+import 'ai01_draft_actions.dart';
 
 class Ai01ConversationPanel extends StatefulWidget {
   const Ai01ConversationPanel({
@@ -32,6 +33,7 @@ class Ai01ConversationPanel extends StatefulWidget {
 class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
   final _ownedDialogs = <DialogRoute<bool>>{};
   bool _historyVisible = false;
+  bool _draftActionsVisible = false;
 
   @override
   void initState() {
@@ -290,7 +292,7 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Wrap(
             alignment: WrapAlignment.end,
-            spacing: 8,
+            spacing: 4,
             children: [
               TextButton.icon(
                 key: const ValueKey('ai01-conversation-history'),
@@ -350,7 +352,7 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -361,13 +363,13 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
                       'ko' => '어떤 작업을 시작할까요?',
                       _ => '今天要完成什么？',
                     },
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: theme.foreground,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
                   if (model.issue != null)
                     _ConversationNotice(
                       issue: model.issue!,
@@ -400,18 +402,7 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
     return Container(
       key: const ValueKey('ai01-conversation-composer'),
       padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
-      decoration: BoxDecoration(
-        color: theme.surface.withValues(alpha: 1),
-        border: Border.all(color: theme.line),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: theme.foreground.withValues(alpha: 0.035),
-            blurRadius: 24,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+      decoration: LumenisTheme.panel(theme, radius: 17, recessed: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -419,7 +410,7 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
             key: const ValueKey('ai01-conversation-input'),
             controller: widget.draftController,
             enabled: !model.busy,
-            minLines: newConversation ? 3 : 1,
+            minLines: newConversation ? 2 : 1,
             maxLines: 5,
             maxLength: 4000,
             onChanged: (_) => setState(() {}),
@@ -444,6 +435,19 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
                   onPressed: widget.onOpenMaterials,
                   icon: const LumenisIcon(Icons.attach_file_rounded, size: 20),
                 ),
+              IconButton(
+                key: const ValueKey('ai01-conversation-draft-actions'),
+                tooltip: switch (copy.locale.languageCode) {
+                  'en' => 'Draft',
+                  'ko' => '초안',
+                  _ => '草稿',
+                },
+                isSelected: _draftActionsVisible,
+                onPressed: () => setState(
+                  () => _draftActionsVisible = !_draftActionsVisible,
+                ),
+                icon: const LumenisIcon(Icons.more_horiz_rounded, size: 20),
+              ),
               const Spacer(),
               IconButton.filled(
                 key: const ValueKey('ai01-conversation-send'),
@@ -462,6 +466,11 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
               ),
             ],
           ),
+          if (_draftActionsVisible)
+            Ai01DraftActions(
+              key: ObjectKey(widget.draftController),
+              controller: widget.draftController,
+            ),
         ],
       ),
     );

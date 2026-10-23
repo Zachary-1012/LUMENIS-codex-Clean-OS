@@ -38,6 +38,16 @@ User-owned wallpaper bytes remain local. Selecting, previewing, persisting, or r
 
 ## 2. Entry, visible surface, and source bindings
 
+Settings contains a “主体目录 / Subject directory / 주체 목록” section alongside
+appearance. It hosts the complete accessible subject and brand directory under
+ACC-02's existing registry/Permission contract: search all, add/remove/re-add to
+the user's working set, and create an absent subject. All markets and new subjects
+use this same entry. A local appearance preference cannot stand in for persisted
+registry membership. Existing source/history is preserved when an object is removed;
+the current user's selection is restored from its owner after reopening. These
+directory actions require implementation and runtime acceptance independently of
+the already supported appearance editor.
+
 | Concern | Current owner/source evidence |
 | --- | --- |
 | Six modes, preference keys, restore/write/error flow | `app/lib/features/system/sys05/sys05_appearance_controller.dart:8,15-17,55-201` |

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
+import '../../../navigation/lumenis_leave_guard.dart';
 import 'shared_research_repository.dart';
 
 String _copy(BuildContext context, String zh, String en, String ko) =>
@@ -31,9 +32,13 @@ class SharedResearchWorkspace extends StatefulWidget {
     super.key,
     required this.repository,
     required this.sources,
+    this.initialArtifactId,
+    this.onBack,
   });
   final SharedResearchRepository repository;
   final Map<String, String> sources;
+  final String? initialArtifactId;
+  final VoidCallback? onBack;
   @override
   State<SharedResearchWorkspace> createState() =>
       _SharedResearchWorkspaceState();
@@ -55,6 +60,7 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
   Future<void> Function()? _pending;
   Timer? _poll;
   int _generation = 0;
+  LumenisLeaveGuard? _guard;
   bool get _dirty =>
       _opened != null &&
       (_title.text != _opened!.title || _body.text != _opened!.markdown);
@@ -65,11 +71,37 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
   void initState() {
     super.initState();
     _selected.addAll(widget.sources.keys.take(100));
-    unawaited(_load());
+    _title.addListener(_draftChanged);
+    _body.addListener(_draftChanged);
+    unawaited(_loadInitial());
+  }
+
+  Future<void> _loadInitial() async {
+    await _load();
+    final id = widget.initialArtifactId;
+    if (mounted && id != null) await _openById(id);
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = LumenisLeaveScope.maybeOf(context);
+    if (identical(next, _guard)) return;
+    _guard?.unregister(this);
+    _guard = next;
+    _guard?.register(
+      this,
+      needsProtection: () =>
+          !_allowPop && (_dirty || _pending != null || _busy),
+      requestLeave: () async => !_busy && await _leaveDraft(),
+    );
+  }
+
+  void _draftChanged() => _guard?.refresh();
+
+  @override
   void dispose() {
+    _guard?.unregister(this);
     _poll?.cancel();
     _question.dispose();
     _title.dispose();
@@ -184,7 +216,11 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
   Future<void> _close() async {
     if (_busy || !await _leaveDraft() || !mounted) return;
     setState(() => _allowPop = true);
-    Navigator.of(context).pop();
+    if (widget.onBack case final onBack?) {
+      onBack();
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   void _showDocument(SharedResearchDocument item) {
@@ -197,7 +233,9 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
     _poll?.cancel();
   }
 
-  Future<void> _open(SharedResearchDocument item) async {
+  Future<void> _open(SharedResearchDocument item) => _openById(item.id);
+
+  Future<void> _openById(String id) async {
     if (_busy || !await _leaveDraft() || !mounted) return;
     final generation = ++_generation;
     _poll?.cancel();
@@ -210,7 +248,10 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
       _pending = null;
     });
     try {
-      final current = await widget.repository.open(item.id);
+      final current = await widget.repository.open(id);
+      if (current.id != id) {
+        throw const FormatException('Wrong research version');
+      }
       if (!mounted || generation != _generation) return;
       setState(() => _showDocument(current));
     } catch (error) {
@@ -266,6 +307,7 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
       _busy = true;
       _notice = null;
     });
+    _guard?.refresh();
     try {
       await operation();
       if (mounted) setState(() => _pending = null);
@@ -274,6 +316,7 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+    _guard?.refresh();
     if (mounted && _pending == null) await _load();
   }
 

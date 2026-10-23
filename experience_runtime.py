@@ -2495,6 +2495,9 @@ def _shared_content_project_route_allowed():
         "experience_runtime.preview_content_speech": (
             "/api/experience/content-sources/tts/preview", "POST",
             r"/api/experience/content-sources/tts/preview"),
+        "experience_runtime.content_speech_capabilities": (
+            "/api/experience/content-sources/tts/capabilities", "GET",
+            r"/api/experience/content-sources/tts/capabilities"),
         "experience_runtime.preview_podcast_topics": (
             "/api/experience/podcast/topics/preview", "POST",
             r"/api/experience/podcast/topics/preview"),
@@ -3702,6 +3705,22 @@ def _content_source_same_origin():
         return False
 
 
+@experience_bp.get("/api/experience/content-sources/tts/capabilities")
+def content_speech_capabilities():
+    from lumenis.shared.content_creation.offline_speech import speech_capabilities
+    from shared_artifacts import LocalArtifactError
+    try:
+        actor, scope = _content_project_scope("read")
+        result = speech_capabilities()
+        if (actor, scope) != _content_project_scope("read"):
+            raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
+        response = jsonify({"ok": True, **result})
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    except ValueError as exc:
+        return _content_project_error(exc)
+
+
 @experience_bp.post("/api/experience/content-sources/tts/preview")
 def preview_content_speech():
     """Generate an explicitly synthetic local WAV; importing remains a separate confirmation."""
@@ -3712,13 +3731,15 @@ def preview_content_speech():
         actor,scope=_content_project_scope("read")
         if not _content_source_same_origin():raise LocalArtifactError("CONTENT_SOURCE_ORIGIN_DENIED")
         body=request.get_json(silent=True)
-        if not isinstance(body,dict) or "text" not in body or set(body)-{"text","language","voice","engine"}:
+        if (not isinstance(body,dict) or "text" not in body
+                or set(body)-{"text","language","voice","engine","response_format"}
+                or body.get("response_format", "wav") not in {"wav", "json"}):
             raise LocalArtifactError("CONTENT_TTS_INPUT_INVALID")
         def check():
             current_actor,current_scope=_content_project_scope("read")
             if current_actor!=actor or current_scope!=scope:raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
         engine=body.get("engine","flite")
-        parameters={key:value for key,value in body.items() if key!="engine"}
+        parameters={key:value for key,value in body.items() if key not in {"engine","response_format"}}
         if engine=="flite":result=synthesize_offline_speech(**parameters,check_cancel=check)
         elif engine=="espeak_ng":
             from lumenis.shared.content_creation.offline_formant_speech import synthesize_formant_speech
@@ -3726,6 +3747,21 @@ def preview_content_speech():
             result=synthesize_formant_speech(**parameters,check_cancel=check)
         else:raise LocalArtifactError("TTS_ENGINE_UNAVAILABLE")
         check();data=result["files"]["speech.wav"];report=result["report"]
+        if body.get("response_format") == "json":
+            import base64
+
+            from lumenis.shared.content_creation.offline_speech import (
+                read_speech_source,
+                speech_source_wav,
+            )
+            data = speech_source_wav(data, report)
+            check()
+            response = jsonify({"ok": True, "audio_base64": base64.b64encode(data).decode("ascii"),
+                                "source": read_speech_source(data), "size_bytes": len(data),
+                                "sha256": hashlib.sha256(data).hexdigest(),
+                                "persisted": False, "requires_explicit_adoption": True})
+            response.headers["Cache-Control"] = "no-store"
+            return response
         response=Response(data,mimetype="audio/wav")
         response.headers["Content-Disposition"]='attachment; filename="synthetic-speech.wav"'
         response.headers["Cache-Control"]="no-store"

@@ -41,6 +41,37 @@ def _pcm_wav(samples=(0, 1000, -2000, 3000), *, rate=speech.SAMPLE_RATE, channel
     return output.getvalue(), pcm
 
 
+def test_embedded_speech_source_survives_reopen_and_rejects_changed_audio():
+    audio, pcm = _pcm_wav()
+    text = "Keep this source text."
+    report = {"source": {"text": text, "sha256": hashlib.sha256(text.encode()).hexdigest()},
+              "engine": "ffmpeg_libflite", "voice": "slt", "language": "en"}
+    saved = speech.speech_source_wav(audio, report)
+    reopened = speech.read_speech_source(bytes(saved))
+    assert reopened["text"] == text
+    assert reopened["identity_state"] == "file_embedded_declaration"
+    assert reopened["canonical_fact"] is False
+    with wave.open(io.BytesIO(saved), "rb") as stream:
+        assert stream.readframes(stream.getnframes()) == pcm
+    corrupted = bytearray(saved)
+    corrupted[saved.index(b"data") + 8] ^= 1
+    with pytest.raises(VideoEditingError, match="TTS_SOURCE_METADATA_INVALID"):
+        speech.read_speech_source(bytes(corrupted))
+    assert speech.read_speech_source(audio) is None
+
+
+def test_embedded_speech_source_rejects_conflicting_declarations_and_truncation():
+    audio, _ = _pcm_wav()
+    text = "First source."
+    report = {"source": {"text": text, "sha256": hashlib.sha256(text.encode()).hexdigest()},
+              "engine": "ffmpeg_libflite", "voice": "slt", "language": "en"}
+    saved = speech.speech_source_wav(audio, report)
+    with pytest.raises(VideoEditingError, match="TTS_SOURCE_METADATA_INVALID"):
+        speech.speech_source_wav(saved, report)
+    with pytest.raises(VideoEditingError, match="TTS_SOURCE_METADATA_INVALID"):
+        speech.read_speech_source(saved[:-3])
+
+
 def _fake_runner(monkeypatch, *, mutate=None):
     """A deterministic failure-injection runner, never evidence of real TTS."""
     import shared_artifacts

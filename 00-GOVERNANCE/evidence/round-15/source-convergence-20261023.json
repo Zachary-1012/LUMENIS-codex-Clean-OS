@@ -1,0 +1,114 @@
+{
+  "recorded_at": "2026-10-23T10:42:17.517245+00:00",
+  "baseline": "f5fbc0cd3d3f297cb62ec326dcb8beb138cff663",
+  "scope": "existing protected source convergence and complete derived execution work order; not whole-product completion",
+  "publication": "branch and main state must be independently read back; this receipt does not self-certify merge",
+  "devices": {
+    "current": [
+      "Public Website",
+      "Web Workspace",
+      "Windows"
+    ],
+    "deferred_by_PO_no_device": [
+      "macOS",
+      "iOS"
+    ]
+  },
+  "requirements": {
+    "outcome_groups": 30,
+    "coverage_items": 396,
+    "source": "EXISTING-OWNER-WORK-HANDOFF.json",
+    "full_plan": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md",
+    "derived_view": "00-GOVERNANCE/LOOP-PLAN-20261014/execution-workorder.html"
+  },
+  "verification": {
+    "python_isolated": {
+      "tests": "238",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "15",
+      "time": "68.971"
+    },
+    "speech_installed_full_ffmpeg": {
+      "tests": "53",
+      "errors": "0",
+      "failures": "0",
+      "skipped": "0",
+      "time": "5.468"
+    },
+    "flutter_targeted": {
+      "passed": 284,
+      "failed": 0
+    },
+    "dart_analyze": "PASS",
+    "web_release_build": "PASS",
+    "launcher_ast_guard": "PASS",
+    "ruff": {
+      "baseline_findings": 554,
+      "current_findings": 554,
+      "added": [],
+      "paths": [
+        "ai_browser_api.py",
+        "ai_browser_runtime.py",
+        "experience_runtime.py",
+        "lumenis/shared/content_creation/offline_speech.py",
+        "lumenis/system/collector/runtime/browser_extract.py",
+        "shared_artifacts.py",
+        "tests/test_browser_extract.py",
+        "tests/test_experience_runtime.py",
+        "tests/test_offline_speech.py"
+      ],
+      "rules": "same installed Ruff --isolated configuration on HEAD and current files; findings compared by path/code/message"
+    }
+  },
+  "preserved_failures": [
+    "Initial two screen-scope regressions in test_experience_runtime: wrong CTH headers on independent SH-02; corrected test inputs, assertions retained.",
+    "Initial governance document budget exceeded; duplicate router explanation compressed, headroom guard retained."
+  ],
+  "limits": [
+    "Five eSpeak runtime integration cases require an explicitly configured isolated engine; not passed.",
+    "One opt-in real browser fixture not run in network-denied isolation; not passed.",
+    "Page context is SOURCE_EXCERPT / NOT_GENERATED, not a finished answer.",
+    "Entire frontend visual acceptance remains NOT_ACCEPTED.",
+    "Individual existing receipts do not establish combined product closure.",
+    "Exact backend in-memory commit remains NOT_VERIFIED; disk hash is not loaded-version evidence.",
+    "No production database write, runtime restart, external AI call, collection, training or deployment performed in this sync task."
+  ],
+  "runtime_readback": {
+    "at": "2026-10-23T10:40:25.464217+00:00",
+    "health_http": 200,
+    "health": {
+      "ok": true,
+      "service": "lumenis-core",
+      "status": "healthy",
+      "version": "5.9.9",
+      "core_instance": {
+        "boot_id": "49f73611edc847118afc79edd83f9859",
+        "entry_sha256": "f4eb9cb4aab6e1fb4c45030cb859eb853b220ab23cfbbbb7a878167f129ae8a4",
+        "launch_id": "72a85df7000b442b9fc5544520f0fa1e"
+      },
+      "runtime": {
+        "scheduler": "not_started",
+        "web_server": "waitress"
+      }
+    },
+    "served_web_sha256": "b3f4a3b3fb33a9e04f8fbd22fb895d31f62f1f49bcdab55163c2319815be6b0a",
+    "local_web_sha256": "b3f4a3b3fb33a9e04f8fbd22fb895d31f62f1f49bcdab55163c2319815be6b0a",
+    "backend_loaded_commit": "NOT_VERIFIED",
+    "scope": "health and served bundle readback, no restart or DB write",
+    "served_matches_build": true
+  },
+  "html_operation": {
+    "offline_source_count": 396,
+    "outcome_count": 30,
+    "search_and_reset": "observed in browser",
+    "business_outcome": "not asserted"
+  },
+  "cleanup": {
+    "status": "BLOCKED_BY_LOCAL_POLICY",
+    "attempted_scope": "30 obsolete generated Flutter build directories under app/.dart_tool/flutter_build, excluding the current hash-matching build, and the obsolete standalone oevira-digital-studio.html preview",
+    "deleted": false,
+    "policy_result": "exec_command rejected: blocked by policy before execution; no workaround attempted",
+    "protected": "Current build, unique source, original research, failure evidence and production data remain protected"
+  }
+}

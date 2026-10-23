@@ -4,6 +4,16 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Source convergence and integrated execution work order
+
+Current PO dispatch is one controller for source convergence and a complete execution work order. Public Website, Web Workspace and Windows are the active device scope; macOS/iOS implementation and device acceptance wait for devices and a later PO instruction. Their planned scope remains intact. The selected whole-product visual style is digital skeuomorphic; task layouts, complete capabilities, localization, accessibility and optional motion remain governed by Experience and the current plan. The rejected old overall frontend is still NOT_ACCEPTED.
+
+This source batch reconciles the protected Home/recent-work, exact SavedWork reopening, independent Shared research, browser page-context extraction, local speech metadata and safe startup changes. Browser context selection produces an excerpt with NOT_GENERATED analysis status; it is not a completed analytical answer. Startup does not create a visible browser or force-stop an occupied Core; scheduled collection requires explicit opt-in. This publication does not restart services, collect data, invoke a model or deploy.
+
+The unique [execution work order](LOOP-PLAN-20261014/execution-workorder.html) is a derived view of full-plan §9.0 and the existing 30 outcome groups / 396 coverage entries. It keeps UI/backend/save/revise/reopen/recovery together, verifies affected downstream callers and separates source, runtime, visual/user acceptance, deployment and operation. The complete source requirements remain expandable and linked, rather than replaced by an eight-item feature summary.
+
+Bounded verification and runtime limitations are recorded in [the source-convergence receipt](evidence/round-15/source-convergence-20261023.json). No whole-product, complete visual or four-device acceptance is established. Read the branch/PR state before merge; only successful main integration and independent remote/local readback establish publication.
+
 ## 2026-10-23 Complete document readthrough and execution reconciliation
 
 The current Architecture, Experience, full product plan/sketch, owner, data,
@@ -1116,9 +1126,9 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 
-2026-10-23 current-document alignment starts from GitHub/main
+Historical document-only alignment (not this implementation batch) started from GitHub/main
 `343ec0cc10231dc38005c77feaf4e907097b974f`, independently matched to origin/main
 and local HEAD before edits. This batch updates the existing router, CURRENT,
 full plan/sketch, source/screen contracts and their current handoff bindings;

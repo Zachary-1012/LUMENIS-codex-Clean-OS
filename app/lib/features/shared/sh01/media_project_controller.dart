@@ -484,6 +484,7 @@ final class MediaProjectController extends ChangeNotifier {
   String? get failureCode => _failureCode;
   MediaProjectOperation get operation => _operation;
   bool get busy => _operation != MediaProjectOperation.idle;
+  int get contextRevision => _scopeGeneration;
   bool get completionUnknown => _completionUnknown;
   bool get needsOriginalFiles => _version != null && _timeline == null;
   bool get sourcesNeedRevalidation => _sourcesNeedRevalidation;

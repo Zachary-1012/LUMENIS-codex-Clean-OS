@@ -28,13 +28,13 @@ The default product context is `GLOBAL / ALL`. It is neither a blank workspace n
 
 Selection is not authorization and is not a runtime control. Selecting or clearing a Subject/BrandFocus must not start, stop or authorize Collector, Browser, AI, content, report or background-task execution. On-demand work runs only after its explicit request; any opted-in background work remains independent of focus and within its configured, source-authorized and permitted scope.
 
-### Collection mode — Product Owner decision, 2026-09-27
+### Collection mode — Product Owner correction, 2026-10-23
 
-> **2026-10-13 PO 直接指令（研发/内测阶段）**：自动采集默认开启，范围为全部已登记主体（不限太古汇），后台无窗口运行；手动采集保留为可选（前端有按钮）。平台登录失效经产品内统一恢复面板恢复，不自动弹外部浏览器。
+Collection serves the user's work as a data source. The default is `MANUAL`: an explicit refresh or a request needing current webpage context starts only its bounded, permitted acquisition. Opening a page, selecting a subject, registering an entity or starting the product does not collect the whole registry. Existing due-only schedules remain a separate explicit opt-in, never an automatic prerequisite for using the product. Historical automatic-baseline approvals do not select today's operating mode or authorize a service change.
 
-The default collection mode is `AUTO` for all registered subjects. Manual collection remains optional: a user may explicitly request a bounded run for an identified, authorized scope and source. `AUTO` may be turned off; disabling prevents future scheduled collection without rewriting already captured Evidence. Registration, search, focus selection, clear focus, opening a page and startup never silently trigger a manual request.
+Use already admitted data immediately for analysis, CTH/BMP and Shared results. An incomplete platform or global inventory limits that source's coverage claim, not independent useful work or the entire product's closure. Preserve actual source, freshness, last attempt, failure, cancellation and recovery; missing data remains unknown. Same-task browser context is the priority interactive path: user question → authorized current page → relevant captured context → grounded analysis/result with source and time. Capture alone is neither source admission nor a generated answer.
 
-The prelaunch Global baseline still requires real, traceable CTH and BMP data before a customer arrives. Authorized operators may build and refresh it through explicit manual collection; an explicitly enabled automatic schedule may maintain an authorized portion. Show the actual collection mode, last attempt, freshness, source limits and `NOT_COLLECTED`/`STALE`/`BLOCKED` states. Do not claim continuous freshness where no active schedule or verified manual refresh supports it. This mode decision changes the trigger policy, not the one Source → Evidence → Canonical owner chain or the requirement that focus never controls collection.
+Settings → 主体目录 is the single directory of all authorized subjects and brands. Users can add to/remove from their selection, re-add and register a new subject there. Initial discovery prioritizes evidenced operations in China, including international brands; a user's choices take precedence. Headquarters, name or language never proves operating market. Removal preserves existing sources, prior work and stable identities; irreversible deletion retains the owner's permission and recovery contract.
 
 Clearing focus returns to `GLOBAL / ALL`. Every result, Evidence reference, AI task, content/report artifact and consequential action must carry its actual scope. A client-supplied header, route parameter, selected card or local UI state never grants access.
 
@@ -117,7 +117,7 @@ For the Product Owner's own prelaunch Global public baseline, explicitly approve
 
 ### PRE-LAUNCH GLOBAL FOUNDATION
 
-The mature global foundation exists and refreshes before customer onboarding. A customer's first search, selection, purchase or workspace entry must not be the product's first collection, first entity registration or first creation of baseline data. Before release, the same one Product must already provide the approved versioned inclusion rule and completed baseline inventory required above, plus:
+The product begins with the existing real, traceable baseline and supports user-driven refresh and new-subject registration. Release requires useful operation on the admitted scope, not completion of a worldwide inventory. Global maturity remains separately measured against disclosed coverage. Preserve the approved inclusion rule and the following capabilities:
 
 - a continuously maintained canonical global commercial-entity and brand-entity registry/index with stable IDs, aliases, type, region, industry/domain, relationships and controlled deduplication/disambiguation;
 - authorized CTH/BMP sources, explicit manual acquisition, individually approved automatic maintenance for the product's own prelaunch public baseline, and only opted-in automatic schedules for final-user scopes, with Evidence lineage, freshness and quality states established before a customer arrives;
@@ -148,7 +148,7 @@ Only when all three coverage dimensions are `YES`, the approved rule and both ba
 LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES
 ```
 
-If any dimension is `NO`, `PARTIAL`, `BLOCKED` or `LIVE_UNVERIFIED`, the single conclusion is `NO` and the exact blocker must be named. A single-subject E2E, non-empty UI or catalog presence cannot substitute for either global coverage dimension. This conclusion is evaluated before the Real Delivery Overlay's final seven statuses; it does not create an eighth status or a second product release.
+If any dimension is `NO`, `PARTIAL`, `BLOCKED` or `LIVE_UNVERIFIED`, the single conclusion is `NO` and the exact blocker must be named. A single-subject E2E, non-empty UI or catalog presence cannot substitute for either global coverage dimension. This conclusion measures full-universe data maturity separately from the Real Delivery Overlay's product-operation gates; incomplete worldwide data does not block independent ready workflows. It does not create an eighth status or a second product release.
 
 The `YES` conclusion additionally requires cross-Subject selection/workflow validation and continuous refresh/recovery to pass on the same release candidate. “Global” means the approved and disclosed coverage scope backed by authorized sources and measurable evidence; it never means an unprovable claim that every entity in the world has complete data.
 

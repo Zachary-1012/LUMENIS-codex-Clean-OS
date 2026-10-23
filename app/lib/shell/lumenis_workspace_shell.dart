@@ -62,6 +62,9 @@ Widget buildLumenisWorkspaceScreen({
   String? lastOpenedScreenId,
   String? workspaceEntry,
   String? returnScreenId,
+  String? initialArtifactId,
+  void Function(String kind, String artifactId)? onOpenSavedWork,
+  ValueChanged<String>? onStartCreation,
   TextEditingController? taskDraftController,
   String? taskScopeLabel,
 }) {
@@ -85,6 +88,8 @@ Widget buildLumenisWorkspaceScreen({
       client: client,
       draftController: taskDraftController,
       scopeLabel: taskScopeLabel,
+      onOpenWork: onOpenSavedWork,
+      onStartCreation: onStartCreation,
       lastOpenedScreenId: lastOpenedScreenId,
       onOpenScreenId: onNavigate,
       onOpen: onNavigate == null
@@ -136,11 +141,20 @@ Widget buildLumenisWorkspaceScreen({
       contextAvailable: contextAvailable,
       initialWorkspaceEntry: workspaceEntry,
       returnScreenId: returnScreenId,
+      initialArtifactId: initialArtifactId,
+      onSavedManuscript: onOpenSavedWork == null
+          ? null
+          : (artifact) => onOpenSavedWork('manuscript', artifact),
       onNavigate: onNavigate,
     ),
-    'SH-02' => Sh02Screen(client: client),
+    'SH-02' => Sh02Screen(
+      client: client,
+      initialArtifactId: initialArtifactId,
+      initialWorkKind: workspaceEntry,
+      onBack: onNavigate == null ? null : () => onNavigate('SH-02'),
+    ),
     'SH-03' => Sh03Screen(client: client),
-    'SH-04' => Sh04Screen(client: client),
+    'SH-04' => Sh04Screen(client: client, initialArtifactId: initialArtifactId),
     'SH-05' => Sh05Screen(client: client),
     'SH-06' => Sh06Screen(client: client),
     'SYS-01' => Sys01Screen(client: client),
@@ -165,6 +179,9 @@ class LumenisWorkspaceShell extends StatefulWidget {
     this.initialScreenId = LumenisWorkspaceRoutes.rootScreenId,
     this.initialWorkspaceEntry,
     this.returnScreenId,
+    this.initialArtifactId,
+    this.onOpenSavedWork,
+    this.onStartCreation,
     this.onScreenSelected,
     this.onLocaleChanged,
     this.onRetryRuntime,
@@ -179,6 +196,9 @@ class LumenisWorkspaceShell extends StatefulWidget {
   final String initialScreenId;
   final String? initialWorkspaceEntry;
   final String? returnScreenId;
+  final String? initialArtifactId;
+  final void Function(String kind, String artifactId)? onOpenSavedWork;
+  final ValueChanged<String>? onStartCreation;
   final ValueChanged<String>? onScreenSelected;
   final ValueChanged<Locale?>? onLocaleChanged;
   final VoidCallback? onRetryRuntime;
@@ -351,7 +371,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         if (constraints.maxWidth < 768) {
           return _buildPhone(context);
         }
-        if (constraints.maxWidth < 1280) {
+        if (constraints.maxWidth < 1280 || _activeScreen.value == 'SYS-06') {
           return _buildCompactWorkspace(context);
         }
         return _buildWideWorkspace(
@@ -461,8 +481,23 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       contextAvailable: _contextEnvelope != null,
       onNavigate: _activateScreen,
       lastOpenedScreenId: _lastOpenedScreen.value,
-      workspaceEntry: isSharedMediaEntry ? 'media' : null,
-      returnScreenId: isSharedMediaEntry
+      workspaceEntry:
+          widget.initialWorkspaceEntry != null &&
+              _activeScreen.value == widget.initialScreenId
+          ? widget.initialWorkspaceEntry
+          : isSharedMediaEntry
+          ? 'media'
+          : null,
+      initialArtifactId: _activeScreen.value == widget.initialScreenId
+          ? widget.initialArtifactId
+          : null,
+      onOpenSavedWork: widget.onOpenSavedWork,
+      onStartCreation: widget.onStartCreation,
+      returnScreenId:
+          widget.initialArtifactId != null &&
+              _activeScreen.value == widget.initialScreenId
+          ? widget.returnScreenId
+          : isSharedMediaEntry
           ? widget.returnScreenId ?? _localReturnScreenId
           : null,
       taskDraftController: _taskDraftController,
@@ -497,7 +532,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       },
       child: KeyedSubtree(
         key: ValueKey(
-          '${_activeScreen.value}:${_activeScreen.value == 'SH-01' ? _editorScopeRevision : _contextFingerprint}:${_activeScreen.value == 'SH-01' ? widget.initialWorkspaceEntry ?? _localWorkspaceEntry : null}:${_activeScreen.value == 'SH-01' ? widget.returnScreenId ?? _localReturnScreenId : null}',
+          '${_activeScreen.value}:${widget.initialArtifactId ?? ''}:${_activeScreen.value == 'SH-01' ? _editorScopeRevision : _contextFingerprint}:${_activeScreen.value == 'SH-01' ? widget.initialWorkspaceEntry ?? _localWorkspaceEntry : null}:${_activeScreen.value == 'SH-01' ? widget.returnScreenId ?? _localReturnScreenId : null}',
         ),
         child: _screen(),
       ),
@@ -812,8 +847,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       backgroundColor: LumenisTheme.of(context).canvas,
       body: Row(
         children: [
-          SizedBox(
+          Container(
             width: 208,
+            decoration: LumenisTheme.chassis(LumenisTheme.of(context)),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 22, 12, 16),
@@ -1531,8 +1567,15 @@ class _WorkspaceHeader extends StatelessWidget {
     return Container(
       height: 64,
       padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 26),
-      decoration: BoxDecoration(
+      decoration: LumenisTheme.chassis(theme).copyWith(
         border: Border(bottom: BorderSide(color: theme.line)),
+        boxShadow: [
+          BoxShadow(
+            color: theme.foreground.withValues(alpha: .055),
+            offset: const Offset(0, 2),
+            blurRadius: 3,
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -1569,7 +1612,7 @@ class _WorkspaceHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (!compact || isHome) ...[
+          if (onRetryRuntime != null) ...[
             const SizedBox(width: 14),
             if (onRetryRuntime != null)
               Tooltip(
@@ -1585,22 +1628,26 @@ class _WorkspaceHeader extends StatelessWidget {
               _StatusPill(label: coreLabel),
             const SizedBox(width: 14),
           ],
-          Flexible(
-            flex: 2,
-            child: Text(
-              contextLabel,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.right,
-              style: TextStyle(color: theme.muted, fontSize: 13),
+          if (compact)
+            IconButton(
+              tooltip: '${copy.text('context.selector.open')} · $contextLabel',
+              onPressed: onOpenContextPicker,
+              icon: const LumenisIcon(Icons.tune_rounded),
+              color: theme.muted,
+            )
+          else
+            Flexible(
+              flex: 2,
+              child: TextButton.icon(
+                onPressed: onOpenContextPicker,
+                icon: const LumenisIcon(Icons.expand_more_rounded, size: 18),
+                label: Text(
+                  contextLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ),
-          ),
-          IconButton(
-            tooltip: copy.text('context.selector.open'),
-            onPressed: onOpenContextPicker,
-            icon: const LumenisIcon(Icons.tune_rounded),
-            color: theme.muted,
-          ),
           if (onLocaleChanged != null)
             _LocaleSwitcher(onLocaleChanged: onLocaleChanged!),
           const Sys05AppearanceButton(),

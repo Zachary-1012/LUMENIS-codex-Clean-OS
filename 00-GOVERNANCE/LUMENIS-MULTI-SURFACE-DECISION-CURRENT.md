@@ -12,7 +12,7 @@ The Product Owner also accepted the ROUND 01 audit and missing-capability regist
 artifacts remain `DESIGN_EXPLORATION` until the sole Experience authority and a
 current detailed screen specification establish `DESIGN_READY`.
 
-### 2026-10-11 最新 PO 修正：四表面并行建设与独立验收
+### 当前端范围：既定四表面，按设备条件独立验收
 
 Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有端角色并行建设，按本端真实任务、运行、恢复与适用验收独立记录。Website使用既有`website/`；Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接建设任务化完整前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并保持OPEN/UNBOUND，不用模拟结果。44份现有ScreenSpec是覆盖基线，不是页面或产品范围上限。保留全部R/J/U、官网内容家族、原件/源码/设计/回执；一个表面通过不代表其他表面或整产品通过。此规则不派发窗口、不更改实际调度或零新增付费边界。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
@@ -21,6 +21,8 @@ Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有端�
 按既有Gate分别验收四个表面；每端的Goal/任务闭环只由本端真实证据支持，跨端一致性及整产品Release仍需各自适用证据，不能由单端自动宣告。部署、费用、身份和外部效果的授权边界不变。2026-10-08 Website/Web-first回执仅为历史记录，当前顺序由2026-10-11直接PO修正：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 F依既有Experience/ScreenSpec/真实合同直接建设四表面，不先做独立设计稿，不等待Figma或M的DESIGN_READY前置审批；必要设计决定随代码回写原规范。既有设计/审核状态只记录实际评审，不等同真实用户验收。原生目标为Windows/macOS与iOS；Android/Linux原生客户端已移出交付要求，原件/源码/旧构建证据保留为历史。Linux服务端/CI、各操作系统浏览器与窄屏Web不受影响。已有真实API/Core立即接入，缺失合同/行为按原Owner标OPEN/UNBOUND。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+
+2026-10-23直接PO执行调整：本轮先完成Public Website、Web Workspace与Windows Desktop；因没有设备，macOS与iOS暂不实施、不作通过声明。四表面产品范围及共享合同保留，有设备并获得后续指令后继续对应实机验收。下文四表面并行指架构可并行能力，不强制本轮启动暂缓端。
 
 ## 1. Approved product-surface structure
 
@@ -61,7 +63,7 @@ Latest 2026-10-12 PO: entering an operational workspace opens the existing conve
 All four surfaces receive the approved creative UI/UX/AIGC, reference-informed
 and interaction upgrades under the Experience Constitution. Painted style
 applies to original icons and suitable page elements; overall visuals follow
-approved research and task needs, with no fixed 2D/3D style.
+the PO-selected digital skeuomorphic style and existing task needs.
 The roles above constrain actual execution and data ownership, not design ambition
 or which surface receives improvements. Device-appropriate composition preserves
 the user's capabilities and continuity; it does not justify a generic thin shell,
@@ -178,7 +180,7 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 | Desktop | 延续同一工作对象，适配多窗格、大文件、真实播放器、横向轨道/选区和本机系统朗读。 | 不新建本地业务真相；本机处理/服务端执行分别显示；关闭/重启恢复版本及用户选区，修改后旧播放不继续。 |
 | Mobile Companion | 用触控顺序重排事实、依据、审阅、允许的轻编辑/参数调整、审批和通知返回；可把复杂工作接续到Web/Desktop。 | 不把不可运行的重计算假装在手机完成；可用动作与原权限一致，不重新解释任务或重复选择来源；焦点与回退可达。 |
 
-四端共同要求：整体视觉依用户已批准研究、当前任务和屏幕合同，不固定二维或三维；原创手绘彩绘用于身份/功能图标及适合的局部页面元素。功能glyph与第三方来源标识分层，颜色有节制；保留有用丰富交互、中英韩/无障碍，操作端避免不必要整页上下滑动且不截断必要长文。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
+四端共同要求：整体视觉采用PO确定的拟物数码风格，布局与操作依当前任务和屏幕合同；原创手绘彩绘用于身份/功能图标及适合的局部页面元素。功能glyph与第三方来源标识分层，颜色有节制；保留有用丰富交互、中英韩/无障碍，操作端避免不必要整页上下滑动且不截断必要长文。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
 
 
 ### 2026-10-08 前端审计与工具维护增补（历史授权快照）

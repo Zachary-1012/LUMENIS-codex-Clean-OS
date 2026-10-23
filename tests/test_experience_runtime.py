@@ -332,7 +332,7 @@ PROPAGATED = ["CTH-02", "CTH-03", "CTH-04", "CTH-05", "CTH-06", "CTH-07", "CTH-0
 def test_all_propagated_screens_bound_with_sections(isolated_client):
     cli, _ = isolated_client
     for sid in PROPAGATED:
-        headers = {"X-Domain-Id": "CTH", "X-Product-Id": "CTH"} if sid.startswith("SH-") else {"X-Domain-Id": "BMP", "X-Product-Id": "ZBMP"} if sid.startswith("BMP-") else {}
+        headers = {} if sid == "SH-02" else {"X-Domain-Id": "CTH", "X-Product-Id": "CTH"} if sid.startswith("SH-") else {"X-Domain-Id": "BMP", "X-Product-Id": "ZBMP"} if sid.startswith("BMP-") else {}
         response = cli.get(f"/api/experience/screen/{sid}", headers=headers)
         assert response.status_code == 200, (sid, response.get_json())
         j = response.get_json()
@@ -531,7 +531,7 @@ def test_ready_kpis_have_value_nonready_are_none(isolated_client):
     cli, _ = isolated_client
     import json
     for sid in ["CTH-01", "AI-01"] + PROPAGATED:
-        headers = {"X-Domain-Id": "CTH", "X-Product-Id": "CTH"} if sid.startswith("SH-") else {"X-Domain-Id": "BMP", "X-Product-Id": "ZBMP"} if sid.startswith("BMP-") else {}
+        headers = {} if sid == "SH-02" else {"X-Domain-Id": "CTH", "X-Product-Id": "CTH"} if sid.startswith("SH-") else {"X-Domain-Id": "BMP", "X-Product-Id": "ZBMP"} if sid.startswith("BMP-") else {}
         response = cli.get(f"/api/experience/screen/{sid}", headers=headers)
         assert response.status_code == 200, (sid, response.get_json())
         j = response.get_json()

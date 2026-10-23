@@ -1395,7 +1395,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                               child: _sources(timeline),
                                             ),
                                           ),
-                                          const SizedBox(width: 1),
+                                          const SizedBox(width: 12),
                                         ],
                                         Expanded(
                                           key: const ValueKey(
@@ -1404,7 +1404,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                           child: _previewArea(),
                                         ),
                                         if (wide && _propertiesVisible) ...[
-                                          const SizedBox(width: 1),
+                                          const SizedBox(width: 12),
                                           SizedBox(
                                             width: 280,
                                             child: SingleChildScrollView(
@@ -1421,10 +1421,13 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                       ],
                                     ),
                                   ),
-                                  SizedBox(
-                                    key: const Key('media-timeline-region'),
-                                    height: timelineHeight,
-                                    child: _timeline(timeline, wide: wide),
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: SizedBox(
+                                      key: const Key('media-timeline-region'),
+                                      height: timelineHeight,
+                                      child: _timeline(timeline, wide: wide),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -1732,11 +1735,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     return Container(
       key: _previewKey,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: LumenisTheme.of(context).surface,
-        border: Border.all(color: LumenisTheme.of(context).line),
-        borderRadius: BorderRadius.circular(4),
-      ),
+      decoration: LumenisTheme.panel(LumenisTheme.of(context), radius: 13),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

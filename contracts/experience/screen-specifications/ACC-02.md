@@ -240,10 +240,17 @@ registry owner. A specification approval alone cannot make this call usable.
 
 - **Job:** a commercial operator or brand practitioner adds a real object absent
   from the directory, then chooses whether to view it or continue browsing.
-- **Entry:** inside the existing CTH/BMP scope picker, beside search, show
-  “添加主体” / “添加品牌” for the selected business domain. The current domain is
-  visible throughout. This entry supports arbitrary valid registry identities,
-  not a fixed list of reference projects or four samples.
+- **Entry:** “设置 → 主体目录” is the single directory for all accessible commercial
+  subjects and brands. The scope picker links here through “管理主体”. The directory
+  supports adding/removing/re-adding objects in the user's working set and creating
+  an absent identity through the existing registry owner. The selected domain stays
+  visible; no separate foreign-subject or new-subject directory is created.
+- **Priority and removal:** initial business presentation prioritizes verified
+  China operating-market relations, including international brands; user choices
+  remain authoritative. Unknown markets remain searchable without invented labels.
+  Removing an object preserves source/result history and shared identities; it is
+  not permission to cascade-delete evidence or another user's objects. Persistence,
+  permission denial, re-addition and reopen require real server readback.
 - **Form:** keep the browsing query, returned rows and scroll position underneath
   one focused form layer. Show type and Chinese/English names first; optional
   industry and keywords can expand in place. Back returns to browsing. Dismissing

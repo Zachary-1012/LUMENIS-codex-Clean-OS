@@ -14,6 +14,9 @@ class LaunchSurface extends StatefulWidget {
     this.initialScreenId = LumenisWorkspaceRoutes.rootScreenId,
     this.initialWorkspaceEntry,
     this.returnScreenId,
+    this.initialArtifactId,
+    this.onOpenSavedWork,
+    this.onStartCreation,
     this.onScreenSelected,
     this.onLocaleChanged,
     super.key,
@@ -23,6 +26,9 @@ class LaunchSurface extends StatefulWidget {
   final String initialScreenId;
   final String? initialWorkspaceEntry;
   final String? returnScreenId;
+  final String? initialArtifactId;
+  final void Function(String kind, String artifactId)? onOpenSavedWork;
+  final ValueChanged<String>? onStartCreation;
   final ValueChanged<String>? onScreenSelected;
   final ValueChanged<Locale?>? onLocaleChanged;
 
@@ -196,6 +202,9 @@ class _LaunchSurfaceState extends State<LaunchSurface> {
           initialScreenId: widget.initialScreenId,
           initialWorkspaceEntry: widget.initialWorkspaceEntry,
           returnScreenId: widget.returnScreenId,
+          initialArtifactId: widget.initialArtifactId,
+          onOpenSavedWork: widget.onOpenSavedWork,
+          onStartCreation: widget.onStartCreation,
           onScreenSelected: widget.onScreenSelected,
           onLocaleChanged: widget.onLocaleChanged,
           onRetryRuntime: switch (_runtime['state']) {

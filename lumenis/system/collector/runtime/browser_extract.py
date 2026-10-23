@@ -27,29 +27,32 @@ class BrowserExtractionError(ValueError):
 
 
 def validate_extract_request(data):
-    if type(data) is not dict or set(data) - {'url', 'formats', 'timeout_ms'}:
+    if type(data) is not dict or set(data) - {
+        'url', 'formats', 'timeout_ms', 'question', 'page_revision', 'target_id'
+    }:
         raise BrowserExtractionError('BROWSER_EXTRACTION_OPTIONS_INVALID')
     url = data.get('url')
-    if not isinstance(url, str) or not 1 <= len(url) <= 4096 or url != url.strip():
-        raise BrowserExtractionError('BROWSER_EXTRACTION_URL_INVALID')
-    try:
-        parsed = urlsplit(url)
-        host = (parsed.hostname or '').lower()
-        if (parsed.scheme not in {'http', 'https'} or not host or parsed.username is not None
-                or parsed.password is not None or any(ord(c) < 32 for c in url)
-                or host == 'localhost' or host.endswith(('.localhost', '.local', '.internal'))):
-            raise ValueError
-        _ = parsed.port
+    if url is not None or 'question' not in data:
+        if not isinstance(url, str) or not 1 <= len(url) <= 4096 or url != url.strip():
+            raise BrowserExtractionError('BROWSER_EXTRACTION_URL_INVALID')
         try:
-            address = ipaddress.ip_address(host)
+            parsed = urlsplit(url)
+            host = (parsed.hostname or '').lower()
+            if (parsed.scheme not in {'http', 'https'} or not host or parsed.username is not None
+                    or parsed.password is not None or any(ord(c) < 32 for c in url)
+                    or host == 'localhost' or host.endswith(('.localhost', '.local', '.internal'))):
+                raise ValueError
+            _ = parsed.port
+            try:
+                address = ipaddress.ip_address(host)
+            except ValueError:
+                if '.' not in host:
+                    raise ValueError
+            else:
+                if not address.is_global:
+                    raise ValueError
         except ValueError:
-            if '.' not in host:
-                raise ValueError
-        else:
-            if not address.is_global:
-                raise ValueError
-    except ValueError:
-        raise BrowserExtractionError('BROWSER_EXTRACTION_URL_INVALID') from None
+            raise BrowserExtractionError('BROWSER_EXTRACTION_URL_INVALID') from None
     formats = data.get('formats')
     if (type(formats) is not dict or not formats or set(formats) - FORMATS
             or any(type(v) is not bool for v in formats.values()) or not any(formats.values())):
@@ -57,7 +60,34 @@ def validate_extract_request(data):
     timeout = data.get('timeout_ms', 10000)
     if type(timeout) is not int or not 100 <= timeout <= 30000:
         raise BrowserExtractionError('BROWSER_EXTRACTION_TIMEOUT_INVALID')
-    return {'url': url, 'formats': {k: True for k in sorted(formats) if formats[k]}, 'timeout_ms': timeout}
+    result = {'url': url, 'formats': {k: True for k in sorted(formats) if formats[k]}, 'timeout_ms': timeout}
+    if any(key in data for key in ('question', 'page_revision', 'target_id')):
+        question = data.get('question')
+        revision, target = data.get('page_revision'), data.get('target_id')
+        if (not isinstance(question, str) or not 1 <= len(question.strip()) <= 2000
+                or any(ord(c) < 32 and c not in '\n\t' for c in question)
+                or type(revision) is not int or revision < 0
+                or not isinstance(target, str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,160}', target)):
+            raise BrowserExtractionError('BROWSER_CONTEXT_REQUEST_INVALID')
+        result.update(question=question.strip(), page_revision=revision, target_id=target)
+    return result
+
+
+def select_page_context(structure, question):
+    from lumenis.shared.reporting.operational_brief import _analysis_window
+
+    body = '\n\n'.join(block['text'] for block in structure['blocks'])
+    excerpt, selection = _analysis_window(body, question)
+    return {
+        'question': question,
+        'excerpt': excerpt,
+        'selection': selection,
+        'captured_characters': len(body),
+        'coverage': structure['coverage'],
+        'answer_state': 'NOT_GENERATED',
+        'content_kind': 'SOURCE_EXCERPT',
+        'semantic_relevance': 'NOT_EVALUATED',
+    }
 
 
 def same_document_url(left, right):

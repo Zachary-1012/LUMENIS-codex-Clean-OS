@@ -1,13 +1,16 @@
 # LUMENIS production idempotent launcher (safe to run repeatedly).
-# Starts the 8201 supervisor, the registered HK/International collector worker, and general browser (idempotent).
+# Starts the 8201 Core. Browser workers are opened by explicit product tasks.
 # Triple idempotency: global mutex (no concurrent launchers) + existing-process guard + healthz.
 # Does NOT touch 8200. All ASCII-safe for Windows PowerShell 5.1.
 #
 # Canonical Windows production entry:
 #   powershell -ExecutionPolicy Bypass -File scripts\start_production.ps1
 #
+param([switch]$EnableScheduledCollection)
+
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $ErrorActionPreference = 'Stop'
+$env:PSModulePath = (Join-Path $PSHOME 'Modules') + [IO.Path]::PathSeparator + $env:PSModulePath
 
 # Background processes inherit the Windows console code page by default.
 # Keep every Python child on UTF-8 so non-ASCII migration/runtime diagnostics
@@ -32,7 +35,7 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 Write-Output ''
 Write-Output '============================================================'
 Write-Output ' LUMENIS production launcher'
-Write-Output '   8201 Flask supervisor  +  registered HK Collector + 9224 General Browser'
+Write-Output '   8201 Product Core; collection and browsing remain user initiated'
 Write-Output '============================================================'
 Write-Output "Root: $Root"
 
@@ -66,16 +69,15 @@ function Test-Http([string]$Url, [int]$TimeoutSec=3, [string]$ExpectedLaunchId='
         return $true
     } catch { return $false }
 }
-function Get-CoreStartupDecision([bool]$Healthy, [bool]$EntryMatches, [int]$SupervisorCount) {
-    if (-not $Healthy) { return 'CONVERGE_OWNED_STALE_PROCESS' }
+function Get-CoreStartupDecision([bool]$Healthy, [bool]$EntryMatches, [int]$SupervisorCount, [bool]$Occupied, [bool]$SchedulerMatches) {
+    if (-not $Healthy) {
+        if ($Occupied -or $SupervisorCount -gt 0) { return 'BLOCKED_EXISTING_PROCESS' }
+        return 'START_CORE'
+    }
     if (-not $EntryMatches) { return 'BLOCKED_SOURCE_IDENTITY' }
     if ($SupervisorCount -ne 1) { return 'BLOCKED_PROCESS_OWNERSHIP' }
+    if (-not $SchedulerMatches) { return 'BLOCKED_SCHEDULER_MODE' }
     return 'REUSE_MATCHING_CORE_ENTRY'
-}
-function Get-StartupReadiness([bool]$CoreHealthy, [int]$ResidentExitCode) {
-    if (-not $CoreHealthy) { return 'CORE_UNAVAILABLE' }
-    if ($ResidentExitCode -ne 0) { return 'CORE_READY_BROWSER_UNAVAILABLE' }
-    return 'CORE_AND_BROWSER_READY'
 }
 function Test-CorePortListening {
     $client = New-Object System.Net.Sockets.TcpClient
@@ -86,11 +88,6 @@ function Test-CorePortListening {
         return $true
     } catch { return $false }
     finally { $client.Dispose() }
-}
-function Test-ProcExists([string]$CmdPattern) {
-    $hit = Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='msedge.exe'" |
-        Where-Object { $_.CommandLine -and ($_.CommandLine -match $CmdPattern) }
-    return [bool]$hit
 }
 function Get-CanonicalSupervisor {
     $rootPattern = [regex]::Escape($Root)
@@ -115,53 +112,34 @@ function Wait-Healthz([string]$Url, [int]$Seconds=15, [string]$ExpectedLaunchId=
     return $false
 }
 
-# --------------- 8201 watchdog (deterministic: healthy + supervisor -> skip; otherwise converge) ---------------
-# Root cause fixed 2026-09-03: HealthGuard fires every 5min; old branch waited on an alive-but-broken
-# run_supervised forever and never cleaned, so repeated firings stacked run_supervised->run_supervised
-# and app.py -> app.py competing for 8201. Now unhealthy always means: kill stale 8201 python, drop
-# stale lock, then start exactly ONE supervisor (whose own lock is atomic-create).
 $httpOk = Test-Http 'http://127.0.0.1:8201/healthz'
 $entrySha256 = (Get-FileHash -LiteralPath (Join-Path $Root 'app.py') -Algorithm SHA256).Hash.ToLowerInvariant()
 $entryMatches = $httpOk -and (Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedEntrySha256 $entrySha256)
 $supervisors = @(Get-CanonicalSupervisor)
-$startupDecision = Get-CoreStartupDecision $httpOk $entryMatches $supervisors.Count
+$ownedCore = @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object {
+    $_.CommandLine -and $_.CommandLine -match '(?:^|\s)--port\s+8201(?:\s|$)' -and
+    $_.CommandLine -match 'app\.py' -and $_.CommandLine -match [regex]::Escape($Root)
+})
+$schedulerMatches = $false
+if ($httpOk -and $supervisors.Count -eq 1) {
+    $withoutScheduler = $supervisors[0].CommandLine -match '(?:^|\s)--no-scheduler(?:\s|$)'
+    $schedulerMatches = $withoutScheduler -eq (-not $EnableScheduledCollection)
+}
+$occupied = (Test-CorePortListening) -or $ownedCore.Count -gt 0
+$startupDecision = Get-CoreStartupDecision $httpOk $entryMatches $supervisors.Count $occupied $schedulerMatches
 if ($startupDecision -like 'BLOCKED_*') {
     throw "Core startup $startupDecision; the running service was preserved. A controlled load requires verified ownership and quiescence."
 }
 if ($startupDecision -eq 'REUSE_MATCHING_CORE_ENTRY') {
     Write-Output '[LUMENIS-8201] healthy with matching Core entry bytes and one canonical supervisor, skip'
 } else {
-    if ($httpOk -and $supervisors.Count -eq 0) {
-        Write-Output '[LUMENIS-8201] healthy but supervisor missing; converging orphan app tree'
-    } elseif ($supervisors.Count -gt 1) {
-        Write-Output ("[LUMENIS-8201] duplicate canonical supervisors detected: " + $supervisors.Count)
-    } else {
-        Write-Output '[LUMENIS-8201] health check failed; converging stale 8201 tree'
-    }
-    $stale = @(Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
-        Where-Object {
-            $_.CommandLine -and
-            ($_.CommandLine -match '8201') -and
-            ($_.CommandLine -match 'run_supervised\.py|app\.py') -and
-            ($_.CommandLine -match [regex]::Escape($Root))
-        })
-    if ($stale.Count -gt 0) {
-        $stalePids = @($stale | ForEach-Object { [int]$_.ProcessId })
-        $treeRoots = @($stale | Where-Object { $stalePids -notcontains [int]$_.ParentProcessId })
-        if ($treeRoots.Count -eq 0) { $treeRoots = $stale }
-        Write-Output ("[LUMENIS-8201] cleaning exact stale tree roots: " + (($treeRoots | ForEach-Object { $_.ProcessId }) -join ','))
-        foreach ($rootProc in $treeRoots) {
-            & taskkill.exe /PID $rootProc.ProcessId /T /F 2>$null | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw 'Owned stale process cleanup was not confirmed; replacement was not started.' }
-        }
-        Start-Sleep -Seconds 3
-    }
     if (Test-CorePortListening) { throw '8201 is still owned by a listener; replacement was not started and the supervisor lock was preserved.' }
-    Remove-Item (Join-Path $Root 'data\supervisor_8201.lock') -Force -ErrorAction SilentlyContinue
     $supOut = Join-Path $LogDir 'supervisor_console.log'
     $supErr = Join-Path $LogDir 'supervisor_console.err'
     $launchId = [guid]::NewGuid().ToString('N')
-    Start-Process -FilePath $Py -ArgumentList @('run_supervised.py','--host','0.0.0.0','--port','8201','--launch-id',$launchId) -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $supOut -RedirectStandardError $supErr
+    $supervisorArgs = @('run_supervised.py','--host','0.0.0.0','--port','8201','--launch-id',$launchId)
+    if (-not $EnableScheduledCollection) { $supervisorArgs += '--no-scheduler' }
+    Start-Process -FilePath $Py -ArgumentList $supervisorArgs -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $supOut -RedirectStandardError $supErr
     Write-Output '[LUMENIS-8201] starting single supervisor (run_supervised.py --port 8201)'
     Write-Output '[LUMENIS-8201] waiting healthz (max 15s)...'
     $up = Wait-Healthz 'http://127.0.0.1:8201/healthz' 15 -ExpectedLaunchId $launchId -ExpectedEntrySha256 $entrySha256
@@ -176,37 +154,17 @@ if ($startupDecision -eq 'REUSE_MATCHING_CORE_ENTRY') {
     }
 }
 
-# --------------- Registered Resident Browsers (HK collection + general browse) ---------------
-# Delegated to scripts/start_resident_browsers.py (single source of truth = xhs_cookie_bridge):
-#   XHS_RETINAUT        registered profile; OS-assigned CDP endpoint
-#   9224 GENERAL_BROWSE  profile edge-cdp-general     general browsing only
-# XHS_CN_PRIMARY is not an eligible production browser identity.
-# The launcher reuses only a verified owner/profile/kernel/endpoint binding.
-$resident = Join-Path $Root 'scripts\start_resident_browsers.py'
-$residentExitCode = 2
-if (Test-Path $resident) {
-    Write-Output '[LUMENIS-Resident] ensuring registered HK collector + 9224 general browser ...'
-    & $Py $resident
-    $residentExitCode = $LASTEXITCODE
-} else {
-    Write-Output "[LUMENIS-Resident] launcher missing: $resident"
-}
-
 $coreHealthy = Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedEntrySha256 $entrySha256
-$readiness = Get-StartupReadiness $coreHealthy $residentExitCode
+$readiness = if ($coreHealthy) { 'CORE_READY' } else { 'CORE_UNAVAILABLE' }
 Write-Output ''
 Write-Output '============================================================'
 Write-Output "  Startup state: $readiness"
 if ($coreHealthy) { Write-Output '  Core -> http://127.0.0.1:8201/' }
 Write-Output '  HZ  ->  http://127.0.0.1:8201/healthz'
-Write-Output '  CDP -> registered XHS_RETINAUT (HK) | 9224 GENERAL_BROWSE'
+Write-Output '  Browser workers start only from an authorized browse/collection request.'
 Write-Output '  Collection, AI and product task readiness require their own runtime evidence.'
 Write-Output '============================================================'
 if (-not $coreHealthy) { exit 1 }
-if ($residentExitCode -ne 0) {
-    Write-Output '[LUMENIS-Resident] unavailable; Core remains available for independent work. No visible-browser fallback was started.'
-    exit 3
-}
 exit 0
 
 } finally {

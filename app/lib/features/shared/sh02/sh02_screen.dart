@@ -20,12 +20,18 @@ class Sh02Screen extends StatefulWidget {
     required this.client,
     this.repository,
     this.documentPicker,
+    this.initialArtifactId,
+    this.initialWorkKind,
+    this.onBack,
     super.key,
   });
 
   final LumenisCoreClient client;
   final Sh02Repository? repository;
   final Sh02DocumentPicker? documentPicker;
+  final String? initialArtifactId;
+  final String? initialWorkKind;
+  final VoidCallback? onBack;
 
   @override
   State<Sh02Screen> createState() => _Sh02ScreenState();
@@ -40,7 +46,16 @@ class _Sh02ScreenState extends State<Sh02Screen> {
   @override
   void initState() {
     super.initState();
-    _viewModel.refresh();
+    unawaited(_loadInitial());
+  }
+
+  Future<void> _loadInitial() async {
+    await _viewModel.refresh();
+    if (mounted &&
+        widget.initialWorkKind == 'material' &&
+        widget.initialArtifactId != null) {
+      await _viewModel.openImportById(widget.initialArtifactId!);
+    }
   }
 
   @override
@@ -61,16 +76,26 @@ class _Sh02ScreenState extends State<Sh02Screen> {
   );
 
   @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: LumenisTheme.of(context).canvas,
-    child: SafeArea(
-      child: AnimatedBuilder(
-        animation: _viewModel,
-        builder: (context, _) =>
-            _LibraryWorkspace(viewModel: _viewModel, onResearch: _research),
-      ),
-    ),
-  );
+  Widget build(BuildContext context) =>
+      widget.initialArtifactId != null && widget.initialWorkKind != 'material'
+      ? SharedResearchWorkspace(
+          repository: CoreSharedResearchRepository(widget.client),
+          sources: const {},
+          initialArtifactId: widget.initialArtifactId,
+          onBack: widget.onBack,
+        )
+      : ColoredBox(
+          color: LumenisTheme.of(context).canvas,
+          child: SafeArea(
+            child: AnimatedBuilder(
+              animation: _viewModel,
+              builder: (context, _) => _LibraryWorkspace(
+                viewModel: _viewModel,
+                onResearch: _research,
+              ),
+            ),
+          ),
+        );
 }
 
 enum _BrowseMode { list, space }
