@@ -1589,17 +1589,15 @@ identity or popularity claim. The existing Collector/registry/Source owners own
 this vocabulary and query plan, not another store or Collector. Global §10 is
 the detailed temporal/continuous-acquisition contract.
 
-The user explicitly authorized this internal scoped program to acquire by subject,
-topic and task semantics, without a universal publication-start date (2026-10-08
-correction), and continue incremental collection
-while other work, training or rule publication occurs. Platforms may rotate;
-one platform's challenge/outage pauses only its affected authorized path. Existing
-SYSTEM Collector/Scheduler code, persistent cursor/backoff/checkpoint/overdue
-recovery and real scheduled operation must supply continuity without Codex/CUA
-or manual developer triggers. This is an explicit opt-in for this program,
-not a change of future-user MANUAL defaults or permission to use the protected
-Mainland personal XHS profile. Source-time unknowns remain unknown; capture time
-cannot establish historical coverage.
+The 2026-10-23 PO correction makes acquisition user-refresh or current-browser-
+context-task driven. Entry, subject selection, registration and startup do not
+collect. Use admitted data immediately; incomplete platform/global coverage
+cannot block independent work. Preserve query/lease/cursor/retry/cancel/recovery
+and source-time semantics. Historical AUTO receipts grant no current schedule;
+each schedule requires explicit opt-in. Rule publication starts/stops no service.
+Settings → 主体目录 holds all authorized subjects: add/remove/re-add/register
+through the existing registry owner. Prioritize evidenced China operations,
+including international brands; retain user choices and results. Global owns detail.
 
 C1/C6 research and repair platform-verification friction using existing material,
 current official interfaces and maintained permitted implementations. Do not

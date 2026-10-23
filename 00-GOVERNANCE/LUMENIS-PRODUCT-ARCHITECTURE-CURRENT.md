@@ -619,7 +619,7 @@ These paths are the current owners for production callers. A route or compatibil
 | --- | --- | --- |
 | `account/api.py`, `agent_runtime/`, `agent_capability/router.py`, `agent_smart_tool/base.py`, `ai_api.py`, `ai_task_engine.py` | `lumenis/shared/agents/skills/{registry,package_runtime,execution}.py` | Skill discovery, source preview/validation, permission checks, execution state transitions, effect fencing and execution Evidence. |
 | `subject_registry.py`, `experience_screens.py`, `lumenis/shared/evidence/api.py`, agent callers | `lumenis/system/security/{permission,action_firewall,effect_fence}.py` | Domain-aware Operation/Risk decisions, system scope, approval state, fail-closed behavior and audited side-effect boundaries. |
-| `app.py`, `agent_runtime/observation.py` | `lumenis/system/ai_gateway/{channel,providers,core}.py` | Provider health, fallback order, retry/error classification, circuit breaking and token accounting. |
+| `app.py`, `agent_runtime/observation.py` | `lumenis/system/ai_gateway/{channel,providers,core}.py` | Explicitly selected provider health, authorized request routing, bounded retry/error classification, circuit breaking and token accounting; no automatic provider switch or fallback. |
 | `browser_runtime_api.py` and browser callers | `lumenis/system/browser/runtime/{contract,policy,router}.py` | Existing status/probe route contracts, authorization context and safe browser state transitions. |
 | `data_query_api.py`, collector scheduling/operations | `lumenis/system/collector/guard/` | Resource limits, queue/DLQ replay, schedule state, recovery gating and runtime switches. |
 | `compliance_gate.py`, `engineering_metrics.py`, `experience_runtime.py`, `topic_campaign.py`, `xhs_cookie_bridge.py` | `lumenis/system/collector/adapters/` | Platform registry, source-specific collection policy, schedule decisions, rate/safety limits and normalized records. |
@@ -744,7 +744,7 @@ Product Owner 直接更正（2026-10-11复核为既有要求，不另建权重�
 
 Global §10 记录本轮完整直接 PO 命令及原实现落实点：采集授权/原始保留、来源有效性、用途权限、身份候选/确认、业务分析分开，合法未绑定原始观察在原 Source/隔离链持久可恢复，不自动成为主体事实。Shared 保持同一 ID/use/时间/版本/状态；CTH 使用已核验时地关系与反馈，BMP/SH-01 Discover 区分原生热度/样本/推断；Research/Reporting/Evaluation 将可检索引用的真实来源接入同一 SourceBrief/SavedWork/Content Project 的保存、关闭重开、修订、追溯和恢复。SYSTEM 继续原 Scheduler/Runtime/Browser/Permission/Gateway，不因 AI 不可用停止合法确定性工作。
 
-C1 保留采集链及获准必要依赖的源码责任；当前窗口执行状态不得由本蓝图推断。跨 Owner 写入仍由 M/W6 既有预约有界交接；原非 C1 候选、未集成成果及完整资料采用继续保留，实际执行需当前PO指令。仅修数据链影响的现有 Web 消费与状态/来源返回，不重做44屏、不新增架构或队列。六平台各自实证与阻塞分列，至少一个获准平台或公开网页来源通过完整真实操作链；同口径吞吐、延迟、覆盖缺失、身份/数据错误、恢复、成果保存重开须有真实数据，无旧基线写 BASELINE NOT VERIFIED。旧逻辑先追有效 caller 再收敛，全部历史/原件/有效兼容保留。
+C1 保留采集链及获准必要依赖的源码责任；当前窗口执行状态不得由本蓝图推断。跨 Owner 写入仍由 M/W6 既有预约有界交接；原非 C1 候选、未集成成果及完整资料采用继续保留，实际执行需当前PO指令。按当前完整规划同时完成各用户工作流程的界面升级、真实后端、来源返回、成果保存、修订、重开和恢复；44屏是历史覆盖索引，不是产品上限。视觉与业务闭环同为验收条件，不新增架构或队列。六平台各自实证与阻塞分列，至少一个获准平台或公开网页来源通过完整真实操作链；同口径吞吐、延迟、覆盖缺失、身份/数据错误、恢复、成果保存重开须有真实数据，无旧基线写 BASELINE NOT VERIFIED。旧逻辑先追有效 caller 再收敛，全部历史/原件/有效兼容保留。
 
 本规则采用不证明源码已改、运行已加载或用户已验收；最终 A–F 成果、OBSERVED/INFERRED/NOT VERIFIED 和 ACCEPTED 条件归既有 Real Delivery Overlay，保持完整 R/J/U 和当前编译/静态安全数据/真实E2E，按当前批准执行相关隔离单元/集成回归，结果不替代真实用户验收。
 

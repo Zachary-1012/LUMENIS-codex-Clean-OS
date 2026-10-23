@@ -378,7 +378,7 @@ SYSTEM may be dense and technical. It exposes machine relationships rather than 
 
 The optional OEVIRA product account, login, recovery and settings are in the current engineering closure. The App opens without a global product-account wall; a protected operation may still show a local, truthful Permission boundary enforced by Product Core. Media-platform Cookie/session/browser authorization is a separate SYSTEM connector state and must not become a OEVIRA login flow.
 
-When post-beta authentication/access surfaces are implemented, they are calm, direct and explicit about identity, permission, blocked state and recovery. They are not marketing landing pages.
+Authentication/access surfaces are part of current engineering closure. They are calm, direct and explicit about identity, permission, blocked state and recovery. Ordinary product work has no global account wall; each protected operation retains its real authorization boundary.
 
 Global Subject Context:
 
@@ -393,7 +393,7 @@ Navigation follows the current product/domain ownership in `LUMENIS-PRODUCT-ARCH
 
 ## 10. AI / Agent experience
 
-AI is **artifact-first**, not chat-first.
+The operational Home is conversation-first. Replies lead to useful, editable and reopenable results through the existing task and Artifact owners; conversation alone does not establish a completed result. CTH, BMP and independent Shared work remain directly accessible.
 
 ```text
 Intent → Task → Runtime → Evidence → Artifact
@@ -726,14 +726,13 @@ Do not use an oversized sculpture, rotating orb, breathing logo or generic AI
 gradient as the identity; the hand-drawn pigment colour of the brand mark is media, not a UI gradient, and does not spread to the shell. This is the in-product mark; package icons and the
 public website remain separately reviewed surfaces.
 
-At desktop and compact-workspace widths, keep a visible navigation trigger and
-the current task/context; expose the existing domain/workflow hierarchy in a
-reversible navigation layer rather than an always-present application catalogue.
+At wide desktop widths (at least 1280px), keep the approved task navigation
+visible. At compact widths, retain its visible trigger and current task/context
+in a reversible navigation layer. Both use the same existing workflow hierarchy.
 All registered destinations and deep links remain available. Closing navigation
 without choosing a destination restores the mounted task, draft, focus and scroll;
 choosing a destination uses the existing route/context owner. Escape, explicit
-close, keyboard traversal and touch must work. Avoid hover-only discovery,
-invisible gesture-only navigation or new project/recent/search capabilities.
+close, keyboard traversal and touch must work. Avoid hover-only discovery and invisible gesture-only navigation. Preserve the approved project, recent-work, search and conversation entries through their existing owners.
 Mobile retains its focused task and existing navigation until a separate change
 proves the same reachability; it is not a compressed desktop catalogue.
 
@@ -1076,7 +1075,7 @@ The named examples below are non-exhaustive. The user's historical and current
 video/image requirements take priority over an assistant's narrow reference list;
 extract and adapt their actual visual and interaction mechanisms, record the
 frames studied and restate the chosen design here or in a governed specification.
-The earlier examples are: Apple informs restraint, content priority, one clear primary action and an uncluttered search entry when an existing workflow is search-led; ChatGPT informs a single intent entry and progressive disclosure of existing complexity; TRAE informs visible **task → execution → result** feedback for existing workflows. These references do not authorize new Chat, Work, Project, recent-content, search, task-platform or account capabilities, and they do not replace any current business function or backend owner.
+The earlier examples are: Apple informs restraint, content priority, one clear primary action and an uncluttered search entry when an existing workflow is search-led; ChatGPT informs a single intent entry and progressive disclosure of existing complexity; TRAE informs visible **task → execution → result** feedback for existing workflows. Implement the already-approved conversation, project, recent-work, search, task and account capabilities through their existing owners. References cannot add unapproved capability families or replace current business functions.
 
 For Korean product-app craft, study public product-engineering documentation such as the [Toss Design System component guide](https://developers-apps-in-toss.toss.im/landing-page/landing-page-en/design/components) for consistency, clear component guidance and task-focused implementation. Its UI Kit terms restrict use of Toss materials to the Apps in Toss service, so OEVIRA does not adopt the UI Kit, components, assets or visual patterns. Extract only general, non-visual principles, then test those against OEVIRA workflows.
 
@@ -1084,13 +1083,13 @@ Do not copy another product's assets, source code, signature layout, visual iden
 
 ## 34. Ordered cross-surface delivery and acceptance
 
-This section retains the approved fifteen-checkpoint dependency coverage in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Dispatch is C1–C6 under AGENTS.md, with independent frontend F throughout; retained ROUND 08/09–14/15 requirements cover foundations, workflows and final integration, not another execution sequence. Do not implement a future surface or provider before its owner, contract and entry gate are approved.
+This section retains the approved fifteen-checkpoint dependency coverage in `LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`. Direct PO assignment determines execution: a sole controller carries all assigned source responsibilities; multiple developers follow explicit reservations. C1–C6/F and retained ROUND 08/09–14/15 identify responsibilities and coverage, not an execution sequence. Do not implement a future surface or provider before its owner, contract and entry gate are approved.
 
-Do not build all screens from a generic template. Work in this order, with a capability-parity gate between phases:
+Do not build screens from a generic template. For each complete user workflow, join the following work and verify visual and business acceptance together:
 
 1. **Bind truth:** classify each Experience screen/action by owner, endpoint, ViewModel fields, permission, Evidence, read/write effect and known gaps. Resolve unknown owners from source before creating a new API.
 2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The optional OEVIRA account is part of current engineering closure and must not block ordinary browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
-3. **Prove the five Golden Pages:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 each use their semantic signature in §25 and bind to live owners. Do not mark a fixture-backed page complete.
+3. **Deliver the workflow's actual interfaces:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 retain their semantic signatures in §25 as part of full coverage, without a five-page prerequisite. Apply each current screen contract, real owner and complete user outcome. Fixtures do not establish completion.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
 5. **Reach surface parity with independent evidence:** build and verify Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel under their approved roles. Each receives its applicable interaction, accessibility, viewport/device, error/recovery and visual checks at §20 widths; do not make one surface's closure a prerequisite for another. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
 6. **Release evidence:** require applicable compilation, static quality/security/data checks, actual complete user runtime/E2E, clean-clone build/runtime acceptance and current-main CI evidence. Follow the current root AGENTS.md and machine contract: targeted unit/integration regressions may be used for a relevant defect, but are not a blanket requirement and do not replace real user outcomes. Preserve historical files and failures. Record unavailable infrastructure as `UNVERIFIED`, never as PASS.
@@ -1237,13 +1236,13 @@ F records actual source, necessary layout decisions and executable acceptance in
 | AI-02 Capability task workbench | Task represented as cancellable stages with input/output artifacts between stages; stage transitions reveal evidence and permission requirements. | Start, pause/cancel, retry a safe stage or review a gated action before it runs. | Stage graph with artifact inspector → vertical progress path with persistent cancel and expandable evidence. |
 | AI-03 Evidence-anchored analysis thread | Conversation claims are grouped by conclusion; each claim has inline evidence anchors, uncertainty labels and a provenance rail. | Open a cited source at the relevant passage, challenge/refine a claim or create an owned follow-up task. | Thread plus source inspector → claim cards with inline citations and full-screen source return. |
 | AI-04 Agent and skill catalog | Capability matrix shows owner, supported task, required permissions, health and last verified call; code presence is not shown as availability. | Filter by task, inspect input/output and permission contract, then run a safe verified capability. | Matrix/catalog with capability detail panel → searchable capability list and detail sheet. |
-| AI-05 AI Gateway and providers | Provider topology shows availability, latency, policy and fallback path while rules/data remain the core lane. | Inspect provider state or run a diagnostic; fallback must be observable and must not block core operations. | Gateway flow map with health table → provider status list with explicit fallback/last-check details. |
+| AI-05 AI Gateway and providers | Show the explicitly selected connection, verified availability, request state and configuration; core business remains independent of AI. | Configure or diagnose a chosen connection through the existing Gateway and authorization contract; no automatic provider switch or fallback. | Connection settings and actual request status → selected connection and expandable last-check details. |
 | SYS-01 Runtime health | Runtime topology traces App → API → database → adapters with current health, degradation and check time; avoid product KPI styling. | Open a failing dependency's diagnostic, inspect trace and invoke only an authorized recovery. | Dependency map with health timeline → ordered dependency list and focused diagnostic view. |
 | SYS-02 Collector status | Platform lanes show scheduler, rate-limit, retry/backoff, queue and ingestion stage; failures stay outside Canonical until validated. | Inspect a run, retry/stop when allowed, and trace a collected record to its destination state. | Live operations table with per-platform drilldown → platform queue cards with persistent running/retry status. |
 | SYS-03 Database and truth chain | Layered schema/version/integrity view links schema → source → canonical → evidence → metric; versions never imply readability or completeness. | Inspect a table/chain validation and open exact integrity errors; recovery is a separately authorized path. | Schema tree with chain timeline and diagnostics → chain stages with integrity summary and error detail. |
 | SYS-04 Security and permission | Permission matrix maps actor × product/domain × operation/risk alongside a separate audit trail; policy and decision are inspectable. | Simulate/read an access decision, inspect policy reason, or approve only through a real second-factor/approval contract. | Matrix and audit ledger → searchable role/scope list with explicit decision detail. |
 | SYS-05 Settings and appearance | Preference studio previews density, contrast, language and motion on representative CTH/BMP samples without touching business data. | Change a local/account preference, preview, save and restore defaults; announce persisted scope. | Side-by-side preference controls and live preview → grouped settings pages with immediate accessible preview. |
-| SYS-06 Internal browser | Controlled evidence-capture workspace splits source page, capture metadata and audit actions; unmistakably separate from personal browsing. | Navigate only within allowed capture rules, pin a snapshot as Evidence and inspect the audit result. | Browser viewport plus evidence inspector → source capture full screen with a compact metadata/trace panel. |
+| SYS-06 Internal browser | Real page tabs, address and history controls give the page the main working area; question/result and source details open when needed. | Browse without AI, ask from chat or the browser about current authorized page context, inspect sources, edit and save the result, then return to the same task. Capture and source admission require their own owner receipts. | Wide page viewport with optional question/result pane → page and question views with preserved navigation, draft, result and return state. |
 | SYS-07 Evaluation and acceptance | Six-gate acceptance sequence shows owner, required evidence, result and unresolved blockers; PARTIAL/UNKNOWN remain visibly incomplete. | Open a gate's artifact, rerun a permitted check and inspect exact failing criterion. | Gate matrix with evidence detail → sequential gate cards with current blocker and artifact links. |
 | SYS-08 Observability and logs | Trace waterfall links requests, runtime spans and structured errors; frontend prototype events are in a separate lane. | Filter by trace/time/component, inspect correlated logs and return to the originating runtime or task. | Waterfall and query facets with detail pane → trace summary followed by scrollable spans and errors. |
 | SH-01 Content creation studio | Discover and source-to-artifact workspace: readable trends/hotspots/related works, brief and evidence rail, editable creation canvas and version/outcome lane; distinct from SH-02 library, BMP-03 interpretation, campaign planning and podcast editing. | Inspect actual works and explained relevance, carry selected locatable references into an editable real brief, review versioned revisions and hand off for human approval. | Three-zone canvas (sources/work/artifact) → focused editor with source drawer and version/action sheet. |

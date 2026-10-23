@@ -4,6 +4,24 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Complete document readthrough and execution reconciliation
+
+The current Architecture, Experience, full product plan/sketch, owner, data,
+interface and delivery contracts and all 44 screen specifications were read
+together (76 current documents). The 30 outcome groups and 396 coverage items
+remain intact; 44 screens are a historical index, not the product ceiling.
+Current rule sentences now align user-triggered acquisition, optional in-loop
+accounts, conversation-first Home, independent Shared creation, the single
+explicitly selected Gateway route and four-surface delivery. Fixed test IDs
+cannot establish production Evidence trust.
+
+This is document reconciliation, not a new runtime or accepted product result.
+The user's rejected overall frontend remains NOT_ACCEPTED. Each workflow must
+join planned layout/interaction, actual backend, permitted input, useful result,
+save/revise/reopen and recovery. Existing implementation and historical receipts
+retain their own versions and limits; no service, collection or model is started
+by these edits. Cross-owner changes follow existing caller and version contracts.
+
 ## 2026-10-23 Home and navigation — incomplete visual upgrade
 
 The current PO correction requires planned visual/interaction quality and real
@@ -1058,9 +1076,9 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 `AGENTS.md` is pinned to LF in `.gitattributes`, so the Codex `project_doc_max_bytes` budget (131072, with 16384 headroom) is measured on the same bytes on Windows and in CI; the text did not change. The six T04 historical PO prohibitions are structured `red_lines` keys in the governance machine contract. The blocking validator `verify_governance_machine_contract.py` rejects dropping or allowing any of them. The PR #24 prose-anchor test has been replaced. AGENTS.md carries a one-line LF note so existing Windows clones rewrite it on update (PR #28 review). PO receipt: `PO-20261013-AGENTS-LF-AND-T04-STRUCTURED-RED-LINES`. 阿康（bot）
 
-## 2026-10-13 PO direct overrides (supersede older text anywhere)
+## Current PO execution boundaries (reconciled 2026-10-23; original approvals retain their dates)
 
-1. Auto-collection scope = all registered subjects (Taikoo Hui is a depth reference only, never the sole scope).
+1. Collection is a data-source capability triggered by explicit user refresh or a task requesting current browser context. All authorized subjects remain in Settings → Subject directory with add/remove/re-add/new registration; initial presentation prioritizes evidenced China operations. Background AUTO needs its own current explicit opt-in. Taikoo Hui remains a depth reference, never the default or sole scope.
 2. Collection runs headless in the background; platform login recovery uses the one in-product LumenisPlatformRecoverySheet on every surface; no automatic external browser window.
 3. R&D-stage configuration and registry writes are executed directly by the developer (backup first); no PO approval wait.
 4. Merge a PR once all required checks are green; no PO wait.
@@ -1098,7 +1116,7 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 
 2026-10-23 current-document alignment starts from GitHub/main
 `343ec0cc10231dc38005c77feaf4e907097b974f`, independently matched to origin/main

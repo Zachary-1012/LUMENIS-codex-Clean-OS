@@ -211,8 +211,10 @@ equivalent path through the canonical contract and its acceptance evidence;
 then retire only the duplicated route. Never keep two independent status or
 write authorities to avoid migrating a caller.
 
-AUTO is the default for all registered subjects. Manual collection remains
-optional; login does not by itself grant source use.
+Explicit user refresh or a task requesting current context initiates acquisition.
+MANUAL is the default; AUTO requires a current explicit opt-in for its exact
+schedule and scope. Startup, entry, subject registration and selection do not
+collect automatically. Login does not by itself grant source use.
 Use current Source/session/Permission/caller bindings and the Source→Evidence→
 Canonical chain. The protected personal Mainland XHS identity and legacy9222
 recovery route remain forbidden. One unavailable identity/source blocks that
@@ -236,7 +238,7 @@ The six current primary platforms (Instagram, Facebook, WeChat Official Accounts
 
 Optimize acquisition cost and recovery effort, not the promised data outcome. For each task, reuse available Canonical observations, public/native sources, discovery/exact-URL resolution, managed authenticated sessions and approved user materials as applicable. Logged-in read-only capability remains available where it supplies fields that zero-auth/public paths cannot currently provide. Do not delete or downgrade proven session capability merely because a public path also exists.
 
-The user-facing product does not expose Cookie/CDP/profile mechanics. During R&D the Product Owner may use their own approved platform identities. When an authorized platform session expires, LUMENIS should recover it inside the controlled product/browser experience and resume only after actual session health is re-read. Future customer/platform identity policy remains separate from the deferred LUMENIS product-account redesign.
+The user-facing product does not expose Cookie/CDP/profile mechanics. During R&D the Product Owner may use their own approved platform identities. When an authorized platform session expires, LUMENIS should recover it inside the controlled product/browser experience and resume only after actual session health is re-read. Platform identities remain separate from the optional LUMENIS product account, whose login, recovery and settings are part of current engineering closure without a global account wall.
 
 ### Mandatory P0 convergence before platform-scale work
 
