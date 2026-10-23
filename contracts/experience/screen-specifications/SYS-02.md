@@ -101,7 +101,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 **9. Executable acceptance**
 - 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
-- 只显示Collector/Scheduler Owner读回的真实模式与范围：未来用户MANUAL默认、AUTO需显式opt-in；PO已批准内部连续程序的AUTO范围覆盖全部已登记主体，无单主体硬编码。当前只读切片不执行模式写入、手动采集或取消；依赖动作在真实callable/Permission/幂等恢复合同接通前保持OPEN。身份、来源权益、Permission及Effect Fence始终执行，界面不自行关闭安全边界。
+- 只显示Collector/Scheduler Owner读回的真实模式与范围：MANUAL默认，用户刷新或当前上下文任务明确触发采集；AUTO需对实际范围和日程显式opt-in。历史内部连续程序回执不授权当前自动开工，登记、进入或选择主体不触发采集，无单主体硬编码。当前只读切片不执行模式写入、手动采集或取消；依赖动作在真实callable/Permission/幂等恢复合同接通前保持OPEN。身份、来源权益、Permission及Effect Fence始终执行，界面不自行关闭安全边界。
 
 ### Existing contract — Purpose-built desktop and web composition
 

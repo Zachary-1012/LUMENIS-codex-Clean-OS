@@ -80,7 +80,7 @@ A0/B0/C0 V2 本轮仅准入准备：外部模型条款/默认关闭设计审阅�
 
 > Status: **CURRENT SUBORDINATE REAL-DELIVERY OVERLAY / NOT A SECOND PRODUCT OR EXPERIENCE AUTHORITY**
 
-> 历史 PO 指令（2026-10-08，仅保留历史效力）：当时暂停单元/集成及换名模块测试，并记录了特定窗口/模型状态。该测试限制已由 2026-10-10 PO 指令取代；当前按根 `AGENTS.md` 和机器合同 v1.3.0 执行，允许适用的定向隔离回归，但不把它们当作真实产品 E2E。旧窗口、模型、effort 和暂停回执均不决定当前执行；未由最新直接 PO 指令及新鲜证据核实的状态记为 `NOT_VERIFIED`。
+> 历史 PO 指令（2026-10-08，仅保留历史效力）：当时暂停单元/集成及换名模块测试，并记录了特定窗口/模型状态。该测试限制已由 2026-10-10 PO 指令取代；当前按根 `AGENTS.md` 和当前机器合同 执行，允许适用的定向隔离回归，但不把它们当作真实产品 E2E。旧窗口、模型、effort 和暂停回执均不决定当前执行；未由最新直接 PO 指令及新鲜证据核实的状态记为 `NOT_VERIFIED`。
 >
 > Authority boundary: this overlay adds delivery evidence and commercial-readiness gates to the five architecture outcomes with retained C1–C6 source responsibilities and retained R01–R15 acceptance coverage. The historical numbered coverage groups below preserve acceptance provenance, not an execution schedule. This overlay does not create another queue, bypass dependencies, replace Product Architecture/Experience, or erase completed source work.
 >
@@ -1318,9 +1318,10 @@ tests/candidates and retain meaningful failure/recovery verification.
 Four-surface creative UI/UX/AIGC, rich useful interaction, no unnecessary vertical
 scrolling, and painted icons or suitable page elements informed by the user's
 reference are acceptance dimensions under the sole Experience Constitution;
-overall visuals follow approved research and task needs. Every supplied video requires
-frame-level coverage and adoption decisions;12 production exercises do not replace
-the larger historical reference corpus. Research must improve applicable product
+overall visuals follow approved research and task needs. Preserve supplied videos,
+existing frame-level coverage and adoption decisions. Reuse valid historical
+analysis; inspect new or materially changed references under Experience §38.
+Twelve production exercises do not replace the retained reference requirements. Research must improve applicable product
 capabilities as well as approved model learning. A source file inventory, fetched
 webpage, storyboard, test or example cannot prove those requirements completed.
 

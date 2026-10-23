@@ -167,8 +167,12 @@ Follow the [security boundary](00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md). Do n
 
 Repository source is licensed under [Apache License 2.0](LICENSE). Third-party software, data, models, fonts, and media retain their own licenses and usage restrictions.
 
-## 研究能力整合 · 2026-10-18
+## 研究与业务采用 / Research and business use
 
-已批准将固定GGI来源的完整研究/决策/评价/学习能力吸收进序境现有Owner，当前已交付有界后端/HTTP证据，最终合并与四表面验收待核。九维组织与36份历史参考进入既有来源/权限/版本链，用户可以在Shared工作区独立研究，再按授权采用到CTH/BMP；原完整功能与四表面要求继续有效。参阅[唯一规划](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md)、[架构与本地采用](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、[来源及完整映射](00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json)。
+用户可以在 Shared 中独立导入、阅读和研究资料，将结果保存、修订、重开，并按实际来源权限采用到 CTH、BMP 或独立创作。原件、研究推导和业务事实保持区分；历史参考有其日期、来源与适用边界。研究、决策、评价和学习复用既有产品能力与版本链。
 
-此为源级整合，不是新GGI服务或已发布/已验收声明。历史资料的权利与现行事实仍待核实；外仓交换1.1.0保持，未宣称四仓已共同更新。前端由本地Codex/GrokBot接续原ScreenSpec，逐表面实测。
+Users can independently import, read and research materials in Shared, save and revise results, reopen earlier versions, and use permitted results in CTH, BMP or independent creation. Originals, derived findings and business facts remain distinct. Historical references retain their dates, sources and applicable limits. Research, decisions, evaluation and learning reuse the existing product capabilities and version chain.
+
+完整要求与来源对应见[唯一规划](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md)、[产品架构](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)和[来源采用记录](00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json)。
+
+See the [complete plan](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md), [product architecture](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) and [source adoption record](00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json) for requirements and source mappings.

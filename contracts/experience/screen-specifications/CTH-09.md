@@ -40,7 +40,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | P1 | Source trail | Canonical Evidence owner | Only allowlisted IDs are displayed; `NOTE:<id>` is not Evidence | Current response cannot satisfy this |
 | EFFECT | Confirm action | Permission + approval + Effect Fence + real result contract | Disabled unless all exact gates and a callable are present; this UI has no mutation client | Not bound |
 
-Trusted CTH-09 fixture IDs are `EV-7710`, `EV-7699` and `EV-7712` (not a single-subject scope). Unknown or `NOTE:` references are withheld.
+Risk and decision evidence must use owner-verified references bound to the current actor, scope, source version and integrity. Fixed fixture IDs are not production authorization. Unknown or `NOTE:` references without the canonical Evidence contract remain withheld.
 
 ## 4. State and recovery matrix
 

@@ -252,8 +252,9 @@ Research adds no dependency or new owner. Source/service status, terms, and vers
 ## 10. Task-semantic vocabulary and continuous acquisition
 
 Six primary platforms are Instagram, Facebook, WeChat Official Accounts,
-RedNote (HK/intl account), Douyin and X. C1 begins/resumes actual eligible acquisition routes
-for all six; names/registrations/imports are not proof of platform collection.
+RedNote (HK/intl account), Douyin and X. Existing Collector owners implement all six
+eligible routes; user refresh or an explicitly requested current-context task initiates acquisition.
+Names/registrations/imports are not proof of platform collection.
 Keep other existing platforms. Every platform has its own native fields, access
 state, permitted identity, exact entity/domain/market/purpose and Evidence path.
 Missing access/binding blocks that portion honestly while available platforms
@@ -276,7 +277,7 @@ Relevance and exact-scope checks must reach real capture/intake and the consumer
 job, not stop at a query-plan candidate. Unknown/conflicting bindings stay honest
 while the owner resolves them; useful authorized results remain the real exit.
 
-The user explicitly opted this internal approved program into continuous operation.
+Acquisition starts from explicit user refresh or a task requesting current context. A background schedule requires its own current explicit opt-in; historical internal AUTO receipts do not authorize collection on startup, entry, selection or registration.
 The 2026-10-08 correction removes the former universal publication-start date.
 Acquire by authorized subject/topic and task semantics with bounded budgets,
 then classify/order/filter by genuine source publication and event time.
@@ -291,16 +292,16 @@ material is not excluded merely because it predates a global calendar cutoff.
 
 Persistent product Scheduler/Collector own backfill cursors, per-platform window/
 progress, incremental watermark, last attempt/success, next due cycle, bounded
-Retry-After/backoff, idempotence and restart/overdue recovery. Rotate the six
-platforms if needed. Training, development, rule publication or another task
-must not cancel their resident acquisition schedule or make collection depend
-on Codex/CUA. Source challenge/outage/revocation safely isolates only the
+Retry-After/backoff, idempotence and restart/overdue recovery. For a currently opted-in schedule, rotate eligible
+platforms if needed and preserve its bounded continuation. Collection and recovery
+execute in the product runtime, independently of Codex/CUA. Training, development
+and rule publication neither start nor cancel a schedule. Source challenge/outage/revocation safely isolates only the
 affected path; continue eligible others, retain pending gaps and resume it after
 actual recovery. Never defeat access controls to satisfy 'continuous'.
 
-Existing MANUAL future-user defaults remain; this is explicit AUTO consent for
-the named internal program and current approved exact identities/scopes, not an
-unbounded consent for all accounts. Protect the personal Mainland XHS profile;
+MANUAL is the current default. Each optional AUTO schedule records the user's
+explicit opt-in, exact scope, source identity and recovery contract; this document
+grants no background execution consent. Protect the personal Mainland XHS profile;
 resolve other platform sessions through registered secret-safe owners. Prefer
 official permitted APIs/refresh/session continuity and researched legitimate
 recovery to repeated human troubleshooting. Historical R-0003/R-0004 and their
@@ -312,8 +313,8 @@ authorized state and resumes only the pending scoped work.
 
 Acceptance requires real topic/task coverage and explicit requested-window receipts/gaps,
 topic/task→query→Capture→Evidence→Canonical→useful normal business result,
-repeated due cycles while another job runs, one-platform failure isolation and
-restart recovery. Mocks, replay clocks, a name search, raw posts, imported rows
+explicit refresh and current-context task execution, one-platform failure isolation and
+restart recovery; opted-in schedules additionally require real repeated due cycles while another job runs. Mocks, replay clocks, a name search, raw posts, imported rows
 or a live schedule registration alone cannot prove these. C1 retains continual
 China/global brand/commercial-entity additions and relation review alongside
 real task validation, without waiting for complete global directory coverage.
@@ -441,7 +442,7 @@ Product Owner明确取消“所有数据必须采全”的要求。产品必须�
 | 2.3 有效吞吐 | 先测真实返回量、原生分页/cursor、计划连续执行、重复请求、同步分析/封面、DB写入/事务/去重、平台锁、风控/频率/session/冷却与跨平台隔离；通过分页、增量、批处理、持久checkpoint提速。不得粗删 MAX_RESULTS=20 等边界或无界并发。计划恢复回执、原生cursor和权限各自独立。 |
 | 3 六平台 | RedNote（香港/国际账号）、抖音、公众号、Facebook、Instagram、X分别实证获准身份/范围、单帖详情/原生字段时间指标、分页回补、封面/元数据、Source/Evidence/Canonical、定时/取消/重启/续跑/重复处理。各平台分别保留真实任务、原帖及事务回执/计数/分母/时窗；BLOCKED路径不带停其他路径，不能被其他平台成功抵消。历史记录、打开页面、HTTP200不证实时可用。 |
 | 4 全产品消费 | 按下表核对真实受影响 Shared、CTH、BMP、Research/Reporting/Evaluation、SYSTEM 调用方；已有数据与确定性合法业务不因 AI 不可用停下。跨 Owner 由 M 原预约有界交接，C1必要Core/runtime/Scheduler/Permission修复仍自己完成，不额外唤醒暂停窗口。 |
-| 5 实际 Web | 官网/Web优先，仅修数据链改变影响的现有界面；主体选择/创建在权限内，真实范围/平台/时间/进度与状态、来源/业务关系/不确定性可查看，进入业务成果、保存/修订/重开，原帖在受控浏览器打开并返回原任务。无假数据墙、模拟后端、重复仪表盘或重做44屏。 |
+| 5 实际 Web | 官网/Web、Windows/macOS和iOS按完整规划并行实现、分别验收；当前用户工作同时完成视觉升级与数据链，主体选择/创建在权限内，真实范围/平台/时间/进度与状态、来源/业务关系/不确定性可查看，进入业务成果、保存/修订/重开，原帖在受控浏览器打开并返回原任务。不使用假数据墙、模拟后端或重复仪表盘；44屏不限制完整产品范围。 |
 | 6 旧路径收敛 | 追真实caller后替换已证失效的耦合/重复入口/旧启动路径、错误GLOBAL默认、兼容映射、吞错假成功、未写Source/Evidence或提前checkpoint、重复拉取/无界重试/session反复启动；保留唯一能力、兼容迁移、原数据/研究/测试/失败/Git史，不因目录旧而删除。 |
 | 7 真正闭环 | 至少一个实际获准平台或公开网页来源：选择主体→真实采集→原始来源保留→Evidence/Canonical核验→工作流分析/分类→CTH/BMP使用→真实成果→保存→关闭→重开→修订→来源追溯→中断恢复；来源类别基础权重相同，采集/入库/恢复已实证后优先接通已有获准数据的下游工具流，不等待全部平台完善。另记录六平台逐项实证/限制/硬阻塞，不把网页成果冒充其他平台已验收。实际重复不多计、身份不误绑、撤权不能继续使用。 |
 | 8 同口径测量 | 真实合规观察/成功原始持久化数量比例、主体平台覆盖缺失、重复和无用请求、入库及分析可用延迟、来源完整/待核验/错误率、重启恢复和成果保存重开；保留真实时间/账号许可/平台任务口径。无有效旧基线写 BASELINE NOT VERIFIED，不造提升百分比。 |
@@ -456,13 +457,13 @@ Product Owner明确取消“所有数据必须采全”的要求。产品必须�
 | Research / Reporting / Evaluation | 来源可检索、定位、引用、比较、修订；继续同一SourceBrief/SavedWork/Content Project/报告/Evaluation。可用的部分结果须说明样本/筛选/截断/方法与未知，不虚构趋势、营销转化或因果。源变更/撤销沿原引用触达受影响结果，旧版保留。 |
 | SYSTEM / Web caller | 原Scheduler/ONE Runtime/Browser/Permission/Gateway/Agent维持调度与身份；界面只消费真实合同，呈现取得/待核验/正式接收/待分析/完成/失败恢复，不把状态相互覆盖。未获准的后续用途保持阻塞；已合法独立路径继续。 |
 
-本条保留所有 R01–R15/J1–J8/U01–U25，既有编译/静态安全数据、真实用户E2E、保存重开恢复及三层Gate；不新增或执行单元/集成/换名模块套件，不改历史失败。零新费用/账号/GPU/Provider/环境/部署，受保护XHS身份及现行来源权益不变。旧前置“业务相关性/完整名称必须已证明”规则只控制业务派生或正式主体事实接收，不再让合法原始观察在取得阶段消失；来源有效性、权限和身份冲突保护不被削弱。
+本条保留所有 R01–R15/J1–J8/U01–U25，既有编译/静态安全数据、真实用户E2E、保存重开恢复及三层Gate；按根AGENTS第14节执行受影响的隔离单元/集成回归，保留其真实类型，不替代真实用户E2E，不改写历史失败。零新费用/账号/GPU/Provider/环境/部署，受保护XHS身份及现行来源权益不变。旧前置“业务相关性/完整名称必须已证明”规则只控制业务派生或正式主体事实接收，不再让合法原始观察在取得阶段消失；来源有效性、权限和身份冲突保护不被削弱。
 
 ### 图片/视频理解保留与异步提速 — 2026-10-09 C1 需求澄清
 
 C1 当前原窗口记录的直接 PO 澄清要求知道图片和视频实际讲什么，并能供产品其他流程使用，同时降低耗时。它补充上述单封面采集预算，不新增产品、模型、来源或权限。既有 J1/J7 的完整媒体理解要求继续有效，不能将封面、标题、原文摘要或分析状态登记冒充理解结果。
 
-1. **先入库，再处理。** C1 连续执行已获准的主体批量采集与 Source/Evidence/Canonical 事务。保留实际原媒体 URL/native ID、来源版本/hash、图序/时长及可取得状态；没有原文件字节时不能虚构文件 hash。由既有 SYSTEM TaskQueue/Worker、AI Gateway 与 Shared Artifact/Reporting 承接媒体用途，不另建队列、数据库或分析 Owner。只有真实 handler 注册、用途准入且持久入队后才能报 QUEUED；仅新增元数据仍是 NOT_RUN。
+1. **先入库，再处理。** 明确用户刷新或当前上下文任务通过 C1 既有 Owner 执行获准只读采集和 Source/Evidence/Canonical 事务；后台日程需当前显式 opt-in。保留实际原媒体 URL/native ID、来源版本/hash、图序/时长及可取得状态；没有原文件字节时不能虚构文件 hash。由既有 SYSTEM TaskQueue/Worker、AI Gateway 与 Shared Artifact/Reporting 承接媒体用途，不另建队列、数据库或分析 Owner。只有真实 handler 注册、用途准入且持久入队后才能报 QUEUED；仅新增元数据仍是 NOT_RUN。
 2. **图片分析不是只有 OCR。** 对实际获准图片分别记录可读文字及位置、可见场景/对象、商品/活动/品牌线索和不确定性。OCR 文本、视觉观察、模型解释与来源主张保持区分；封面第一遍分析不代表完整图集已读。当前任务确需其他图时按真实原件定位补取与处理，不能用单封面预算缩减已批准任务。
 3. **视频结合声音与时间画面。** 在既有媒体工具/许可和资源边界内，音轨实际转写一次，保留原时段、说话/语言不确定性和字幕来源；超过现有适配长度时由原 Owner 有界分段并正确重组，不静默截断。场景变化与时间覆盖的关键画面只作为有覆盖记录的分析输入；对重要/歧义区间补读，未取到或未看区间明确列出。不能以抽样帧宣称全片逐帧理解，也不能以无声音的画面推造话语。
 4. **复用结果仍要复核用途。** 按既有来源字节/版本、处理配方/模型版本、实际 scope/purpose 保留可复用派生结果，读取时重查当前 actor、来源权益/可用性与撤销状态。每项媒体 READ/ANALYZE/派生保存分别通过现有用途与写入合同；DATA_IMPORT 或内部关键词许可不自动授权媒体分析。原 UNREVIEWED/allowed_uses 不改，不隐含商业引文、导出、训练、发布或新 Provider 准入。
@@ -472,7 +473,7 @@ C1 当前原窗口记录的直接 PO 澄清要求知道图片和视频实际讲�
 
 ### 已核读资料进入 C1 当前闭环 — 2026-10-08
 
-下列要求适配已读本地内容/平台研究原件及现有 RC-03/04/08/13 路由，增强同一 J1/U01–U05，不新增采集器、资料库、任务卡或统一数据模型。C1 在当前完整任务内连续执行，不等待其余资料全部读完或 GPU：
+下列要求适配已读本地内容/平台研究原件及现有 RC-03/04/08/13 路由，增强同一 J1/U01–U05，不新增采集器、资料库、任务卡或统一数据模型。当前直接 PO 指派的执行者在既有 C1 Owner 内落实，不从历史窗口记录推断派工；独立可用工作不等待全球材料全齐或 GPU。
 
 1. **保留原件与实际覆盖。** 经现有 Source/Evidence/Canonical 保存原始身份、URL、版本/hash、发布/事件/capture 时间及现有精确 locator。全文、摘要、截断正文、封面、视频区间、转录和音频实际读取分别记录；元数据/标题/封面不能写成原文或全片已读。分页失败、缺图、媒体不可得等保留具体原因和可恢复位置，不能用成功的 HTTP 或总条数冲抵。
 2. **去重不丢来源。** 复用当前去重/版本接口；同文转载仍保留各来源身份、时间、链接和引用关系。前缀相同或长度接近只可作相似候选，不能静默删除独有材料或认定版本等价。原件读取只证明内容取得，不自动验证其主张、代表性、商业复用或训练资格。

@@ -104,7 +104,7 @@ actor + tenant/scope
 
 Surface capability must be explicit: `AVAILABLE`, `DEGRADED`, `DESKTOP_REQUIRED`, `PERMISSION_REQUIRED`, `UNAVAILABLE` or `UNKNOWN`. A Web or Mobile request may enqueue or hand off an authorized Desktop/SYSTEM task only through a real canonical contract with status, Evidence and recovery. It may not report success from an optimistic UI, HTTP 200, registration record or fixture.
 
-The pre-beta product-account decision remains in force until product engineering closure and the Product Owner's subsequent redesign. Multi-surface approval does not authorize a new login database, browser-side credential store or bypass of protected server routes.
+Optional product-account login, recovery and settings are part of current engineering closure; ordinary work has no global account wall. Free Google login and email codes use the existing account owner; Apple sign-in requires actual developer-account activation. Multi-surface approval does not authorize a second login database, browser-side credential store or bypass of protected server routes.
 
 ## 5. Jev product decision
 
