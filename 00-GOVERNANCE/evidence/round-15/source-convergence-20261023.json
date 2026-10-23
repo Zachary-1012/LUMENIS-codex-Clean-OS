@@ -59,11 +59,31 @@
         "tests/test_offline_speech.py"
       ],
       "rules": "same installed Ruff --isolated configuration on HEAD and current files; findings compared by path/code/message"
+    },
+    "web_release_build_scope": "PASS before withdrawal; generated output subsequently removed by explicit PO instruction. This is not a currently available frontend build or visual acceptance.",
+    "documentation_publication": {
+      "isolated_regression": {
+        "passed": 6,
+        "deselected": 29,
+        "failed": 0,
+        "extra_subtest_outcomes": 13
+      },
+      "python_compilation": "PASS for the two changed governance/test files",
+      "ruff": {
+        "baseline": 22,
+        "current": 22,
+        "added": 0
+      },
+      "scope": "Exact documentation-path classification and retained negative runtime/unreviewed-path cases; not product E2E. No network or production database used in the passing run."
     }
   },
   "preserved_failures": [
     "Initial two screen-scope regressions in test_experience_runtime: wrong CTH headers on independent SH-02; corrected test inputs, assertions retained.",
-    "Initial governance document budget exceeded; duplicate router explanation compressed, headroom guard retained."
+    "Initial governance document budget exceeded; duplicate router explanation compressed, headroom guard retained.",
+    "The document-only staged followup initially retained PUBLISHED_SOURCE_VERIFIED and correctly failed the same-commit source gate. The already-green source PR was merged separately; this fresh documentation branch is correctly classified RULES_ONLY_PUBLICATION. No guard was changed or bypassed.",
+    "The initial documentation classification rejected the existing requested HTML and JSON receipt. The original validator now admits only these two exact documentation paths, with negative tests retaining denial of unreviewed HTML/JSON/backups; no gate became advisory.",
+    "The first publication-regression invocation refused the protected repository DB because WAL/SHM sidecars were present; no tests ran in that attempt. The passing rerun used the existing disposable-schema and network-denied runner.",
+    "The first Ruff subprocess invocation could not resolve the .cmd shim; the installed exact Ruff executable subsequently completed the comparison."
   ],
   "limits": [
     "Five eSpeak runtime integration cases require an explicitly configured isolated engine; not passed.",
@@ -102,13 +122,106 @@
     "offline_source_count": 396,
     "outcome_count": 30,
     "search_and_reset": "observed in browser",
-    "business_outcome": "not asserted"
+    "business_outcome": "not asserted",
+    "approved_addendum_expansion": "Observed complete browser-continuity requirement text in the real HTML after correcting eight addendum content bindings; all 396 rows contain nonempty source content."
   },
   "cleanup": {
-    "status": "BLOCKED_BY_LOCAL_POLICY",
-    "attempted_scope": "30 obsolete generated Flutter build directories under app/.dart_tool/flutter_build, excluding the current hash-matching build, and the obsolete standalone oevira-digital-studio.html preview",
-    "deleted": false,
-    "policy_result": "exec_command rejected: blocked by policy before execution; no workaround attempted",
-    "protected": "Current build, unique source, original research, failure evidence and production data remain protected"
+    "status": "COMPLETED_FOR_APPROVED_GENERATED_FRONTEND_SCOPE",
+    "po_instruction": "Delete all current frontend builds and residual generated previews; retain source/planning for later reconstruction.",
+    "verified_at": "2026-10-23T20:58:22.164262+08:00",
+    "deleted": true,
+    "targets": [
+      {
+        "path": "app/build",
+        "files": 2141,
+        "bytes": 2669688137,
+        "absent_verified": true
+      },
+      {
+        "path": "app/.dart_tool/flutter_build",
+        "files": 769,
+        "bytes": 1711404982,
+        "absent_verified": true
+      },
+      {
+        "path": "website/dist",
+        "files": 13,
+        "bytes": 491062,
+        "absent_verified": true
+      },
+      {
+        "path": "website/.astro",
+        "files": 7,
+        "bytes": 6804,
+        "absent_verified": true
+      },
+      {
+        "path": "work/frontend-2026-10-03/web-mount-uf_l88rt/previous-web",
+        "files": 48,
+        "bytes": 83610660,
+        "absent_verified": true
+      },
+      {
+        "path": "workstation visualization: oevira-digital-studio.html",
+        "files": 1,
+        "bytes": 40580,
+        "absent_verified": true
+      }
+    ],
+    "deleted_files_in_this_inventory": 2979,
+    "deleted_bytes_in_this_inventory": 4465242225,
+    "earlier_removed_cache": "app/.dart_tool/flutter_build/0952d3846772b56aea7cf52b3dd16502; absent verified, not double-counted",
+    "historical_diagnostics_preserved": {
+      "files": 18,
+      "location": "work/product-closure-20261011/sync-closeout-20261023/historical-build-diagnostics",
+      "verification": "Each copied text diagnostic SHA256 matches its original before generated-tree removal; no compiled app retained there."
+    },
+    "residual_scope": "app, website and work: no compiled main.dart.js or matching product executables remain; tracked bootstrap templates and historical source/dependency templates are source, not builds.",
+    "initial_attempt": "Earlier compound deletion commands were blocked before execution. After renewed explicit PO approval, bounded literal-path native PowerShell removal succeeded.",
+    "protected": "Product source, plans, originals, historical evidence, production data and installed toolchains are retained. No frontend rebuild performed."
+  },
+  "updated_at": "2026-10-23T20:58:22.164262+08:00",
+  "runtime_readback_after_frontend_withdrawal": {
+    "at": "2026-10-23T20:58:22.164262+08:00",
+    "scope": "read-only HTTP after approved frontend build withdrawal; Core not restarted",
+    "health": {
+      "http": 200,
+      "ok": true,
+      "service": "lumenis-core",
+      "status": "healthy",
+      "version": "5.9.9"
+    },
+    "workspace": {
+      "http": 503,
+      "error": "workspace_build_unavailable"
+    },
+    "javascript": {
+      "http": 503,
+      "error": "workspace_build_unavailable"
+    }
+  },
+  "local_branch_cleanup": {
+    "removed_count": 16,
+    "evidence": "work/product-closure-20261011/sync-closeout-20261023/retired-branches.json",
+    "basis": "Each retired ref was an ancestor of main or its tree matched a merged PR; no unique candidate was deleted."
+  },
+  "source_publication": {
+    "pr": 136,
+    "head": "0cfdab4844bd4caa89d19768d5fa8c78856aed8d",
+    "merge": "2407bbda561f4fa8b1734d4d24971f6cb4f429d5",
+    "merged_at": "2026-10-23T21:01:50+08:00",
+    "product_gate": 39941881595,
+    "app_gate": 39941881638,
+    "checks": "SUCCESS on exact PR head",
+    "followup": "This document-only closeout uses a fresh branch from that integrated main; final parity requires independent readback."
+  },
+  "publication_admission_basis": {
+    "source": "Direct PO request in this conversation, 2026-10-23",
+    "request": "同步一下，保持一致和最新，旧的必须删除；完成后给我一份执行工单可视化html，产品闭环的执行步骤，整个产品的闭环，上线，必须严格按照产品规划及各文件",
+    "scope": "The existing requested work-order HTML and its source-convergence receipt are documentation, not product runtime source. Admit these two exact already-published paths to the existing documentation classifier; arbitrary HTML, JSON, backups and runtime source stay denied.",
+    "paths": [
+      "00-GOVERNANCE/LOOP-PLAN-20261014/execution-workorder.html",
+      "00-GOVERNANCE/evidence/round-15/source-convergence-20261023.json"
+    ]
   }
 }
