@@ -1,0 +1,62 @@
+{
+  "recorded_at": "2026-10-23T01:24:28.862751+00:00",
+  "source_base": "70d0499a284c393d5f1f6c28d430893eb6ea1d0a",
+  "state": "BOUNDED_LOCAL_OPERATION_VERIFIED",
+  "scope": "Home conversation composition, existing route navigation, manuscript reopen and unsent draft continuity. Full visual and product acceptance remain OPEN.",
+  "source_pins": {
+    "app/lib/features/account/acc03/acc03_screen.dart": "f70a0f17f53dbed903d7f69a526b0a54d4f50d806705e38f5c3038acef9aec80",
+    "app/lib/features/ai01/ai01_conversation_panel.dart": "34dfa2ceb6600402947f7d91c4396cfad58180289260509705140b8731c4158e",
+    "app/lib/shell/lumenis_workspace_shell.dart": "65822916c27ee0bcbcae1c07ddd6beccde30b91a4879df4d909ae6c87721412a",
+    "app/test/features/account/acc03/acc03_screen_test.dart": "48125e890f92bb090d68ecb33a1979ce76ff06d237b56ebdf77dd4e6f93d7075",
+    "app/test/features/ai01/ai01_conversations_test.dart": "ca605952aad0b6a8e608e3a15592b32d5f3f0b5aebe99ee66a2f5d002e392408",
+    "app/test/shell/lumenis_workspace_shell_test.dart": "0bf4b1f55dfbe2fa4300ac4de7cf107efea9d175adde2a65add769aaaa08e953",
+    "contracts/experience/screen-specifications/ACC-03.md": "fc7977ea9e586cf3c29dc9d5ce60455b37686eb82b3905d68bd0535f29b0bad0"
+  },
+  "checks": {
+    "flutter_analyze": "PASS - exact changed Home/panel/shell and three test files",
+    "widget_regressions": {
+      "passed": 40,
+      "log_sha256": "27a134558c971cf403ab0690b0cafcfd9297a8fdab70fbd7cfbc8e22d6a40e2a",
+      "classification": "isolated automated checks, not user E2E"
+    },
+    "flutter_web_build": "PASS - release no-pub",
+    "constitution": "PASS",
+    "experience_authority": "PASS",
+    "experience_anti_template_static": "PASS - not visual review",
+    "screen_contracts": "PASS",
+    "source_adoption": "PASS - all 396 coverage rows and 30 outcomes retained"
+  },
+  "runtime": {
+    "port": 57946,
+    "kind": "owned manual workspace, no scheduler",
+    "pid": 9816,
+    "web_bundle_sha256": "e1e0f76aed32f8e42001e5a7350287f99f96aae239232feb337f44cb28f67ce8",
+    "backend_restarted": false,
+    "production_8201_changed": false,
+    "source_boundary": "Frontend is the current working snapshot. Existing uncommitted offline speech/client methods were not accepted or loaded into the backend by this batch."
+  },
+  "actual_operations": [
+    {
+      "action": "Type unsent Home draft, open existing creation library and select saved manuscript version 2",
+      "observed": "Actual title, section/body and saved version 2 read back; no new save or inference",
+      "screenshot_sha256": "873dd325a27d08ce2e97a563a11153a449e4044dd4a58b0f7551d4482a16c539"
+    },
+    {
+      "action": "Return to Home through product navigation",
+      "observed": "Original unsent draft retained; last-page action points to creation workspace",
+      "screenshot_sha256": "0de068306cca10bc3fd10660d760e4f3a1c760b29b6910e96e0d9851e38e479e"
+    }
+  ],
+  "retained_failures": {
+    "initial_home_widgets": "Layout overflow/stale layout assertions repaired; initial logs retained locally.",
+    "unknown_creation_confirmation_test": "Initial cancellation locator used wrong locale; localized dialog cancellation now checked without issuing another create.",
+    "media_properties_change": "Changing media inspector initial visibility exposed 22 existing regressions. This unrelated layout change was withdrawn; media workbench matches HEAD. Logs retained."
+  },
+  "limits": [
+    "No new conversational inference was performed; history/persistence wiring has isolated checks only.",
+    "Navigation preserves draft within same window/scope; refresh/close persistence is not claimed.",
+    "The existing manuscript editor remains visually unaccepted; this does not close Shared creation.",
+    "Full recent-task/result continuation, original artwork, physical interactions, CTH/BMP full chains, native device operation and release remain OPEN.",
+    "Existing production database, external collection, external AI, training and deployment were not changed."
+  ]
+}

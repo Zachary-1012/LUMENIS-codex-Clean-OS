@@ -205,6 +205,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   String? _localReturnScreenId;
   var _taskDraftController = TextEditingController();
   String _taskDraftScope = 'GLOBAL_ALL::';
+  bool _inspectorVisible = false;
 
   LumenisLeaveGuard get _leaveGuard =>
       LumenisLeaveScope.maybeOf(context) ?? _localLeaveGuard;
@@ -811,10 +812,148 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       backgroundColor: LumenisTheme.of(context).canvas,
       body: Row(
         children: [
+          SizedBox(
+            width: 208,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 22, 12, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8, bottom: 32),
+                      child: _LumenisMark(),
+                    ),
+                    Expanded(
+                      child: ListView(
+                        key: const ValueKey('workspace-work-rail'),
+                        children: [
+                          _workRailEntry(
+                            'ACC-03',
+                            Icons.chat_bubble_outline_rounded,
+                            _shellCopy(
+                              context,
+                              zh: '开始工作',
+                              en: 'Start work',
+                              ko: '작업 시작',
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _workRailEntry(
+                            'CTH-01',
+                            Icons.timeline_rounded,
+                            _shellCopy(
+                              context,
+                              zh: '商业运营',
+                              en: 'Commerce',
+                              ko: '커머스 운영',
+                            ),
+                          ),
+                          _workRailEntry(
+                            'BMP-01',
+                            Icons.hub_outlined,
+                            _shellCopy(
+                              context,
+                              zh: '品牌与市场',
+                              en: 'Brand & market',
+                              ko: '브랜드 & 마켓',
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          _workRailEntry(
+                            'SH-02',
+                            Icons.library_books_outlined,
+                            _shellCopy(
+                              context,
+                              zh: '研究与资料',
+                              en: 'Research',
+                              ko: '리서치',
+                            ),
+                          ),
+                          _workRailEntry(
+                            'SH-01',
+                            Icons.edit_note_rounded,
+                            _shellCopy(
+                              context,
+                              zh: '创作与作品',
+                              en: 'Create & works',
+                              ko: '창작과 작품',
+                            ),
+                          ),
+                          _workRailEntry(
+                            'SYS-06',
+                            Icons.language_rounded,
+                            _shellCopy(
+                              context,
+                              zh: '浏览器',
+                              en: 'Browser',
+                              ko: '브라우저',
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          TextButton.icon(
+                            key: const ValueKey('workspace-rail-all'),
+                            onPressed: _openNavigation,
+                            icon: const LumenisIcon(
+                              Icons.grid_view_rounded,
+                              size: 18,
+                            ),
+                            label: Text(
+                              _shellCopy(
+                                context,
+                                zh: '全部工作',
+                                en: 'All work',
+                                ko: '모든 작업',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (showInspector &&
+                        !_isHome &&
+                        _activeScreen.value != 'AI-01')
+                      TextButton.icon(
+                        key: const ValueKey('workspace-details-toggle'),
+                        onPressed: () => setState(
+                          () => _inspectorVisible = !_inspectorVisible,
+                        ),
+                        icon: LumenisIcon(
+                          _inspectorVisible
+                              ? Icons.close_rounded
+                              : Icons.info_outline_rounded,
+                          size: 18,
+                        ),
+                        label: Text(
+                          _shellCopy(
+                            context,
+                            zh: '工作详情',
+                            en: 'Work details',
+                            ko: '작업 세부 정보',
+                          ),
+                        ),
+                      ),
+                    _workRailEntry(
+                      'SYS-05',
+                      Icons.tune_rounded,
+                      _shellCopy(
+                        context,
+                        zh: '偏好设置',
+                        en: 'Preferences',
+                        ko: '환경설정',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          VerticalDivider(width: 1, color: LumenisTheme.of(context).line),
           Expanded(
             child: Column(
               children: [
                 _WorkspaceHeader(
+                  railVisible: true,
                   destination: destination,
                   activeScreenId: _activeScreen.value,
                   contextLabel: _contextLabel(),
@@ -833,7 +972,10 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
               ],
             ),
           ),
-          if (showInspector && !_isHome && _activeScreen.value != 'AI-01') ...[
+          if (showInspector &&
+              _inspectorVisible &&
+              !_isHome &&
+              _activeScreen.value != 'AI-01') ...[
             const VerticalDivider(width: 1, thickness: 1),
             _ContextInspector(
               destination: destination,
@@ -843,6 +985,38 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _workRailEntry(String screen, IconData icon, String label) {
+    final theme = LumenisTheme.of(context);
+    final selected =
+        _activeScreen.value == screen ||
+        (screen == 'CTH-01' && _activeScreen.value.startsWith('CTH-')) ||
+        (screen == 'BMP-01' && _activeScreen.value.startsWith('BMP-'));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Semantics(
+        selected: selected,
+        child: TextButton.icon(
+          key: ValueKey('workspace-rail-$screen'),
+          onPressed: () => _activateScreen(screen),
+          style: TextButton.styleFrom(
+            foregroundColor: selected ? theme.foreground : theme.muted,
+            backgroundColor: selected
+                ? theme.surfaceRaised
+                : Colors.transparent,
+            alignment: Alignment.centerLeft,
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          icon: LumenisIcon(icon, size: 19),
+          label: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
       ),
     );
   }
@@ -1331,6 +1505,7 @@ class _WorkspaceHeader extends StatelessWidget {
     required this.isHome,
     required this.isCth02,
     this.compact = false,
+    this.railVisible = false,
   });
 
   final _WorkspaceDestination destination;
@@ -1347,6 +1522,7 @@ class _WorkspaceHeader extends StatelessWidget {
   final bool isHome;
   final bool isCth02;
   final bool compact;
+  final bool railVisible;
 
   @override
   Widget build(BuildContext context) {
@@ -1370,14 +1546,20 @@ class _WorkspaceHeader extends StatelessWidget {
             key: const ValueKey('workspace-home'),
             tooltip: _shellCopy(context, zh: '首页', en: 'Home', ko: '홈'),
             onPressed: onHome,
-            icon: CustomPaint(
-              size: const Size(24, 24),
-              painter: _OpenContoursMark(theme.muted),
-            ),
+            icon: railVisible
+                ? const LumenisIcon(Icons.home_outlined)
+                : CustomPaint(
+                    size: const Size(24, 24),
+                    painter: _OpenContoursMark(theme.muted),
+                  ),
           ),
           Expanded(
             child: Text(
-              copy.text(isHome ? 'product.name' : 'screen.$activeScreenId'),
+              isHome && railVisible
+                  ? _shellCopy(context, zh: '首页', en: 'Home', ko: '홈')
+                  : copy.text(
+                      isHome ? 'product.name' : 'screen.$activeScreenId',
+                    ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1403,18 +1585,16 @@ class _WorkspaceHeader extends StatelessWidget {
               _StatusPill(label: coreLabel),
             const SizedBox(width: 14),
           ],
-          if (!isHome) ...[
-            Flexible(
-              flex: 2,
-              child: Text(
-                contextLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.right,
-                style: TextStyle(color: theme.muted, fontSize: 13),
-              ),
+          Flexible(
+            flex: 2,
+            child: Text(
+              contextLabel,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.right,
+              style: TextStyle(color: theme.muted, fontSize: 13),
             ),
-          ],
+          ),
           IconButton(
             tooltip: copy.text('context.selector.open'),
             onPressed: onOpenContextPicker,
@@ -2310,12 +2490,14 @@ class _LumenisMark extends StatelessWidget {
               painter: _OpenContoursMark(theme.muted),
             ),
             const SizedBox(width: 10),
-            Text(
-              '寰意 / OEVIRA',
-              style: TextStyle(
-                color: theme.foreground,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
+            Flexible(
+              child: Text(
+                '寰意 / OEVIRA',
+                style: TextStyle(
+                  color: theme.foreground,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

@@ -4,6 +4,33 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
+## 2026-10-23 Home and navigation — incomplete visual upgrade
+
+The current PO correction requires planned visual/interaction quality and real
+business completion together. Whole-product visual acceptance remains
+**NOT_ACCEPTED**; all 30 outcomes and 396 coverage rows remain in scope. The
+complete plan, full-product sketch, Experience and corresponding module contracts
+govern execution. A usable backend, isolated check or screenshot cannot close a
+work surface whose planned presentation and operation are still incomplete.
+
+Home now embeds the existing AI-01 conversation owner directly, with explicit
+send, real history, persistent turn identity and uncertain-write recovery. It
+reads history without creating a conversation or invoking a model. Independent
+business/research/creation entries and the existing AI-01 analysis/draft/file
+tools remain reachable. The wide shell exposes existing work routes directly;
+the contextual inspector opens on request. Existing scope, leave guards,
+appearance, localization and narrow-screen navigation are preserved.
+
+Local Web operation reopened the existing manuscript version 2 from the creation
+library and returned to Home with the unsent draft retained. This is bounded
+navigation/readback evidence, not new analysis, conversational inference or
+whole-product recovery acceptance. See [Home continuity](evidence/round-15/home-workspace-continuity-20261023.json).
+The remaining editor layouts, complete recent-task/result continuation, original
+visual assets and physical/motion interactions, CTH/BMP chains and each native
+surface still require their planned implementation and actual acceptance.
+Production 8201, production data, collection, external models, training and
+deployment were not changed by this batch.
+
 ## 2026-10-23 Media project and podcast continuity
 
 Named editable media projects save independently of rendering through the existing

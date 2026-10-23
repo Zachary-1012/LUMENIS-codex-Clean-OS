@@ -29,17 +29,19 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.byKey(const ValueKey('ai01-embedded-content')),
+        find.byKey(const ValueKey('ai01-conversation-workspace')),
         findsOneWidget,
       );
-      final draftFinder = find.byKey(const ValueKey('ai01-task-input'));
+      final draftFinder = find.byKey(const ValueKey('ai01-conversation-input'));
       expect(draftFinder, findsOneWidget);
       await tester.enterText(draftFinder, 'Review global market signals');
+      await tester.pump();
       expect(
         tester.widget<TextField>(draftFinder).controller!.text,
         'Review global market signals',
       );
-      expect(client.requestedScreens, ['AI-01']);
+      expect(client.requestedScreens, isEmpty);
+      expect(client.listCalls, 1);
       expect(repository.calls, 0);
       expect(find.text('从一处，看见全局。'), findsNothing);
       expect(find.text('从一处，看见全局'), findsNothing);
@@ -47,17 +49,9 @@ void main() {
       expect(find.text('入口检查'), findsNothing);
       expect(find.text('查看入口状态'), findsNothing);
 
-      final submit = find.widgetWithText(FilledButton, '开始分析');
-      expect(submit, findsOneWidget);
-      expect(tester.widget<FilledButton>(submit).onPressed, isNull);
-      final submitTooltip = find.ancestor(
-        of: submit,
-        matching: find.byType(Tooltip),
-      );
-      expect(
-        tester.widget<Tooltip>(submitTooltip.first).message,
-        contains('AI 服务状态尚未读取成功'),
-      );
+      expect(find.text('开始分析'), findsNothing);
+      final send = find.byKey(const ValueKey('ai01-conversation-send'));
+      expect(tester.widget<IconButton>(send).onPressed, isNotNull);
 
       const destinations = <(String, Acc03Destination)>[
         ('CTH-01', Acc03Destination.commerce),
@@ -105,7 +99,6 @@ void main() {
         'A usable business subject or brand is not confirmed, so analysis cannot start.',
         '사용할 사업 주체 또는 브랜드가 확인되지 않아 분석을 시작할 수 없습니다.',
       ];
-      const globalFocusCopy = <String>['范围可选', 'Optional focus', '범위 선택 가능'];
       const expectedFirstDestination = <String>['商业运营', 'Commerce', '커머스 운영'];
       const marketingTitles = <String>[
         '今天，想完成什么？',
@@ -127,8 +120,14 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byKey(const ValueKey('ai01-task-input')), findsOneWidget);
-        expect(find.text(globalFocusCopy[index]), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('ai01-conversation-input')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const ValueKey('ai01-conversation-workspace')),
+          findsOneWidget,
+        );
         expect(find.text(oldSubjectBlockers[index]), findsNothing);
         expect(find.text(oldSubmitBlockers[index]), findsNothing);
         expect(find.text(marketingTitles[index]), findsNothing);
@@ -141,7 +140,8 @@ void main() {
         expect(tester.takeException(), isNull);
       }
       for (final client in clients) {
-        expect(client.requestedScreens, ['AI-01']);
+        expect(client.requestedScreens, isEmpty);
+        expect(client.listCalls, 1);
       }
       expect(repository.calls, 0);
     },
@@ -163,9 +163,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final editor = tester.getRect(
-      find.byKey(const ValueKey('ai01-composer-surface')),
+      find.byKey(const ValueKey('ai01-conversation-composer')),
     );
-    expect(editor.width, lessThanOrEqualTo(820));
+    expect(editor.width, lessThanOrEqualTo(940));
     expect((editor.center.dx - 640).abs(), lessThanOrEqualTo(1));
     expect(tester.takeException(), isNull);
   });
@@ -219,7 +219,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('acc03-last-opened')), findsNothing);
-    expect(client.requestedScreens, ['AI-01']);
+    expect(client.requestedScreens, isEmpty);
+    expect(client.listCalls, 1);
     expect(tester.takeException(), isNull);
   });
 }
@@ -263,6 +264,16 @@ Widget _app({
 
 class _Client extends LumenisCoreClient {
   final requestedScreens = <String>[];
+  int listCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> listAiConversations({
+    int limit = 30,
+    int offset = 0,
+  }) async {
+    listCalls++;
+    throw const LumenisCoreException('Core unavailable', statusCode: 503);
+  }
 
   @override
   Future<Map<String, dynamic>> screen(String screenId) async {

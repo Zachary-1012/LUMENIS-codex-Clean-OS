@@ -200,6 +200,91 @@ void main() {
     },
   );
 
+  testWidgets(
+    'home uses existing conversation persistence without an extra dialog or empty creation',
+    (tester) async {
+      final draft = TextEditingController();
+      addTearDown(draft.dispose);
+      await tester.pumpWidget(_conversationApp(model, draft, embedded: true));
+      await tester.pumpAndSettle();
+      expect(repository.conversations, isEmpty);
+      expect(
+        find.byKey(const ValueKey('ai01-conversation-dialog')),
+        findsNothing,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-conversation-input')),
+        'Keep this original question',
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('ai01-conversation-send')));
+      await tester.pumpAndSettle();
+      expect(repository.conversations.length, 1);
+      expect(repository.appendedTexts, ['Keep this original question']);
+      expect(repository.respondCalls.length, 1);
+      expect(draft.text, isEmpty);
+      expect(find.text('A grounded reply'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-new-work')),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.conversations.length, 1);
+      await tester.tap(find.byKey(const ValueKey('ai01-conversation-history')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-$_conversationId')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Keep this original question'), findsOneWidget);
+      expect(repository.appendedTexts.length, 1);
+      expect(repository.respondCalls.length, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('home retains draft and confirmation after uncertain creation', (
+    tester,
+  ) async {
+    repository.createThrowsAfterPersist = true;
+    final draft = TextEditingController(text: 'Retain the original question');
+    addTearDown(draft.dispose);
+    await tester.pumpWidget(_conversationApp(model, draft, embedded: true));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('ai01-conversation-send')));
+    await tester.pumpAndSettle();
+    expect(model.creatingUnknown, isTrue);
+    expect(repository.conversations, hasLength(1));
+    expect(repository.respondCalls, isEmpty);
+    expect(draft.text, 'Retain the original question');
+    expect(
+      tester
+          .widget<IconButton>(
+            find.byKey(const ValueKey('ai01-conversation-send')),
+          )
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.byKey(const ValueKey('ai01-conversation-new-work')));
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('ai01-conversation-create-again-confirm')),
+      findsOneWidget,
+    );
+    expect(repository.conversations, hasLength(1));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(
+          const ValueKey('ai01-conversation-create-again-confirm'),
+        ),
+        matching: find.byType(TextButton),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.conversations, hasLength(1));
+    expect(draft.text, 'Retain the original question');
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('checking an unknown save does not clear a later draft edit', (
     tester,
   ) async {
@@ -321,8 +406,9 @@ void main() {
 
 Widget _conversationApp(
   Ai01ConversationViewModel model,
-  TextEditingController draft,
-) => MaterialApp(
+  TextEditingController draft, {
+  bool embedded = false,
+}) => MaterialApp(
   theme: LumenisTheme.dark,
   supportedLocales: LumenisLocalizations.supportedLocales,
   localizationsDelegates: const [
@@ -335,6 +421,7 @@ Widget _conversationApp(
     body: Ai01ConversationPanel(
       viewModel: model,
       draftController: draft,
+      embedded: embedded,
       onClose: () {},
     ),
   ),
@@ -573,9 +660,7 @@ class _ConversationRepository implements Ai01ConversationRepository {
       originKind: originKind,
       state: state,
       revision: 1,
-      content:
-          content ??
-          {'text': text, 'in_reply_to': ?replyTo},
+      content: content ?? {'text': text, 'in_reply_to': ?replyTo},
       recovery: state == 'reserved'
           ? 'RESULT_UNKNOWN_NO_AUTOMATIC_RETRY'
           : null,

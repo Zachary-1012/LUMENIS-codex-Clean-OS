@@ -227,7 +227,13 @@ void main() {
       final close = find.byKey(const ValueKey('workspace-navigation-close'));
       expect(tester.getSize(close).width, greaterThanOrEqualTo(44));
       expect(tester.getSize(close).height, greaterThanOrEqualTo(44));
-      expect(find.bySemanticsLabel('寰意 / OEVIRA'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('workspace-navigation-dialog')),
+          matching: find.bySemanticsLabel('寰意 / OEVIRA'),
+        ),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
       await tester.tap(close);
       await tester.pumpAndSettle();
@@ -543,10 +549,10 @@ void main() {
       await tester.pumpWidget(_app(client, initialScreenId: 'ACC-03'));
       await tester.pumpAndSettle();
 
-      final input = find.byKey(const ValueKey('ai01-task-input'));
+      final input = find.byKey(const ValueKey('ai01-conversation-input'));
       expect(
-        tester.widget<Ai01Screen>(find.byType(Ai01Screen)).embedded,
-        isTrue,
+        find.byKey(const ValueKey('ai01-conversation-workspace')),
+        findsOneWidget,
       );
       const draft = '同一范围暂时读取失败时保留的草稿';
       await tester.enterText(input, draft);
@@ -589,11 +595,11 @@ void main() {
       expect(find.byType(Acc03Screen), findsOneWidget);
       expect(find.byKey(const ValueKey('acc03-last-opened')), findsNothing);
       final inputAfterScopeChange = find.byKey(
-        const ValueKey('ai01-task-input'),
+        const ValueKey('ai01-conversation-input'),
       );
       expect(
-        tester.widget<Ai01Screen>(find.byType(Ai01Screen)).embedded,
-        isTrue,
+        find.byKey(const ValueKey('ai01-conversation-workspace')),
+        findsOneWidget,
       );
       expect(
         tester.widget<TextField>(inputAfterScopeChange).controller!.text,
@@ -965,6 +971,9 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('workspace-nav-BMP-01')));
       await tester.pumpAndSettle();
 
+      expect(find.text('Example Brand'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('workspace-details-toggle')));
+      await tester.pumpAndSettle();
       expect(find.text('Example Brand'), findsNWidgets(2));
       expect(find.text('INTERNAL-BRAND-ID'), findsNothing);
       expect(find.text('LEGACY-INTERNAL-KEY'), findsNothing);
