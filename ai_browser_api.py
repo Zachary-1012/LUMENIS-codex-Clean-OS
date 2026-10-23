@@ -755,6 +755,11 @@ def register_ai_browser_api(app):
             except (ValueError, UnicodeDecodeError):
                 data = None
             result = session.extract(data)
+            current, err = _get_session_or_404(session_id)
+            if err:
+                return err
+            if current is not session:
+                raise BrowserExtractionError('BROWSER_EXTRACTION_PAGE_CHANGED')
             reply = jsonify(result)
             reply.headers['Cache-Control'] = 'no-store, private'
             reply.headers['Pragma'] = 'no-cache'

@@ -24,6 +24,55 @@ import 'package:lumenis_app/navigation/lumenis_router.dart';
 import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
 
 void main() {
+  for (final kind in ['manuscript', 'video', 'audio']) {
+    testWidgets('Home opens independent $kind work and survives route reload', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1100, 960));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _RouterClient();
+      final router = createLumenisRouter(client: client, onLocaleChanged: (_) {});
+      addTearDown(router.dispose);
+      await tester.pumpWidget(_app(router));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('acc03-start-$kind')));
+      await tester.pumpAndSettle();
+      final location = router.routeInformationProvider.value.uri.toString();
+      expect(location, '/workspace/SH-01?entry=$kind');
+      expect(tester.widget<Sh01Screen>(find.byType(Sh01Screen)).initialWorkspaceEntry, kind);
+      if (kind != 'manuscript') expect(find.byType(MediaProjectWorkbench), findsOneWidget);
+      expect(client.browserStartCalls, 0);
+      expect(tester.takeException(), isNull);
+      final reopened = createLumenisRouter(client: _RouterClient(), onLocaleChanged: (_) {}, initialLocation: location);
+      addTearDown(reopened.dispose);
+      await tester.pumpWidget(_app(reopened));
+      await tester.pumpAndSettle();
+      expect(tester.widget<Sh01Screen>(find.byType(Sh01Screen)).initialWorkspaceEntry, kind);
+      if (kind != 'manuscript') expect(find.byType(MediaProjectWorkbench), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+  for (final path in [
+    '/workspace/SH-01?entry=manuscript&artifact=invalid',
+    '/workspace/CTH-01?entry=manuscript&artifact=ART-0123456789abcdef',
+    '/workspace/SH-02?entry=video&artifact=ART-0123456789abcdef',
+    '/workspace/SH-01?entry=manuscript&artifact=ART-0123456789abcdef&artifact=ART-0000000000000000',
+  ]) {
+    testWidgets('rejects an ambiguous or mismatched saved-work entry: $path', (
+      tester,
+    ) async {
+      final router = createLumenisRouter(
+        client: _RouterClient(),
+        onLocaleChanged: (_) {},
+        initialLocation: path,
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(_app(router));
+      await tester.pumpAndSettle();
+      expect(find.byType(LumenisRouteBoundary), findsOneWidget);
+      expect(find.byType(Sh01Screen), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   for (final size in const [Size(390, 960), Size(1440, 960)]) {
     testWidgets(
       'BMP-08 opens the independent SH-01 media workspace and returns at ${size.width}px',
@@ -376,7 +425,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(Sys06Screen), findsOneWidget);
-        expect(find.text('内置来源阅读器'), findsOneWidget);
+        expect(find.byKey(const ValueKey('sys06-tabs')), findsOneWidget);
         expect(find.byKey(const ValueKey('sys06-open')), findsOneWidget);
         expect(tester.takeException(), isNull);
 
@@ -609,6 +658,13 @@ class _RouterClient extends LumenisCoreClient {
   _RouterClient({this.denyContext = false});
   final bool denyContext;
   int runtimeIdentityCalls = 0;
+  int browserStartCalls = 0;
+
+  @override
+  Future<Map<String, dynamic>> openBrowserSession() async {
+    browserStartCalls++;
+    throw StateError('Navigation cannot start acquisition or browsing.');
+  }
 
   @override
   Future<Map<String, dynamic>> runtimeIdentity() async {

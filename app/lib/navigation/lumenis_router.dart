@@ -52,22 +52,49 @@ GoRouter createLumenisRouter({
         path: '/workspace/:screenId',
         builder: (context, state) {
           final screenId = state.pathParameters['screenId'] ?? '';
+          final artifact = state.uri.queryParameters['artifact'];
+          final entry = state.uri.queryParameters['entry'];
+          final independentCreation =
+              screenId == 'SH-01' &&
+              artifact == null &&
+              const {'manuscript', 'video', 'audio'}.contains(entry) &&
+              state.uri.queryParametersAll.values.every(
+                (values) => values.length == 1,
+              );
+          if (artifact != null &&
+              (!RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifact) ||
+                  state.uri.queryParametersAll.values.any(
+                    (values) => values.length != 1,
+                  ) ||
+                  !(const {
+                        'SH-01': ['manuscript', 'video', 'audio'],
+                        'SH-02': ['research', 'material'],
+                        'SH-04': ['report'],
+                      }[screenId]?.contains(entry) ??
+                      false))) {
+            return const LumenisRouteBoundary.unavailable();
+          }
           if (LumenisWorkspaceRoutes.supportsWorkspaceScreen(screenId)) {
             return _workspace(
               context,
               client: client,
               leaveGuard: leaveGuard,
               screenId: screenId,
-              workspaceEntry:
-                  screenId == 'SH-01' &&
-                      state.uri.queryParameters['entry'] == 'media' &&
-                      state.uri.queryParameters['return'] == 'BMP-08'
+              initialArtifactId: artifact,
+              workspaceEntry: artifact != null
+                  ? entry
+                  : independentCreation
+                  ? entry
+                  : screenId == 'SH-01' &&
+                        state.uri.queryParameters['entry'] == 'media' &&
+                        state.uri.queryParameters['return'] == 'BMP-08'
                   ? 'media'
                   : null,
-              returnScreenId:
-                  screenId == 'SH-01' &&
-                      state.uri.queryParameters['entry'] == 'media' &&
-                      state.uri.queryParameters['return'] == 'BMP-08'
+              returnScreenId: artifact != null
+                  ? 'ACC-03'
+                  : screenId == 'SH-01' &&
+                        state.uri.queryParameters['entry'] == 'media' &&
+                        state.uri.queryParameters['return'] == 'BMP-08'
                   ? 'BMP-08'
                   : null,
               onLocaleChanged: onLocaleChanged,
@@ -88,6 +115,7 @@ Widget _workspace(
   required String screenId,
   String? workspaceEntry,
   String? returnScreenId,
+  String? initialArtifactId,
   required ValueChanged<Locale?> onLocaleChanged,
 }) => LumenisLeaveScope(
   guard: leaveGuard,
@@ -96,6 +124,33 @@ Widget _workspace(
     initialScreenId: screenId,
     initialWorkspaceEntry: workspaceEntry,
     returnScreenId: returnScreenId,
+    initialArtifactId: initialArtifactId,
+    onOpenSavedWork: (kind, artifact) {
+      final target = switch (kind) {
+        'manuscript' || 'video' || 'audio' => 'SH-01',
+        'research' || 'material' => 'SH-02',
+        'report' => 'SH-04',
+        _ => null,
+      };
+      if (target == null || !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifact)) {
+        return;
+      }
+      context.go(
+        Uri(
+          path: LumenisWorkspaceRoutes.pathForScreen(target),
+          queryParameters: {'entry': kind, 'artifact': artifact},
+        ).toString(),
+      );
+    },
+    onStartCreation: (kind) {
+      if (!const {'manuscript', 'video', 'audio'}.contains(kind)) return;
+      context.go(
+        Uri(
+          path: LumenisWorkspaceRoutes.sh01,
+          queryParameters: {'entry': kind},
+        ).toString(),
+      );
+    },
     onScreenSelected: (nextScreenId) {
       final path = LumenisWorkspaceRoutes.pathForScreen(nextScreenId);
       if (LumenisWorkspaceRoutes.focusedReturnScreenIds.contains(
@@ -110,7 +165,7 @@ Widget _workspace(
         context.go('$path?entry=media&return=BMP-08');
         return;
       }
-      if (GoRouterState.of(context).uri.path != path) {
+      if (GoRouterState.of(context).uri.toString() != path) {
         context.go(path);
       }
     },

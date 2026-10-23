@@ -333,7 +333,15 @@ class Sh02ViewModel extends ChangeNotifier {
     await loadRecentImports();
   }
 
-  Future<void> openImport(Sh02ImportedMaterial item) async {
+  Future<void> openImport(Sh02ImportedMaterial item) =>
+      _openImport(item.artifactId, expected: item);
+
+  Future<void> openImportById(String artifactId) => _openImport(artifactId);
+
+  Future<void> _openImport(
+    String artifactId, {
+    Sh02ImportedMaterial? expected,
+  }) async {
     final generation = ++_readGeneration;
     _sourcePage = null;
     _rowsLoading = false;
@@ -343,14 +351,15 @@ class Sh02ViewModel extends ChangeNotifier {
     _openingImport = true;
     _notifyIfAlive();
     try {
-      final reopened = await _repository.reopenImport(item.artifactId);
+      final reopened = await _repository.reopenImport(artifactId);
       if (_disposed || generation != _readGeneration) return;
-      if (reopened.artifactId != item.artifactId ||
-          reopened.artifactSha256 != item.artifactSha256 ||
-          reopened.requestId != item.requestId ||
-          reopened.filename != item.filename ||
-          reopened.sizeBytes != item.sizeBytes ||
-          reopened.sourceSha256 != item.sourceSha256) {
+      if (reopened.artifactId != artifactId ||
+          (expected != null &&
+              (reopened.artifactSha256 != expected.artifactSha256 ||
+                  reopened.requestId != expected.requestId ||
+                  reopened.filename != expected.filename ||
+                  reopened.sizeBytes != expected.sizeBytes ||
+                  reopened.sourceSha256 != expected.sourceSha256))) {
         throw const FormatException('Imported document version changed.');
       }
       _openedImport = reopened;

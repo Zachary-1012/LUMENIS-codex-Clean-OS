@@ -19,8 +19,11 @@ from array import array
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
+import re
 import struct
+import subprocess
 import sys
 import tempfile
 from typing import Any, Callable
@@ -29,6 +32,139 @@ import wave
 
 from . import rendering
 from .video_editing import VideoEditingError
+
+
+def speech_capabilities() -> dict:
+    from shared_artifacts import _ffmpeg_path
+    engines = []
+    ffmpeg = _ffmpeg_path()
+    voices = []
+    if ffmpeg:
+        try:
+            result = subprocess.run(
+                [ffmpeg, "-hide_banner", "-nostdin", "-f", "lavfi", "-i", "flite=list_voices=1"],
+                capture_output=True, text=True, timeout=10, check=False,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            voices = sorted(set(re.findall(r"\[Parsed_flite_\d+ @ [^\]]+\] (\w+)\s*$", result.stderr, re.MULTILINE)) & set(SUPPORTED_VOICES))
+        except (OSError, subprocess.SubprocessError):
+            pass
+    engines.append({"id": "flite", "available": bool(voices), "languages": ["en"] if voices else [],
+                    "voices": voices, "text_limit": 4000, "ascii_only": True,
+                    "synthetic": True, "quality_verified": False})
+    from .offline_formant_speech import VOICES, _runtime
+    languages = []
+    try:
+        binary, args, environment = _runtime()
+        result = subprocess.run([binary, *args, "--voices"], env=environment, capture_output=True,
+                                text=True, timeout=10, check=True,
+                                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+        observed = {line.split()[1] for line in result.stdout.splitlines()[1:] if len(line.split()) > 2}
+        languages = [language for language, voice in VOICES.items() if voice in observed]
+    except (ValueError, OSError, subprocess.SubprocessError):
+        pass
+    engines.append({"id": "espeak_ng", "available": bool(languages), "languages": languages,
+                    "voices": [VOICES[language] for language in languages], "text_limit": 4000,
+                    "ascii_only": False, "synthetic": True, "quality_verified": False})
+    return {"engines": engines, "automatic_install": False, "external_network_used": False}
+
+
+def speech_source_wav(audio: bytes, report: dict) -> bytes:
+    pcm, count = _speech_source_pcm(audio)
+    value = {
+        "schema": "oevira.speech-source/v1", "synthetic": True,
+        "text": report["source"]["text"], "engine": report["engine"],
+        "voice": report["voice"], "language": report["language"],
+        "text_sha256": report["source"]["sha256"],
+        "pcm_sha256": hashlib.sha256(pcm).hexdigest(), "samples": count,
+        "identity_state": "file_embedded_declaration", "canonical_fact": False,
+    }
+    comment = b"OEVIRA-SPEECH-V1\n" + json.dumps(value, ensure_ascii=True, sort_keys=True).encode("ascii")
+    if len(comment) > 48 * 1024:
+        raise VideoEditingError("TTS_SOURCE_METADATA_INVALID")
+    comment += b"\0"
+    info = b"INFOICMT" + struct.pack("<I", len(comment)) + comment
+    if len(comment) % 2:
+        info += b"\0"
+    result = audio + b"LIST" + struct.pack("<I", len(info)) + info
+    result = result[:4] + struct.pack("<I", len(result) - 8) + result[8:]
+    if read_speech_source(result) != value:
+        raise VideoEditingError("TTS_SOURCE_METADATA_INVALID")
+    return result
+
+
+def _speech_source_pcm(audio: bytes) -> tuple[bytes, int]:
+    try:
+        if (len(audio) > 31 * 1024 * 1024 or len(audio) < 44 or audio[:4] != b"RIFF"
+                or audio[8:12] != b"WAVE" or struct.unpack_from("<I", audio, 4)[0] + 8 != len(audio)):
+            raise ValueError()
+        with wave.open(io.BytesIO(audio), "rb") as sound:
+            count = sound.getnframes()
+            if (sound.getnchannels() != 1 or sound.getsampwidth() != 2
+                    or sound.getcomptype() != "NONE" or not 0 < count / sound.getframerate() <= 300):
+                raise ValueError()
+            pcm = sound.readframes(count + 1)
+        if len(pcm) != count * 2:
+            raise ValueError()
+        return pcm, count
+    except (EOFError, OSError, ValueError, ZeroDivisionError, struct.error, wave.Error) as exc:
+        raise VideoEditingError("TTS_SOURCE_METADATA_INVALID") from exc
+
+
+def read_speech_source(audio: bytes) -> dict | None:
+    if len(audio) > 31 * 1024 * 1024 or audio[:4] != b"RIFF" or audio[8:12] != b"WAVE":
+        return None
+    position = 12
+    found = None
+    while position + 8 <= len(audio):
+        kind, size = struct.unpack_from("<4sI", audio, position)
+        end = position + 8 + size
+        if end > len(audio):
+            raise VideoEditingError("TTS_SOURCE_METADATA_INVALID")
+        if kind == b"LIST" and audio[position + 8:position + 12] == b"INFO":
+            item = position + 12
+            while item + 8 <= end:
+                tag, length = struct.unpack_from("<4sI", audio, item)
+                stop = item + 8 + length
+                if stop > end:
+                    raise VideoEditingError("TTS_SOURCE_METADATA_INVALID")
+                prefix = b"OEVIRA-SPEECH-V1\n"
+                if tag == b"ICMT" and audio[item + 8:item + 8 + len(prefix)] == prefix:
+                    if found is not None or length > 48 * 1024:
+                        raise VideoEditingError("TTS_SOURCE_METADATA_INVALID")
+                    try:
+                        found = json.loads(audio[item + 8 + len(prefix):stop].rstrip(b"\0").decode("ascii"))
+                    except (ValueError, UnicodeError) as exc:
+                        raise VideoEditingError("TTS_SOURCE_METADATA_INVALID") from exc
+                item = stop + length % 2
+        position = end + size % 2
+    if found is None:
+        return None
+    pcm, count = _speech_source_pcm(audio)
+    try:
+        if (not isinstance(found, dict) or set(found) != {
+                "schema", "synthetic", "text", "engine", "voice", "language", "text_sha256",
+                "pcm_sha256", "samples", "identity_state", "canonical_fact"}
+                or found["schema"] != "oevira.speech-source/v1" or found["synthetic"] is not True
+                or found["canonical_fact"] is not False
+                or found["identity_state"] != "file_embedded_declaration"
+                or not isinstance(found["text"], str) or not 1 <= len(found["text"]) <= 4000
+                or not found["text"].strip()
+                or hashlib.sha256(found["text"].encode("utf-8")).hexdigest() != found["text_sha256"]
+                or hashlib.sha256(pcm).hexdigest() != found["pcm_sha256"]
+                or type(found["samples"]) is not int or found["samples"] != count):
+            raise ValueError()
+        if found["engine"] == "ffmpeg_libflite":
+            _validate_text(found["text"], found["voice"], found["language"])
+        elif found["engine"] == "espeak_ng":
+            from .offline_formant_speech import VOICES
+            if VOICES.get(found["language"]) != found["voice"]:
+                raise ValueError()
+        else:
+            raise ValueError()
+    except (ValueError, TypeError, KeyError) as exc:
+        raise VideoEditingError("TTS_SOURCE_METADATA_INVALID") from exc
+    return found
 
 
 # These are FFmpeg's built-in, US-English Flite voices, not user-controlled

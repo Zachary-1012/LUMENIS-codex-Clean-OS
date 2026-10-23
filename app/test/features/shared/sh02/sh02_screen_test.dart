@@ -13,6 +13,29 @@ import '../shared_test_support.dart';
 
 void main() {
   testWidgets(
+    'Home-linked material opens the exact imported original in the existing reader',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        sharedTestApp(
+          Sh02Screen(
+            client: LumenisCoreClient(),
+            repository: _ReadableMaterialsRepository(),
+            initialArtifactId: 'ART-0000000100000013',
+            initialWorkKind: 'material',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('资料内容'), findsOneWidget);
+      expect(find.text('existing-1-19.txt'), findsWidgets);
+      expect(find.text('已保存版本'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'material timeline keeps identical dates in different years separate',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1280, 900));

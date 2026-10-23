@@ -7,6 +7,7 @@ import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../platform/lumenis_external_view.dart';
 import 'sys06_browser_repository.dart';
+import 'sys06_page_context.dart';
 
 /// SYSTEM's single-page controlled reader.
 ///
@@ -42,6 +43,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   bool _viewVisible = true;
   final List<Sys06BrowserSession> _tabs = <Sys06BrowserSession>[];
   bool _collapsed = false;
+  bool _contextVisible = false;
 
   @override
   void initState() {
@@ -150,23 +152,6 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   });
 
   Future<void> _navigate() => _run((generation, repository) async {
-    final session = _session;
-    final frame = _frame;
-    final lease = _humanLease;
-    if (repository is! Sys06BrowserHumanControlRepository) return;
-    final controlRepository = repository as Sys06BrowserHumanControlRepository;
-    if (session != null &&
-        lease != null &&
-        !lease.expiresAt.isAfter(DateTime.now())) {
-      await _refreshSessionAfterExpiredLease(generation, repository, session);
-      return;
-    }
-    if (session == null ||
-        frame == null ||
-        lease == null ||
-        !_canHumanAction(session, lease, 'navigate')) {
-      return;
-    }
     final address = _addressController.text.trim();
     final parsed = Uri.tryParse(address);
     if (parsed == null ||
@@ -176,6 +161,25 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       if (mounted) setState(() => _notice = _Sys06Notice.invalidAddress);
       return;
     }
+    if (_session?.isRunning != true) {
+      final opened = await repository.open();
+      if (!_isCurrent(generation, repository)) return;
+      _adoptSession(opened, clearFrame: true, updateAddress: false);
+      await _readFrame(opened, generation, repository);
+    }
+    await _acquireControlFor(generation, repository);
+    if (!_isCurrent(generation, repository)) return;
+    final session = _session;
+    final frame = _frame;
+    final lease = _humanLease;
+    if (repository is! Sys06BrowserHumanControlRepository ||
+        session == null ||
+        frame == null ||
+        lease == null ||
+        !_canHumanAction(session, lease, 'navigate')) {
+      return;
+    }
+    final controlRepository = repository as Sys06BrowserHumanControlRepository;
     if (mounted) {
       setState(() {
         _frame = null;
@@ -210,7 +214,11 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       });
       return;
     }
-    _adoptSession(updated, clearFrame: true);
+    _adoptSession(
+      updated,
+      clearFrame: true,
+      updateAddress: actionError == null,
+    );
     if (_humanLease != null) {
       await _readFrame(updated, generation, repository);
     }
@@ -224,10 +232,12 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
     generation,
     repository,
   ) async {
+    if (repository is! Sys06BrowserHumanControlRepository) return;
+    await _acquireControlFor(generation, repository);
+    if (!_isCurrent(generation, repository)) return;
     final session = _session;
     final frame = _frame;
     final lease = _humanLease;
-    if (repository is! Sys06BrowserHumanControlRepository) return;
     final controlRepository = repository as Sys06BrowserHumanControlRepository;
     if (session != null &&
         lease != null &&
@@ -448,6 +458,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       await repository.stop(session.sessionId);
       if (!_isCurrentSession(generation, repository, session.sessionId)) return;
       setState(() {
+        _tabs.removeWhere((tab) => tab.sessionId == session.sessionId);
         _session = null;
         _humanLease = null;
         _frame = null;
@@ -465,7 +476,22 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _acquireHumanControl() => _run((generation, repository) async {
+  Future<void> _acquireHumanControl() => _run(_acquireControlFor);
+
+  Future<void> _acquireControlFor(
+    int generation,
+    Sys06BrowserRepository repository,
+  ) async {
+    final currentLease = _humanLease;
+    if (currentLease != null &&
+        currentLease.expiresAt.isAfter(DateTime.now()) &&
+        _session?.humanControlActive == true) {
+      return;
+    }
+    if (currentLease != null && _session != null) {
+      await _refreshSessionAfterExpiredLease(generation, repository, _session!);
+      if (!_isCurrent(generation, repository)) return;
+    }
     if (repository is! Sys06BrowserHumanControlRepository) {
       if (mounted) setState(() => _notice = _Sys06Notice.controlUnavailable);
       return;
@@ -520,9 +546,9 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       }
       return;
     }
-    _adoptSession(updated, clearFrame: true);
+    _adoptSession(updated, clearFrame: true, updateAddress: false);
     await _readFrame(updated, generation, repository);
-  });
+  }
 
   Future<void> _releaseHumanControl() => _run((generation, repository) async {
     final session = _session;
@@ -537,10 +563,14 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       _frame = null;
       _notice = _Sys06Notice.releasingControl;
     });
-    await controlRepository.releaseHumanControl(
-      sessionId: session.sessionId,
-      leaseToken: lease.token,
-    );
+    try {
+      await controlRepository.releaseHumanControl(
+        sessionId: session.sessionId,
+        leaseToken: lease.token,
+      );
+    } catch (error) {
+      if (!_isLeaseFailure(error)) rethrow;
+    }
     if (!_isCurrentSession(generation, repository, session.sessionId)) return;
     _humanLease = null;
     final updated = await repository.readSession(session.sessionId);
@@ -550,6 +580,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       _frame = null;
       _notice = _Sys06Notice.controlReleased;
     });
+    await _readFrame(updated, generation, repository);
   });
 
   Future<void> _returnToTask() async {
@@ -609,11 +640,58 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
         : CoreSys06BrowserRepository(client: widget.client);
     await showDialog<void>(
       context: context,
+      barrierDismissible: false,
       builder: (dialogContext) => _BrowserResearchNotesDialog(
         repository: notesRepository,
         currentPage: locator,
       ),
     );
+  }
+
+  void _openPageContext() => setState(() => _contextVisible = !_contextVisible);
+
+  Future<Map<String, dynamic>> _readPageContext(String question) async {
+    final session = _session;
+    final client = widget.client;
+    final repository = _repository;
+    if (session == null ||
+        !session.isRunning ||
+        session.targetId == null ||
+        _busy) {
+      throw const LumenisCoreException(
+        'Open a page first.',
+        errorCode: 'BROWSER_CONTEXT_PAGE_REQUIRED',
+      );
+    }
+    bool isCurrent() =>
+        mounted &&
+        identical(client, widget.client) &&
+        identical(repository, _repository) &&
+        _session?.isRunning == true &&
+        _session?.sessionId == session.sessionId &&
+        _session?.targetId == session.targetId &&
+        _session?.pageRevision == session.pageRevision;
+    if (_humanLease != null) await _releaseHumanControl();
+    if (!isCurrent() || _humanLease != null) {
+      throw const LumenisCoreException(
+        'The page changed.',
+        errorCode: 'BROWSER_EXTRACTION_PAGE_CHANGED',
+      );
+    }
+    final result = await client.readBrowserPageContext(
+      sessionId: session.sessionId,
+      targetId: session.targetId!,
+      pageRevision: session.pageRevision,
+      question: question,
+    );
+    if (!isCurrent() ||
+        result['metadata']?['page_revision'] != session.pageRevision) {
+      throw const LumenisCoreException(
+        'The page changed.',
+        errorCode: 'BROWSER_EXTRACTION_PAGE_CHANGED',
+      );
+    }
+    return result;
   }
 
   bool _canHumanAction(
@@ -796,7 +874,11 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       source.browserRepository ??
       CoreSys06BrowserRepository(client: source.client);
 
-  void _adoptSession(Sys06BrowserSession session, {required bool clearFrame}) {
+  void _adoptSession(
+    Sys06BrowserSession session, {
+    required bool clearFrame,
+    bool updateAddress = true,
+  }) {
     setState(() {
       _session = session;
       final tabIndex = _tabs.indexWhere(
@@ -813,32 +895,40 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
           : _Sys06Notice.reading;
       // The server strips query/fragment material before it reaches this field.
       // A raw typed address is never stored after navigation succeeds.
-      if (session.currentUrl.isNotEmpty) {
+      if (updateAddress && session.currentUrl.isNotEmpty) {
         _addressController.text = session.currentUrl;
       }
     });
   }
 
-  // Tabs behave like a normal browser: each tab is one built-in session.
   Future<void> _switchTab(Sys06BrowserSession tab) {
     if (_humanLease != null || tab.sessionId == _session?.sessionId) {
       return Future<void>.value();
     }
     _cancelFrameStream();
     return _run((generation, repository) async {
-      _adoptSession(tab, clearFrame: true);
-      await _readFrame(tab, generation, repository);
+      final current = await repository.readSession(tab.sessionId);
+      if (!_isCurrent(generation, repository)) return;
+      _adoptSession(current, clearFrame: true);
+      await _readFrame(current, generation, repository);
     });
   }
 
-  void _closeTab(Sys06BrowserSession tab) {
-    if (_humanLease != null && tab.sessionId == _session?.sessionId) return;
-    setState(
-      () => _tabs.removeWhere((item) => item.sessionId == tab.sessionId),
-    );
-    if (tab.sessionId == _session?.sessionId && _tabs.isNotEmpty) {
-      unawaited(_switchTab(_tabs.last));
+  Future<void> _closeTab(Sys06BrowserSession tab) async {
+    if (tab.sessionId == _session?.sessionId) {
+      await _stop();
+      if (mounted && _session == null && _tabs.isNotEmpty) {
+        await _switchTab(_tabs.last);
+      }
+      return;
     }
+    await _run((generation, repository) async {
+      await repository.stop(tab.sessionId);
+      if (!_isCurrent(generation, repository)) return;
+      setState(
+        () => _tabs.removeWhere((item) => item.sessionId == tab.sessionId),
+      );
+    });
   }
 
   // Optional user-chosen jump; collection and login stay in the built-in browser.
@@ -858,6 +948,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
       }
       return switch (error.errorCode) {
         'BROWSER_LOCAL_CORE_REQUIRED' => _Sys06Notice.localCoreRequired,
+        'BROWSER_NAVIGATION_POLICY_DENIED' => _Sys06Notice.navigationRestricted,
         'BROWSER_FRAME_PENDING' => _Sys06Notice.framePending,
         'BROWSER_FRAME_EMPTY' => _Sys06Notice.frameEmpty,
         'BROWSER_CAPACITY_OCCUPIED' => _Sys06Notice.capacityOccupied,
@@ -881,44 +972,16 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final copy = _Sys06Copy.of(context);
+    final theme = LumenisTheme.of(context);
     return ColoredBox(
-      color: LumenisTheme.of(context).canvas,
+      color: theme.canvas,
       child: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final narrow = constraints.maxWidth < 720;
-            final constrainedHeight = constraints.maxHeight < 620;
-            final padding = EdgeInsets.fromLTRB(
-              narrow ? 18 : 30,
-              narrow ? 18 : 24,
-              narrow ? 18 : 30,
-              narrow ? 20 : 26,
-            );
-            final header = _ReaderHeader(
-              copy: copy,
-              session: _session,
-              notice: _notice,
-            );
-            final controls = _ReaderControls(
-              copy: copy,
-              addressController: _addressController,
-              session: _session,
-              frame: _frame,
-              busy: _busy || _stopping,
-              stopping: _stopping,
-              returning: _returning,
-              lease: _humanLease,
-              onOpen: _open,
-              onNavigate: _navigate,
-              onAcquireControl: _acquireHumanControl,
-              onReleaseControl: _releaseHumanControl,
-              onHumanAction: _humanAction,
-              onOpenPageLinks: _openVisibleLinks,
-              onRefreshFrame: _refreshFrame,
-              onStop: _stop,
-              onReturn: _returnToTask,
-              onResearchNotes: _openResearchNotes,
-            );
+            final wide = constraints.maxWidth >= 840;
+            final panelWidth = wide
+                ? (constraints.maxWidth * .3).clamp(320.0, 390.0)
+                : constraints.maxWidth;
             final preview = _ReaderPreview(
               copy: copy,
               frame: _frame,
@@ -926,74 +989,115 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
               busy: _busy || _stopping,
               onRefresh: _refreshFrame,
             );
-            final content = _ReaderBoundary(copy: copy);
-            final tabs = _ReaderTabs(
-              copy: copy,
-              tabs: _tabs,
-              activeSessionId: _session?.sessionId,
-              collapsed: _collapsed,
-              busy: _busy || _stopping,
-              canViewExternally: _session?.currentUrl.isNotEmpty == true,
-              onSelect: _switchTab,
-              onClose: _closeTab,
-              onNewTab: _open,
-              onToggleCollapsed: () => setState(() => _collapsed = !_collapsed),
-              onViewExternally: _viewOriginalExternally,
-            );
-            if (_collapsed) {
-              return Padding(
-                padding: padding,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [header, const SizedBox(height: 12), tabs],
-                ),
-              );
-            }
-            if (constrainedHeight) {
-              return SingleChildScrollView(
-                padding: padding,
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1500),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        header,
-                        const SizedBox(height: 12),
-                        tabs,
-                        const SizedBox(height: 10),
-                        controls,
-                        const SizedBox(height: 14),
-                        SizedBox(height: 440, child: preview),
-                        const SizedBox(height: 14),
-                        content,
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }
-            return Padding(
-              padding: padding,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1500),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      header,
-                      const SizedBox(height: 12),
-                      tabs,
-                      const SizedBox(height: 10),
-                      controls,
-                      const SizedBox(height: 14),
-                      Expanded(child: preview),
-                      const SizedBox(height: 14),
-                      content,
-                    ],
-                  ),
+            final panel = SizedBox(
+              width: panelWidth,
+              child: ColoredBox(
+                color: theme.surface.withValues(alpha: 1),
+                child: Sys06PageContext(
+                  embedded: true,
+                  read: _readPageContext,
+                  pageIdentity:
+                      '${_session?.sessionId}:${_session?.targetId}:${_session?.pageRevision}',
+                  onClose: _openPageContext,
                 ),
               ),
+            );
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                  child: _ReaderTabs(
+                    copy: copy,
+                    tabs: _tabs,
+                    activeSessionId: _session?.sessionId,
+                    collapsed: _collapsed,
+                    busy: _busy || _stopping,
+                    canViewExternally:
+                        _session?.currentUrl.startsWith('http') == true,
+                    onSelect: _switchTab,
+                    onClose: _closeTab,
+                    onNewTab: _open,
+                    onToggleCollapsed: () =>
+                        setState(() => _collapsed = !_collapsed),
+                    onViewExternally: _viewOriginalExternally,
+                  ),
+                ),
+                if (!_collapsed) ...[
+                  _ReaderControls(
+                    copy: copy,
+                    addressController: _addressController,
+                    session: _session,
+                    frame: _frame,
+                    busy: _busy || _stopping,
+                    stopping: _stopping,
+                    returning: _returning,
+                    lease: _humanLease,
+                    onOpen: _open,
+                    onNavigate: _navigate,
+                    onAcquireControl: _acquireHumanControl,
+                    onReleaseControl: _releaseHumanControl,
+                    onHumanAction: _humanAction,
+                    onOpenPageLinks: _openVisibleLinks,
+                    onRefreshFrame: _refreshFrame,
+                    onStop: _stop,
+                    onReturn: _returnToTask,
+                    onResearchNotes: _openResearchNotes,
+                    onReadPage: _openPageContext,
+                  ),
+                  SizedBox(
+                    height: 2,
+                    child: _busy || _stopping
+                        ? LinearProgressIndicator(color: theme.accent)
+                        : const SizedBox.shrink(),
+                  ),
+                  if (_notice.isFailure)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 6,
+                      ),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Text(
+                          copy.notice(_notice, session: _session),
+                          key: const ValueKey('sys06-status'),
+                          style: TextStyle(color: theme.caution),
+                        ),
+                      ),
+                    ),
+                  Divider(height: 1, thickness: 1, color: theme.line),
+                  Expanded(
+                    child: wide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(child: preview),
+                              if (_contextVisible)
+                                VerticalDivider(width: 1, color: theme.line),
+                              Offstage(
+                                offstage: !_contextVisible,
+                                child: panel,
+                              ),
+                            ],
+                          )
+                        : Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Offstage(
+                                offstage: _contextVisible,
+                                child: preview,
+                              ),
+                              Offstage(
+                                offstage: !_contextVisible,
+                                child: panel,
+                              ),
+                            ],
+                          ),
+                  ),
+                ] else
+                  const Spacer(),
+              ],
             );
           },
         ),
@@ -1048,21 +1152,14 @@ class _ReaderTabs extends StatelessWidget {
               children: [
                 for (final tab in tabs)
                   Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: InputChip(
+                    padding: const EdgeInsets.only(right: 3),
+                    child: _BrowserTab(
                       key: ValueKey('sys06-tab-${tab.sessionId}'),
                       selected: tab.sessionId == activeSessionId,
-                      label: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 180),
-                        child: Text(
-                          _label(tab),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
+                      label: _label(tab),
                       onPressed: busy ? null : () => onSelect(tab),
-                      onDeleted: busy ? null : () => onClose(tab),
-                      deleteButtonTooltipMessage: copy.text('tab.close'),
+                      onClose: busy ? null : () => onClose(tab),
+                      closeLabel: copy.text('tab.close'),
                     ),
                   ),
                 Tooltip(
@@ -1100,60 +1197,82 @@ class _ReaderTabs extends StatelessWidget {
   }
 }
 
-class _ReaderHeader extends StatelessWidget {
-  const _ReaderHeader({
-    required this.copy,
-    required this.session,
-    required this.notice,
+class _BrowserTab extends StatelessWidget {
+  const _BrowserTab({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+    required this.onClose,
+    required this.closeLabel,
   });
 
-  final _Sys06Copy copy;
-  final Sys06BrowserSession? session;
-  final _Sys06Notice notice;
+  final String label;
+  final bool selected;
+  final VoidCallback? onPressed;
+  final VoidCallback? onClose;
+  final String closeLabel;
 
   @override
   Widget build(BuildContext context) {
-    final theme = LumenisTheme.of(context);
-    return Semantics(
-      header: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            copy.text('eyebrow'),
-            style: TextStyle(
-              color: theme.system,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.1,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            copy.text('title'),
-            style: TextStyle(
-              color: theme.foreground,
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            copy.text('subtitle'),
-            style: TextStyle(color: theme.muted, height: 1.45),
-          ),
-          const SizedBox(height: 10),
-          Semantics(
-            liveRegion: true,
-            child: Text(
-              copy.notice(notice, session: session),
-              key: const ValueKey('sys06-status'),
-              style: TextStyle(
-                color: notice.isFailure ? theme.caution : theme.quiet,
-                fontWeight: FontWeight.w600,
+    final palette = LumenisTheme.of(context);
+    return Material(
+      color: selected
+          ? palette.surface.withValues(alpha: 1)
+          : Colors.transparent,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+      child: SizedBox(
+        width: 228,
+        height: 42,
+        child: Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                selected: selected,
+                child: InkWell(
+                  onTap: onPressed,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(10),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: 14,
+                      top: 11,
+                      bottom: 11,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.language, size: 16, color: palette.muted),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: selected
+                                  ? palette.foreground
+                                  : palette.muted,
+                              fontWeight: selected
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+            IconButton(
+              tooltip: closeLabel,
+              onPressed: onClose,
+              icon: const Icon(Icons.close, size: 16),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1179,6 +1298,7 @@ class _ReaderControls extends StatelessWidget {
     required this.onStop,
     required this.onReturn,
     required this.onResearchNotes,
+    required this.onReadPage,
   });
 
   final _Sys06Copy copy;
@@ -1199,241 +1319,223 @@ class _ReaderControls extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onReturn;
   final VoidCallback onResearchNotes;
+  final VoidCallback onReadPage;
 
   @override
   Widget build(BuildContext context) {
+    final theme = LumenisTheme.of(context);
     final active = session;
     final hasLease =
         lease != null &&
-        active?.isRunning == true &&
-        lease!.expiresAt.isAfter(DateTime.now());
+        lease!.expiresAt.isAfter(DateTime.now()) &&
+        active?.humanControlActive == true;
     bool canControl(String action) =>
         !busy &&
-        hasLease &&
-        active!.isRunning &&
-        active.humanControlActive == true &&
-        active.humanActionsRequireLease &&
-        active.humanActions.contains(action) &&
-        lease!.humanActions.contains(action);
-    final currentFrame = frame?.frame;
-    final hasFreshFrame =
-        active != null &&
-        active.isRunning &&
-        active.targetId != null &&
-        currentFrame != null &&
-        currentFrame.targetId == active.targetId &&
-        currentFrame.pageRevision == active.pageRevision &&
-        currentFrame.frameId.isNotEmpty &&
-        currentFrame.viewportWidth > 0 &&
-        currentFrame.viewportHeight > 0 &&
-        currentFrame.devicePixelRatio.isFinite &&
-        currentFrame.devicePixelRatio > 0;
-    final canOpenPageLinks = canControl('open_link') && hasFreshFrame;
-    final canNavigate = canControl('navigate');
-    final canAcquireControl =
+        active?.isRunning == true &&
+        frame != null &&
+        (hasLease || active?.humanControlActive == false) &&
+        active!.humanActions.contains(action) &&
+        (!hasLease || lease!.humanActions.contains(action));
+    final canAcquire =
         !busy &&
         active?.isRunning == true &&
-        active?.humanActionsRequireLease == true &&
-        active!.humanActions.isNotEmpty &&
-        active.humanControlActive == false &&
+        active?.humanControlActive == false &&
         lease == null;
-    final canFrame = !busy && active?.allowedActions.contains('frame') == true;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: LumenisTheme.of(context).surfaceRaised,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LumenisTheme.of(context).line),
+    Widget control(
+      String key,
+      String label,
+      IconData icon,
+      VoidCallback? action,
+    ) => IconButton(
+      key: ValueKey(key),
+      tooltip: copy.text(label),
+      onPressed: action,
+      visualDensity: VisualDensity.compact,
+      icon: Icon(icon, size: 19),
+    );
+    final navigation = [
+      control(
+        'sys06-back',
+        'back',
+        Icons.arrow_back_rounded,
+        canControl('back') ? () => onHumanAction('back') : null,
       ),
+      control(
+        'sys06-forward',
+        'forward',
+        Icons.arrow_forward_rounded,
+        canControl('forward') ? () => onHumanAction('forward') : null,
+      ),
+      control(
+        'sys06-reload',
+        'reload',
+        Icons.refresh_rounded,
+        canControl('reload') ? () => onHumanAction('reload') : null,
+      ),
+    ];
+    return ColoredBox(
+      color: theme.surface.withValues(alpha: 1),
       child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: active == null
-            ? Align(
-                alignment: Alignment.centerLeft,
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      key: const ValueKey('sys06-open'),
-                      onPressed: busy ? null : onOpen,
-                      icon: const Icon(Icons.travel_explore_rounded),
-                      label: Text(copy.text('open')),
+        padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                if (MediaQuery.sizeOf(context).width >= 650) ...navigation,
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('sys06-address'),
+                    controller: addressController,
+                    keyboardType: TextInputType.url,
+                    textInputAction: TextInputAction.go,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    onSubmitted: (_) => onNavigate(),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: theme.surfaceRaised.withValues(alpha: 1),
+                      labelText: copy.text('address'),
+                      floatingLabelBehavior: FloatingLabelBehavior.never,
+                      hintText: copy.text('addressHint'),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      prefixIcon: const Icon(Icons.public_rounded, size: 18),
+                      suffixIcon: control(
+                        'sys06-go',
+                        'go',
+                        Icons.arrow_forward_rounded,
+                        busy ? null : onNavigate,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
-                    OutlinedButton.icon(
+                  ),
+                ),
+                control(
+                  'sys06-read-page',
+                  'readPage',
+                  Icons.chat_bubble_outline_rounded,
+                  onReadPage,
+                ),
+                PopupMenuButton<String>(
+                  key: const ValueKey('sys06-more'),
+                  tooltip: copy.text('more'),
+                  icon: const Icon(Icons.more_horiz),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'notes':
+                        onResearchNotes();
+                      case 'stop':
+                        onStop();
+                      case 'return':
+                        onReturn();
+                      case 'links':
+                        onOpenPageLinks();
+                      case 'refresh':
+                        onRefreshFrame();
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    PopupMenuItem(
                       key: const ValueKey('sys06-research-notes'),
-                      onPressed: busy ? null : onResearchNotes,
-                      icon: const Icon(Icons.edit_note_rounded),
-                      label: Text(copy.text('researchNotes')),
+                      value: 'notes',
+                      child: Text(copy.text('researchNotes')),
+                    ),
+                    PopupMenuItem(
+                      value: 'links',
+                      enabled: canControl('open_link'),
+                      child: Text(copy.text('pageLinks')),
+                    ),
+                    PopupMenuItem(
+                      key: const ValueKey('sys06-refresh-frame'),
+                      value: 'refresh',
+                      enabled: !busy && active != null,
+                      child: Text(copy.text('refreshPreview')),
+                    ),
+                    PopupMenuItem(
+                      key: const ValueKey('sys06-return'),
+                      value: 'return',
+                      enabled: !returning && !busy,
+                      child: Text(copy.text('return')),
+                    ),
+                    PopupMenuItem(
+                      value: 'stop',
+                      enabled: active != null && !stopping,
+                      child: Text(copy.text('end')),
                     ),
                   ],
                 ),
-              )
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              ],
+            ),
+            if (active != null || MediaQuery.sizeOf(context).width < 650)
+              Row(
                 children: [
-                  Wrap(
-                    alignment: WrapAlignment.start,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      SizedBox(
-                        width: MediaQuery.sizeOf(context).width < 520
-                            ? double.infinity
-                            : 420,
-                        child: TextField(
-                          key: const ValueKey('sys06-address'),
-                          controller: addressController,
-                          enabled: canNavigate,
-                          keyboardType: TextInputType.url,
-                          textInputAction: TextInputAction.go,
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          onSubmitted: (_) => onNavigate(),
-                          decoration: InputDecoration(
-                            isDense: true,
-                            prefixIcon: const Icon(Icons.language_rounded),
-                            labelText: copy.text('address'),
-                            hintText: copy.text('addressHint'),
-                          ),
-                        ),
+                  if (MediaQuery.sizeOf(context).width < 650) ...navigation,
+                  if (active != null) ...[
+                    if (hasLease)
+                      control(
+                        'sys06-release-control',
+                        'releaseControl',
+                        Icons.pause_rounded,
+                        busy ? null : onReleaseControl,
+                      )
+                    else
+                      control(
+                        'sys06-acquire-control',
+                        'takeControl',
+                        Icons.touch_app_outlined,
+                        canAcquire ? onAcquireControl : null,
                       ),
-                      FilledButton(
-                        key: const ValueKey('sys06-go'),
-                        onPressed: canNavigate ? onNavigate : null,
-                        child: Text(copy.text('go')),
-                      ),
-                      OutlinedButton.icon(
-                        key: const ValueKey('sys06-research-notes'),
-                        onPressed: busy ? null : onResearchNotes,
-                        icon: const Icon(Icons.edit_note_rounded),
-                        label: Text(copy.text('researchNotes')),
-                      ),
-                      Tooltip(
-                        message: copy.text('refreshPreview'),
-                        child: IconButton(
-                          key: const ValueKey('sys06-refresh-frame'),
-                          onPressed: canFrame ? onRefreshFrame : null,
-                          icon: const Icon(Icons.photo_camera_back_outlined),
-                        ),
-                      ),
-                      OutlinedButton.icon(
-                        key: const ValueKey('sys06-stop'),
-                        onPressed: stopping ? null : onStop,
-                        icon: const Icon(Icons.stop_circle_outlined),
-                        label: Text(copy.text('end')),
-                      ),
-                      TextButton.icon(
-                        key: const ValueKey('sys06-return'),
-                        onPressed: busy || returning ? null : onReturn,
-                        icon: const Icon(Icons.arrow_back_rounded),
-                        label: Text(copy.text('return')),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      if (hasLease)
-                        OutlinedButton.icon(
-                          key: const ValueKey('sys06-release-control'),
-                          onPressed: busy ? null : onReleaseControl,
-                          icon: const Icon(Icons.pan_tool_alt_outlined),
-                          label: Text(copy.text('releaseControl')),
-                        )
-                      else
-                        FilledButton.tonalIcon(
-                          key: const ValueKey('sys06-acquire-control'),
-                          onPressed: canAcquireControl
-                              ? onAcquireControl
-                              : null,
-                          icon: const Icon(Icons.pan_tool_alt_rounded),
-                          label: Text(copy.text('takeControl')),
-                        ),
-                      if (canControl('back'))
-                        Tooltip(
-                          message: copy.text('back'),
-                          child: IconButton(
-                            key: const ValueKey('sys06-human-back'),
-                            onPressed: () => onHumanAction('back'),
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-                          ),
-                        ),
-                      if (canControl('forward'))
-                        Tooltip(
-                          message: copy.text('forward'),
-                          child: IconButton(
-                            key: const ValueKey('sys06-human-forward'),
-                            onPressed: () => onHumanAction('forward'),
-                            icon: const Icon(Icons.arrow_forward_ios_rounded),
-                          ),
-                        ),
-                      if (canControl('reload'))
-                        Tooltip(
-                          message: copy.text('reload'),
-                          child: IconButton(
-                            key: const ValueKey('sys06-human-reload'),
-                            onPressed: () => onHumanAction('reload'),
-                            icon: const Icon(Icons.refresh_rounded),
-                          ),
-                        ),
-                      if (canOpenPageLinks)
-                        OutlinedButton.icon(
-                          key: const ValueKey('sys06-page-links'),
-                          onPressed: onOpenPageLinks,
-                          icon: const Icon(Icons.link_rounded),
-                          label: Text(copy.text('pageLinks')),
-                        ),
-                      if (canControl('scroll')) ...[
-                        OutlinedButton.icon(
-                          key: const ValueKey('sys06-human-scroll-up'),
-                          onPressed: () =>
-                              onHumanAction('scroll', value: '-500'),
-                          icon: const Icon(Icons.keyboard_arrow_up_rounded),
-                          label: Text(copy.text('scrollUp')),
-                        ),
-                        OutlinedButton.icon(
-                          key: const ValueKey('sys06-human-scroll-down'),
-                          onPressed: () =>
-                              onHumanAction('scroll', value: '500'),
-                          icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                          label: Text(copy.text('scrollDown')),
-                        ),
-                      ],
-                      Text(
-                        copy.taskBinding(active.taskBindingStatus),
-                        key: const ValueKey('sys06-task-binding'),
-                        style: TextStyle(
-                          color: LumenisTheme.of(context).quiet,
-                          fontSize: 12,
-                        ),
-                      ),
-                      if (active.humanActions.isEmpty)
-                        Text(
-                          copy.text('humanActionsUnavailable'),
-                          key: const ValueKey(
-                            'sys06-human-actions-unavailable',
-                          ),
-                          style: TextStyle(
-                            color: LumenisTheme.of(context).quiet,
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    copy.text('manualActionBoundary'),
-                    style: TextStyle(
-                      color: LumenisTheme.of(context).quiet,
-                      fontSize: 12,
+                    control(
+                      'sys06-page-links',
+                      'pageLinks',
+                      Icons.link_rounded,
+                      canControl('open_link') ? onOpenPageLinks : null,
                     ),
-                  ),
+                  ],
+                  const Spacer(),
+                  if (active != null) ...[
+                    control(
+                      'sys06-scroll-up',
+                      'scrollUp',
+                      Icons.keyboard_arrow_up,
+                      canControl('scroll')
+                          ? () => onHumanAction('scroll', value: '-600')
+                          : null,
+                    ),
+                    control(
+                      'sys06-scroll-down',
+                      'scrollDown',
+                      Icons.keyboard_arrow_down,
+                      canControl('scroll')
+                          ? () => onHumanAction('scroll', value: '600')
+                          : null,
+                    ),
+                    control(
+                      'sys06-stop',
+                      'end',
+                      Icons.stop_circle_outlined,
+                      stopping ? null : onStop,
+                    ),
+                  ],
                 ],
               ),
+            if (active == null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  key: const ValueKey('sys06-open'),
+                  onPressed: busy ? null : onOpen,
+                  child: Text(copy.text('open')),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1526,7 +1628,7 @@ class _BrowserResearchNotesDialogState
   Sys06BrowserResearchContext? _scope;
   Sys06BrowserResearchNote? _selectedNote;
   List<Sys06BrowserResearchNote> _notes = const [];
-  String? _globalDomainId;
+  String _globalDomainId = 'SHARED';
   String? _cursor;
   String? _errorKey;
   String? _pendingSaveRequestId;
@@ -1589,14 +1691,14 @@ class _BrowserResearchNotesDialogState
           _pendingRevisionRequestId = null;
         }
         _selection = selection;
-        _loadingContext = false;
-        if (selection.mode == 'FOCUS') {
-          _globalDomainId = null;
+        if (selection.mode == 'FOCUS' &&
+            _globalDomainId != 'SHARED' &&
+            _globalDomainId != selection.domainId) {
+          _globalDomainId = 'SHARED';
         }
+        _loadingContext = false;
       });
-      if (selection.mode == 'FOCUS' || _globalDomainId != null) {
-        await _resolveAndLoadNotes(generation);
-      }
+      await _resolveAndLoadNotes(generation);
     } catch (_) {
       if (!_isCurrent(generation)) return;
       setState(() {
@@ -1607,7 +1709,18 @@ class _BrowserResearchNotesDialogState
   }
 
   Future<void> _selectGlobalDomain(String? domainId) async {
-    if (domainId == null || !const {'CTH', 'BMP'}.contains(domainId)) return;
+    if (domainId == null ||
+        !const {'SHARED', 'CTH', 'BMP'}.contains(domainId)) {
+      return;
+    }
+    final discard = await _confirmDiscard();
+    if (!mounted) return;
+    if (!discard) {
+      setState(() {
+        _generation++;
+      });
+      return;
+    }
     final generation = ++_generation;
     setState(() {
       _globalDomainId = domainId;
@@ -1627,7 +1740,6 @@ class _BrowserResearchNotesDialogState
   Future<void> _resolveAndLoadNotes(int generation) async {
     final selection = _selection;
     if (selection == null) return;
-    if (selection.mode == 'GLOBAL_ALL' && _globalDomainId == null) return;
     setState(() {
       _loadingContext = true;
       _errorKey = null;
@@ -1709,6 +1821,7 @@ class _BrowserResearchNotesDialogState
   }
 
   Future<void> _refreshContext() async {
+    if (!await _confirmDiscard() || !mounted) return;
     final priorFingerprint = _scope?.fingerprint;
     await _loadWorkspaceSelection();
     if (!mounted || priorFingerprint == _scope?.fingerprint) return;
@@ -1721,8 +1834,9 @@ class _BrowserResearchNotesDialogState
     });
   }
 
-  void _startNewNote() {
+  Future<void> _startNewNote() async {
     if (_scope == null || widget.currentPage == null || _saving) return;
+    if (!await _confirmDiscard() || !mounted) return;
     _generation++;
     setState(() {
       _selectedNote = null;
@@ -1738,6 +1852,7 @@ class _BrowserResearchNotesDialogState
   Future<void> _reopen(Sys06BrowserResearchNote note) async {
     final scope = _scope;
     if (scope == null || _saving) return;
+    if (!await _confirmDiscard() || !mounted) return;
     final generation = ++_generation;
     setState(() {
       _saving = true;
@@ -1918,6 +2033,43 @@ class _BrowserResearchNotesDialogState
         _markdownController.text.isNotEmpty;
   }
 
+  bool get _hasEdits =>
+      _titleController.text != (_selectedNote?.title ?? '') ||
+      _markdownController.text != (_selectedNote?.markdown ?? '');
+
+  Future<bool> _confirmDiscard() async {
+    if (!_hasEdits) return true;
+    final copy = _Sys06Copy.of(context);
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(copy.text('noteUnsaved')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(copy.text('noteKeepEditing')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(copy.text('noteDiscard')),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _close() async {
+    if (_saving || !await _confirmDiscard() || !mounted) return;
+    setState(() {
+      _titleController.text = _selectedNote?.title ?? '';
+      _markdownController.text = _selectedNote?.markdown ?? '';
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
   bool get _selectedVersionIsOld =>
       _selectedNote != null &&
       _notes.any(
@@ -1932,79 +2084,88 @@ class _BrowserResearchNotesDialogState
     final screen = MediaQuery.sizeOf(context);
     final wide = screen.width >= 760;
     final page = widget.currentPage;
-    return Dialog(
-      child: SizedBox(
-        width: screen.width < 920 ? screen.width - 40 : 880,
-        height: screen.height < 760 ? screen.height - 48 : 700,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      copy.text('researchNotes'),
-                      style: Theme.of(context).textTheme.titleLarge,
+    return PopScope(
+      canPop: !_saving && !_hasEdits,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) unawaited(_close());
+      },
+      child: Dialog(
+        child: SizedBox(
+          width: screen.width < 920 ? screen.width - 40 : 880,
+          height: screen.height < 760 ? screen.height - 48 : 700,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        copy.text('researchNotes'),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    IconButton(
+                      key: const ValueKey('sys06-notes-close'),
+                      onPressed: _saving ? null : _close,
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  copy.text('noteBoundary'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                _buildScopeControl(copy),
+                if (_errorKey != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    copy.text(_errorKey!),
+                    key: const ValueKey('sys06-note-error'),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
-                  IconButton(
-                    key: const ValueKey('sys06-notes-close'),
-                    onPressed: _saving
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                    icon: const Icon(Icons.close_rounded),
-                  ),
                 ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                copy.text('noteBoundary'),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              const SizedBox(height: 12),
-              _buildScopeControl(copy),
-              if (_errorKey != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  copy.text(_errorKey!),
-                  key: const ValueKey('sys06-note-error'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
+                const SizedBox(height: 12),
+                if (_loadingContext)
+                  const Expanded(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_scope == null)
+                  Expanded(
+                    child: Center(child: Text(copy.text('noteChooseDomain'))),
+                  )
+                else
+                  Expanded(
+                    child: wide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(width: 270, child: _buildNoteList(copy)),
+                              const VerticalDivider(width: 24),
+                              Expanded(child: _buildEditor(copy, page)),
+                            ],
+                          )
+                        : Column(
+                            children: [
+                              SizedBox(
+                                height: 150,
+                                child: _buildNoteList(copy),
+                              ),
+                              const Divider(height: 20),
+                              Expanded(child: _buildEditor(copy, page)),
+                            ],
+                          ),
+                  ),
               ],
-              const SizedBox(height: 12),
-              if (_loadingContext)
-                const Expanded(
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (_scope == null)
-                Expanded(
-                  child: Center(child: Text(copy.text('noteChooseDomain'))),
-                )
-              else
-                Expanded(
-                  child: wide
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            SizedBox(width: 270, child: _buildNoteList(copy)),
-                            const VerticalDivider(width: 24),
-                            Expanded(child: _buildEditor(copy, page)),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            SizedBox(height: 150, child: _buildNoteList(copy)),
-                            const Divider(height: 20),
-                            Expanded(child: _buildEditor(copy, page)),
-                          ],
-                        ),
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -2016,45 +2177,33 @@ class _BrowserResearchNotesDialogState
     if (_loadingContext || selection == null) {
       return Text(copy.text('noteScopeLoading'));
     }
-    if (selection.mode == 'GLOBAL_ALL') {
-      return Row(
-        children: [
-          Expanded(
-            child: DropdownButtonFormField<String>(
-              key: const ValueKey('sys06-note-domain'),
-              initialValue: _globalDomainId,
-              decoration: InputDecoration(
-                isDense: true,
-                labelText: copy.text('noteBusinessDomain'),
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            key: ValueKey('sys06-note-domain-$_globalDomainId-$_generation'),
+            initialValue: _globalDomainId,
+            decoration: InputDecoration(
+              isDense: true,
+              labelText: copy.text('noteBusinessDomain'),
+            ),
+            items: [
+              DropdownMenuItem(
+                value: 'SHARED',
+                child: Text(copy.text('noteShared')),
               ),
-              items: [
+              if (selection.mode == 'GLOBAL_ALL' || selection.domainId == 'CTH')
                 DropdownMenuItem(
                   value: 'CTH',
                   child: Text(copy.text('noteCth')),
                 ),
+              if (selection.mode == 'GLOBAL_ALL' || selection.domainId == 'BMP')
                 DropdownMenuItem(
                   value: 'BMP',
                   child: Text(copy.text('noteBmp')),
                 ),
-              ],
-              onChanged: _saving ? null : _selectGlobalDomain,
-            ),
-          ),
-          IconButton(
-            key: const ValueKey('sys06-note-refresh-context'),
-            onPressed: _loadingContext || _saving ? null : _refreshContext,
-            tooltip: copy.text('noteRefreshContext'),
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      );
-    }
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            '${copy.text('noteFocusedScope')}: ${selection.domainId} · ${copy.text('noteSelectedSubject')}',
-            key: const ValueKey('sys06-note-focused-scope'),
+            ],
+            onChanged: _saving ? null : _selectGlobalDomain,
           ),
         ),
         IconButton(
@@ -2262,14 +2411,9 @@ class _ReaderPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = LumenisTheme.of(context);
     final value = frame;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.line),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
+    return ColoredBox(
+      color: theme.surface.withValues(alpha: 1),
+      child: ClipRect(
         child: value == null
             ? _PreviewEmpty(
                 copy: copy,
@@ -2285,11 +2429,12 @@ class _ReaderPreview extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     ColoredBox(
-                      color: Colors.black,
+                      color: Colors.white,
                       child: InteractiveViewer(
                         minScale: 1,
                         maxScale: 4,
-                        child: Center(
+                        child: Align(
+                          alignment: Alignment.topCenter,
                           child: Image.memory(
                             value.frame.bytes,
                             key: const ValueKey('sys06-frame'),
@@ -2301,19 +2446,18 @@ class _ReaderPreview extends StatelessWidget {
                       ),
                     ),
                     Positioned(
-                      left: 12,
-                      right: 12,
-                      top: 12,
+                      right: 8,
+                      bottom: 8,
                       child: IgnorePointer(
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.68),
+                            color: Colors.black.withValues(alpha: 0.56),
                             borderRadius: BorderRadius.circular(9),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 7,
+                              horizontal: 7,
+                              vertical: 4,
                             ),
                             child: Text(
                               copy.previewTimestamp(value.frame.capturedAt),
@@ -2411,22 +2555,6 @@ class _PreviewEmpty extends StatelessWidget {
   }
 }
 
-class _ReaderBoundary extends StatelessWidget {
-  const _ReaderBoundary({required this.copy});
-
-  final _Sys06Copy copy;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    label: copy.text('boundaryTitle'),
-    child: Text(
-      copy.text('boundary'),
-      style: TextStyle(color: LumenisTheme.of(context).quiet, height: 1.4),
-    ),
-  );
-}
-
 enum _Sys06Notice {
   ready,
   enterAddress,
@@ -2441,6 +2569,7 @@ enum _Sys06Notice {
   accessUnavailable,
   localCoreRequired,
   invalidAddress,
+  navigationRestricted,
   unavailable,
   releasingControl,
   controlReleased,
@@ -2457,6 +2586,7 @@ extension on _Sys06Notice {
     _Sys06Notice.accessUnavailable ||
     _Sys06Notice.localCoreRequired ||
     _Sys06Notice.invalidAddress ||
+    _Sys06Notice.navigationRestricted ||
     _Sys06Notice.unavailable ||
     _Sys06Notice.controlUnavailable ||
     _Sys06Notice.returnUnavailable => true,
@@ -2516,8 +2646,9 @@ class _Sys06Copy {
       'eyebrow': 'SYSTEM · 受控来源阅读',
       'title': '内置来源阅读器',
       'subtitle': '页面在寰意受控会话中读取，不会跳转或使用你的个人浏览器。',
-      'open': '打开受控阅读器',
-      'address': '允许的公开来源地址',
+      'more': '更多',
+      'open': '打开浏览器',
+      'address': '网址',
       'addressHint': 'https://example.com',
       'go': '前往',
       'reload': '重新加载页面',
@@ -2549,16 +2680,21 @@ class _Sys06Copy {
       'previewSemantics': '只读页面预览。此区域不可点击、输入或远程滚动。',
       'boundaryTitle': '安全边界',
       'researchNotes': '研究笔记',
-      'noteBoundary': '这里只保存你手动撰写的笔记。网页未导入、未核验，也未绑定任务；不会保存页面正文或截图。',
+      'readPage': '问这个网页',
+      'noteBoundary': '保存自己的阅读记录。网页原文和截图不会随笔记保存。',
       'noteScopeLoading': '正在读取当前工作区范围…',
-      'noteBusinessDomain': '业务范围',
+      'noteBusinessDomain': '保存位置',
+      'noteShared': '我的笔记',
+      'noteUnsaved': '笔记还未保存',
+      'noteKeepEditing': '继续编辑',
+      'noteDiscard': '放弃修改',
       'noteCth': 'CTH 商业运营',
       'noteBmp': 'BMP 品牌市场',
       'noteFocusedScope': '当前已选范围',
       'noteSelectedSubject': '已选主体 / 品牌焦点',
-      'noteChooseDomain': '请先选择 CTH 或 BMP，再读取该范围内的研究笔记。',
+      'noteChooseDomain': '请选择笔记的保存位置。',
       'noteError': '研究笔记暂时不可用。请保留文字并重试。',
-      'noteAccessError': '当前账号或范围没有 SavedWork 权限。',
+      'noteAccessError': '当前没有访问这些笔记的权限。',
       'noteContextChanged': '工作区范围已变化。请重新核对范围后再保存或修订。',
       'noteRefreshContext': '重新读取工作区范围',
       'noteEmpty': '此范围内暂无浏览器研究笔记。',
@@ -2572,9 +2708,8 @@ class _Sys06Copy {
       'notePageRevision': '页面版本 / 画面时间',
       'noteNoCurrentPage': '先在受控会话中读取页面，再新建带站点来源的笔记。',
       'noteTitle': '标题',
-      'noteMarkdown': '手动撰写的 Markdown 笔记',
-      'noteContextDisclosure':
-          '笔记以普通 SavedWork 保存；不是原始来源、Source、Evidence 或 Canonical 事实。',
+      'noteMarkdown': '笔记内容',
+      'noteContextDisclosure': '笔记是你的记录，引用网页内容前请核对原文。',
       'noteSave': '保存笔记',
       'noteRevise': '保存为新版本',
       'noteRevisionReason': '用户在 SYS-06 中修订浏览器研究笔记。',
@@ -2594,14 +2729,15 @@ class _Sys06Copy {
       'notice.accessUnavailable': '当前工作区没有此浏览权限。',
       'notice.localCoreRequired': '目前仅支持连接本机寰意 Core；远程 Web 浏览尚未验证或开放。',
       'notice.invalidAddress': '请输入一个有效的 http 或 https 地址。',
-      'notice.unavailable': '受控阅读暂时不可用。',
+      'notice.unavailable': '网页暂时无法打开，请重试。',
+      'notice.navigationRestricted': '当前浏览访问规则未允许此地址。网址已保留，请核对地址或联系管理员。',
       'notice.releasingControl': '正在释放人工控制权。',
       'notice.controlReleased': '已释放人工控制权；需要时可重新读取画面。',
       'notice.controlUnavailable': '人工控制当前不可用或租约已失效。',
       'notice.returnUnavailable': '当前没有可返回的任务页面。',
       'notice.closed': '受控会话已结束。',
-      'empty.ready.title': '在寰意内开始读取',
-      'empty.ready.detail': '先开启受控会话，再输入一个允许的公开来源地址。',
+      'empty.ready.title': '打开一个网页',
+      'empty.ready.detail': '输入网址，开始浏览。',
       'empty.enterAddress.title': '输入来源地址',
       'empty.enterAddress.detail': '导航成功后，系统会显示已授权页面的只读快照。',
       'empty.stopping.title': '正在结束会话',
@@ -2628,7 +2764,7 @@ class _Sys06Copy {
       'empty.invalidAddress.title': '地址不可用',
       'empty.invalidAddress.detail': '只接受无凭证的 http 或 https 公开地址。',
       'empty.unavailable.title': '预览暂时不可用',
-      'empty.unavailable.detail': '不会保留旧页面或伪造成功状态。',
+      'empty.unavailable.detail': '画面暂时中断，请重新载入。',
       'empty.releasingControl.title': '正在释放控制权',
       'empty.releasingControl.detail': '受控画面会先清除，服务端确认释放后才能继续。',
       'empty.controlReleased.title': '控制权已释放',
@@ -2645,8 +2781,9 @@ class _Sys06Copy {
       'title': 'Internal source reader',
       'subtitle':
           'The page is read in an OEVIRA-controlled session. Your personal browser is never opened or used.',
-      'open': 'Open controlled reader',
-      'address': 'Allowed public source address',
+      'more': 'More',
+      'open': 'Open browser',
+      'address': 'Web address',
       'addressHint': 'https://example.com',
       'go': 'Go',
       'reload': 'Reload page',
@@ -2682,16 +2819,20 @@ class _Sys06Copy {
           'Read-only page preview. This area cannot click, type, or scroll the remote page.',
       'boundaryTitle': 'Safety boundary',
       'researchNotes': 'Research notes',
+      'readPage': 'Ask about this page',
       'noteBoundary':
-          'Only your manually written notes are saved. The page is not imported or verified, and no task is bound. Page text and screenshots are not stored.',
+          'Save your reading notes. Page text and screenshots are not saved with them.',
       'noteScopeLoading': 'Reading the current workspace scope…',
-      'noteBusinessDomain': 'Business scope',
+      'noteBusinessDomain': 'Save to',
+      'noteShared': 'My notes',
+      'noteUnsaved': 'This note has unsaved changes',
+      'noteKeepEditing': 'Keep editing',
+      'noteDiscard': 'Discard changes',
       'noteCth': 'CTH commerce operations',
       'noteBmp': 'BMP brand and market',
       'noteFocusedScope': 'Current focused scope',
       'noteSelectedSubject': 'selected Subject / BrandFocus',
-      'noteChooseDomain':
-          'Choose CTH or BMP before reading notes in that scope.',
+      'noteChooseDomain': 'Choose where to keep your notes.',
       'noteError':
           'Research notes are temporarily unavailable. Keep your text and retry.',
       'noteAccessError':
@@ -2713,9 +2854,9 @@ class _Sys06Copy {
       'noteNoCurrentPage':
           'Read a page in the controlled session before creating a note with its site origin.',
       'noteTitle': 'Title',
-      'noteMarkdown': 'Manually written Markdown note',
+      'noteMarkdown': 'Note',
       'noteContextDisclosure':
-          'Saved as ordinary SavedWork; it is not a raw source, Source, Evidence, or Canonical fact.',
+          'These are your notes. Check the original page before citing it.',
       'noteSave': 'Save note',
       'noteRevise': 'Save new version',
       'noteRevisionReason': 'User revised the browser research note in SYS-06.',
@@ -2739,6 +2880,8 @@ class _Sys06Copy {
           'Only local OEVIRA Core is supported here; remote Web browsing is not yet verified or enabled.',
       'notice.invalidAddress': 'Enter a valid http or https address.',
       'notice.unavailable': 'Controlled reading is temporarily unavailable.',
+      'notice.navigationRestricted':
+          'This address is restricted by the current browsing rules. It is retained; check it or contact your administrator.',
       'notice.releasingControl': 'Releasing human control.',
       'notice.controlReleased':
           'Human control released. Refresh the frame when needed.',
@@ -2804,8 +2947,9 @@ class _Sys06Copy {
       'eyebrow': 'SYSTEM · 제어된 소스 읽기',
       'title': '내장 소스 리더',
       'subtitle': '페이지는 OEVIRA 제어 세션에서 읽습니다. 개인 브라우저를 열거나 사용하지 않습니다.',
-      'open': '제어된 리더 열기',
-      'address': '허용된 공개 소스 주소',
+      'more': '더 보기',
+      'open': '브라우저 열기',
+      'address': '웹 주소',
       'addressHint': 'https://example.com',
       'go': '이동',
       'reload': '페이지 새로고침',
@@ -2838,17 +2982,21 @@ class _Sys06Copy {
           '읽기 전용 페이지 미리보기입니다. 이 영역은 원격 페이지를 클릭, 입력 또는 스크롤할 수 없습니다.',
       'boundaryTitle': '안전 경계',
       'researchNotes': '연구 노트',
-      'noteBoundary':
-          '직접 작성한 노트만 저장합니다. 페이지는 가져오거나 검증하지 않으며 작업에도 연결하지 않습니다. 페이지 본문과 스크린샷은 저장하지 않습니다.',
+      'readPage': '이 페이지에 질문하기',
+      'noteBoundary': '읽으면서 작성한 노트를 저장하세요. 페이지 원문과 스크린샷은 함께 저장되지 않습니다.',
       'noteScopeLoading': '현재 작업 공간 범위를 읽는 중…',
-      'noteBusinessDomain': '업무 범위',
+      'noteBusinessDomain': '저장 위치',
+      'noteShared': '내 노트',
+      'noteUnsaved': '저장하지 않은 변경 사항이 있습니다',
+      'noteKeepEditing': '계속 편집',
+      'noteDiscard': '변경 취소',
       'noteCth': 'CTH 상업 운영',
       'noteBmp': 'BMP 브랜드·시장',
       'noteFocusedScope': '현재 선택 범위',
       'noteSelectedSubject': '선택된 Subject / BrandFocus',
-      'noteChooseDomain': '해당 범위의 노트를 읽기 전에 CTH 또는 BMP를 선택하세요.',
+      'noteChooseDomain': '노트를 저장할 위치를 선택하세요.',
       'noteError': '연구 노트를 일시적으로 사용할 수 없습니다. 텍스트를 보존하고 다시 시도하세요.',
-      'noteAccessError': '현재 계정 또는 범위에는 SavedWork 권한이 없습니다.',
+      'noteAccessError': '이 노트에 접근할 권한이 없습니다.',
       'noteContextChanged': '작업 공간 범위가 바뀌었습니다. 저장 또는 수정 전에 범위를 다시 확인하세요.',
       'noteRefreshContext': '작업 공간 범위 새로고침',
       'noteEmpty': '이 범위에 브라우저 연구 노트가 없습니다.',
@@ -2862,9 +3010,8 @@ class _Sys06Copy {
       'notePageRevision': '페이지 버전 / 화면 시각',
       'noteNoCurrentPage': '제어 세션에서 페이지를 읽은 후 사이트 출처가 기록된 노트를 만드세요.',
       'noteTitle': '제목',
-      'noteMarkdown': '직접 작성한 Markdown 노트',
-      'noteContextDisclosure':
-          '일반 SavedWork로 저장됩니다. 원본 Source, Evidence 또는 Canonical 사실이 아닙니다.',
+      'noteMarkdown': '노트 내용',
+      'noteContextDisclosure': '개인 기록입니다. 인용하기 전에 원문을 확인하세요.',
       'noteSave': '노트 저장',
       'noteRevise': '새 버전으로 저장',
       'noteRevisionReason': '사용자가 SYS-06에서 브라우저 연구 노트를 수정했습니다.',
@@ -2886,6 +3033,8 @@ class _Sys06Copy {
           '현재는 로컬 OEVIRA Core만 지원합니다. 원격 Web 브라우징은 아직 검증되거나 활성화되지 않았습니다.',
       'notice.invalidAddress': '유효한 http 또는 https 주소를 입력하세요.',
       'notice.unavailable': '제어된 읽기를 일시적으로 사용할 수 없습니다.',
+      'notice.navigationRestricted':
+          '현재 탐색 규칙에서 허용하지 않는 주소입니다. 주소는 유지됩니다. 주소를 확인하거나 관리자에게 문의하세요.',
       'notice.releasingControl': '사람 제어권을 해제하고 있습니다.',
       'notice.controlReleased': '사람 제어권이 해제되었습니다. 필요하면 화면을 다시 읽으세요.',
       'notice.controlUnavailable': '사람 제어를 사용할 수 없거나 임대가 만료되었습니다.',

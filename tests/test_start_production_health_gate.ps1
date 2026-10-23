@@ -23,25 +23,13 @@ $decisionAst = $ast.Find({
 }, $true)
 if (-not $decisionAst) { throw 'Get-CoreStartupDecision function not found' }
 . ([scriptblock]::Create($decisionAst.Extent.Text))
-$readinessAst = $ast.Find({
-    param($node)
-    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
-        $node.Name -eq 'Get-StartupReadiness'
-}, $true)
-if (-not $readinessAst) { throw 'Get-StartupReadiness function not found' }
-. ([scriptblock]::Create($readinessAst.Extent.Text))
-foreach ($browserExit in @(0, 1, 2)) {
-    if ((Get-StartupReadiness $false $browserExit) -ne 'CORE_UNAVAILABLE') {
-        throw 'Browser state hid a failed Core'
-    }
+$launcherText = [IO.File]::ReadAllText($launcherPath)
+if ($launcherText -match 'taskkill|Remove-Item|start_resident_browsers') {
+    throw 'Startup must preserve existing processes and start no browser automatically'
 }
-foreach ($browserExit in @(1, 2)) {
-    if ((Get-StartupReadiness $true $browserExit) -ne 'CORE_READY_BROWSER_UNAVAILABLE') {
-        throw 'Failed or missing browser launcher was reported as ready'
-    }
-}
-if ((Get-StartupReadiness $true 0) -ne 'CORE_AND_BROWSER_READY') {
-    throw 'Ready Core and browser were rejected'
+if (-not $launcherText.Contains('param([switch]$EnableScheduledCollection)') -or
+    -not $launcherText.Contains("if (-not `$EnableScheduledCollection) { `$supervisorArgs += '--no-scheduler' }")) {
+    throw 'Scheduled collection must require explicit opt-in'
 }
 $script:MockHealth = $null
 $script:MockTransportFailure = $false
@@ -82,11 +70,14 @@ $script:MockHealth.core_instance.entry_sha256 = 'e' * 64
 if (Test-Http 'http://127.0.0.1:8201/healthz' -ExpectedLaunchId $launchId -ExpectedEntrySha256 $entryHash) {
     throw 'Different Core entry bytes were accepted'
 }
-if ((Get-CoreStartupDecision $true $false 1) -ne 'BLOCKED_SOURCE_IDENTITY') { throw 'Healthy unknown source was allowed to restart' }
-if ((Get-CoreStartupDecision $true $true 0) -ne 'BLOCKED_PROCESS_OWNERSHIP') { throw 'Healthy unowned Core was allowed to restart' }
-if ((Get-CoreStartupDecision $true $true 2) -ne 'BLOCKED_PROCESS_OWNERSHIP') { throw 'Duplicate ownership was accepted' }
-if ((Get-CoreStartupDecision $true $true 1) -ne 'REUSE_MATCHING_CORE_ENTRY') { throw 'Matching owned Core could not be reused' }
-if ((Get-CoreStartupDecision $false $false 0) -ne 'CONVERGE_OWNED_STALE_PROCESS') { throw 'Unhealthy recovery path was lost' }
+if ((Get-CoreStartupDecision $true $false 1 $true $true) -ne 'BLOCKED_SOURCE_IDENTITY') { throw 'Unknown source accepted' }
+if ((Get-CoreStartupDecision $true $true 0 $true $true) -ne 'BLOCKED_PROCESS_OWNERSHIP') { throw 'Unowned Core accepted' }
+if ((Get-CoreStartupDecision $true $true 2 $true $true) -ne 'BLOCKED_PROCESS_OWNERSHIP') { throw 'Duplicate ownership accepted' }
+if ((Get-CoreStartupDecision $true $true 1 $true $true) -ne 'REUSE_MATCHING_CORE_ENTRY') { throw 'Matching Core rejected' }
+if ((Get-CoreStartupDecision $true $true 1 $true $false) -ne 'BLOCKED_SCHEDULER_MODE') { throw 'Wrong scheduler mode accepted' }
+if ((Get-CoreStartupDecision $false $false 0 $false $false) -ne 'START_CORE') { throw 'Empty endpoint cannot start' }
+if ((Get-CoreStartupDecision $false $false 0 $true $false) -ne 'BLOCKED_EXISTING_PROCESS') { throw 'Unknown listener was not protected' }
+if ((Get-CoreStartupDecision $false $false 1 $false $false) -ne 'BLOCKED_EXISTING_PROCESS') { throw 'Existing supervisor was not protected' }
 
 $script:MockHealth = [pscustomobject]@{
     ok = $false
@@ -107,4 +98,4 @@ if (Test-Http 'http://127.0.0.1:8201/healthz' 1) {
     throw 'Transport failure was accepted'
 }
 
-Write-Output 'PASS: launcher preserves Core identity and distinguishes browser readiness from Core availability'
+Write-Output 'PASS: launcher preserves Core identity and requires scheduler opt-in and preserves occupied endpoints'

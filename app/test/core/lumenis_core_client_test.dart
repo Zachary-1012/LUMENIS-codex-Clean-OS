@@ -472,6 +472,62 @@ void main() {
     );
   });
 
+  test(
+    'browser notes remain independent of the selected business scope',
+    () async {
+      final server = await _CoreStub.start(
+        contextResponses: [
+          _contextEnvelope('FOCUS', domainId: 'CTH', subjectId: 'shop-1'),
+        ],
+      );
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+      await client.selectContext(domainId: 'CTH', subjectId: 'shop-1');
+      await client.listBrowserResearchNotes(domainId: null);
+      await client.saveBrowserResearchNote(
+        domainId: null,
+        title: 'Reading note',
+        markdown: 'User observation',
+        payload: const {},
+        requestId: 'browser_note_0001',
+      );
+      await client.reopenBrowserResearchNote(
+        domainId: null,
+        artifactId: 'ART-0123456789abcdef',
+      );
+      await client.reviseBrowserResearchNote(
+        domainId: null,
+        artifactId: 'ART-0123456789abcdef',
+        requestId: 'browser_note_0002',
+        expectedSha256: List.filled(64, 'a').join(),
+        reason: 'Clarification',
+        expectedTitle: 'Reading note',
+        title: 'Reading note',
+        expectedMarkdown: 'User observation',
+        markdown: 'Revised observation',
+      );
+      final notes = server.requests
+          .where(
+            (request) => request.path.startsWith('/api/experience/saved-work'),
+          )
+          .toList();
+      expect(notes, hasLength(4));
+      for (final request in notes) {
+        expect(
+          request.workspaceScope,
+          '{"scope_kind":"shared_workspace","version":1}',
+        );
+        expect(request.headers.keys, isNot(contains('x-domain-id')));
+        expect(request.headers.keys, isNot(contains('x-subject-id')));
+      }
+      expect((jsonDecode(notes[1].body!) as Map)['citations'], isEmpty);
+      expect(
+        (jsonDecode(notes[3].body!) as Map)['expected_sha256'],
+        List.filled(64, 'a').join(),
+      );
+    },
+  );
+
   test('Shared SavedWork accepts only a guarded PPTX export response', () async {
     final server = await _CoreStub.start();
     addTearDown(server.close);

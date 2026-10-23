@@ -56,7 +56,7 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 - **结果优先 / Results first：** 用户提出工作问题和业务约束，后台处理适用分析，报告呈现结论、依据、限制及下一步。 / Users provide the question and practical constraints; backend analysis produces conclusions, evidence, limitations, and next actions.
 - **版本连续 / Version continuity：** 成果支持保存、局部修订、重开与恢复；旧版和修改原因保留。 / Work supports saving, local revision, reopening, and recovery, with prior versions and reasons retained.
 - **主体与范围 / Subjects and scope：** 默认范围为 GLOBAL / ALL。用户可以搜索、新增、聚焦和清除商业主体与品牌；聚焦只缩小范围，不授予权限，也不启动采集。品牌名称以品牌官网的正式名称为准，并记录来源。 / The default scope is GLOBAL / ALL. Users can search, add, focus, and clear commercial subjects and brands; focus only narrows scope and neither grants permission nor starts collection. Brand names follow each brand's official website and record the source.
-- **持续采集 / Continuous acquisition：** SYSTEM Collector 按话题和任务语义，在现有采集启用状态、权限、身份与来源边界内对主体执行采集；仅登记主体不授予采集权限，也不自动启动采集。当前主要平台为 Instagram、Facebook、微信公众号、小红书、抖音和 X，不设统一历史起点。采集在后台运行，不弹出窗口。平台登录失效时，在产品内打开统一的恢复面板（扫码、受控登录或验证），恢复后续跑原任务，不自动打开外部浏览器。单个平台不可用不影响其他平台。 / The SYSTEM Collector acquires sources by topic and task semantics only within the existing enabled collection state and applicable permission, identity, and source boundaries. Registration alone grants no collection permission and does not start acquisition. The primary platforms are Instagram, Facebook, WeChat Official Accounts, RedNote/XHS, Douyin, and X, with no universal start date. Collection runs in the background without pop-up windows. When a platform session expires, one in-product recovery sheet (QR, controlled login, or verification) restores it and resumes the original task; no external browser opens automatically. One unavailable platform does not stop the others.
+- **按需采集 / On-demand acquisition：** SYSTEM Collector 由用户刷新或当前浏览器上下文任务触发，定时采集需用户明确选择；按话题和任务语义、权限、身份与来源边界对主体执行采集；仅登记主体不授予采集权限，也不自动启动采集。当前主要平台为 Instagram、Facebook、微信公众号、小红书、抖音和 X，不设统一历史起点。采集在后台运行，不弹出窗口。平台登录失效时，在产品内打开统一的恢复面板（扫码、受控登录或验证），恢复后续跑原任务，不自动打开外部浏览器。单个平台不可用不影响其他平台。 / The SYSTEM Collector acquires sources when a user refreshes or requests current browser context; scheduled acquisition requires explicit opt-in. Topic and task semantics retain the applicable permission, identity, and source boundaries. Registration alone grants no collection permission and does not start acquisition. The primary platforms are Instagram, Facebook, WeChat Official Accounts, RedNote/XHS, Douyin, and X, with no universal start date. Collection runs in the background without pop-up windows. When a platform session expires, one in-product recovery sheet (QR, controlled login, or verification) restores it and resumes the original task; no external browser opens automatically. One unavailable platform does not stop the others.
 - **权限明确 / Explicit permissions：** 浏览、引用、制作、导出、发布及模型训练遵循各自适用的授权。 / Browsing, citation, production, export, publication, and training follow their respective permissions.
 
 ## 产品表面 / Product surfaces
@@ -68,9 +68,13 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 | Desktop · Windows / macOS | 原生桌面工作区。 / Native desktop workspace. |
 | Mobile Companion · iOS | 移动查阅、审阅与工作接续。 / Mobile reading, review, and work continuation. |
 
-四类表面按各自角色并行建设、独立验收，共用同一 Product Core、权限、资料和成果版本。Workspace、Windows/macOS与iOS复用同一Flutter实现；语言、视觉与无障碍归唯一体验规范。README不派工，也不把单端通过算成全产品完成。
+四类表面按各自角色独立验收，实际开工端由当前PO指令决定，共用同一 Product Core、权限、资料和成果版本。Workspace、Windows/macOS与iOS复用同一Flutter实现；语言、视觉与无障碍归唯一体验规范。README不派工，也不把单端通过算成全产品完成。
 
-Build the four surfaces in parallel and accept each independently over one Product Core, permissions, materials and result versions. Workspace, Windows/macOS and iOS reuse one Flutter implementation. Language, visual and accessibility requirements belong to the sole Experience Constitution; this README neither dispatches work nor treats one surface as full-product acceptance.
+Accept each surface independently, following the current PO instruction for execution order over one Product Core, permissions, materials and result versions. Workspace, Windows/macOS and iOS reuse one Flutter implementation. Language, visual and accessibility requirements belong to the sole Experience Constitution; this README neither dispatches work nor treats one surface as full-product acceptance.
+
+
+产品采用拟物数码视觉，任务专属布局、原创图标、可选动效和三语无障碍遵循现行体验规范。
+The digital skeuomorphic visual language follows the current Experience specification, with task-specific layouts, original icons, selectable motion and accessible Chinese/English/Korean operation.
 
 ## 工程结构 / Repository structure
 

@@ -16,10 +16,16 @@ import 'sh04_snapshot.dart';
 import 'sh04_view_model.dart';
 
 class Sh04Screen extends StatefulWidget {
-  const Sh04Screen({required this.client, this.repository, super.key});
+  const Sh04Screen({
+    required this.client,
+    this.repository,
+    this.initialArtifactId,
+    super.key,
+  });
 
   final LumenisCoreClient client;
   final Sh04Repository? repository;
+  final String? initialArtifactId;
 
   @override
   State<Sh04Screen> createState() => _Sh04ScreenState();
@@ -34,7 +40,7 @@ class _Sh04ScreenState extends State<Sh04Screen> {
   @override
   void initState() {
     super.initState();
-    _viewModel.refresh();
+    _load();
   }
 
   @override
@@ -47,9 +53,13 @@ class _Sh04ScreenState extends State<Sh04Screen> {
         repository:
             widget.repository ?? CoreSh04Repository(client: widget.client),
       );
-      _viewModel.refresh();
+      _load();
     }
   }
+
+  Future<void> _load() => widget.initialArtifactId == null
+      ? _viewModel.refresh()
+      : _viewModel.openArtifact(widget.initialArtifactId!);
 
   @override
   void dispose() {
@@ -67,11 +77,11 @@ class _Sh04ScreenState extends State<Sh04Screen> {
           Sh04LoadPhase.loading => _LoadingState(),
           Sh04LoadPhase.blocked => _BlockedState(
             error: _viewModel.scopeError,
-            onRetry: _viewModel.refresh,
+            onRetry: _load,
           ),
           Sh04LoadPhase.failed => _FailureState(
             kind: _viewModel.failureKind!,
-            onRetry: _viewModel.refresh,
+            onRetry: _load,
           ),
           Sh04LoadPhase.ready => _Workspace(
             viewModel: _viewModel,

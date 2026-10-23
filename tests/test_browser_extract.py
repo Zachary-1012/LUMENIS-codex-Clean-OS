@@ -61,6 +61,52 @@ def test_success():
     assert obj._active_control_actions==0
     cdp.detach.assert_called_once()
     assert 'Hello' not in str(obj._record_evidence.call_args)
+
+
+def test_question_reads_exact_page_without_exporting_query():
+    address = URL + '?access_token=private-value'
+    obj, _ = runtime({'url': address, 'title': 'Opening hours', 'blocks': [
+        {'tag': 'p', 'text': 'Opening hours are 10 AM to 8 PM.'}], 'truncated': False})
+    obj._page.url = address
+    result = obj.extract({'formats': {'text': True}, 'question': 'Opening hours?',
+                          'page_revision': 3, 'target_id': 'target-test'})
+    assert '10 AM' in result['page_context']['excerpt']
+    assert result['page_context']['answer_state'] == 'NOT_GENERATED'
+    assert result['page_context']['semantic_relevance'] == 'NOT_EVALUATED'
+    assert 'private-value' not in json.dumps(result)
+    assert result['source_use'] == 'NOT_ADMITTED'
+
+
+@pytest.mark.parametrize('changes', [{'page_revision': 2}, {'target_id': 'other'}])
+def test_context_stale_binding_never_reads(changes):
+    obj, cdp = runtime()
+    error('BROWSER_EXTRACTION_PAGE_CHANGED', lambda: obj.extract({
+        'formats': {'text': True}, 'question': 'What happened?',
+        'page_revision': 3, 'target_id': 'target-test', **changes}))
+    cdp.send.assert_not_called()
+
+
+@pytest.mark.parametrize('changes', [{'question': ''}, {'question': 'q'*2001},
+    {'page_revision': True}, {'target_id': ''}, {'target_id': None}])
+def test_context_requires_complete_bounded_binding(changes):
+    error('BROWSER_CONTEXT_REQUEST_INVALID', lambda: validate_extract_request({
+        'formats': {'text': True}, 'question': 'What happened?',
+        'page_revision': 3, 'target_id': 'target-test', **changes}))
+
+
+def test_context_uses_server_page_but_rejects_private_url():
+    obj, cdp = runtime()
+    obj._page.url = 'http://127.0.0.1/private'
+    error('BROWSER_EXTRACTION_URL_INVALID', lambda: obj.extract({
+        'formats': {'text': True}, 'question': 'What happened?',
+        'page_revision': 3, 'target_id': 'target-test'}))
+    cdp.send.assert_not_called()
+
+
+def test_revoked_bound_task_returns_no_page_body():
+    obj, _ = runtime()
+    obj._check_bound_task_operation = Mock(side_effect=[None, PermissionError('revoked')])
+    error('BROWSER_EXTRACTION_PERMISSION_DENIED', lambda: obj.extract(request()))
 def test_mismatch_no_capture():
     obj,cdp=runtime()
     error('BROWSER_EXTRACTION_NAVIGATION_REQUIRED',lambda:obj.extract(request(url='https://example.com/other')))

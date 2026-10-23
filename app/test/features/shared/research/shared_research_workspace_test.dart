@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/features/shared/research/shared_research_repository.dart';
 import 'package:lumenis_app/features/shared/research/shared_research_workspace.dart';
+import 'package:lumenis_app/navigation/lumenis_leave_guard.dart';
 import '../shared_test_support.dart';
 
 const scope = {'scope_kind': 'shared_workspace', 'version': 1};
@@ -132,6 +133,50 @@ class PagedRepository extends Repository {
 }
 
 void main() {
+  testWidgets(
+    'Home-linked research opens the exact artifact and protects edits on navigation',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final guard = LumenisLeaveGuard(routeDriven: true);
+      var returned = 0;
+      await tester.pumpWidget(
+        sharedTestApp(
+          LumenisLeaveScope(
+            guard: guard,
+            child: SharedResearchWorkspace(
+              repository: Repository(),
+              sources: const {},
+              initialArtifactId: id,
+              onBack: () => returned++,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('已核对 17 行；仍有缺项。'), findsOneWidget);
+      await tester.tap(find.text('编辑'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, '正文'),
+        '保留人工修订，尚未保存。',
+      );
+      expect(guard.needsProtection, isTrue);
+      final decision = guard.requestLeave();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('继续编辑'));
+      await tester.pumpAndSettle();
+      expect(await decision, isFalse);
+      expect(find.text('保留人工修订，尚未保存。'), findsOneWidget);
+      await tester.tap(find.byTooltip('返回资料库'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('离开'));
+      await tester.pumpAndSettle();
+      expect(returned, 1);
+      expect(guard.needsProtection, isFalse);
+    },
+  );
+
   testWidgets('paging tasks preserves already loaded saved versions', (
     tester,
   ) async {

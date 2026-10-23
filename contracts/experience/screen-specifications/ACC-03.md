@@ -3,7 +3,7 @@
 ```yaml
 screen_id: ACC-03
 status: DESIGN_READY
-revision: 7
+revision: 8
 owner_domain: SYSTEM / Shared Capability presentation
 binding_ids: []
 product_owner_approval: APPROVED
@@ -18,7 +18,7 @@ approval_reference: Current F/M thread decision for task-first Home, GLOBAL_ALL 
 ## 1. User task and product invariant
 
 Open the product and begin real work: write or open a task draft, continue an
-actually visited page, or open an existing business/creation workflow. This is
+actually visited page or exact saved work, or open an existing business/creation workflow. This is
 an operating product entry, not a marketing landing page or a system checklist.
 
 No selection means GLOBAL_ALL. Subject/BrandFocus selection only narrows the
@@ -57,6 +57,7 @@ the current design rather than retained as alternative layouts.
 | Analysis and draft/file tools | Existing AI-01 entry and owner | Direct reachable action; no model/algorithm selection required to enter basic business workflows |
 | Analysis availability | Existing AI-01 service/submit contract | Present actual unavailable/failure reason; missing focus is not a reason |
 | Four destinations | Existing shell onOpen routes | CTH-01, BMP-01, SH-02 and SH-01; navigation only |
+| Continue saved work | Existing Shared SavedWork search with latest_only=true, actor-bound resume receipt; original import/research/manuscript/report readers | Show returned title/type/version; exact Artifact deep link reauthorizes and reads bytes; opening never creates or executes work; original uploads and research results use distinct existing readers |
 | Continue last page | Actual Shell in-memory/restorable valid prior route | No invented job, artifact, timestamp or claim of project recovery; clear on confirmed context/client change |
 | Theme/wallpaper/locale | Existing shared owners | Preserve contrast, zh-CN/en/ko, text scaling and reduced motion |
 | GLOBAL_ALL/FOCUS | Existing Core context and request headers | Default global; selected focus only narrows; no synthetic grant |
@@ -84,7 +85,13 @@ closed initially; readable content retains its space and current user appearance
 Four compact destinations use a small original glyph and a concise label, with
 shared edges and visible focus/pressed state. They are navigation controls,
 not four descriptive cards. Show the actual last-opened page only when present.
-No permanent right-hand business inspector or duplicate AI panel.
+No permanent right-hand business inspector or duplicate AI panel. Below the input,
+real recent work uses readable title rows and fine separators rather than KPI tiles.
+One Work appears at its current verified version; unverified/partial reads remain
+visible as incomplete. Refresh and cursor continuation are explicit. Failed or
+changed-client reads clear stale rows. The route cannot grant permission; each
+original owner freshly reopens the selected Artifact. Media projects and unfinished
+job/draft continuation retain their existing owners and outstanding acceptance.
 
 ## 5. Web and mobile composition
 

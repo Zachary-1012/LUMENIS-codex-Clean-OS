@@ -251,9 +251,6 @@ abstract interface class Sys06BrowserVisibleLinksRepository {
   });
 }
 
-/// A business context resolved from the existing actor-authorized workspace
-/// selection. It is routing metadata; every SavedWork operation is still
-/// re-authorized by Core.
 class Sys06BrowserResearchContext {
   const Sys06BrowserResearchContext({
     required this.mode,
@@ -262,10 +259,11 @@ class Sys06BrowserResearchContext {
   });
 
   final String mode;
-  final String domainId;
+  final String? domainId;
   final String? subjectId;
 
   bool get isGlobal => mode == 'GLOBAL_ALL';
+  bool get isShared => mode == 'SHARED_WORKSPACE';
   String get fingerprint => '$mode|$domainId|${subjectId ?? ''}';
 }
 
@@ -380,6 +378,9 @@ class Sys06BrowserResearchNote {
                 returnRef['work_id'] != workId ||
                 returnRef['version'] != version ||
                 receiptScope is! Map ||
+                receiptScope['scope_kind'] != documentScope['scope_kind'] ||
+                receiptScope['version'] != documentScope['version'] ||
+                receiptScope['actor_id'] != documentScope['actor_id'] ||
                 receiptScope['domain_id'] != documentScope['domain_id'] ||
                 receiptScope['subject_id'] != documentScope['subject_id'] ||
                 receiptScope['brand_focus_id'] !=
@@ -512,9 +513,23 @@ class CoreSys06BrowserRepository
   Future<Sys06BrowserResearchContext> resolveResearchContext({
     String? globalDomainId,
   }) async {
+    if (globalDomainId == 'SHARED') {
+      return const Sys06BrowserResearchContext(
+        mode: 'SHARED_WORKSPACE',
+        domainId: null,
+        subjectId: null,
+      );
+    }
     final selection = await readWorkspaceSelection();
     if (selection.mode == 'GLOBAL_ALL') {
       final domain = globalDomainId?.trim().toUpperCase();
+      if (domain == null) {
+        return const Sys06BrowserResearchContext(
+          mode: 'SHARED_WORKSPACE',
+          domainId: null,
+          subjectId: null,
+        );
+      }
       if (domain != 'CTH' && domain != 'BMP') {
         throw const LumenisCoreException(
           'Select CTH or BMP before using Shared SavedWork.',
@@ -523,7 +538,7 @@ class CoreSys06BrowserRepository
       }
       return Sys06BrowserResearchContext(
         mode: 'GLOBAL_ALL',
-        domainId: domain!,
+        domainId: domain,
         subjectId: null,
       );
     }
@@ -550,7 +565,11 @@ class CoreSys06BrowserRepository
     Sys06BrowserResearchContext expected,
   ) async {
     final current = await resolveResearchContext(
-      globalDomainId: expected.isGlobal ? expected.domainId : null,
+      globalDomainId: expected.isShared
+          ? 'SHARED'
+          : expected.isGlobal
+          ? expected.domainId
+          : null,
     );
     if (current.fingerprint != expected.fingerprint) {
       throw const LumenisCoreException(
@@ -928,7 +947,12 @@ class CoreSys06BrowserRepository
     required String action,
   }) {
     if (response['ok'] == true) return;
-    final code = response['error_code'];
+    final code =
+        response['error_code'] ??
+        (response['error'] ==
+                'AI Browser navigation is blocked by the existing browser policy'
+            ? 'BROWSER_NAVIGATION_POLICY_DENIED'
+            : null);
     throw LumenisCoreException(
       'Browser $action was not accepted.',
       errorCode:

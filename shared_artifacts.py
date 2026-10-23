@@ -1478,7 +1478,7 @@ def read_content_source_artifact(
     shared_workspace_scope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Return authorized source metadata only; the original media is never served here."""
-    metadata, record, _, _ = _verified_content_source(
+    metadata, record, _, candidate = _verified_content_source(
         artifact_id,
         actor=actor,
         domain_id=domain_id,
@@ -1495,7 +1495,16 @@ def read_content_source_artifact(
             "approval_required", "approval_status", "created_at", "updated_at",
         )
     }
-    return {"artifact": public_record, "asset": metadata["asset"], "rights_state": "unknown", **_media_license_public(metadata)}
+    speech = None
+    if metadata["media_filename"].lower().endswith(".wav") and record["media_size_bytes"] <= 31 * 1024 * 1024:
+        from lumenis.shared.content_creation.offline_speech import read_speech_source
+        with zipfile.ZipFile(candidate, "r") as archive:
+            audio = archive.read(metadata["media_filename"])
+        if hashlib.sha256(audio).hexdigest() != metadata["asset"]["sha256"]:
+            raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+        speech = read_speech_source(audio)
+    return {"artifact": public_record, "asset": metadata["asset"], "rights_state": "unknown",
+            **({"speech_source": speech} if speech is not None else {}), **_media_license_public(metadata)}
 
 
 @contextmanager

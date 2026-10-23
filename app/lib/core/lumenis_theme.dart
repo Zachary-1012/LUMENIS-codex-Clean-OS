@@ -136,15 +136,15 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
 abstract final class LumenisTheme {
   // Compatibility tokens for older callers and semantic-only code. New
   // neutral color consumers should resolve LumenisTheme.of(context).
-  static const canvas = Color(0xFFFAF9F7);
-  static const surface = Color(0xFFFFFFFF);
-  static const surfaceRaised = Color(0xFFF1F0EE);
-  static const line = Color(0xFFE3E1DE);
-  static const foreground = Color(0xFF202124);
-  static const muted = Color(0xFF626367);
-  static const quiet = Color(0xFF6D6E73);
-  static const accent = Color(0xFF242529);
-  static const accentStrong = Color(0xFF121315);
+  static const canvas = Color(0xFFE6E5E1);
+  static const surface = Color(0xFFFCFCF7);
+  static const surfaceRaised = Color(0xFFDADCD6);
+  static const line = Color(0xFFBABEBA);
+  static const foreground = Color(0xFF252B2D);
+  static const muted = Color(0xFF596362);
+  static const quiet = Color(0xFF626B68);
+  static const accent = Color(0xFF286653);
+  static const accentStrong = Color(0xFF214E40);
 
   /// The least neutral tint that keeps the current text roles readable over
   /// any image pixel. Using the worst possible region avoids sampling misses
@@ -213,15 +213,15 @@ abstract final class LumenisTheme {
   );
 
   static const darkPalette = LumenisPalette(
-    canvas: Color(0xFF151619),
-    surface: Color(0xFF202226),
-    surfaceRaised: Color(0xFF2A2D32),
-    line: Color(0xFF41464D),
-    foreground: Color(0xFFF2F1EE),
-    muted: Color(0xFFB6B8BC),
-    quiet: Color(0xFF979BA2),
-    accent: Color(0xFFF2F1EE),
-    accentStrong: Color(0xFFFFFFFF),
+    canvas: Color(0xFF292E30),
+    surface: Color(0xFF202829),
+    surfaceRaised: Color(0xFF363E40),
+    line: Color(0xFF586264),
+    foreground: Color(0xFFEDF1ED),
+    muted: Color(0xFFB7C2BE),
+    quiet: Color(0xFFA5B3AE),
+    accent: Color(0xFF98DABE),
+    accentStrong: Color(0xFFB3E8CC),
     brightness: Brightness.dark,
   );
 
@@ -230,6 +230,99 @@ abstract final class LumenisTheme {
 
   static ThemeData get light => forPalette(lightPalette);
   static ThemeData get dark => forPalette(darkPalette);
+
+  static BoxDecoration chassis(LumenisPalette palette, {double radius = 0}) {
+    final dark = palette.brightness == Brightness.dark;
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(radius),
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(palette.canvas, Colors.white, dark ? .08 : .3)!,
+          palette.canvas,
+          Color.lerp(palette.canvas, Colors.black, dark ? .08 : .04)!,
+        ],
+      ),
+    );
+  }
+
+  static BoxDecoration panel(
+    LumenisPalette palette, {
+    double radius = 12,
+    bool recessed = false,
+  }) {
+    final dark = palette.brightness == Brightness.dark;
+    final face = recessed ? palette.surface : palette.canvas;
+    final highlight = Color.lerp(face, Colors.white, dark ? .09 : .6)!;
+    final shadow = Colors.black.withValues(alpha: dark ? .3 : .12);
+    return BoxDecoration(
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: palette.line),
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: recessed
+            ? [Color.lerp(face, palette.line, .22)!, face, face]
+            : [highlight, face, Color.lerp(face, palette.line, .16)!],
+        stops: recessed ? const [0, .035, 1] : const [0, .12, 1],
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: highlight,
+          offset: Offset(0, recessed ? 1 : -1),
+          blurRadius: 0,
+        ),
+        if (!recessed)
+          BoxShadow(color: shadow, offset: const Offset(0, 3), blurRadius: 6),
+      ],
+    );
+  }
+
+  static Widget _buttonFace(
+    BuildContext context,
+    Set<WidgetState> states,
+    Widget? child,
+  ) {
+    final palette = of(context);
+    final pressed = states.contains(WidgetState.pressed);
+    final disabled = states.contains(WidgetState.disabled);
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+    return AnimatedContainer(
+      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 90),
+      transform: Matrix4.translationValues(0, pressed ? 1.5 : 0, 0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(9),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withValues(
+              alpha: disabled
+                  ? .025
+                  : pressed
+                  ? 0
+                  : .13,
+            ),
+            Colors.black.withValues(alpha: pressed ? .08 : .035),
+          ],
+        ),
+        border: Border.all(
+          color: palette.foreground.withValues(alpha: disabled ? .05 : .13),
+        ),
+        boxShadow: [
+          if (!pressed && !disabled)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: .13),
+              offset: const Offset(0, 2),
+              blurRadius: 2,
+            ),
+        ],
+      ),
+      child: child,
+    );
+  }
 
   static ThemeData forPalette(LumenisPalette palette) {
     final isLight = palette.brightness == Brightness.light;
@@ -276,7 +369,12 @@ abstract final class LumenisTheme {
       ),
       cardTheme: CardThemeData(
         color: palette.surface,
-        elevation: 0,
+        elevation: 3,
+        shadowColor: Colors.black.withValues(alpha: .12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: palette.line),
+        ),
         surfaceTintColor: Colors.transparent,
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -301,9 +399,55 @@ abstract final class LumenisTheme {
           backgroundColor: palette.accentStrong,
           foregroundColor: onAccent,
           minimumSize: const Size(48, 44),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+        ).copyWith(backgroundBuilder: _buttonFace),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: palette.canvas,
+          foregroundColor: palette.foreground,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          minimumSize: const Size(48, 44),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+        ).copyWith(backgroundBuilder: _buttonFace),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          backgroundColor: palette.canvas,
+          foregroundColor: palette.foreground,
+          minimumSize: const Size(48, 44),
+          side: BorderSide(color: palette.line),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
+        ).copyWith(backgroundBuilder: _buttonFace),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: palette.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 18,
+        shadowColor: Colors.black.withValues(alpha: .22),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: palette.line),
+        ),
+      ),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: palette.accent,
+        inactiveTrackColor: palette.line,
+        thumbColor: palette.surface,
+        overlayColor: palette.accent.withValues(alpha: .12),
+        trackHeight: 4,
+        thumbShape: const RoundSliderThumbShape(
+          enabledThumbRadius: 9,
+          elevation: 3,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStatePropertyAll(palette.surface),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accent
+              : palette.line,
         ),
       ),
       tooltipTheme: TooltipThemeData(

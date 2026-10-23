@@ -11,7 +11,7 @@ CTH/BMP是业务领域；Shared内容制作提供独立入口。用户可直接�
 
 AI 在资料检索/理解、分析解释、研究、方案、创作与步骤辅助中上下文贯通；建议可检查、修改、拒绝，采用形成明确新版本。正常功能无模型仍可运行，AI 专属动作不可用应局部表达。不能把 AI 限成孤立聊天页，也不能让增强失败覆盖整个任务。
 
-**采集资料的视觉呈现**：依已批准研究、当前任务和数据语义选择卡片、列表、表格或时间线，展示实际标题/正文片段、真实代表封面、作者、平台/原帖、原生时间与采集时间、真实指标与缺失原因。手绘彩绘只用于身份/对象图标及适合的局部页面元素；整体视觉不固定为2D或3D。来源类别同权；未取得字段显示“—”，真实零显示0。不得复制平台 Feed、伪造图片/热度，单封面不冒称媒体已读。原文、确定性派生、AI解释与人工判断分别可追溯。
+**采集资料的视觉呈现**：依已批准研究、当前任务和数据语义选择卡片、列表、表格或时间线，展示实际标题/正文片段、真实代表封面、作者、平台/原帖、原生时间与采集时间、真实指标与缺失原因。手绘彩绘只用于身份/对象图标及适合的局部页面元素；整体采用PO确定的拟物数码风格，任务结构、布局与操作依现行规划。来源类别同权；未取得字段显示“—”，真实零显示0。不得复制平台 Feed、伪造图片/热度，单封面不冒称媒体已读。原文、确定性派生、AI解释与人工判断分别可追溯。
 
 **报告的视觉与内容层级**：结论与业务问题 → 依据/比较/图表 → 不确定性与适用范围 → 可执行建议及继续动作；来源与方法可展开。不能只交样本统计、原文拼接或等待用户配置算法的空报告。部分成果标明缺口，保留已有编辑，不用增量更新覆盖用户改稿。
 
@@ -1302,6 +1302,9 @@ pan/seek/reopen evidence remain separate from this rule publication.
 
 ## 38. Current frontend reference scope and scrolling
 
+2026-10-23 PO 补充：浏览器的重点操作是提出需求后读取对应页面上下文，再给出有来源、有范围的分析与可编辑成果。界面以问题、网页、答案/成果及必要操作为主；读取中的状态简短，结果出现后可展开依据，输入保持可用。一次读取不能冒充自动分析、完整页面或全网覆盖。采集按用户刷新/明确任务触发，已有数据可继续使用。全部主体统一在“设置 → 主体目录”添加、移除、重新添加和新增；初始展示优先有据在中国经营的主体/品牌。此补充保留原动效、用户选择、三语、无障碍和四端要求，不能用通用SaaS卡片模板替代原规划。
+
+
 ### Intelligent UI adoption — approved rules, implementation in current dispatch (2026-10-08)
 
 The Product Owner supplied `https://x.com/i/trending/2107900056858722693` and
@@ -1352,7 +1355,7 @@ Required adaptation inside existing screen owners:
    owners. Deterministic arithmetic uses actual typed units/currency/time; a
    scenario or model estimate is labeled as such, never Canonical observation.
 6. Follow approved research and task contracts for overall visuals; use painted
-   icons and suitable page elements without a fixed 2D/3D style. Preserve useful
+   icons and suitable page elements within the PO-selected digital skeuomorphic style. Preserve useful
    interaction, four-surface roles and no unnecessary operational page-level
    scrolling. A website explains the capability with
    truthful approved examples; Web/Desktop execute work, and Mobile exposes
