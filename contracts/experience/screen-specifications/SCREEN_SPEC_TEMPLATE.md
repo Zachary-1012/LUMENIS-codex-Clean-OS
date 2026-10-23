@@ -14,7 +14,7 @@ reviewed_at: UNKNOWN
 approval_reference: UNKNOWN
 ```
 
-Latest PO direct-build rule: reuse current screen records and implement from real contracts without a separate design draft/Figma or M DESIGN_READY prerequisite. Design review fields above record facts, not a coding gate. Website/Web, Windows/macOS and iOS proceed in parallel with independent acceptance. Unknown business/auth contracts still block dependent actions; acceptance requires actual operation.
+Latest PO direct-build rule: reuse current screen records and implement from real contracts without a separate design draft/Figma or M DESIGN_READY prerequisite. Design review fields above record facts, not a coding gate. Retain Website/Web, Windows/macOS and iOS contracts; implement only the current PO device scope with independent acceptance. Unknown business/auth contracts still block dependent actions; acceptance requires actual operation.
 
 ## 0. Authority basis and artifact disposition
 

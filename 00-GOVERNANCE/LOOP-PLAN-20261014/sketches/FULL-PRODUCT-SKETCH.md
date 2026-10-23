@@ -2383,7 +2383,7 @@ UI可按真实历史密度提出列表分组/Reader层级，保稳定地址栏�
 
 同账号/平台的所有适用任务遵守原Collector限额，使用同一账号/平台限流Owner；429/Retry-After、冷却、配额未知分别显示，等待可取消且不会绕限额换账号/会话。每任务详情/评论游标独立，来源按原Evidence/Canonical键去重并保scope，不跨域复制。当前rate修复只证明同实例放行间隔，不证明跨进程或所有任务已共用实例。暂停/取消呈请求→安全边界→真实终态，已派发外部效果不可回滚；恢复先新观察/新frame，新run重新取得sealed admission，不复用旧DOM或批准。登录/CAPTCHA/敏感步骤沿原人工接管入口，人控结束后重新核状态，不偷偷代填凭据。
 
-当前实现事实：ActionVerifier状态核验、未知副作用恢复、同实例限流与内部Task admission→Browser绑定桥已有独立候选及隔离测试；原tab策略已有边界检查。这不是Task工具dispatcher已接通，更不是同登录多tab端到端完成。当前start仍每runtime新context，原manager同owner异task限制仍存在；不能为迎合并行直接删隔离锁。尚待同版证明的最小纵向链是：真实队列任务→获准Registry/Skill版本及明确browser effect→原工具dispatcher→一个产品tab→真实Observation/Evidence/Task checkpoint→实际结束，再扩同登录两任务tab。HTTP自报task/run不可替代内部封装准入，内部桥本身不算全链。
+2026-10-23主线源码读回：ai_browser_runtime.py已包含ActionVerifier、未知副作用恢复、同实例限流和bind_task_admission内部绑定桥；原tab策略已有边界检查。既有隔离回执保留其记录版本和范围，不再称这些已入主线源码为独立候选。这不是Task工具dispatcher已接通，更不是同登录多tab端到端完成。当前start仍每runtime新context，原manager同owner异task限制仍存在；不能为迎合并行直接删隔离锁。尚待同版证明的最小纵向链是：真实队列任务→获准Registry/Skill版本及明确browser effect→原工具dispatcher→一个产品tab→真实Observation/Evidence/Task checkpoint→实际结束，再扩同登录两任务tab。HTTP自报task/run不可替代内部封装准入，内部桥本身不算全链。
 
 验收先用合成测试站和真实Chromium证明一次登录两任务连续、tab隔离/弹窗归属、一个取消不影响另一个、同账号429等待、动作超时已生效/未生效分别恢复、进程/lease回收及撤权；不得用真实用户凭据做单测。真实外站、多账号和各平台覆盖尚未验证；云端浏览器socket受限时如实记环境阻塞，不绕过，不把纯mock当真浏览器通过。四表面实际前端构建与有权本地产品浏览器验收继续分账。主任务预算、界面自身AIGC原创表达和200以上交互要求保留，便利不省略必要批准/成功核验。
 

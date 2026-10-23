@@ -761,7 +761,7 @@ iOS Companion：当前任务、材料、审阅和适用轻改优先；聊天交�
 | Web Workspace · Flutter `app/` | 完整业务、研究、资料、聊天/异步、提案/视频/播客编辑与成果恢复；按宽度重组轨/工作面/依据抽屉，保留浏览器前进后退和深链接。来源、编辑器和真实浏览器视口各有任务型空间。 | 真实 Core/Permission/Source/Evidence/Artifact 接线、文件选择与下载、重载/断网/重连恢复、输入法、键盘和读屏；窄屏 Web 单独验，不冒充 iOS。 |
 | Windows / macOS Desktop · 同一 Flutter | 同一任务和合同的原生工作区；多窗格、大文件、稿件/时间轴/预览、原生文件和本机朗读、后台任务与原窗口恢复。系统材质只在实际支持时使用，不新增本地业务真相。 | 两个系统各自打包/安装/启动、窗口伸缩/缩放、⌘/Ctrl快捷键、文件读写/导出、音视频/本地语音、退出重开/任务恢复。缺mac设备不阻塞独立Web/Windows工作，也不伪报mac通过。 |
 | iOS Companion · 同一 Flutter | 触控优先的一项当前工作：聊天交办/查看异步成果、研究阅读与引用、业务审阅/审批、稿件轻编辑、媒体试听/审阅/允许的轻操作、来源和内置浏览器、通知返回、状态及跨端续接。复杂编辑按已批准能力真实执行或明确交接。 | 安全区/旋转/键盘/输入法/字号、VoiceOver/触控等价、前后台/休眠/离线/恢复、当前版本与原任务返回；没有设备保持本端 OPEN，不能用“同桌面”或竖排截图验收。 |
-四表面并行建设、各自验收。F0–F13 是建设依赖和结果分组，不是必须串行的新阶段；后端缺失只阻塞其依赖动作。完整交互设计与独立本地编辑照常推进，写入、执行、发布和恢复只显示真实能力。原生 Android/Linux不在当前交付要求；Linux服务/CI及各OS浏览器和窄屏Web仍在范围。
+四表面完整规划保留，按§9.0当前设备范围建设、各自验收；macOS/iOS待设备和后续PO指令。F0–F13 是建设依赖和结果分组，不是必须串行的新阶段；后端缺失只阻塞其依赖动作。完整交互设计与独立本地编辑照常推进，写入、执行、发布和恢复只显示真实能力。原生 Android/Linux不在当前交付要求；Linux服务/CI及各OS浏览器和窄屏Web仍在范围。
 
 #### 3. 用户工作、入口与成果合同
 每行同时采用[总草图](sketches/FULL-PRODUCT-SKETCH.md)对应任务布局及原 ScreenSpec 的独立接口/权限/验收。每项均需正常路径、空/部分/拒绝/错误/取消、保存修订重开和适用恢复；不能只验不可用提示。
@@ -1610,7 +1610,7 @@ UI可按真实历史密度提出列表分组/Reader层级，保稳定地址栏�
 
 同账号/平台的所有适用任务遵守原Collector限额，使用同一账号/平台限流Owner；429/Retry-After、冷却、配额未知分别显示，等待可取消且不会绕限额换账号/会话。每任务详情/评论游标独立，来源按原Evidence/Canonical键去重并保scope，不跨域复制。当前rate修复只证明同实例放行间隔，不证明跨进程或所有任务已共用实例。暂停/取消呈请求→安全边界→真实终态，已派发外部效果不可回滚；恢复先新观察/新frame，新run重新取得sealed admission，不复用旧DOM或批准。登录/CAPTCHA/敏感步骤沿原人工接管入口，人控结束后重新核状态，不偷偷代填凭据。
 
-当前实现事实：ActionVerifier状态核验、未知副作用恢复、同实例限流与内部Task admission→Browser绑定桥已有独立候选及隔离测试；原tab策略已有边界检查。这不是Task工具dispatcher已接通，更不是同登录多tab端到端完成。当前start仍每runtime新context，原manager同owner异task限制仍存在；不能为迎合并行直接删隔离锁。尚待同版证明的最小纵向链是：真实队列任务→获准Registry/Skill版本及明确browser effect→原工具dispatcher→一个产品tab→真实Observation/Evidence/Task checkpoint→实际结束，再扩同登录两任务tab。HTTP自报task/run不可替代内部封装准入，内部桥本身不算全链。
+2026-10-23主线源码读回：ai_browser_runtime.py已包含ActionVerifier、未知副作用恢复、同实例限流和bind_task_admission内部绑定桥；原tab策略已有边界检查。既有隔离回执保留其记录版本和范围，不再称这些已入主线源码为独立候选。这不是Task工具dispatcher已接通，更不是同登录多tab端到端完成。当前start仍每runtime新context，原manager同owner异task限制仍存在；不能为迎合并行直接删隔离锁。尚待同版证明的最小纵向链是：真实队列任务→获准Registry/Skill版本及明确browser effect→原工具dispatcher→一个产品tab→真实Observation/Evidence/Task checkpoint→实际结束，再扩同登录两任务tab。HTTP自报task/run不可替代内部封装准入，内部桥本身不算全链。
 
 验收先用合成测试站和真实Chromium证明一次登录两任务连续、tab隔离/弹窗归属、一个取消不影响另一个、同账号429等待、动作超时已生效/未生效分别恢复、进程/lease回收及撤权；不得用真实用户凭据做单测。真实外站、多账号和各平台覆盖尚未验证；云端浏览器socket受限时如实记环境阻塞，不绕过，不把纯mock当真浏览器通过。四表面实际前端构建与有权本地产品浏览器验收继续分账。主任务预算、界面自身AIGC原创表达和200以上交互要求保留，便利不省略必要批准/成功核验。
 
@@ -2604,7 +2604,7 @@ Web/桌面在原统计结果方法栏就地展开资格原因与保输入动作�
 
 #### 完整动作、状态与恢复
 
-这是用户已批准新增能力，V2第9B明确公关稿、媒体稿、文章、社媒稿；原原创创意路线继续，不能由常规稿替代。独立候选已有后端测试/隔离HTTP证据，但本稿不复用其旧数量宣称当前正式前端已验。
+这是用户已批准新增能力，V2第9B明确公关稿、媒体稿、文章、社媒稿；原原创创意路线继续，不能由常规稿替代。既有后端测试/隔离HTTP证据仅证明其记录版本和范围，本稿不以旧数量或原候选称谓推断当前主线、正式前端或用户验收。
 
 1. 从同一事实底稿进入，逐事实显示出处/未知和可用语言。选择受众、目标、平台与本次所需四类稿；不扩成多品牌任务。
 2. 预览各稿将如何复用事实及差异，仅有用户提供的对应语言事实文本时走当前候选无模型路径；缺译文明确不可生成，不能空字段贴12语言标签。
@@ -5667,7 +5667,7 @@ Creator合作/投放/奖励已补跨渠道窗口、订单去重、未知身份�
 当前来源链依根AGENTS的完整路由：[AGENTS](../../AGENTS.md) → [机器语义](../LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json) → [CURRENT](../LUMENIS-CODEX-TAKEOVER-CURRENT.md) → [AI-native 原则](../AI-NATIVE-PRODUCT-CONSTITUTION.md) → [Architecture](../LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) → [Experience](../LUMENIS-EXPERIENCE-CONSTITUTION.md) → [四表面](../LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md) → [Owner](../LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md) → [Real Delivery](../LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md) → [Global数据合同](../LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md) → [Product Positioning](../PRODUCT-POSITIONING-CURRENT.md) → [README](../../README.md) → [跨仓注册表](../CROSS-REPO-CANONICAL-REGISTRY-V1.md) → [GGI机器合同](../LUMENIS-GGI-CROSS-PRODUCT-CONTRACT-V1.json) → [Security](../SECURITY-BOUNDARY-CURRENT.md) → 原字段/动作/权限合同和源码。跨仓被列出不授予跨仓写入；历史检查、原件、审批、失败及材料采用记录保留原位置和Git历史，不复活退休规则正文。
 
 #### 5. 当前实现与未完状态的读回
-整体前端的“不合格、尚未接受（NOT_ACCEPTED）”判断保留；2026-10-16该窗口仅文档整合是历史范围，2026-10-18当前获准接续按CURRENT §1进行。规划、语言、构建、局部操作或一个表面通过均不能升级整体验收，完整视觉/UI/UX/AIGC/原动效及真实物理参数、视频/icon、全部四表面仍需继续建设和验收。当前继续同一个完整前后端产品闭环，不限于资料导入页。
+整体前端的“不合格、尚未接受（NOT_ACCEPTED）”判断保留；2026-10-16该窗口仅文档整合是历史范围，2026-10-18获准接续仅为历史派工，当前任务按CURRENT最新有日期记录和直接PO指令执行。规划、语言、构建、局部操作或一个表面通过均不能升级整体验收，完整视觉/UI/UX/AIGC/原动效及真实物理参数、视频/icon、全部四表面仍需继续建设和验收。完整前后端产品闭环仍是后续开发范围，不限于资料导入页；本规划不自行恢复开发。
 本次固定基线的44份规范和实际App路径均存在，54条绑定台账仍是逐字段验收记录；不能把它变为产品总完成率。台账本身的旧source_commit或状态只指向其采样，不代替当前调用和运行。PR #77/#78已有的有界Shared报告/诊断证据、先前媒体/浏览器源码和研究成果继续复用；M正在做的SourceBrief、CTH07、032/048持久聊天、045调用授权、046 Fact Wall不在此处提前写成已合入或已验收。
 按每项真实任务记录：REQUIREMENT / SOURCE_IMPLEMENTATION / CORE_BINDING / RUNTIME / USER_OUTCOME / SURFACE / EVIDENCE_VERSION。未接合同设计完整、依赖动作标OPEN/UNBOUND；当前只读slice不能缩减最终保存/修订/执行等要求，当前slice也不能因为规划有按钮而声称可执行。普通错误沿原Owner修复，权限/成本/法务/设备等实际外部阻塞只停其依赖路径。
 原195个G条目和原章节继续承接完整功能、资料/研究、Math/AI、媒体、采集、账户/权限和恢复；“闭环内”表示范围要求，不是实现或验收通过。G189/§3的直传解析、基础分析、资料与分析卡片、真实入库时间及修订恢复，和§4.1的鼠标现实物理，当前只在本轮落实完整要求；对应实现/调用接线、同版运行、保存重开恢复及四表面验收逐项保持OPEN/NOT_VERIFIED，已有局部回执只复用原精确范围。未读材料仍未读，未实现和未绑定仍未完成；不能用这段记录替代逐项证据或生成另一份专项队列。

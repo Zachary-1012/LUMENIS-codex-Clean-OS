@@ -43,7 +43,7 @@ OpenAI 数学论文方法在既有后端计算/业务/Shared Evaluation 中按�
 
 ### 本次实际顺序
 
-先统一当前规则与详细合同；继续已授权的真实来源→分析→CTH/BMP→成果保存/修订/重开/恢复；再按完整五轮退出条件关闭其余真实缺口。Public Website、Web Workspace、Windows/macOS Desktop 与 iOS Mobile 并行推进；Website 保持既有独立展示边界，Workspace/Desktop/Mobile 使用同一 Flutter `app/` 与同一 Product Core。先形成任务化的完整真实前端，不等待全部后端；已有真实 API/Core 合同立即绑定，其他依赖按既有 Owner 逐项接入并将缺口标为 OPEN/UNBOUND，不以模拟结果替代。44 份现有屏幕规格是覆盖基线，不是页面数或产品范围上限；每个表面独立通过自身真实任务验收。该执行更新经 `PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE` 批准。R01–R15/J1–J8/U01–U25 和既有设计/历史证据保留，只有通用电脑控制的明确子要求撤回，不删整项 ID。窗口实际开工、暂停与恢复只服从直接PO指令及本地事实记录，不写作线上产品约束。文档变更不证明界面已改、业务已验收或 Runtime 已加载。
+先统一当前规则与详细合同；继续已授权的真实来源→分析→CTH/BMP→成果保存/修订/重开/恢复；再按完整五轮退出条件关闭其余真实缺口。当前推进Public Website、Web Workspace与Windows；macOS/iOS保留完整规划，待设备和后续PO指令；Website 保持既有独立展示边界，Workspace/Desktop/Mobile 使用同一 Flutter `app/` 与同一 Product Core。先形成任务化的完整真实前端，不等待全部后端；已有真实 API/Core 合同立即绑定，其他依赖按既有 Owner 逐项接入并将缺口标为 OPEN/UNBOUND，不以模拟结果替代。44 份现有屏幕规格是覆盖基线，不是页面数或产品范围上限；每个表面独立通过自身真实任务验收。该执行更新经 `PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE` 批准。R01–R15/J1–J8/U01–U25 和既有设计/历史证据保留，只有通用电脑控制的明确子要求撤回，不删整项 ID。窗口实际开工、暂停与恢复只服从直接PO指令及本地事实记录，不写作线上产品约束。文档变更不证明界面已改、业务已验收或 Runtime 已加载。
 
 ### 用户工作方式蓝图 — 2026-10-11（PO 已确认）
 
@@ -175,7 +175,7 @@ Reranker 对查询与候选二次精排。不同量纲分数不直接相加；�
 
 **共同管理。** 搜索、偏好、语言、中英韩、无障碍、通知、任务状态、权限与设置继续属于完整产品；通知应打开对应工作，设置实际生效并可恢复。产品账号重构不成为新增的工作入口障碍，既有服务端权限仍执行。Skill 商店/GitHub 等已批准增强保留各自授权；它们不成为普通工作必需，也不因此批准外部模型或费用。
 
-**使用表面。** 官网负责产品说明、帮助、真实示例和进入工作区；Web Workspace、Windows/macOS Desktop 与 iOS Companion 按既有角色并行建设，共用一个 Product Core，后三者共用现有 Flutter `app/`。移动端按查阅、审阅与接续等既定角色适配，不压成一张桌面长页。已有后端合同直接接入；缺少的绑定保持 OPEN/UNBOUND 并沿现有 Owner 补齐。各端按本端任务与运行证据独立验收。原生 Android/Linux 不再是交付目标，已有资料/源码保留，Linux 服务端和窄屏浏览器支持不受影响。
+**使用表面。** 官网负责产品说明、帮助、真实示例和进入工作区；Web Workspace、Windows/macOS Desktop 与 iOS Companion 保留既有角色，按当前PO设备范围实施，共用一个 Product Core，后三者共用现有 Flutter `app/`。移动端按查阅、审阅与接续等既定角色适配，不压成一张桌面长页。已有后端合同直接接入；缺少的绑定保持 OPEN/UNBOUND 并沿现有 Owner 补齐。各端按本端任务与运行证据独立验收。原生 Android/Linux 不再是交付目标，已有资料/源码保留，Linux 服务端和窄屏浏览器支持不受影响。
 
 #### 10. 独立使用和可选联动的确认对照
 
@@ -223,7 +223,7 @@ Reranker 对查询与候选二次精排。不同量纲分数不直接相加；�
 | 内置浏览器 | 已有SYSTEM受控浏览、任务与笔记保存源码和有界旧回执 | 真正网页画面/操作、人工独占接管、安全返回、当前登录身份传递和恢复需同版证明；只读画面或接口成功不足以关闭浏览器目标 |
 | AI与数学增强 | 已有唯一Gateway、有限数学计算、研究采用和版本合同 | 完整主算法、适用性、各业务有效增益、实际模型训练/重载/独立评价分别未全闭合；基础链不等待它们 |
 | 本轮解析/媒体办公适配 | 接收包、75项清单字节校验与原始说明已核对；包含独立补丁和隔离工程回执 | 尚未正式接入主仓与当前Runtime；较宽回归的PDF依赖和提案API错误仍未关闭；Flutter/真实用户链缺证据，不将示例和工程检查当成产品完成 |
-| 全产品与四表面 | 已有44份屏幕规格、客户端与Core源码；44份规格是覆盖基线而非范围上限 | Website、Web、Windows/macOS Desktop 与 iOS Mobile 的真实任务、跨能力正常联动、来源变化影响传播和恢复按端并行建设、独立验收。窗口状态在本地按直接PO指令核验，本稿不证明实现或发布 |
+| 全产品与四表面 | 已有44份屏幕规格、客户端与Core源码；44份规格是覆盖基线而非范围上限 | Website、Web、Windows/macOS Desktop 与 iOS Mobile 的真实任务、跨能力正常联动、来源变化影响传播和恢复按当前PO设备范围建设、逐端独立验收。窗口状态在本地按直接PO指令核验，本稿不证明实现或发布 |
 
 验收依据是用户能否完成上面的工作，而非模块、提交或测试数量。本次未缩减保留的 J1–J8、R01–R15、U01–U25 与44屏；各工作对应原Owner及验收清单，通用电脑控制只有被明确撤回的子要求退出。蓝图确认不升级第12节任何实现/运行状态。窗口工作与依赖安排在[Source Owner Index的完整成果卡](LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)中记录；[Real Delivery](LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)保留真实用户与上线门槛。实际窗口按最新直接PO指令与新鲜准入核验；本蓝图不构成派工。公网部署、生产发布、新费用和外部效果仍按各自现有授权门槛执行。
 
@@ -267,7 +267,7 @@ Scoped development branches and PRs are permitted globally; validate and review 
 第五轮既定智能要求仍须真实兑现，不能借 AI 可选原则取消。
 
 保留 J1–J8、R01–R15、U01–U25、既有44份屏幕规格及原资料/设计/历史证据全部要求；44份规格不是新增映射屏幕或官网内容家族的上限。
-Public Website、Web Workspace、Windows/macOS Desktop 与 iOS Companion 并行建设，按各自角色和真实任务独立验收；单端结果不替代其他端或全产品闭环。
+Public Website、Web Workspace、Windows/macOS Desktop 与 iOS Companion 保留完整范围，按当前PO设备指令建设，按各自角色和真实任务独立验收；单端结果不替代其他端或全产品闭环。
 不以本次文档提交宣称 SYSTEM、任一表面或全产品闭环。
 不新增费用、账号、模型服务、训练或部署；按2026-10-10批准恢复隔离单元/集成回归，
 保留编译、静态、安全、数据一致性与真实用户 E2E。
@@ -304,8 +304,8 @@ the existing Agent Runtime and never become another business or security owner.
 
 **Multi-surface product direction:** Public Website and one Flutter `app/` for
 Web Workspace, Windows/macOS Desktop and iOS Mobile share one Product Core.
-All four surfaces build in parallel with their approved roles and separate
-real-task acceptance. Build the complete task-shaped frontend without waiting
+All four planned roles remain; build only the currently dispatched surfaces with
+separate real-task acceptance. Build the complete task-shaped frontend without waiting
 for all backend work; bind available real APIs/Core immediately, and track
 missing bindings as OPEN/UNBOUND for incremental connection through existing
 owners. The 44 existing screen specifications are a baseline, not a page or
@@ -362,7 +362,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 | Source / Evidence / Canonical | 来源、可定位且带出处的证据、经当前合同接收的规范事实 | 研究笔记、AI 输出、缓存、文件存在、mock、旧报告不能自行升级为 Production Truth |
 | Metric / Truth Table / ViewModel | 按明确单位/分母/时间口径计算及表达事实 | `0` 是已知数值，`UNKNOWN`/缺测不是零；ViewModel 不创建另一份业务真相 |
 | Product AI | 单一 SYSTEM AI Gateway；寰意自有模型、产品内置 Groq 连接与用户自带外部 API 均经此调用 | 用户明确选择具体连接及模型，外发经适用 Permission/SourceUse；协议适配、配置、实际可用与调用授权分别验证，无自动 fallback |
-| 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；四表面按各自角色并行建设、独立验收 |
+| 四 Surface | Public Website / Web Workspace / Desktop / Mobile Companion | Desktop App 是 Desktop 的描述性名称；Flutter 是实现技术；四表面保留各自角色，按当前PO设备范围实施、独立验收 |
 
 状态必须随其已有 Owner/字段解释：例如 `query_plan.status=READY` 只说明查询计划可提交，
 不证明平台 Session 已就绪；`collector_guard=NEED_VERIFY` 是平台验证挑战，旧
@@ -388,7 +388,7 @@ Collector→Canonical→CTH/BMP→SourceBrief→SavedWork/Content Project→Eval
 OpenAI Math/Lean/Comparator 是方法来源，不构成寰意已获形式化证明、商业因果或训练授权。
 具体实现、证据和未验证运行范围见同一语义清单及 Math 采用记录。
 
-Latest PO: F builds the complete task-shaped frontend directly from current Experience, screen contracts and source across Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel. Website remains the public presentation surface; one Flutter `app/` serves Web/Desktop/Mobile over the same Product Core. No separate design draft, Figma completion or M DESIGN_READY approval is a coding prerequisite. Update existing specifications alongside code. Bind available real APIs/Core immediately; connect remaining existing-owner dependencies incrementally and keep missing behavior OPEN/UNBOUND without mock results. Existing design artifacts and review states remain provenance, not proof of implementation. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame or a generic swapped-title renderer alone; the current contracts and direct PO construction instruction govern. Keep each surface's role, actual user operation and acceptance evidence distinct. The 44 existing specifications are a baseline, not a ceiling. Android/Linux native clients are no longer delivery targets; preserve historical source/evidence. Linux server/CI and browser access remain separate. No new product, owner, design system or paid service is introduced. This 2026-10-11 rule supersedes the 2026-10-08 Website/Web-first order. Approval: `evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
+Build the complete task-shaped frontend from current Experience, screen contracts and source. The 2026-10-23 PO device scope is Public Website, Web Workspace and Windows; macOS/iOS implementation and device acceptance wait for devices and later PO dispatch, with their complete requirements retained. Website remains the public presentation surface; one Flutter `app/` serves Web/Desktop/Mobile over the same Product Core. No separate design draft, Figma completion or M DESIGN_READY approval is a coding prerequisite. Update existing specifications alongside code. Bind available real APIs/Core immediately; connect remaining existing-owner dependencies incrementally and keep missing behavior OPEN/UNBOUND without mock results. Existing design artifacts and review states remain provenance, not proof of implementation. Do not authorize implementation from a PDF, screenshot, fixture, Figma frame or a generic swapped-title renderer alone; the current contracts and direct PO construction instruction govern. Keep each surface's role, actual user operation and acceptance evidence distinct. The 44 existing specifications are a baseline, not a ceiling. Android/Linux native clients are no longer delivery targets; preserve historical source/evidence. Linux server/CI and browser access remain separate. No new product, owner, design system or paid service is introduced. This 2026-10-11 rule supersedes the 2026-10-08 Website/Web-first order. Approval: `evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 一、闭环后，用户实际得到什么
 
@@ -418,7 +418,7 @@ Latest PO: F builds the complete task-shaped frontend directly from current Expe
 
 例如商业体比较能检查城市与时间口径；活动预算调整能看到受影响段落和镜头；媒体编辑能在同一来源/脚本/时间轴中定位并只改选中部分；来源撤回能定位对应结论；采集/模型不可用时能理解缺口并继续不依赖它的工作。设置、通知、任务状态和恢复入口也按实际动作与返回关系设计。模型只提出有依据的解释/方案，UI和AI都不创造事实、权限或外部效果。
 
-唯一Experience §38细化八项要求与验收；44屏在既有screen-specifications中明确各自任务和视觉动线，既有文字草图同步增补，四端角色见Multi-Surface Decision。整体视觉依已批准研究与当前任务；手绘彩绘限于图标及适合页面元素，不固定二维或三维。保留丰富且有用的交互、中英韩、无障碍及操作端避免不必要整页滚动。该蓝图定义闭环目标，不能据此把规则更新等同功能已上线或屏幕已验收。
+唯一Experience §38细化八项要求与验收；44屏在既有screen-specifications中明确各自任务和视觉动线，既有文字草图同步增补，四端角色见Multi-Surface Decision。整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究和当前任务；手绘彩绘限于图标及适合页面元素，不固定二维或三维。保留丰富且有用的交互、中英韩、无障碍及操作端避免不必要整页滚动。该蓝图定义闭环目标，不能据此把规则更新等同功能已上线或屏幕已验收。
 
 二、锁定的产品组成
 
@@ -441,7 +441,7 @@ SYSTEM：采集、产品浏览器、Scheduler、AI Gateway、Agent/Skills/Memory
 | Desktop App | 本地媒体处理、专业编辑、文件操作与高级工作 | 同一任务和版本；视频/播客真实播放器、横向时间轴、导出、重开恢复 | 不另建业务数据库；本机工具能力与服务器能力分别反馈 |
 | Mobile Companion | 查看、审阅、批准、轻操作、通知与任务接续 | 真实任务/成果/版本、适配触控、返回路径与权限 | 按移动任务重组，不缩小PC界面，也不冒称所有桌面重计算能力已在手机运行 |
 
-四端共同遵守：整体视觉方向依据用户已批准研究、当前任务与屏幕合同，不固定二维或三维；手绘彩绘用于五位架构身份/功能图标及适合的局部页面元素。线性功能glyph、彩绘身份图标、第三方来源icon分层；颜色丰富但不滥用；人物根据脚本或描述生成；AIGC呈现按任务设计，不使用助手虚构的70–80%/20–30%固定配额。除官网外避免无必要的整页纵向滚动，必要长文和无障碍操作不被截断。增加有用交互，不做换标题的模板页。
+四端共同遵守：整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究、当前任务与屏幕合同；手绘彩绘用于五位架构身份/功能图标及适合的局部页面元素。线性功能glyph、彩绘身份图标、第三方来源icon分层；颜色丰富但不滥用；人物根据脚本或描述生成；AIGC呈现按任务设计，不使用助手虚构的70–80%/20–30%固定配额。除官网外避免无必要的整页纵向滚动，必要长文和无障碍操作不被截断。增加有用交互，不做换标题的模板页。
 
 产品账号体系、用户与创始人两种开发者模式、六项商业能力、视觉、Logo和角色均在工程闭环内。免费 Google 登录和邮箱验证码为账号登录的明确例外；Apple 登录待开发者账号开通后启用。设置分区可借鉴成熟产品的信息结构，视觉与资产采用寰意原创表达。不设账号墙，服务端权限、平台授权和效果控制继续执行。仅真实用户验证及付费/授权来源安排在上线后；既有工程操作、安全、恢复验收仍须完成。
 
@@ -609,7 +609,7 @@ website/                     committed Public Website implementation; release st
 
 This is an ownership target, not permission to mass-move files. Every move requires owner/caller/read-write/runtime/test tracing.
 
-For each vertical delivery slice, record the surface matrix over one Product Core contract: Web Workspace primary/available; Desktop enhanced/exclusive; Mobile view/notify/approve/light action; Public Website explanation/demo only. Layouts need not match, but business meaning and state semantics must. Build and evaluate the four surfaces in parallel; accept each on its actual platform through its own real task and runtime flow. Record unavailable device/runtime combinations as `UNVERIFIED`, and do not claim a surface or OS release until its build and runtime flows pass. One surface's closure does not gate another surface's construction or acceptance.
+For each vertical delivery slice, record the surface matrix over one Product Core contract: Web Workspace primary/available; Desktop enhanced/exclusive; Mobile view/notify/approve/light action; Public Website explanation/demo only. Layouts need not match, but business meaning and state semantics must. Build and evaluate currently dispatched surfaces, retaining all four planned roles; accept each on its actual platform through its own real task and runtime flow. Record unavailable device/runtime combinations as `UNVERIFIED`, and do not claim a surface or OS release until its build and runtime flows pass. One surface's closure does not gate another surface's construction or acceptance.
 
 ### Current runtime caller map
 
