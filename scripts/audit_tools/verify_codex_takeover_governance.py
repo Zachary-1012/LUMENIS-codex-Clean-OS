@@ -440,6 +440,8 @@ def _is_rules_only_publication_path(path: str) -> bool:
         "tests/test_source_adoption_governance.py",  # Existing source/owner evidence regression.
         "scripts/audit_tools/verify_source_adoption.py",  # Existing adoption provenance validator, not runtime.
         "00-GOVERNANCE/evidence/round-15/source-adoption-20261018/EXISTING-OWNER-WORK-HANDOFF.json",  # Exact current developer handoff document.
+        "00-GOVERNANCE/LOOP-PLAN-20261014/execution-workorder.html",
+        "00-GOVERNANCE/evidence/round-15/source-convergence-20261023.json",
         "research/engineering/third-party-review-20261018/third-party-review-full-v11.md",  # Existing research report with verified historical evidence.
         "research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/08_ORIGINAL_MATERIAL_MANIFEST_PRESERVED.json",  # Exact preserved-material reconciliation document, not runtime.
         "tests/test_governance_machine_contract.py",  # This policy owner's regression, not product behavior.

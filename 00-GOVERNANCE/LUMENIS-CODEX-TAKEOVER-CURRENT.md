@@ -12,7 +12,9 @@ This source batch reconciles the protected Home/recent-work, exact SavedWork reo
 
 The unique [execution work order](LOOP-PLAN-20261014/execution-workorder.html) is a derived view of full-plan §9.0 and the existing 30 outcome groups / 396 coverage entries. It keeps UI/backend/save/revise/reopen/recovery together, verifies affected downstream callers and separates source, runtime, visual/user acceptance, deployment and operation. The complete source requirements remain expandable and linked, rather than replaced by an eight-item feature summary.
 
-Bounded verification and runtime limitations are recorded in [the source-convergence receipt](evidence/round-15/source-convergence-20261023.json). No whole-product, complete visual or four-device acceptance is established. Read the branch/PR state before merge; only successful main integration and independent remote/local readback establish publication.
+By the latest direct PO instruction, all identified local generated frontend builds, Flutter build caches, Website build/cache and obsolete standalone preview were removed. The historical Web build under work/ was also removed. Existing text build diagnostics were preserved with matching hashes; source and planning remain. Readback now returns workspace_build_unavailable (HTTP 503) for the product frontend while Core health remains HTTP 200. The rejected frontend is withdrawn, not visually accepted; this task does not rebuild it.
+
+Bounded verification and runtime limitations are recorded in [the source-convergence receipt](evidence/round-15/source-convergence-20261023.json). No whole-product, complete visual or four-device acceptance is established. PR #136 head `0cfdab4844bd4caa89d19768d5fa8c78856aed8d` passed Product/App Gate and merged at 2026-10-23 21:01:50 Beijing as `2407bbda561f4fa8b1734d4d24971f6cb4f429d5`; fresh origin/main readback confirms that source integration. This following publication changes the derived work order, cleanup/current-state evidence and exact documentation-path classification with its isolated regression. It changes no product runtime behavior; its publication classification is RULES_ONLY_PUBLICATION. Final online/offline parity must still be read back after this documentation PR merges.
 
 ## 2026-10-23 Complete document readthrough and execution reconciliation
 
@@ -1126,7 +1128,7 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 
 Historical document-only alignment (not this implementation batch) started from GitHub/main
 `343ec0cc10231dc38005c77feaf4e907097b974f`, independently matched to origin/main
