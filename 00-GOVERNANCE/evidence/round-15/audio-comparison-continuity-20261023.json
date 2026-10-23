@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "observed_at": "2026-10-23T00:40:15.939504+00:00",
+  "state": "BOUNDED_LOCAL_OPERATION_VERIFIED",
+  "base_main": "0cafbd2a74d429e961202314485832053cd2cbfc",
+  "real_user_job": "Compare original and processed podcast sound, explicitly adopt settings, save and export a new revision, reopen original/new versions after Core recovery.",
+  "entry": "SH-01 independent podcast editor / loudness / listen and adjust",
+  "real_input": {
+    "title": "研究工作札记 · 合成配音",
+    "kind": "Authored workflow notes, existing local English TTS; not human speech, external fact or owned-model quality evidence.",
+    "source_sha256": [
+      "848f6f86c539f65057e71514204d7f63097e3a356f487be56dcaf6cb1b215cd0",
+      "f03b68b71e93dc21ff2fec22112542123e786200e78d035fe3d06f323fda13bd"
+    ]
+  },
+  "implementation": {
+    "owner": "Existing Shared Timeline/rendering, SYSTEM Permission, content inspection and F editor",
+    "preview": "Full-programme original mix and actual denoise/mastering, then matching 0-35.38s PCM16 preview; selected listening range limited to60s. Same processing helpers as export.",
+    "adoption": "Explicit; current timeline/options/context/scope-generation binding. Cancel does not save or change settings.",
+    "data": "No preview Artifact or production-data write; temporary media removed. Final save/export uses existing immutable parent/readback owners.",
+    "languages": [
+      "zh-CN",
+      "en",
+      "ko"
+    ]
+  },
+  "operations": [
+    "Changed denoising then cancelled: v10 stayed saved with -14 LUFS and denoiseOFF.",
+    "Generated actual original/processed preview for -16LUFS and denoise12dB/floor-50; played both.",
+    "Switched at about21s: old playback paused, position retained; new audio played after explicit Play.",
+    "Adopted settings, saved projectv11 without encoding, explicitly exportedv12 WAV/MP3/M4A.",
+    "Downloaded package and independently decoded all3formats; bytes matched persisted Artifact.",
+    "Backed up owned DB and31 Artifact hashes, restarted only manualCore57946.",
+    "Reopenedv11 settings-only, v10 original settings andv12 processed output through product UI; v12 played beyond31s."
+  ],
+  "outcome": {
+    "at": "2026-10-23T00:33:16.426890+00:00",
+    "artifact_id": "ART-83218d18d88e4123",
+    "saved_settings_id": "ART-c1da9a6e4edd4528",
+    "project_revision": 12,
+    "settings": {
+      "loudness_target_lufs": -16.0,
+      "noise_floor_db": -50.0,
+      "noise_reduction_db": 12.0
+    },
+    "download_sha256": "8a2042576da6bd7078a6576ea470aa978b4f9174ca08ca99f5fe3dcc426f6079",
+    "saved_file_matches": true,
+    "media": {
+      "media.wav": {
+        "bytes": 10189542,
+        "sha256": "c2bd5852c263963d079ec8be483448cb56fe005391c314c397c46b4fb4f86e03",
+        "full_decode": "PASS",
+        "codec": "pcm_s24le",
+        "duration": "35.380000"
+      },
+      "episode.mp3": {
+        "bytes": 850796,
+        "sha256": "b60b5229309008fd6b6e97b0b66914ea907d9437e44c03f8bc83847afe868ffd",
+        "full_decode": "PASS",
+        "codec": "mp3",
+        "duration": "35.380000"
+      },
+      "episode.m4a": {
+        "bytes": 856555,
+        "sha256": "4e7eb70ae3fd59e369b7e4c84092241fd254a1f39ce9d324289093462c367b41",
+        "full_decode": "PASS",
+        "codec": "aac",
+        "duration": "35.380000"
+      }
+    },
+    "measurements": {
+      "integrated_lufs": -16.0,
+      "loudness_range_lu": 2.2,
+      "method": "ffmpeg_loudnorm_input_ebu_r128",
+      "state": "measured",
+      "target_lufs": null,
+      "true_peak_dbtp": -5.94
+    },
+    "prior_artifacts_unchanged": 29
+  },
+  "preview_playback": {
+    "observed_at": "2026-10-23T00:27:45.060Z",
+    "beforeSwitch": [
+      {
+        "currentTime": 21.018926,
+        "duration": 35.38,
+        "error": null,
+        "paused": false
+      }
+    ],
+    "afterPlay": [
+      {
+        "currentTime": 21.492788,
+        "duration": 35.38,
+        "error": null,
+        "paused": false
+      }
+    ],
+    "scope": "DOM playback and visible comparison only; subjective quality not accepted"
+  },
+  "recovered_playback": {
+    "at": "2026-10-23T00:38:12.166Z",
+    "playback": [
+      {
+        "duration": 35.38,
+        "ended": false,
+        "error": null,
+        "paused": false,
+        "time": 31.794766
+      }
+    ]
+  },
+  "runtime": {
+    "port": 57946,
+    "scheduler": "not_started",
+    "loaded_web_sha256": "816f5555443e62c2ff91eb6dfd78212db96117d0e43b658e75c6746eb17ce8c1",
+    "core_boot": {
+      "boot_id": "ff9ad4670fe84018b876208aff4620a8",
+      "entry_sha256": "f4eb9cb4aab6e1fb4c45030cb859eb853b220ab23cfbbbb7a878167f129ae8a4",
+      "launch_id": ""
+    },
+    "prior_files_unchanged_after_restart": 31,
+    "production_8201_modified": false,
+    "production_database_modified": false,
+    "version_limit": "Fresh owned process and bounded operations support this flow; entry/disk hashes alone do not prove every in-memory module."
+  },
+  "verification": {
+    "python": {
+      "passed": 171,
+      "scope": "isolated renderer, content inspection and storage regressions; not user acceptance"
+    },
+    "flutter": {
+      "passed": 129,
+      "final_controller_after_scope_guard": 41,
+      "scope": "client/controller/widget regressions; not native-device acceptance"
+    },
+    "dart_analysis": "PASS",
+    "web_build": "PASS",
+    "ruff": {
+      "experience_runtime.py": {
+        "baseline": 173,
+        "current": 173,
+        "new_count": 0
+      },
+      "lumenis/shared/content_creation/rendering.py": {
+        "baseline": 7,
+        "current": 7,
+        "new_count": 0
+      },
+      "tests/test_content_media_inspection.py": {
+        "baseline": 2,
+        "current": 2,
+        "new_count": 0
+      }
+    },
+    "prior_failures_preserved": [
+      "First preview probe correctly rejected PCM16 under the formal PCM24 contract; added explicit preview-only probe mode, formal export unchanged.",
+      "First Flutter build rejected num-to-double range values; explicit finite double conversion fixed.",
+      "Initial three import-order findings fixed only in new blocks; pre-existing Ruff findings retained."
+    ]
+  },
+  "source_sha256": {
+    "experience_runtime.py": "770d108a726c9ca6ff84395bdd3a06c486dbfa2c8bd62e752f7328b624f087c0",
+    "lumenis/shared/content_creation/rendering.py": "af7d917f294b5f31ee6fce1b11886d80c6efeae6ff2b7f04f42339e0c088ec6e",
+    "app/lib/core/lumenis_core_client.dart": "948f3024e6c37ed5050f55344eeb63025412ab6e017409d97d3f9fd5c0169e1b",
+    "app/lib/features/shared/sh01/media_project_controller.dart": "cb7550a7c41ed5ac6e307b2d16fc8180307539d05b1b5a3a497abdc37b81af6f",
+    "app/lib/features/shared/sh01/media_project_workbench.dart": "b9a31a80bcc38b3022eac1a18e23454677cbd5333a25f1fbb10dcd5118ecc228",
+    "app/lib/features/shared/sh01/media_audio_comparison.dart": "db776f07693dfcc596bb7593b2be26fbabe7803a7eebf180523f4c5333c9dca0",
+    "tests/test_content_media_inspection.py": "e9d383a7ce14bbf058194fb7e6c3cf2e23f1f3e146c71288bed9614b55e583ad",
+    "app/test/features/shared/sh01/media_project_controller_test.dart": "647ca4cc4242a02ba1d0088bf8b299432684a0691fca36fdde5699efe07adadf",
+    "app/test/features/shared/sh01/media_project_workbench_test.dart": "16a04a21400359e24fa1eab8642b00412981d2c0cb4c434b00eea39c973e162c",
+    "app/test/features/shared/sh01/audio_comparison_fixture.dart": "f5f801cbe408cc62290b57f6e56645954a20c589a55560f4195323ad8d66a45b"
+  },
+  "local_evidence_sha256": {
+    "audio-comparison-python-final.txt": "4b08efcea7992234dfc353cf01575e8cb5b96d7f93b37f4a0219320f5a77db02",
+    "audio-comparison-flutter-final.txt": "c126e91193e40f4312cb938eab4ae6e8d683dc4831b648ba5efd1b493da22469",
+    "audio-comparison-controller-final.txt": "5b5c523b1f97d2e826d2cc3a566b2f4b57d45aaddfdebd34f4e7e14dd5aa1857",
+    "audio-comparison-dart-final.txt": "30a23123fe50b8d5f87ab767e67e281bd5471d158df631ca7ed582343783e356",
+    "audio-comparison-web-build.txt": "cde044f8dbadbc0f1f21b3e714ba11e86a70ae567a38da89d27fef6df68ec36c",
+    "audio-comparison-document-bindings.json": "ae46848a0b16d63583da2a70c97871b160451fc2fe68d533deb141dc8eda2adb",
+    "audio-comparison-operation/actual-export.json": "141df6588be59ee562d744f0388a06f06eb22b701ea1543f846fe6fed132b2b0",
+    "audio-comparison-operation/recovery.json": "b58b9f531c4fb3eaf08a759deb58322b6a03586ab55a443e097ec027a34f9f0f",
+    "audio-comparison-operation/reopened-v10.txt": "ac78ed773eb73f8a4d57c92afd2183fd986194d6c20e7da0a79f3cf0e938a7b6",
+    "audio-comparison-operation/reopened-v11.txt": "68fa750e2903f84033e7892ba564fe704c125d974b1f478cb431755070963cfe",
+    "audio-comparison-operation/playback.json": "df4fffdb3df88bb2fa5673b1de858d2c12c7830cf63220d7fe0727d1b75aba12",
+    "audio-comparison-operation/reopened-playback-complete.json": "e9fed8991d566f97995d40f9df85efb2f8f0c406969506c3c2338b8cb6f2257e"
+  },
+  "screenshots": [
+    "00-GOVERNANCE/evidence/round-15/audio-comparison-preview.png",
+    "00-GOVERNANCE/evidence/round-15/audio-comparison-recovered.png"
+  ],
+  "remaining": [
+    "Complete media tools, full-programme production cases and subjective listening quality",
+    "Final full-product visual upgrade and native surface/device acceptance",
+    "All396 coverage rows and30 outcome groups",
+    "Production/runtime/release and user repeat-operation acceptance"
+  ],
+  "external_effects": {
+    "collection": false,
+    "external_ai": false,
+    "training": false,
+    "deployment": false,
+    "new_dependencies": false
+  },
+  "acceptance_boundary": "This is the actual bounded Web preview/adoption/save/export/recovery flow. It does not close SH-01, podcast, final frontend or whole product."
+}

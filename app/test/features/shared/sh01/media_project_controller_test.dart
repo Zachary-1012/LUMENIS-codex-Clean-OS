@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'audio_comparison_fixture.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
@@ -48,6 +49,29 @@ Map<String, dynamic> _batchResponse(
 final class _Repository implements MediaProjectRepository {
   @override
   String contextKey = 'BMP:GLOBAL';
+  Completer<void>? pendingAudio;
+  Map<String, dynamic>? audioOverride;
+  @override
+  Future<Map<String, dynamic>> inspectAudioProcessing({
+    required String? domain,
+    required List<String> paths,
+    List<String>? refs,
+    required MediaProjectSnapshot timeline,
+    required Map<String, double> renderOptions,
+    required double startSec,
+    required double endSec,
+  }) async {
+    await pendingAudio?.future;
+    return audioOverride ??
+        audioComparisonFixture(
+          timeline.toJson(),
+          refs,
+          renderOptions,
+          startSec,
+          endSec,
+        );
+  }
+
   final observedDomains = <String?>[];
   final asset = MediaProjectAsset(
     assetId: 'MEDIA-aaaaaaaaaaaaaaaa',
@@ -271,6 +295,54 @@ void main() {
     'source_in': 0.0, 'source_out': 3.0,
   }];
 
+
+  test(
+    'audio comparison changes only explicit adoption and rejects stale options',
+    () async {
+      await controller.createFromLocalFiles(['chosen.mp4']);
+      controller.edit(
+        (s) =>
+            s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
+      );
+      final base = controller.timeline;
+      final preview = await controller.previewAudioProcessing(
+        {'loudness_target_lufs': -16},
+        startSec: 0,
+        endSec: 4,
+      );
+      expect(controller.renderOptions, isEmpty);
+      expect(repository.exported, isNull);
+      expect(controller.adoptAudioProcessing(preview), isTrue);
+      expect(controller.renderOptions, {'loudness_target_lufs': -16});
+      expect(identical(controller.timeline, base), isTrue);
+      expect(controller.adoptAudioProcessing(preview), isFalse);
+    },
+  );
+
+  test(
+    'audio response arriving after context or draft change cannot be adopted',
+    () async {
+      await controller.createFromLocalFiles(['chosen.mp4']);
+      controller.edit(
+        (s) =>
+            s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 4),
+      );
+      repository.pendingAudio = Completer<void>();
+      final pending = controller.previewAudioProcessing(
+        {'loudness_target_lufs': -16},
+        startSec: 0,
+        endSec: 4,
+      );
+      final expectation = expectLater(pending, throwsFormatException);
+      controller.edit(
+        (s) =>
+            s.addClip(repository.asset.assetId, trackId: 'video', sourceOut: 2),
+      );
+      repository.pendingAudio!.complete();
+      await expectation;
+      expect(controller.renderOptions, isEmpty);
+    },
+  );
 
   test('project-only save reopens unchanged and can later render', () async {
     await controller.importFile('chosen.mp4', Uint8List.fromList([1]));

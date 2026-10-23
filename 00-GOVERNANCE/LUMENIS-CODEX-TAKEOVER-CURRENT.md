@@ -39,8 +39,14 @@ revision and Permission contract. Settings-only saves do not encode; explicit
 export preserves the original sources and produces the selected files with
 separate measured results. Actual saved version, downloaded bytes and recovery
 evidence belongs to [audio delivery continuity](evidence/round-15/audio-delivery-continuity-20261023.json).
-This does not accept pre-adoption A/B preview, all delivery tools, subjective voice
-quality or the complete media frontend.
+Pre-adoption audio comparison now uses the same whole-programme processing chain
+and presents two actual same-range WAV previews. Switching stops the old player
+and preserves the listening position. Explicit adoption changes only draft settings;
+cancel and stale context preserve the original project. Settings save, render,
+download and restart/readback are recorded in
+[audio comparison continuity](evidence/round-15/audio-comparison-continuity-20261023.json).
+This does not accept all delivery tools, subjective voice quality or the complete
+media frontend.
 The non-TEMP storage correction, actual revision/export/readback and retained
 originals are recorded in [Artifact workspace continuity](evidence/round-15/artifact-workspace-continuity-20261023.json).
 

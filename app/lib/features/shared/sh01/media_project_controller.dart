@@ -19,6 +19,15 @@ abstract interface class MediaProjectRepository {
     required MediaProjectSnapshot timeline,
     required List<Map<String, dynamic>> commands,
   });
+  Future<Map<String, dynamic>> inspectAudioProcessing({
+    required String? domain,
+    required List<String> paths,
+    List<String>? refs,
+    required MediaProjectSnapshot timeline,
+    required Map<String, double> renderOptions,
+    required double startSec,
+    required double endSec,
+  });
   Future<Map<String, dynamic>> importFile(
     String? domain,
     String filename,
@@ -128,6 +137,25 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     timeline: timeline.toJson(),
     commands: commands,
     expectedVersion: timeline.version,
+  );
+
+  @override
+  Future<Map<String, dynamic>> inspectAudioProcessing({
+    required String? domain,
+    required List<String> paths,
+    List<String>? refs,
+    required MediaProjectSnapshot timeline,
+    required Map<String, double> renderOptions,
+    required double startSec,
+    required double endSec,
+  }) => client.inspectAudioProcessing(
+    domainId: domain,
+    assetPaths: refs == null ? paths : null,
+    assetRefs: refs,
+    timeline: timeline.toJson(),
+    renderOptions: renderOptions,
+    startSec: startSec,
+    endSec: endSec,
   );
 
   @override
@@ -389,6 +417,33 @@ final class MediaProjectBatchPreview {
 
 /// Presentation state only. Core reauthorizes, fingerprints and renders every
 /// export; neither a local edit nor a server response is public publication.
+final class MediaAudioComparison {
+  const MediaAudioComparison._(
+    this._owner,
+    this._base,
+    this._context,
+    this._previousOptions,
+    this._scopeGeneration,
+    this.options,
+    this.original,
+    this.processed,
+    this.measurements,
+    this.startSec,
+    this.endSec,
+  );
+  final MediaProjectController _owner;
+  final MediaProjectSnapshot _base;
+  final String _context;
+  final Map<String, double> _previousOptions;
+  final int _scopeGeneration;
+  final Map<String, double> options;
+  final ContentProjectFile original;
+  final ContentProjectFile processed;
+  final Map<String, dynamic> measurements;
+  final double startSec;
+  final double endSec;
+}
+
 final class MediaProjectController extends ChangeNotifier {
   MediaProjectController({required this.repository, required this.domain}) {
     if (domain != null && !const ['CTH', 'BMP'].contains(domain)) {
@@ -448,6 +503,116 @@ final class MediaProjectController extends ChangeNotifier {
 
   String get _contextKey =>
       '${domain ?? 'shared_workspace:v1'}:${repository.contextKey}';
+
+  Future<MediaAudioComparison> previewAudioProcessing(
+    Map<String, double> options, {
+    required double startSec,
+    required double endSec,
+  }) async {
+    if (_disposed || busy || !contextMatches || _timeline == null) {
+      throw const FormatException('Audio preview context unavailable.');
+    }
+    final base = _timeline!;
+    final context = _contextKey;
+    final previous = _renderOptions;
+    final generation = _scopeGeneration;
+    final frozen = _readRenderOptions(options);
+    final refs = _sourceRefs;
+    final response = await repository.inspectAudioProcessing(
+      domain: domain,
+      paths: _paths,
+      refs: refs,
+      timeline: base,
+      renderOptions: frozen,
+      startSec: startSec,
+      endSec: endSec,
+    );
+    final result = response['audio_comparison'];
+    if (response['ok'] != true ||
+        response['assets'] is! List ||
+        response['rights_state'] != 'unknown' ||
+        response['external_fetch'] != false ||
+        jsonEncode(response['source_artifact_refs']) !=
+            jsonEncode(refs ?? <String>[]) ||
+        result is! Map ||
+        result['state'] != 'preview' ||
+        result['base_version'] != base.version ||
+        result['persisted'] != false ||
+        result['export_performed'] != false ||
+        result['approval_required'] != true ||
+        result['start_sec'] != startSec ||
+        result['end_sec'] != endSec ||
+        result['programme_duration_sec'] != base.durationSec ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch('${result['base_digest']}') ||
+        !mapEquals(_readRenderOptions(result['render_options']), frozen)) {
+      throw const FormatException('Invalid audio comparison response.');
+    }
+    MediaProjectSnapshot.fromJson(
+      base.toJson(),
+      inspectedAssets: (response['assets'] as List)
+          .map(MediaProjectAsset.fromJson)
+          .toList(),
+    );
+    final samples = result['samples'];
+    ContentProjectFile read(String name) {
+      final sample = samples is Map ? samples[name] : null;
+      if (sample is! Map ||
+          sample['wav_base64'] is! String ||
+          (sample['wav_base64'] as String).length > 16 * 1024 * 1024 ||
+          !RegExp(r'^[0-9a-f]{64}$').hasMatch('${sample['sha256']}')) {
+        throw const FormatException('Invalid audio sample.');
+      }
+      final bytes = base64Decode(sample['wav_base64'] as String);
+      if (bytes.length < 44 ||
+          bytes.length > 12 * 1024 * 1024 ||
+          bytes.length != sample['size_bytes'] ||
+          ascii.decode(bytes.sublist(0, 4), allowInvalid: true) != 'RIFF' ||
+          ascii.decode(bytes.sublist(8, 12), allowInvalid: true) != 'WAVE') {
+        throw const FormatException('Invalid audio sample bytes.');
+      }
+      return ContentProjectFile(
+        bytes: bytes,
+        filename: '$name.wav',
+        mediaType: 'audio/wav',
+      );
+    }
+
+    final preview = MediaAudioComparison._(
+      this,
+      base,
+      context,
+      previous,
+      generation,
+      frozen,
+      read('original'),
+      read('processed'),
+      _freezeJsonMap(result['programme_measurements']),
+      startSec,
+      endSec,
+    );
+    if (!canAdoptAudioProcessing(preview)) {
+      throw const FormatException('Audio preview is stale.');
+    }
+    return preview;
+  }
+
+  bool canAdoptAudioProcessing(MediaAudioComparison preview) =>
+      !_disposed &&
+      !busy &&
+      contextMatches &&
+      identical(preview._owner, this) &&
+      identical(preview._base, _timeline) &&
+      preview._scopeGeneration == _scopeGeneration &&
+      preview._context == _contextKey &&
+      mapEquals(preview._previousOptions, _renderOptions);
+
+  bool adoptAudioProcessing(MediaAudioComparison preview) {
+    if (!canAdoptAudioProcessing(preview)) return false;
+    _renderOptions = preview.options;
+    _failureCode = null;
+    notifyListeners();
+    return true;
+  }
 
   void setLoudnessTarget(double? target) {
     if (_disposed || busy || !contextMatches || _timeline == null) return;

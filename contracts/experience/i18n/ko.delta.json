@@ -962,6 +962,17 @@
   "sh01.media.denoise_original": "원본 오디오는 유지되며 내보낼 때 노이즈 감소가 적용됩니다.",
   "sh01.media.audio_files": "오디오 파일",
   "sh01.media.wav_included": "프로젝트 패키지에는 WAV가 포함됩니다. 추가 형식:",
-  "sh01.media.audio_delivery_failed": "오디오를 내보내지 못했습니다. 초안과 저장된 버전은 유지됩니다. 처리 설정을 조정한 후 다시 시도하세요."
+  "sh01.media.audio_delivery_failed": "오디오를 내보내지 못했습니다. 초안과 저장된 버전은 유지됩니다. 처리 설정을 조정한 후 다시 시도하세요.",
+  "sh01.media.audio_adjust": "듣고 조정",
+  "sh01.media.audio_sample_range": "미리 듣기 구간",
+  "sh01.media.audio_sample_hint": "최대 60초를 들을 수 있습니다. 처리는 전체 프로그램을 기준으로 합니다.",
+  "sh01.media.audio_prepare": "미리 듣기 준비",
+  "sh01.media.audio_preparing": "오디오 준비 중…",
+  "sh01.media.audio_preview_failed": "미리 들을 수 없습니다. 원본 파일을 확인하고 다시 시도하세요.",
+  "sh01.media.audio_unprocessed": "처리 전",
+  "sh01.media.audio_processed": "처리 후",
+  "sh01.media.audio_programme_measurement": "전체 프로그램 측정값",
+  "sh01.media.audio_adopt": "조정 적용",
+  "sh01.media.audio_off": "끄기"
  }
 }

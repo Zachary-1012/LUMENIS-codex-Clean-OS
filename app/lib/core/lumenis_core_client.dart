@@ -1154,6 +1154,33 @@ class LumenisCoreClient {
     },
   );
 
+  Future<Map<String, dynamic>> inspectAudioProcessing({
+    required String? domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+    required Map<String, dynamic> timeline,
+    required Map<String, double> renderOptions,
+    required double startSec,
+    required double endSec,
+  }) => _request(
+    'POST',
+    '/api/experience/shared-skills/shared.content_project/inspect',
+    operationContext: _mediaContentContext(domainId),
+    payload: {
+      'action_type': 'READ',
+      'input': {
+        ..._contentAssets(assetPaths, assetRefs),
+        'timeline': timeline,
+        'audio_comparison': {
+          'start_sec': startSec,
+          'end_sec': endSec,
+          'render_options': renderOptions,
+        },
+      },
+    },
+    connectionTimeout: const Duration(minutes: 5),
+  );
+
   Future<Map<String, dynamic>> exportContentProject({
     required String? domainId,
     List<String>? assetPaths,
