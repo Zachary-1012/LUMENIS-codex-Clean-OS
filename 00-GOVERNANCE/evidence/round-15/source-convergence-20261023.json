@@ -83,7 +83,8 @@
     "The document-only staged followup initially retained PUBLISHED_SOURCE_VERIFIED and correctly failed the same-commit source gate. The already-green source PR was merged separately; this fresh documentation branch is correctly classified RULES_ONLY_PUBLICATION. No guard was changed or bypassed.",
     "The initial documentation classification rejected the existing requested HTML and JSON receipt. The original validator now admits only these two exact documentation paths, with negative tests retaining denial of unreviewed HTML/JSON/backups; no gate became advisory.",
     "The first publication-regression invocation refused the protected repository DB because WAL/SHM sidecars were present; no tests ran in that attempt. The passing rerun used the existing disposable-schema and network-denied runner.",
-    "The first Ruff subprocess invocation could not resolve the .cmd shim; the installed exact Ruff executable subsequently completed the comparison."
+    "The first Ruff subprocess invocation could not resolve the .cmd shim; the installed exact Ruff executable subsequently completed the comparison.",
+    "PR #138 initial Product Gate 39962534370 rejected positioning because its guard requires built in parallel / accepted independently vocabulary. Clarified that only currently dispatched surfaces may build in parallel; deferred-device requirements stay intact. The blocking validator and required gates were not changed."
   ],
   "limits": [
     "Five eSpeak runtime integration cases require an explicitly configured isolated engine; not passed.",
@@ -245,7 +246,8 @@
       "Synchronize architecture, Experience, owner, delivery, positioning, screen-spec entry/template and repository Flutter skill in place.",
       "Replace pending PR #137 wording with actual exact merge and CI readback; distinguish historical served bundle from withdrawn frontend.",
       "Refresh existing document identity/line bindings and complete 30-outcome/396-item HTML without creating another plan.",
-      "Apply the selected digital skeuomorphic visual language to remaining active style instructions, keeping task-specific layouts, painted icon scope and all existing motion choices."
+      "Apply the selected digital skeuomorphic visual language to remaining active style instructions, keeping task-specific layouts, painted icon scope and all existing motion choices.",
+      "Replace stale independent-candidate claims for the mainline browser verifier/admission bridge in both unique plan and sketch; retain missing dispatcher/multi-tab E2E and historical verification limits. Remove historical 2026-10-18 dispatch phrased as current execution."
     ],
     "generated_targets_still_absent": {
       "app/build": true,
