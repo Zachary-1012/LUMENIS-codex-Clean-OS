@@ -1760,6 +1760,7 @@ def stage_timeline_artifact(
 
             if render_media:
                 measured = render_timeline(timeline, rendered_path, output_kind=output_kind,
+                                           artifact_workspace=Path(work_dir),
                                            check_continue=check_export_permission,
                                            **({"render_options": render_options} if render_options else {}))
                 if (

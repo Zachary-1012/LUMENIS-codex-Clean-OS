@@ -256,7 +256,12 @@ def test_tampered_package_and_inactive_account_are_denied_with_recovery(media_st
 
 
 @pytest.mark.parametrize("legacy_demo", [None, False, True])
-def test_audio_project_real_render_reopen_revision_and_download(media_store, legacy_demo):
+def test_audio_project_real_render_reopen_revision_and_download(media_store, legacy_demo, monkeypatch, tmp_path):
+    from lumenis.shared.content_creation import rendering
+
+    os_temp = tmp_path / "separate-os-temp"
+    os_temp.mkdir()
+    monkeypatch.setattr(rendering.tempfile, "gettempdir", lambda: str(os_temp))
     approve(media_store)
     source = import_source(media_store)
     source_id = source["artifact"]["artifact_id"]
