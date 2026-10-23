@@ -11,6 +11,9 @@ class Ai01ConversationPanel extends StatefulWidget {
     required this.draftController,
     required this.onClose,
     this.currentTaskId,
+    this.embedded = false,
+    this.startActions,
+    this.onOpenMaterials,
     super.key,
   });
 
@@ -18,6 +21,9 @@ class Ai01ConversationPanel extends StatefulWidget {
   final TextEditingController draftController;
   final String? currentTaskId;
   final VoidCallback onClose;
+  final bool embedded;
+  final Widget? startActions;
+  final VoidCallback? onOpenMaterials;
 
   @override
   State<Ai01ConversationPanel> createState() => _Ai01ConversationPanelState();
@@ -25,17 +31,22 @@ class Ai01ConversationPanel extends StatefulWidget {
 
 class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
   final _ownedDialogs = <DialogRoute<bool>>{};
+  bool _historyVisible = false;
 
   @override
   void initState() {
     super.initState();
-    widget.viewModel.refreshList();
+    widget.viewModel.refreshList(selectFirstIfEmpty: !widget.embedded);
   }
 
   Future<void> _send() async {
     final controller = widget.draftController;
     final draft = controller.value;
     final text = draft.text;
+    if (widget.embedded && widget.viewModel.selectedId == null) {
+      await _createConversation();
+      if (!mounted || !widget.viewModel.canSend) return;
+    }
     await widget.viewModel.send(
       text,
       onPersisted: () {
@@ -203,6 +214,12 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
     final copy = context.lumenisL10n;
     final theme = LumenisTheme.of(context);
     final phone = MediaQuery.sizeOf(context).width < 600;
+    if (widget.embedded) {
+      return AnimatedBuilder(
+        animation: widget.viewModel,
+        builder: (context, _) => _buildEmbedded(context),
+      );
+    }
     return Dialog(
       key: const ValueKey('ai01-conversation-dialog'),
       alignment: phone ? Alignment.bottomCenter : Alignment.centerRight,
@@ -258,6 +275,194 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEmbedded(BuildContext context) {
+    final model = widget.viewModel;
+    final copy = context.lumenisL10n;
+    return Column(
+      key: const ValueKey('ai01-conversation-workspace'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            children: [
+              TextButton.icon(
+                key: const ValueKey('ai01-conversation-history'),
+                onPressed: () =>
+                    setState(() => _historyVisible = !_historyVisible),
+                icon: LumenisIcon(
+                  _historyVisible ? Icons.close_rounded : Icons.history_rounded,
+                  size: 18,
+                ),
+                label: Text(
+                  copy.text(
+                    _historyVisible ? 'common.close' : 'ai01.conversation.list',
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                key: const ValueKey('ai01-conversation-new-work'),
+                onPressed: model.busy || model.outcomeUnknown
+                    ? null
+                    : model.creatingUnknown
+                    ? _createConversation
+                    : () {
+                        model.showConversationList();
+                        setState(() => _historyVisible = false);
+                      },
+                icon: const LumenisIcon(Icons.add_rounded, size: 18),
+                label: Text(copy.text('ai01.conversation.new')),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _historyVisible
+              ? _ConversationList(
+                  viewModel: model,
+                  onSelect: (id) {
+                    model.open(id);
+                    setState(() => _historyVisible = false);
+                  },
+                  onLoadMore: model.loadMoreConversations,
+                )
+              : model.selectedId == null
+              ? _buildStart(context)
+              : _buildConversation(context),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStart(BuildContext context) {
+    final model = widget.viewModel;
+    final theme = LumenisTheme.of(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          key: const ValueKey('acc03-home-scroll'),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    switch (context.lumenisL10n.locale.languageCode) {
+                      'en' => 'What are we working on?',
+                      'ko' => '어떤 작업을 시작할까요?',
+                      _ => '今天要完成什么？',
+                    },
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: theme.foreground,
+                      fontWeight: FontWeight.w500,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  if (model.issue != null)
+                    _ConversationNotice(
+                      issue: model.issue!,
+                      unknown: model.creatingUnknown,
+                      checkKey: 'ai01-conversation-start-retry',
+                      onCheck: () =>
+                          model.refreshList(selectFirstIfEmpty: false),
+                    ),
+                  _composer(context, newConversation: true),
+                  if (widget.startActions != null) ...[
+                    const SizedBox(height: 24),
+                    widget.startActions!,
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _composer(BuildContext context, {bool newConversation = false}) {
+    final model = widget.viewModel;
+    final copy = context.lumenisL10n;
+    final theme = LumenisTheme.of(context);
+    final canSend = newConversation
+        ? !model.busy && !model.creatingUnknown && !model.outcomeUnknown
+        : model.canSend;
+    return Container(
+      key: const ValueKey('ai01-conversation-composer'),
+      padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
+      decoration: BoxDecoration(
+        color: theme.surface.withValues(alpha: 1),
+        border: Border.all(color: theme.line),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: theme.foreground.withValues(alpha: 0.035),
+            blurRadius: 24,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            key: const ValueKey('ai01-conversation-input'),
+            controller: widget.draftController,
+            enabled: !model.busy,
+            minLines: newConversation ? 3 : 1,
+            maxLines: 5,
+            maxLength: 4000,
+            onChanged: (_) => setState(() {}),
+            textInputAction: TextInputAction.newline,
+            decoration: InputDecoration(
+              hintText: copy.text('ai01.conversation.input_hint'),
+              counterText: '',
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: false,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              if (widget.onOpenMaterials != null)
+                IconButton(
+                  key: const ValueKey('ai01-conversation-materials'),
+                  tooltip: copy.text('screen.SH-02'),
+                  onPressed: widget.onOpenMaterials,
+                  icon: const LumenisIcon(Icons.attach_file_rounded, size: 20),
+                ),
+              const Spacer(),
+              IconButton.filled(
+                key: const ValueKey('ai01-conversation-send'),
+                tooltip: copy.text('ai01.conversation.send'),
+                onPressed:
+                    canSend && widget.draftController.text.trim().isNotEmpty
+                    ? _send
+                    : null,
+                icon: model.busy
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const LumenisIcon(Icons.arrow_upward_rounded, size: 20),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -445,51 +650,56 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
                   },
                 ),
         ),
-        Divider(height: 1, color: theme.line),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  key: const ValueKey('ai01-conversation-input'),
-                  controller: widget.draftController,
-                  enabled: model.canSend,
-                  minLines: 1,
-                  maxLines: 4,
-                  maxLength: 4000,
-                  onChanged: (_) => setState(() {}),
-                  textInputAction: TextInputAction.newline,
-                  decoration: InputDecoration(
-                    hintText: copy.text('ai01.conversation.input_hint'),
-                    counterText: '',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
+        if (widget.embedded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: _composer(context),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('ai01-conversation-input'),
+                    controller: widget.draftController,
+                    enabled: model.canSend,
+                    minLines: 1,
+                    maxLines: 4,
+                    maxLength: 4000,
+                    onChanged: (_) => setState(() {}),
+                    textInputAction: TextInputAction.newline,
+                    decoration: InputDecoration(
+                      hintText: copy.text('ai01.conversation.input_hint'),
+                      counterText: '',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              IconButton.filled(
-                key: const ValueKey('ai01-conversation-send'),
-                tooltip: copy.text('ai01.conversation.send'),
-                onPressed:
-                    model.canSend &&
-                        widget.draftController.text.trim().isNotEmpty
-                    ? _send
-                    : null,
-                icon: model.busy
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const LumenisIcon(Icons.arrow_upward_rounded, size: 20),
-              ),
-            ],
+                const SizedBox(width: 10),
+                IconButton.filled(
+                  key: const ValueKey('ai01-conversation-send'),
+                  tooltip: copy.text('ai01.conversation.send'),
+                  onPressed:
+                      model.canSend &&
+                          widget.draftController.text.trim().isNotEmpty
+                      ? _send
+                      : null,
+                  icon: model.busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const LumenisIcon(Icons.arrow_upward_rounded, size: 20),
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

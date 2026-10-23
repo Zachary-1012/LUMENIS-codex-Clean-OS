@@ -4,12 +4,13 @@ import 'package:lumenis_app/core/lumenis_icon.dart';
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
 import '../../../l10n/lumenis_localizations.dart';
-import '../../../features/ai01/ai01_screen.dart';
+import '../../../features/ai01/ai01_conversation_panel.dart';
+import '../../../features/ai01/ai01_conversations.dart';
 import '../../../navigation/lumenis_workspace_routes.dart';
 import 'acc03_repository.dart';
 import 'acc03_snapshot.dart';
 
-class Acc03Screen extends StatelessWidget {
+class Acc03Screen extends StatefulWidget {
   const Acc03Screen({
     required this.client,
     this.repository,
@@ -32,8 +33,48 @@ class Acc03Screen extends StatelessWidget {
   final TextEditingController? draftController;
   final String? scopeLabel;
 
+  @override
+  State<Acc03Screen> createState() => _Acc03ScreenState();
+}
+
+class _Acc03ScreenState extends State<Acc03Screen> {
+  late Ai01ConversationViewModel _conversations;
+  TextEditingController? _ownedDraft;
+
+  TextEditingController get _draft => widget.draftController ?? _ownedDraft!;
+
+  @override
+  void initState() {
+    super.initState();
+    _conversations = Ai01ConversationViewModel(
+      repository: CoreAi01ConversationRepository(client: widget.client),
+    );
+    if (widget.draftController == null) _ownedDraft = TextEditingController();
+  }
+
+  @override
+  void didUpdateWidget(covariant Acc03Screen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.client != widget.client) {
+      _conversations.dispose();
+      _conversations = Ai01ConversationViewModel(
+        repository: CoreAi01ConversationRepository(client: widget.client),
+      );
+    }
+    if (widget.draftController == null && _ownedDraft == null) {
+      _ownedDraft = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    _conversations.dispose();
+    _ownedDraft?.dispose();
+    super.dispose();
+  }
+
   String? get _safeLastOpenedScreenId {
-    final screenId = lastOpenedScreenId;
+    final screenId = widget.lastOpenedScreenId;
     if (screenId == null ||
         screenId == LumenisWorkspaceRoutes.rootScreenId ||
         LumenisWorkspaceRoutes.focusedReturnScreenIds.contains(screenId) ||
@@ -45,57 +86,63 @@ class Acc03Screen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 600;
     final lastPage = _safeLastOpenedScreenId;
 
     return ColoredBox(
       color: LumenisTheme.of(context).canvas,
       child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            key: const ValueKey('acc03-home-scroll'),
-            padding: EdgeInsets.fromLTRB(
-              compact ? 16 : 28,
-              compact ? 14 : 22,
-              compact ? 16 : 28,
-              compact ? 18 : 24,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 820),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Ai01Screen(
-                      client: client,
-                      embedded: true,
-                      draftController: draftController,
-                      scopeLabel: scopeLabel,
-                    ),
-                    SizedBox(height: compact ? 12 : 18),
-                    Divider(height: 1, color: LumenisTheme.of(context).line),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      alignment: WrapAlignment.start,
-                      children: [
-                        for (final destination in acc03HomeDestinations)
-                          _BusinessDestination(
-                            destination: destination,
-                            onOpen: onOpen,
-                          ),
-                      ],
-                    ),
-                    if (lastPage != null && onOpenScreenId != null) ...[
-                      const SizedBox(height: 6),
-                      _ContinueLastPage(
-                        screenId: lastPage,
-                        onOpen: () => onOpenScreenId!(lastPage),
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 940),
+            child: Ai01ConversationPanel(
+              key: ObjectKey(_conversations),
+              viewModel: _conversations,
+              draftController: _draft,
+              embedded: true,
+              onClose: () {},
+              onOpenMaterials: widget.onOpen == null
+                  ? null
+                  : () => widget.onOpen!(Acc03Destination.research),
+              startActions: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    alignment: WrapAlignment.start,
+                    children: [
+                      for (final destination in acc03HomeDestinations)
+                        _BusinessDestination(
+                          destination: destination,
+                          onOpen: widget.onOpen,
+                        ),
                     ],
+                  ),
+                  if (widget.onOpen != null)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        key: const ValueKey('acc03-analysis'),
+                        onPressed: () => widget.onOpen!(Acc03Destination.ai),
+                        icon: const LumenisIcon(Icons.search_rounded, size: 18),
+                        label: Text(
+                          _copy(
+                            context,
+                            zh: '分析问题',
+                            en: 'Analyze a question',
+                            ko: '질문 분석',
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (lastPage != null && widget.onOpenScreenId != null) ...[
+                    const SizedBox(height: 6),
+                    _ContinueLastPage(
+                      screenId: lastPage,
+                      onOpen: () => widget.onOpenScreenId!(lastPage),
+                    ),
                   ],
-                ),
+                ],
               ),
             ),
           ),

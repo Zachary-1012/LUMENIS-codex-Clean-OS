@@ -7,6 +7,7 @@ import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/account/acc01/acc01_screen.dart';
 import 'package:lumenis_app/features/account/acc03/acc03_screen.dart';
 import 'package:lumenis_app/features/account/acc04/acc04_screen.dart';
+import 'package:lumenis_app/features/ai01/ai01_conversation_panel.dart';
 import 'package:lumenis_app/features/ai01/ai01_screen.dart';
 import 'package:lumenis_app/features/ai04/ai04_screen.dart';
 import 'package:lumenis_app/features/bmp01/bmp01_screen.dart';
@@ -253,10 +254,12 @@ void main() {
       await tester.pumpWidget(_app(router));
       await tester.pumpAndSettle();
       expect(find.text('全局查看范围（未命名）'), findsNothing);
-      // The launch map now embeds the AI-01 composer itself (there is no
-      // separate AI destination card) and keeps the business destinations.
       expect(find.byType(Acc03Screen), findsOneWidget);
-      expect(find.byType(Ai01Screen), findsOneWidget);
+      expect(find.byType(Ai01ConversationPanel), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('ai01-conversation-input')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey('acc03-destination-CTH-01')),
         findsOneWidget,
@@ -322,8 +325,11 @@ void main() {
         '/workspace/ACC-03',
       );
       expect(find.byType(Acc03Screen), findsOneWidget);
-      // The embedded composer is the AI entry on the launch map.
-      expect(find.byType(Ai01Screen), findsOneWidget);
+      expect(find.byType(Ai01ConversationPanel), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('ai01-conversation-input')),
+        findsOneWidget,
+      );
 
       final destinations = [
         ('acc03-destination-CTH-01', '/workspace/CTH-01', Cth01Screen),

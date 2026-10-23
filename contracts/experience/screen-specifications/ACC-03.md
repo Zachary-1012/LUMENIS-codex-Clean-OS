@@ -3,7 +3,7 @@
 ```yaml
 screen_id: ACC-03
 status: DESIGN_READY
-revision: 6
+revision: 7
 owner_domain: SYSTEM / Shared Capability presentation
 binding_ids: []
 product_owner_approval: APPROVED
@@ -35,8 +35,13 @@ the current design rather than retained as alternative layouts.
 
 - Default / and /workspace resolve to /workspace/ACC-03 through the existing
   route owner. Exact CTH, BMP, Shared and other deep links keep their meaning.
-- ACC-03 owns composition/navigation only. It embeds the existing AI-01 editor
-  using the shared Core client; AI-01 owns draft/file/analysis behavior.
+- ACC-03 owns composition/navigation only. It embeds the existing AI-01
+  conversation owner directly in the workspace, using the shared Core client.
+  AI-01 retains the separate analysis/draft/file tools; no second chat store.
+  Opening Home reads history but never creates a conversation or calls a model.
+  Explicit Send creates a conversation if needed, persists the original message,
+  then uses the existing Gateway response contract. Unknown writes are reconciled
+  before retry; navigation does not replay them.
 - CTH remains commercial Subject-first and BMP brand/market-first in their
   business domains. That does not force a focus at the product entry.
 - Shell owns navigation, current scope, leave decisions and remembered route.
@@ -48,7 +53,8 @@ the current design rather than retained as alternative layouts.
 
 | Field/action | Existing owner/binding | Truth rule |
 | --- | --- | --- |
-| Task editor | Ai01Screen(client, embedded: true), Ai01ViewModel and Ai01DraftActions; Shell supplies the existing editor controller | One session draft shared by Home and AI-01 in the same scope; no separate Home AI service/store |
+| Conversation input | Ai01ConversationPanel(embedded: true), Ai01ConversationViewModel / CoreAi01ConversationRepository; existing `/v4/ai/conversations` APIs | Shell supplies the same scoped draft; explicit send only; server-authored conversation/turn identity, readback, recovery and Permission remain unchanged |
+| Analysis and draft/file tools | Existing AI-01 entry and owner | Direct reachable action; no model/algorithm selection required to enter basic business workflows |
 | Analysis availability | Existing AI-01 service/submit contract | Present actual unavailable/failure reason; missing focus is not a reason |
 | Four destinations | Existing shell onOpen routes | CTH-01, BMP-01, SH-02 and SH-01; navigation only |
 | Continue last page | Actual Shell in-memory/restorable valid prior route | No invented job, artifact, timestamp or claim of project recovery; clear on confirmed context/client change |
@@ -65,10 +71,15 @@ entry-state fetch is not a prerequisite for the editor or host navigation.
 > 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#acc-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
 Use the existing wallpaper-aware Shell with its restrained brand and controls.
-The content area has one reading/editing width around 820 logical pixels. A
-small functional New task heading is optional at about 18–20 px. The reusable
-task field and its real local file actions form the main content. No large
-hero, slogan, repeated product name, introduction text or status-inspection CTA.
+The main conversation occupies one comfortable reading width up to 940 logical
+pixels. With no selected conversation, a concise work prompt, input and direct
+business/research/creation actions form the opening workspace. With a conversation,
+show actual messages and their states with the input at the bottom. History is a
+reversible view, not a separate modal required before writing. No marketing hero,
+KPI cards, repeated product title or developer-status inspection CTA.
+Wide layouts provide the existing work routes in a persistent left rail. Narrow
+layouts keep the existing reversible navigation. Context inspectors are optional,
+closed initially; readable content retains its space and current user appearance.
 
 Four compact destinations use a small original glyph and a concise label, with
 shared edges and visible focus/pressed state. They are navigation controls,
@@ -82,8 +93,9 @@ No permanent right-hand business inspector or duplicate AI panel.
 The same owner contracts apply in Web Workspace, Desktop and Mobile Companion.
 On phone, prioritize the editor and wrap the compact destination controls while
 preserving >=48 px targets. Avoid decorative vertical space and nested scroll.
-The embedded AI-01 body takes natural height; Home supplies a single bounded
-page scroll when keyboard, low height or 200% text makes it necessary.
+The conversation uses the available height with a reachable input. The empty
+work prompt and actions scroll only when keyboard, low height or 200% text requires
+it; an open conversation scrolls messages independently of its input.
 
 The Public Website is a separate approved surface and does not become an editor.
 Native mobile file saving remains limited by the actual existing file owner;
@@ -94,7 +106,7 @@ offer real Open/Copy behavior instead of a fake Save success.
 | State | Behavior | Recovery |
 | --- | --- | --- |
 | No focus | GLOBAL_ALL; editor and existing navigation remain available | Optional exact focus through existing Shell only |
-| AI screen read pending/error | Preserve local draft and file controls; actual AI status beside it | Explicit safe retry; clear stale remote data |
+| Conversation history pending/error | Preserve typed draft and independent business/navigation actions; show the actual read failure | Retry the existing history read; do not invent empty history or model output |
 | Analysis not integrated | State analysis service is not yet connected | Existing AI/Core owners connect real submit/result path; do not suggest choosing a Subject |
 | Actual permission refusal | Keep distinct from offline/no data/missing adapter | Respect server decision; no new account wall |
 | No last page | Omit the row | Never display a fake empty recent-work card |
@@ -102,8 +114,9 @@ offer real Open/Copy behavior instead of a fake Save success.
 | Missing host callback | Affected navigation unavailable | No fake navigation success |
 
 File chooser cancel, invalid input, concurrent edits, save failure and expanded
-editor return preserve the existing AI-01 safeguards. No automatic persistence
-or inference is added. Navigation to a business page and back, or between Home
+editor return preserve the existing AI-01 safeguards at its direct entry. Explicit
+conversation Send retains existing persistence/response semantics; opening Home
+and switching work never submit text or start inference. Navigation to a business page and back, or between Home
 and AI-01, preserves task text and selection within the same window and scope.
 A confirmed scope/client change starts a separate draft; a temporary scope-read
 failure does not erase it. Closing/refreshing still requires saving or copying.
@@ -128,7 +141,7 @@ two user-supplied vivid wallpapers. No new shader, copied asset or motion owner.
 | --- | --- |
 | ACC03-ENTRY-01 | Default route opens neutral Home; explicit deep links remain exact |
 | ACC03-GLOBAL-01 | No Subject/BrandFocus keeps GLOBAL_ALL, local editor and navigation available; no subject-selection lock |
-| ACC03-TASK-01 | Home uses the real AI-01 draft/file owner; editable text, expansion/return and actual failure recovery work |
+| ACC03-TASK-01 | Home uses the existing AI-01 conversation owner; explicit send, persistence, history readback and uncertain-write recovery work; analysis/draft/file tools remain reachable through AI-01 |
 | ACC03-DRAFT-01 | Home -> business page -> Home and Home -> AI-01 retain text/selection in the same window/scope; confirmed scope/client change isolates the new draft; no claim of refresh/close persistence |
 | ACC03-NAV-01 | All four destinations call their exact host route without business writes |
 | ACC03-RETURN-01 | Valid last page returns correctly; invalid/absent and changed context/client do not fabricate history |
