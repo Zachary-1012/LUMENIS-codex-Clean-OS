@@ -518,14 +518,30 @@ def _probe_output(path: Path, ffprobe: str, *, output_kind: str, duration: float
             "video_frames": frames, "stream_start_seconds": starts}
 
 
-def _validate_output_path(output: Path, *, output_kind: str) -> Path:
+def _validate_output_path(output: Path, *, output_kind: str,
+                          artifact_workspace: Path | None = None) -> Path:
     expected_suffix = ".mp4" if output_kind == "video" else ".wav"
     try:
         temporary_root = Path(tempfile.gettempdir()).resolve(strict=True)
         parent = output.parent.resolve(strict=True)
+        if artifact_workspace is not None:
+            from shared_artifacts import artifact_root
+
+            workspace = Path(artifact_workspace)
+            root = artifact_root().resolve(strict=True)
+            allowed_parent = (
+                workspace.is_absolute()
+                and workspace.resolve(strict=True) == workspace.absolute()
+                and workspace.parent == root
+                and workspace.name.startswith("content-project-")
+                and len(workspace.name) > len("content-project-")
+                and parent == workspace
+            )
+        else:
+            allowed_parent = parent != temporary_root and parent.is_relative_to(temporary_root)
         if (not output.is_absolute() or output.suffix.lower() != expected_suffix
-                or output.exists() or output.is_symlink() or parent == temporary_root
-                or parent != output.parent.absolute() or not parent.is_relative_to(temporary_root)):
+                or output.exists() or output.is_symlink()
+                or parent != output.parent.absolute() or not allowed_parent):
             raise ValueError("not a new private temporary output")
     except (OSError, ValueError) as exc:
         raise VideoEditingError("NEW_PRIVATE_TEMP_OUTPUT_REQUIRED") from exc
@@ -613,8 +629,9 @@ def _verify_final_audio_peak(rendered: Path, audio: Path, *, ffmpeg: str,
 
 def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "video",
                     check_continue: Callable[[], None] | None = None,
-                    render_options: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Render a bounded manual timeline to new private-Temp media; never authorize export."""
+                    render_options: dict[str, Any] | None = None,
+                    artifact_workspace: Path | None = None) -> dict[str, Any]:
+    """Render to a new private workspace file; never authorize export."""
     from shared_artifacts import _ffmpeg_path
 
     timeline.validate()
@@ -624,7 +641,8 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
     run_options = {"check_continue": check_continue} if check_continue else {}
     if output_kind not in {"video", "audio"}:
         raise VideoEditingError("OUTPUT_KIND_NOT_SUPPORTED")
-    output = _validate_output_path(Path(output), output_kind=output_kind)
+    output = _validate_output_path(Path(output), output_kind=output_kind,
+                                   artifact_workspace=artifact_workspace)
     if timeline.format_ratio not in FRAME_SIZES:
         raise VideoEditingError("FORMAT_RATIO_NOT_SUPPORTED")
     if timeline.overlays and output_kind != "video":

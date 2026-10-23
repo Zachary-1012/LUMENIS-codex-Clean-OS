@@ -252,6 +252,61 @@ def test_output_and_unsupported_features_fail_before_process(media, render_calls
     assert existing.read_bytes() == b"keep"
 
 
+def test_registered_artifact_workspace_outside_os_temp(media, render_calls, tmp_path, monkeypatch):
+    root = tmp_path / "artifacts"
+    workspace = root / "content-project-owned"
+    workspace.mkdir(parents=True)
+    os_temp = tmp_path / "os-temp"
+    os_temp.mkdir()
+    monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(root))
+    monkeypatch.setattr(rendering.tempfile, "gettempdir", lambda: str(os_temp))
+    timeline = Timeline.from_assets([media]).add_clip(media.asset_id, source_out=1, audio_role="muted")
+    output = workspace / "media.mp4"
+    result = rendering.render_timeline(timeline, output, artifact_workspace=workspace)
+    assert result["state"] == "rendered_verified" and output.is_file()
+    assert not list(workspace.glob("timeline-render-*"))
+
+
+@pytest.mark.parametrize("case", ["no_binding", "root", "foreign", "sibling", "nested", "existing", "wrong_suffix"])
+def test_artifact_workspace_does_not_grant_arbitrary_output(media, render_calls, tmp_path, monkeypatch, case):
+    root = tmp_path / "artifacts"
+    workspace = root / "content-project-owned"
+    workspace.mkdir(parents=True)
+    os_temp = tmp_path / "os-temp"
+    os_temp.mkdir()
+    monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(root))
+    monkeypatch.setattr(rendering.tempfile, "gettempdir", lambda: str(os_temp))
+    output = workspace / "media.mp4"
+    bound = workspace
+    if case == "no_binding":
+        bound = None
+    elif case == "root":
+        bound = root
+        output = root / "media.mp4"
+    elif case == "foreign":
+        bound = tmp_path / "content-project-foreign"
+        bound.mkdir()
+        output = bound / "media.mp4"
+    elif case == "sibling":
+        sibling = root / "content-project-other"
+        sibling.mkdir()
+        output = sibling / "media.mp4"
+    elif case == "nested":
+        nested = workspace / "nested"
+        nested.mkdir()
+        output = nested / "media.mp4"
+    elif case == "existing":
+        output.write_bytes(b"preserve previous output")
+    else:
+        output = workspace / "media.wav"
+    timeline = Timeline.from_assets([media]).add_clip(media.asset_id, source_out=1, audio_role="muted")
+    with pytest.raises(VideoEditingError, match="NEW_PRIVATE_TEMP_OUTPUT_REQUIRED"):
+        rendering.render_timeline(timeline, output, artifact_workspace=bound)
+    assert render_calls == []
+    if case == "existing":
+        assert output.read_bytes() == b"preserve previous output"
+
+
 @pytest.fixture
 def caption_font(tmp_path, monkeypatch):
     font = tmp_path / "installed-font.ttc"

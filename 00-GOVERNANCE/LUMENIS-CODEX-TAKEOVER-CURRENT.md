@@ -28,8 +28,10 @@ Explicit loudness targets now persist as editable project settings, including a
 settings-only revision with an unchanged timeline. Export applies the selected
 target and reports the saved output's measured loudness/true peak; reopening an
 older version restores its original settings. The default preserves original
-volume. Temporary rendering now stays inside the existing authorized Artifact
-root, fixing the delivery path without broadening file access. Actual save,
+volume. Temporary rendering stays inside the existing authorized Artifact
+root. The renderer accepts the exact server-created child workspace there,
+including when the data root is outside OS TEMP; direct root files, unrelated
+directories, mismatched workspaces and existing outputs remain rejected. Actual save,
 export, playback, download and restart/readback evidence belongs to
 [media mastering continuity](evidence/round-15/media-mastering-continuity-20261023.json).
 Explicit denoising and MP3/M4A delivery selection now use that same project
@@ -39,6 +41,8 @@ separate measured results. Actual saved version, downloaded bytes and recovery
 evidence belongs to [audio delivery continuity](evidence/round-15/audio-delivery-continuity-20261023.json).
 This does not accept pre-adoption A/B preview, all delivery tools, subjective voice
 quality or the complete media frontend.
+The non-TEMP storage correction, actual revision/export/readback and retained
+originals are recorded in [Artifact workspace continuity](evidence/round-15/artifact-workspace-continuity-20261023.json).
 
 The former local TTS failure was traced to the essentials FFmpeg build lacking
 libflite. An official full-build variant was verified and bound only to the owned
