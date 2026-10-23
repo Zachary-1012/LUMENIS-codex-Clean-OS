@@ -22,11 +22,11 @@ Copying Subject/BrandFocus or campaign configuration must not copy source/histor
 > 六文件治理发布不唤醒窗口；后续直接授权的 SYSTEM 浏览器弹窗 P0 沿既有 Owner 与预约单独执行。原J/R/U、44屏、权益、Permission/Evidence/Canonical、成本、生产数据及共享写入保护保留。
 > C1保留完整采集及必要Core/Runtime/Scheduler/Permission接口责任，其他Owner保留各自完整成果和M/W6集成验收责任。实际开发者按最新直接PO指令承担相应范围；该映射不限制当前总控跨Owner完成获准任务，也不自动派工。
 
-### 最新 PO 当前成果要求 — 四表面并行建设，2026-10-11
+### 当前成果要求 — 完整四表面合同，按PO设备范围执行
 
-直接PO修正：Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有角色并行建设；Website使用现有`website/`，后三者共用单一Flutter `app/` 与同一Product Core。F直接构建完整任务化前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并诚实记录OPEN/UNBOUND。44份ScreenSpec是覆盖基线而非页面或产品范围上限。无需先制作独立设计稿，不等待Figma或M逐屏DESIGN_READY；实现中的设计决定随代码更新既有规格。原生客户端仅Windows/macOS与iOS；Android/Linux历史资料/源码仍保留，Linux服务端/CI与跨OS浏览器不受影响。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+2026-10-23直接PO设备范围为Public Website、Web Workspace与Windows；macOS/iOS暂缓实施及设备验收，保留完整要求并待设备与后续指令；Website使用现有`website/`，后三者共用单一Flutter `app/` 与同一Product Core。F直接构建完整任务化前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并诚实记录OPEN/UNBOUND。44份ScreenSpec是覆盖基线而非页面或产品范围上限。无需先制作独立设计稿，不等待Figma或M逐屏DESIGN_READY；实现中的设计决定随代码更新既有规格。原生客户端仅Windows/macOS与iOS；Android/Linux历史资料/源码仍保留，Linux服务端/CI与跨OS浏览器不受影响。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-沿现有Owner/源码表并行建设四个表面，按各自真实角色、任务、接口、保存恢复与端侧运行要求独立验收。F负责完整前端屏幕/官网内容家族与真实接口绑定；已有后端立即接入，其他能力由既有领域Owner与C6按原合同接续，缺失部分记OPEN/UNBOUND，不因接线未齐缩减前端任务、不用模拟结果。实际窗口调度仍由PO决定，共享集成按M/W6预约。保留全部R/J/U、44份规格基线及更广的产品要求，不新增产品、Owner、队列、设计系统或费用。一端验收不自动成立其余端或完整Release。具体端角色归本Decision与Experience，真实验收归Overlay。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+沿现有Owner/源码表建设当前获派表面，保留四表面完整要求，按各自真实角色、任务、接口、保存恢复与端侧运行要求独立验收。F负责完整前端屏幕/官网内容家族与真实接口绑定；已有后端立即接入，其他能力由既有领域Owner与C6按原合同接续，缺失部分记OPEN/UNBOUND，不因接线未齐缩减前端任务、不用模拟结果。实际窗口调度仍由PO决定，共享集成按M/W6预约。保留全部R/J/U、44份规格基线及更广的产品要求，不新增产品、Owner、队列、设计系统或费用。一端验收不自动成立其余端或完整Release。具体端角色归本Decision与Experience，真实验收归Overlay。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 
 ### 2026-10-13 PO personnel clarification — engineering peers and independent research
@@ -632,9 +632,9 @@ Real Delivery Card/acceptance fields in the Overlay.
 
 ### 2026-10-11 窗口执行审核稿：完整用户工作与上线准备
 
-**批准边界**：PO已确认Architecture中的七条用户工作方式、解析采用方向及四表面并行建设；本成果卡按现有Owner与完整用户结果执行，并由M按指令分发。实际窗口派工/准入仍只按最新直接PO指令及本地ledger核验，不由本索引推断或改变模型/effort/速度；无新读回时实际进程/模型为`NOT_VERIFIED`。产品要求、工作安排、实际派工和成果验收分别记录。
+**批准边界**：PO已确认Architecture中的七条用户工作方式、解析采用方向及四表面完整角色；当前设备执行范围按最新PO指令；本成果卡按现有Owner与完整用户结果执行，并由M按指令分发。实际窗口派工/准入仍只按最新直接PO指令及本地ledger核验，不由本索引推断或改变模型/effort/速度；无新读回时实际进程/模型为`NOT_VERIFIED`。产品要求、工作安排、实际派工和成果验收分别记录。
 
-**目标**：Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有角色并行建设；用户从适用入口独立开展CTH、BMP、研究、提案、视频、播客和内置浏览器工作，得到实际有用成果并保存、修改、关闭重开、追溯及故障恢复。不是只跑通后台API，也不是只补静态前端。已有真实API/Core立即绑定，剩余接口按原Owner接续并维持OPEN/UNBOUND，44份规格是基线而非范围上限；逐端用真实操作和适用端运行证据独立验收，单端成功不覆盖其他端。通过原Release Gate后具备获准上线的条件；这里不批准公网部署或新费用。审批：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+**目标**：Website、Web Workspace与Windows按既有角色实施；macOS/iOS待设备和后续PO指令，保留完整合同；用户从适用入口独立开展CTH、BMP、研究、提案、视频、播客和内置浏览器工作，得到实际有用成果并保存、修改、关闭重开、追溯及故障恢复。不是只跑通后台API，也不是只补静态前端。已有真实API/Core立即绑定，剩余接口按原Owner接续并维持OPEN/UNBOUND，44份规格是基线而非范围上限；逐端用真实操作和适用端运行证据独立验收，单端成功不覆盖其他端。通过原Release Gate后具备获准上线的条件；这里不批准公网部署或新费用。审批：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 **基线与复用**：本次规划核对local HEAD、fresh origin/main及live main均为`fa2a863112bff453eb4ad525bae72e2d34bca219`，divergence0/0。8项tracked dirty、2项untracked仍保留，未暂存；它们是待审成果，不是已发布修复。该SHA的Product/App CI成功只证明相应工程检查。本次不重跑业务、不读取生产DB、不把历史Runtime/用户结果刷新为当前事实。后续实际开工重新做增量准入。
 
@@ -709,7 +709,7 @@ Real Delivery Card/acceptance fields in the Overlay.
 #### F：让用户实际工作，四表面并行（44屏基线、官网家族及跨端要求）
 
 - **执行边界**：按直接PO指令及本地准入执行完整F成果；规范不记录当前停/开状态。不先建新项目，不要求先做独立设计稿/Figma。
-- **完整成果**：官网完整内容与真实产品入口；Web首页新建/续接、CTH/BMP、独立研究和三类制作、内置浏览器、资料/结果/版本、设置通知及失败恢复；同一Flutter App的Windows/macOS与iOS Companion按既有角色提供对应完整操作。依Experience和每屏合同整体升级视觉/信息层级/布局/交互/反馈，整体视觉依已批准研究与真实任务，彩绘仅用于所需icon和适合的局部页面元素、不限定二维；保留中英韩、无障碍、窄屏及适用智能UI；不缩成七个演示页面，也不只接线或改皮肤。44份ScreenSpec为基线，产品要求不限于44页。
+- **完整成果**：官网完整内容与真实产品入口；Web首页新建/续接、CTH/BMP、独立研究和三类制作、内置浏览器、资料/结果/版本、设置通知及失败恢复；同一Flutter App的Windows/macOS与iOS Companion按既有角色提供对应完整操作。依Experience和每屏合同整体升级视觉/信息层级/布局/交互/反馈，整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究和真实任务，彩绘仅用于所需icon和适合的局部页面元素、不限定二维；保留中英韩、无障碍、窄屏及适用智能UI；不缩成七个演示页面，也不只接线或改皮肤。44份ScreenSpec为基线，产品要求不限于44页。
 - **先做什么/源码**：复用`app/lib/`、`website/`及既有44屏规格；逐项核对页面、组件/变量、草图与真实Owner合同，复用正确成果，按完整任务纠正差距；同步实际受影响规格与现有可编辑视觉载体，不新建第二设计系统。已有真实Core/API直接接入，未提供的既有接口沿原Owner补齐并保持OPEN/UNBOUND。所有外来能力与采集/导入资料的产品呈现采用序境自己的布局、操作和状态语言，保留原始来源内容与权益。用户输入问题/范围/目标，看到已分析报告和直接继续动作；不暴露论文运算、内部ID、权限诊断表作为默认流程。真实标题/正文片段、单封面、作者、平台/原帖、两种时间及指标/“—”有准确定义。
 - **构建顺序不缩范围**：完整建设工作区聊天首页及架构导航、CTH全部业务、BMP全部业务、独立研究、提案/文稿、视频、播客、产品内浏览器、资料与成果版本、设置/通知/权限及全部失败恢复状态；官网完整家族及适用Windows/macOS/iOS同步构建。沿原ScreenSpec逐项记录界面构造、真实交互、接口绑定与实际验收四种状态，不建立新阶段或第二清单。聊天优先不是只做聊天；F1–F5、Golden Pages、七类工作和44规格均不能截断其余已批准范围。后台缺接口时继续该界面已有可实现的导航、编辑、撤销、布局、键盘/触控/无障碍和诚实状态，缺失的真实操作由原后端Owner补齐后接入。不能以未经验证的本地存储、模拟回复或假保存冒充接通。
 - **独立与联动**：直接新建提案/视频/播客/研究，不强迫选CTH/BMP；用户选择业务续接才带入资料/上下文。产品内浏览和回到原任务保持工作不丢失；编辑器实际可操作，AI可选建议不覆盖人工修改。F不在界面另造分析模型、假后端或事实。

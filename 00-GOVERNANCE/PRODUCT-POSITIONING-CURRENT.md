@@ -31,7 +31,7 @@ OEVIRA 正从商业运营、品牌市场与研究创作的专业工作中建立�
 
 CTH/BMP是业务领域，Shared内容制作是独立可用的制作能力。用户可以直接创建和编辑提案/文稿、视频、播客，不必先完成业务分析或创建业务域任务；也可按需要采用业务/研究资料。共享表示统一复用能力，不表示依赖业务领域才能运行。
 
-通用电脑/OS、任意安装应用及远程桌面控制已撤出产品要求，不列后置欠项、不记完成。产品内受控浏览器、后台采集、正常文件/媒体处理、权限与保存恢复继续保留；历史源码和研究不删除。具体计划只归 Product Architecture，呈现只归 Experience；窗口调度不属于产品定位；Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有角色并行建设、分别验收；一端未完成不阻止其他端独立工作。
+通用电脑/OS、任意安装应用及远程桌面控制已撤出产品要求，不列后置欠项、不记完成。产品内受控浏览器、后台采集、正常文件/媒体处理、权限与保存恢复继续保留；历史源码和研究不删除。具体计划只归 Product Architecture，呈现只归 Experience；窗口调度不属于产品定位；Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile保留完整角色，按当前PO设备范围建设、分别验收；一端未完成不阻止其他端独立工作。
 
 ## Product identity
 
@@ -46,7 +46,7 @@ The final user-facing product is **one product with four coordinated experience 
 
 Web Workspace, Desktop App and Mobile Companion share **ONE Product Core, ONE Canonical API / ViewModel contract, ONE Canonical Data, ONE Evidence, ONE Permission and ONE workflow meaning**. Flutter remains the approved shared application technology for Web Workspace, Desktop App and Mobile Companion; terminal-specific composition and capability boundaries are required instead of identical layouts. Public Website is separately deployable presentation and acquisition surface, not a second product or business-logic owner.
 
-Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile are built in parallel and accepted independently under their approved roles. No surface must wait for another surface to close. Native application targets remain Windows/macOS Desktop and iOS Mobile only. Android and Linux native clients are removed from active delivery requirements; preserve their existing source and history. Linux servers/CI, browser access on supported operating systems and narrow-screen Web accessibility remain in scope. Target presence is not release evidence; each retained surface still needs its applicable runtime and release gate.
+Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile retain their complete approved roles; implementation follows the current PO device scope, with independent acceptance. No surface must wait for another surface to close. Native application targets remain Windows/macOS Desktop and iOS Mobile only. Android and Linux native clients are removed from active delivery requirements; preserve their existing source and history. Linux servers/CI, browser access on supported operating systems and narrow-screen Web accessibility remain in scope. Target presence is not release evidence; each retained surface still needs its applicable runtime and release gate.
 
 Generated PDFs, audit illustrations, screenshots, mockups and Figma explorations are `DESIGN_EXPLORATION`, not implementation authority. Implement the current Experience Constitution and detailed screen specifications directly in existing frontend source, maintaining necessary decisions alongside code. A separate design draft, Figma file or M `DESIGN_READY` review is not an implementation prerequisite. Preserve existing editable design assets and honest design-review records; compilation, real operation, accessibility, security and full user-outcome acceptance remain required.
 

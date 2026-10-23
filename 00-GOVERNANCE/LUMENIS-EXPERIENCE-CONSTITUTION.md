@@ -424,7 +424,7 @@ Permission boundary. Page execution, secure action/state transport and the visib
 workspace viewport are separate responsibilities of existing owners. A static
 image, external popup or failed iframe does not satisfy an interactive browser.
 Website remains explanation/entry; Workspace, Desktop and Mobile implement their
-approved operational roles in parallel and require separate actual acceptance.
+approved roles within the current PO device scope, with separate actual acceptance.
 
 Mobile: return/close and task identity at the top, safe destination and real page
 viewport in the center, visible takeover/stop/current action, and a compact live
@@ -978,7 +978,7 @@ Current production CSS/JS/assets may temporarily contain legacy implementation s
 
 ## 30. Canonical multi-surface architecture and feature ownership
 
-The product is delivered through an SEO-capable Public Website plus one Flutter implementation for Web Workspace, Desktop App and Mobile Companion. All four surfaces share business semantics and contracts while adapting composition and input to browsers, native Windows/macOS and native iOS; they are built in parallel and accepted independently under their approved roles. Linux server/CI and browser availability are distinct from native delivery targets. Bind available real APIs/Core immediately; missing existing-owner behavior remains OPEN/UNBOUND while connected. The approved roles and capability boundary are recorded in `LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`; this Constitution remains the sole design authority. See the approved 2026-10-11 receipt `evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
+The product is delivered through an SEO-capable Public Website plus one Flutter implementation for Web Workspace, Desktop App and Mobile Companion. All four surfaces share business semantics and contracts while adapting composition and input to browsers, native Windows/macOS and native iOS; implementation follows the current PO device scope and each surface is accepted independently. Currently Website/Web/Windows proceed; macOS/iOS retain complete requirements but wait for devices and later PO dispatch. Linux server/CI and browser availability are distinct from native delivery targets. Bind available real APIs/Core immediately; missing existing-owner behavior remains OPEN/UNBOUND while connected. The approved roles and capability boundary are recorded in `LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`; this Constitution remains the sole design authority. See the approved 2026-10-11 receipt `evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`.
 
 ```text
 Flutter composition root
@@ -1091,7 +1091,7 @@ Do not build screens from a generic template. For each complete user workflow, j
 2. **Make the shell real:** implement Product Core connectivity, current context, routing, error/offline/retry states, keyboard/focus behavior and restorable navigation. The optional OEVIRA account is part of current engineering closure and must not block ordinary browsing or existing product use. Keep server Permission/effect fences intact, and keep media Cookie/session authorization entirely inside the SYSTEM collector/browser chain. Keep CTH SubjectContext separate from BMP BrandFocus.
 3. **Deliver the workflow's actual interfaces:** AI-01, CTH-01, BMP-01, SH-01 and SYS-01 retain their semantic signatures in §25 as part of full coverage, without a five-page prerequisite. Apply each current screen contract, real owner and complete user outcome. Fixtures do not establish completion.
 4. **Migrate by workflow family:** bind remaining contract screens only after their source/API/Permission/Evidence owner is verified. Preserve established behavior before removing any migrated surface.
-5. **Reach surface parity with independent evidence:** build and verify Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel under their approved roles. Each receives its applicable interaction, accessibility, viewport/device, error/recovery and visual checks at §20 widths; do not make one surface's closure a prerequisite for another. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
+5. **Reach surface parity with independent evidence:** retain complete Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile requirements; build and verify only currently dispatched surfaces under their approved roles. Each receives its applicable interaction, accessibility, viewport/device, error/recovery and visual checks at §20 widths; do not make one surface's closure a prerequisite for another. Verify Public Website acquisition/workspace-entry separately; do not require identical layouts.
 6. **Release evidence:** require applicable compilation, static quality/security/data checks, actual complete user runtime/E2E, clean-clone build/runtime acceptance and current-main CI evidence. Follow the current root AGENTS.md and machine contract: targeted unit/integration regressions may be used for a relevant defect, but are not a blanket requirement and do not replace real user outcomes. Preserve historical files and failures. Record unavailable infrastructure as `UNVERIFIED`, never as PASS.
 
 For each domain, acceptance must include its invariant in §30, real ViewModel truth, permission response, Evidence trace and return, honest missing/error states, keyboard/touch operation, reduced motion, persistence or explicit non-persistence, and the result after a real action. A screen is complete only when its user task completes end to end.
@@ -1169,7 +1169,7 @@ The supplied [`motion-web` repository](https://github.com/Zachary-1012/motion-we
 3. **Implement foundations:** typed API clients, session and context boundaries, deep links, cancellation/retry, offline/error handling, accessibility, event logging without sensitive content, state restoration and explicit surface capability state. Establish browser keyboard/touch and native Desktop/Mobile baselines alongside the related screen work; bind existing real APIs/Core immediately and track any missing existing-owner dependency as OPEN/UNBOUND.
 4. **Deliver workflow slices:** for each capability, finish read → explain → decide → authorize → act → observe → Trace/Return before moving on. Prioritize AI-01, CTH-01, BMP-01, SH-01 and SYS-01 as distinct Golden Pages, then migrate by shared interaction/workflow family while preserving parity.
 5. **Optimize analytical and operational modules:** measure decision completion time, signal-to-action time, evidence coverage, freshness, false-positive rate, campaign delivery/impact attribution quality, workflow SLA and recovery success. Each metric has a canonical definition, owner, denominator and freshness; do not optimize engagement at the cost of trust or business outcomes.
-6. **Prove each surface and cross-surface continuity:** exercise Public Website, Web Workspace, Windows/macOS Desktop and iOS Companion against their real endpoints and role-specific tasks in parallel. Test pointer, keyboard, touch, screen reader, reduced motion, localization, slow/offline connection, empty/stale/partial/error states, permission denial, persistence and return where applicable. Verify Public Website entry/demo truth separately. Compare screenshots only after semantic and functional checks pass; preserve OPEN evidence where a device/runtime is unavailable.
+6. **Prove each surface and cross-surface continuity:** exercise Public Website, Web Workspace, Windows/macOS Desktop and iOS Companion against their real endpoints and role-specific tasks when dispatched; retain deferred-device requirements without claiming acceptance. Test pointer, keyboard, touch, screen reader, reduced motion, localization, slow/offline connection, empty/stale/partial/error states, permission denial, persistence and return where applicable. Verify Public Website entry/demo truth separately. Compare screenshots only after semantic and functional checks pass; preserve OPEN evidence where a device/runtime is unavailable.
 7. **Release by evidence:** attach the binding ID and test/runtime evidence to every completed capability. A package import, generic renderer, fixture, screenshot or CI pass alone does not make a user workflow complete. Mark unavailable platform accounts, device coverage or production data as `UNVERIFIED` with an owner and follow-up.
 
 ### Definition of done per capability
@@ -1255,7 +1255,7 @@ F records actual source, necessary layout decisions and executable acceptance in
 ### Blueprint implementation rules
 
 1. Validate each row's user problem with its intended role; amend composition where a real workflow contradicts the proposal without changing owner semantics.
-2. Build each row's applicable composition over the same typed owner contract on Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile in parallel, preserving each approved role. Existing real APIs/Core bind as available; missing behavior remains OPEN/UNBOUND for its existing Owner. Public Website explains or demonstrates only verified capabilities. Do not equate responsive resizing with mobile UX or browser availability with local capability.
+2. Build each row's applicable composition over the same typed owner contract on the currently dispatched surfaces, retaining the complete Public Website, Web Workspace, Windows/macOS Desktop and iOS Mobile roles and contracts. Existing real APIs/Core bind as available; missing behavior remains OPEN/UNBOUND for its existing Owner. Public Website explains or demonstrates only verified capabilities. Do not equate responsive resizing with mobile UX or browser availability with local capability.
 3. Derive screen-specific typography, data density and visualization from its task. Reuse semantic tokens and accessibility behavior, never a universal card grid, generic dashboard or template-based page builder.
 4. Keep the design blueprint, binding registry and implementation state separate: the blueprint says how a verified task should work; the binding registry says where truth and authorization come from; tests/runtime evidence say whether implementation works.
 5. Complete visual regression only after the corresponding real binding and action behavior pass. Review each applicable surface with its realistic long text, missing data and permission-denial states; browser viewport checks cover Web and the Public Website has its separate content/entry contract. Desktop/Mobile device evidence remains specific to those targets; acceptance on one surface never substitutes for another.
@@ -1650,13 +1650,13 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 
 构建工具故障修好后回到完整界面与操作建设；通过编译或一批验证后继续原完整目标。按实际用户工作纠正呈现：自然输入优先、复杂条件渐进展开；结果展示有用正文/图表/文件及来源，而非只有内部编号；成果通过可识别历史选择重开，不要求用户手输Task ID；数学方法留在后端。优先级调整不能取消尚未完成的界面、视觉或业务要求。前后端依旧分别拥有表现层与业务真相，按W6预约对接，不互写共享区域。
 
-### 四表面并行建设与独立验收 — 2026-10-11 PO 修正
+### 四表面完整要求与逐端验收 — 当前设备范围按直接PO指令
 
-2026-10-11 直接PO修正：Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有角色并行建设；Website继续使用现有`website/`，Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接构建任务化完整前端，不等待全部后端；已有真实API/Core立即接入，其他既有Owner依赖逐项接续，缺少的行为记录为OPEN/UNBOUND，不用模拟结果代替。保留44份ScreenSpec作为覆盖基线，不作为页面数或产品范围上限。无独立设计稿/Figma/M逐屏DESIGN_READY编码前置；设计决定随代码更新原规格。原生Desktop目标为Windows/macOS，原生Mobile为iOS；Android/Linux原生客户端不再是当前交付目标，保留历史原件和证据。Linux服务端/CI、不同操作系统的浏览器和窄屏Web不受影响。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+四表面角色仍沿2026-10-11批准；2026-10-23直接PO修正当前执行Website/Web/Windows，macOS/iOS待设备及后续指令，完整要求不变；Website继续使用现有`website/`，Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接构建任务化完整前端，不等待全部后端；已有真实API/Core立即接入，其他既有Owner依赖逐项接续，缺少的行为记录为OPEN/UNBOUND，不用模拟结果代替。保留44份ScreenSpec作为覆盖基线，不作为页面数或产品范围上限。无独立设计稿/Figma/M逐屏DESIGN_READY编码前置；设计决定随代码更新原规格。原生Desktop目标为Windows/macOS，原生Mobile为iOS；Android/Linux原生客户端不再是当前交付目标，保留历史原件和证据。Linux服务端/CI、不同操作系统的浏览器和窄屏Web不受影响。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-本条控制 §§23、34–36 和本节中所有“逐端实现/设计/回归/打包”的产品要求：四表面按既有角色并行建设，每个表面通过本端真实任务、运行、恢复和适用验收独立记录；一端通过不代表其他端通过或整产品Release。所有现有资料、能力与屏幕要求继续逐项映射至既有规则、Owner源码/操作及真实验收；44份ScreenSpec是基线而非上限。窗口执行依最新根AGENTS与PO直接派工，本规范不保存当前窗口停/开指令。没有接口的既有能力保持OPEN/UNBOUND并由原Owner接续；不新增产品、Owner、设计系统或付费服务。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+本条控制 §§23、34–36 和本节中所有“逐端实现/设计/回归/打包”的产品要求：四表面保留既有角色，按当前PO设备范围建设，每个表面通过本端真实任务、运行、恢复和适用验收独立记录；一端通过不代表其他端通过或整产品Release。所有现有资料、能力与屏幕要求继续逐项映射至既有规则、Owner源码/操作及真实验收；44份ScreenSpec是基线而非上限。窗口执行依最新根AGENTS与PO直接派工，本规范不保存当前窗口停/开指令。没有接口的既有能力保持OPEN/UNBOUND并由原Owner接续；不新增产品、Owner、设计系统或付费服务。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-每个表面分别验收其真实入口、任务操作、结果、来源/权限、保存/修订/重开/恢复、语言与无障碍；同时遵守官网真实内容/操作视频状态及窄屏浏览器等既有要求。整体视觉依已批准研究与任务；手绘彩绘限于图标及适合页面元素，并保留可编辑设计。对已有Core/API立即真实绑定，尚未提供的接口按Owner接续并明确OPEN/UNBOUND。按Multi-Surface Decision及Real Delivery逐端记录证据；完整四表面Goal与Release要求仍按原标准核验。
+每个表面分别验收其真实入口、任务操作、结果、来源/权限、保存/修订/重开/恢复、语言与无障碍；同时遵守官网真实内容/操作视频状态及窄屏浏览器等既有要求。整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究与任务；手绘彩绘限于图标及适合页面元素，并保留可编辑设计。对已有Core/API立即真实绑定，尚未提供的接口按Owner接续并明确OPEN/UNBOUND。按Multi-Surface Decision及Real Delivery逐端记录证据；完整四表面Goal与Release要求仍按原标准核验。
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
@@ -1664,7 +1664,7 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 
 在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 映射。Figma 载体记录 file/node/revision；源码载体记录 Dart/Token/SVG 路径、版本及编辑/预览方法，明确不等同于原生 Figma。工具受限仅标记该路径，禁止 PNG、PPT、静态截图或伪造 .fig 冒充完整可编辑交付。复用现有文件，不重复创建，不新增收费服务。唯一 Experience、设计状态及 Product Core 真相不变。
 
-整体升级覆盖信息架构、任务入口、导航返回、内容层级、图表/报告、资料阅读、制作编辑、浏览器、设置通知及全部状态；不能只接API、改配色或升级几个样板页。完整信息架构、组件/变量、现有屏幕与官网家族的可编辑源码和真实任务交互仍须交付，不另立设计稿阶段；不要求全部Figma页面先完成才修已有Flutter交互。各端依现有合同并行构建，已有真实Core/API立即接入，其他依赖按Owner逐项连通并记录OPEN/UNBOUND，不造模拟后端。各屏依本屏任务定义独立层级、构图和操作路径；共享可访问行为和设计变量不意味着通用重复模板。必要设计决定与验收证据同步回写原规范。ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06等既有例子帮助排序，不缩减其余能力、ScreenSpec、官网家族或新增范围。整体视觉依已批准研究与任务；手绘彩绘限于图标及适合页面元素。保留中英韩、主题、字号/宽度、无障碍和失败恢复。Figma复用可编辑组件/变量/原型，源码路径保留可编辑组件/变量/矢量与预览；提供真实载体/版本和ScreenSpec覆盖缺口。主题映射既有LumenisTheme，Website Astro/CSS共享既有语义决策；Widget通过不等于保存或跨端运行验收。
+整体升级覆盖信息架构、任务入口、导航返回、内容层级、图表/报告、资料阅读、制作编辑、浏览器、设置通知及全部状态；不能只接API、改配色或升级几个样板页。完整信息架构、组件/变量、现有屏幕与官网家族的可编辑源码和真实任务交互仍须交付，不另立设计稿阶段；不要求全部Figma页面先完成才修已有Flutter交互。当前获派端依现有合同构建，暂缓端保留完整要求，已有真实Core/API立即接入，其他依赖按Owner逐项连通并记录OPEN/UNBOUND，不造模拟后端。各屏依本屏任务定义独立层级、构图和操作路径；共享可访问行为和设计变量不意味着通用重复模板。必要设计决定与验收证据同步回写原规范。ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06等既有例子帮助排序，不缩减其余能力、ScreenSpec、官网家族或新增范围。整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究与任务；手绘彩绘限于图标及适合页面元素。保留中英韩、主题、字号/宽度、无障碍和失败恢复。Figma复用可编辑组件/变量/原型，源码路径保留可编辑组件/变量/矢量与预览；提供真实载体/版本和ScreenSpec覆盖缺口。主题映射既有LumenisTheme，Website Astro/CSS共享既有语义决策；Widget通过不等于保存或跨端运行验收。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 
@@ -1680,7 +1680,7 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 | Apple：动作可预测、反馈清楚、能挽回误操作 | 控件/快捷键/触控语义一致；Undo/Redo说明撤回对象并展示受影响位置；进度、完成、失败各有真实反馈；普通状态内联表达，重要边界才中断 | 撤回后可见内容、项目版本和导出一致；状态不要求猜测；反馈不能谎称已保存 |
 | Tesla：在当前任务里直接控制并看到状态，偏好可保存/恢复 | 复用现有任务/设置Owner保存布局/播放位置/可允许偏好，区分未保存与已保存；明确继续/停止/恢复，设备切换只恢复已授权适用状态 | 重开保留同一工作、失败不丢输入；自动状态可停止；Scope/权限不随偏好或设备转移而扩大 |
 
-这是基于已读官方材料的寰意设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。整体视觉依用户已批准研究和当前任务；手绘彩绘用于原创图标及适合页面元素。保留丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
+这是基于已读官方材料的寰意设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究和当前任务；手绘彩绘用于原创图标及适合页面元素。保留丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
 
 J5/J6具体操作归既有SH-01、BMP-08规范；完整44屏与官网家族均须核对和升级，复用正确部分、定向改进真实差距，不机械全量重写或只改这两屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。映射保留F/C1-C6完整职责；窗口状态只按最新直接PO指令和新鲜事实判断，历史恢复/等待记录不自动生效。文档更新仍不代表实现或验收完成。
 

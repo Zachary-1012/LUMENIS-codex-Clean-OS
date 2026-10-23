@@ -14,7 +14,7 @@ The unique [execution work order](LOOP-PLAN-20261014/execution-workorder.html) i
 
 By the latest direct PO instruction, all identified local generated frontend builds, Flutter build caches, Website build/cache and obsolete standalone preview were removed. The historical Web build under work/ was also removed. Existing text build diagnostics were preserved with matching hashes; source and planning remain. Readback now returns workspace_build_unavailable (HTTP 503) for the product frontend while Core health remains HTTP 200. The rejected frontend is withdrawn, not visually accepted; this task does not rebuild it.
 
-Bounded verification and runtime limitations are recorded in [the source-convergence receipt](evidence/round-15/source-convergence-20261023.json). No whole-product, complete visual or four-device acceptance is established. PR #136 head `0cfdab4844bd4caa89d19768d5fa8c78856aed8d` passed Product/App Gate and merged at 2026-10-23 21:01:50 Beijing as `2407bbda561f4fa8b1734d4d24971f6cb4f429d5`; fresh origin/main readback confirms that source integration. This following publication changes the derived work order, cleanup/current-state evidence and exact documentation-path classification with its isolated regression. It changes no product runtime behavior; its publication classification is RULES_ONLY_PUBLICATION. Final online/offline parity must still be read back after this documentation PR merges.
+Bounded verification and runtime limitations are recorded in [the source-convergence receipt](evidence/round-15/source-convergence-20261023.json). No whole-product, complete visual or four-device acceptance is established. PR #136 head `0cfdab4844bd4caa89d19768d5fa8c78856aed8d` passed Product/App Gate and merged at 2026-10-23 21:01:50 Beijing as `2407bbda561f4fa8b1734d4d24971f6cb4f429d5`; fresh origin/main readback confirms that source integration. PR #137 head `51b5f41cb2d00262c5297f17df71638504bf2658` passed Product/App Gate and merged at 2026-10-23 21:15:00 Beijing as `21922e038f1894c66a644b5111098b05643e7f89`; local main, fresh origin/main and GitHub main matched with a clean tree and 0/0 divergence after that delivery. Its main Product Gate also passed. The current follow-up corrects stale device-execution instructions and publication wording in place, refreshes the existing complete work order and checks its document bindings. It remains RULES_ONLY_PUBLICATION: no frontend rebuild, product development or runtime restart is dispatched. Each later merge still requires its own exact remote/local readback.
 
 ## 2026-10-23 Complete document readthrough and execution reconciliation
 
@@ -1276,7 +1276,7 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 | C4 / W4 | 独立提案/文稿、视频、播客的完整编辑与交付；保留用户原稿、原素材、方法、项目版本、实际媒体输出、回读、视听检查和恢复，计划不替代成品。 |
 | C5 / W5 | 资料原件、检索、引用、SavedWork、报告/导出、版本、通知与Shared独立工作空间；现行来源用途和对象权限贯穿所有入口，复用已有底座。 |
 | C6 / W6 | 同版本集成、Core与依赖、运行身份、数据库迁移/恢复、打包、各端真实操作与发布；保护其他候选，分清Change、Owner Closure和Release。 |
-| F | 官网、Web、Windows/macOS与iOS按各自角色并行建设、独立验收；完整任务交互、三语、无障碍、原研究采用和真实成果接续，不以页面数或视觉草图结项。 |
+| F | 官网、Web、Windows为当前执行端，macOS/iOS保留完整要求并待设备和后续PO指令；各端独立验收；完整任务交互、三语、无障碍、原研究采用和真实成果接续，不以页面数或视觉草图结项。 |
 | M | 当前授权范围内的跨Owner协调、源码判断、整合与最终工程验收；不凭本文件自动启动/暂停其他Agent，不重建用户管理的原生Goal。 |
 
 ## 4. 必须带入接续的完整要求

@@ -115,7 +115,7 @@
     "served_web_sha256": "b3f4a3b3fb33a9e04f8fbd22fb895d31f62f1f49bcdab55163c2319815be6b0a",
     "local_web_sha256": "b3f4a3b3fb33a9e04f8fbd22fb895d31f62f1f49bcdab55163c2319815be6b0a",
     "backend_loaded_commit": "NOT_VERIFIED",
-    "scope": "health and served bundle readback, no restart or DB write",
+    "scope": "HISTORICAL BEFORE FRONTEND WITHDRAWAL: health and served bundle readback at its recorded time only; this bundle was subsequently deleted. Not current frontend availability or loaded backend version proof.",
     "served_matches_build": true
   },
   "html_operation": {
@@ -180,7 +180,7 @@
     "initial_attempt": "Earlier compound deletion commands were blocked before execution. After renewed explicit PO approval, bounded literal-path native PowerShell removal succeeded.",
     "protected": "Product source, plans, originals, historical evidence, production data and installed toolchains are retained. No frontend rebuild performed."
   },
-  "updated_at": "2026-10-23T20:58:22.164262+08:00",
+  "updated_at": "2026-10-23T21:35:03.663615+08:00",
   "runtime_readback_after_frontend_withdrawal": {
     "at": "2026-10-23T20:58:22.164262+08:00",
     "scope": "read-only HTTP after approved frontend build withdrawal; Core not restarted",
@@ -213,7 +213,7 @@
     "product_gate": 39941881595,
     "app_gate": 39941881638,
     "checks": "SUCCESS on exact PR head",
-    "followup": "This document-only closeout uses a fresh branch from that integrated main; final parity requires independent readback."
+    "followup": "Documentation PR #137 subsequently merged and was independently read back; see documentation_publication_readback."
   },
   "publication_admission_basis": {
     "source": "Direct PO request in this conversation, 2026-10-23",
@@ -223,5 +223,75 @@
       "00-GOVERNANCE/LOOP-PLAN-20261014/execution-workorder.html",
       "00-GOVERNANCE/evidence/round-15/source-convergence-20261023.json"
     ]
+  },
+  "documentation_publication_readback": {
+    "pr": 137,
+    "head": "51b5f41cb2d00262c5297f17df71638504bf2658",
+    "merge": "21922e038f1894c66a644b5111098b05643e7f89",
+    "merged_at": "2026-10-23T21:15:00+08:00",
+    "product_gate": 39958547500,
+    "app_gate": 39958547376,
+    "main_product_gate": 39959645826,
+    "checks": "SUCCESS at exact recorded SHA",
+    "parity": "local main = freshly fetched origin/main = GitHub main, clean tree, ahead/behind 0/0 at prior delivery",
+    "scope": "Source parity and documentation only; not loaded runtime or user-outcome acceptance."
+  },
+  "document_recheck": {
+    "at": "2026-10-23T21:31:28.031235+08:00",
+    "baseline": "21922e038f1894c66a644b5111098b05643e7f89",
+    "task": "Recheck and correct existing synchronization, cleanup, complete work order and linked current documents; no product development or frontend reconstruction.",
+    "corrections": [
+      "Replace obsolete mandatory all-device parallel execution with current Website/Web/Windows scope while retaining full macOS/iOS requirements.",
+      "Synchronize architecture, Experience, owner, delivery, positioning, screen-spec entry/template and repository Flutter skill in place.",
+      "Replace pending PR #137 wording with actual exact merge and CI readback; distinguish historical served bundle from withdrawn frontend.",
+      "Refresh existing document identity/line bindings and complete 30-outcome/396-item HTML without creating another plan.",
+      "Apply the selected digital skeuomorphic visual language to remaining active style instructions, keeping task-specific layouts, painted icon scope and all existing motion choices."
+    ],
+    "generated_targets_still_absent": {
+      "app/build": true,
+      "app/.dart_tool/flutter_build": true,
+      "website/dist": true,
+      "website/.astro": true,
+      "work/frontend-2026-10-03/web-mount-uf_l88rt/previous-web": true
+    },
+    "runtime_readback": {
+      "health": {
+        "http": 200,
+        "ok": true,
+        "service": "lumenis-core",
+        "status": "healthy",
+        "version": "5.9.9"
+      },
+      "workspace": {
+        "http": 503,
+        "ok": false,
+        "error": "workspace_build_unavailable"
+      },
+      "javascript": {
+        "http": 503,
+        "ok": false,
+        "error": "workspace_build_unavailable"
+      }
+    },
+    "acceptance": "Not a product/visual completion claim; product frontend remains withdrawn.",
+    "verification": {
+      "documents_checked": 85,
+      "local_links_checked": 518,
+      "missing_local_links": 0,
+      "outcome_groups": 30,
+      "coverage_items": 396,
+      "empty_coverage_items": 0,
+      "historical_bindings_changed": 0,
+      "guards": {
+        "constitution": "PASS",
+        "machine_contract": "PASS",
+        "source_adoption": "PASS",
+        "experience_authority": "PASS",
+        "experience_anti_template_strict": "PASS",
+        "screen_blueprints": "PASS"
+      },
+      "browser": "Reloaded current HTML; 30 outcome disclosures and 396 nonempty coverage disclosures observed; header explicitly states frontend builds withdrawn and not rebuilt.",
+      "scope": "Documentation consistency and work-order operation only; no product source changes, rebuild, data write, model call or runtime restart."
+    }
   }
 }

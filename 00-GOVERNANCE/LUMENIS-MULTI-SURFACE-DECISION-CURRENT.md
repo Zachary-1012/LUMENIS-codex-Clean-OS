@@ -14,15 +14,15 @@ current detailed screen specification establish `DESIGN_READY`.
 
 ### 当前端范围：既定四表面，按设备条件独立验收
 
-Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile按既有端角色并行建设，按本端真实任务、运行、恢复与适用验收独立记录。Website使用既有`website/`；Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接建设任务化完整前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并保持OPEN/UNBOUND，不用模拟结果。44份现有ScreenSpec是覆盖基线，不是页面或产品范围上限。保留全部R/J/U、官网内容家族、原件/源码/设计/回执；一个表面通过不代表其他表面或整产品通过。此规则不派发窗口、不更改实际调度或零新增付费边界。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+Public Website、Web Workspace与Windows Desktop为当前执行端；macOS/iOS保留完整角色和合同，待设备及后续PO指令后实施，按本端真实任务、运行、恢复与适用验收独立记录。Website使用既有`website/`；Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接建设任务化完整前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并保持OPEN/UNBOUND，不用模拟结果。44份现有ScreenSpec是覆盖基线，不是页面或产品范围上限。保留全部R/J/U、官网内容家族、原件/源码/设计/回执；一个表面通过不代表其他表面或整产品通过。此规则不派发窗口、不更改实际调度或零新增付费边界。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 四个表面各自交付其既有角色适用的完整真实任务、研究/业务/创作、来源和权限、成果保存/修改/重开/恢复/评价。已存在的Core/API均直接接入；其他依赖由对应Owner继续，不因表面排期或客户端类型而遗漏。官网展示不得夸大能力，Web不使用模拟后端或桌面端跳转代替已批准能力。手机浏览器窄屏属于Web响应式验收，不等于原生Mobile Companion。
 
-按既有Gate分别验收四个表面；每端的Goal/任务闭环只由本端真实证据支持，跨端一致性及整产品Release仍需各自适用证据，不能由单端自动宣告。部署、费用、身份和外部效果的授权边界不变。2026-10-08 Website/Web-first回执仅为历史记录，当前顺序由2026-10-11直接PO修正：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+按既有Gate分别验收四个表面；每端的Goal/任务闭环只由本端真实证据支持，跨端一致性及整产品Release仍需各自适用证据，不能由单端自动宣告。部署、费用、身份和外部效果的授权边界不变。2026-10-08 Website/Web-first回执仅为历史记录，当前设备执行范围按2026-10-23直接PO修正，四表面角色批准仍见：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-F依既有Experience/ScreenSpec/真实合同直接建设四表面，不先做独立设计稿，不等待Figma或M的DESIGN_READY前置审批；必要设计决定随代码回写原规范。既有设计/审核状态只记录实际评审，不等同真实用户验收。原生目标为Windows/macOS与iOS；Android/Linux原生客户端已移出交付要求，原件/源码/旧构建证据保留为历史。Linux服务端/CI、各操作系统浏览器与窄屏Web不受影响。已有真实API/Core立即接入，缺失合同/行为按原Owner标OPEN/UNBOUND。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+F依既有Experience/ScreenSpec/真实合同建设当前获派表面并保留其余表面的完整合同，不先做独立设计稿，不等待Figma或M的DESIGN_READY前置审批；必要设计决定随代码回写原规范。既有设计/审核状态只记录实际评审，不等同真实用户验收。原生目标为Windows/macOS与iOS；Android/Linux原生客户端已移出交付要求，原件/源码/旧构建证据保留为历史。Linux服务端/CI、各操作系统浏览器与窄屏Web不受影响。已有真实API/Core立即接入，缺失合同/行为按原Owner标OPEN/UNBOUND。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-2026-10-23直接PO执行调整：本轮先完成Public Website、Web Workspace与Windows Desktop；因没有设备，macOS与iOS暂不实施、不作通过声明。四表面产品范围及共享合同保留，有设备并获得后续指令后继续对应实机验收。下文四表面并行指架构可并行能力，不强制本轮启动暂缓端。
+2026-10-23直接PO执行调整：本轮先完成Public Website、Web Workspace与Windows Desktop；因没有设备，macOS与iOS暂不实施、不作通过声明。四表面产品范围及共享合同保留，有设备并获得后续指令后继续对应实机验收。共享源码须保持暂缓端的合同兼容，不以未执行的设备验收宣称通过。
 
 ## 1. Approved product-surface structure
 
@@ -78,8 +78,8 @@ The approved route is hybrid and keeps one Product Core:
 ```text
 Public Website     SEO-capable independent presentation deployment
 Web Workspace      Flutter Web target from the existing app/ codebase
-Desktop App        Flutter Windows/macOS targets from app/ (parallel build; independent acceptance)
-Mobile Companion   Flutter iOS target from app/ (parallel build; independent acceptance)
+Desktop App        Flutter Windows/macOS targets from app/ (current PO device scope; independent acceptance)
+Mobile Companion   Flutter iOS target from app/ (current PO device scope; independent acceptance)
 Product Core       existing Python/Flask canonical API and runtime owners
 ```
 
@@ -191,15 +191,15 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 
 ### 2026-10-08 成熟操作与智能增强的四端一致性
 
-按Product Architecture与Experience§38，四表面按既有角色并行建设、分别验收；保留完整范围，不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要上下滚动。产品范围不等于当前派工；窗口状态由最新直接指令及本地新鲜证据核实。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+按Product Architecture与Experience§38，四表面保留既有角色，按当前PO设备范围建设、分别验收；保留完整范围，不新增入口。Web/Desktop承载实际编辑，Mobile保持已批准触控/轻操作/恢复范围，适用的录音与音频播放逐端验证，缺设备的项目保留OPEN；官网呈现真实已验证能力和明确标记的演示，不宣传尚未实现的媒体/AI。GPT/Apple/Tesla只作为操作、反馈、撤回和状态连续性的参考。SH-01/BMP-08完整媒体操作沿原合同，必要媒体时间轴横向滚动不违反非必要上下滚动。产品范围不等于当前派工；窗口状态由最新直接指令及本地新鲜证据核实。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 ### 2026-10-11 产品内浏览器的端能力（通用电脑控制撤回）
 
 | 端 | 当前交付要求 | 边界 |
 |---|---|---|
 | Web Workspace | 在原任务中显示真实网页、完成获准操作、人工接管/停止、返回及保存恢复；按Web任务独立验收 | 由既有 SYSTEM 会话/权限服务执行，不是任意 iframe 或控制访客电脑 |
-| Desktop Windows/macOS | 同一浏览器与业务合同的原生工作区承载；与其他表面并行建设和独立验收 | 不控制任意本机/远程应用，不读取个人浏览器档案 |
-| iOS Companion | 当前任务内浏览器视口、触控/键盘、状态、接管/停止、返回；与其他表面并行建设和独立验收 | 不控制手机或远程电脑操作系统 |
+| Desktop Windows/macOS | 同一浏览器与业务合同的原生工作区承载；按当前PO设备范围实施并独立验收 | 不控制任意本机/远程应用，不读取个人浏览器档案 |
+| iOS Companion | 当前任务内浏览器视口、触控/键盘、状态、接管/停止、返回；按当前PO设备范围实施并独立验收 | 不控制手机或远程电脑操作系统 |
 | Public Website | 说明已验证能力、标记演示并进入 Workspace | 不以宣传视频替代运行证明 |
 
 移除的是通用桌面/OS控制要求；原生客户端、产品内浏览、文件导入导出和媒体编辑范围保留。AI 增强跨端复用同一任务/版本，缺模型不阻断正常业务。

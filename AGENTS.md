@@ -92,8 +92,8 @@ Registry growth, task dates/no universal start date, honest dimensions, cover-on
 intake with later media understanding, Source rights and protected identities
 remain mandatory under Global §10 and the Collector contract. Source ownership,
 in-flight/process protection, rollback and unrelated work remain protected.
-Website/Web, Windows/macOS and iOS proceed in parallel, with actual acceptance
-recorded separately for each surface. DeepSeek/ancestor inputs, upgraded plans and unfinished material adoption
+Build only currently dispatched surfaces; retain all four planned roles and record
+actual acceptance separately for each surface. DeepSeek/ancestor inputs, upgraded plans and unfinished material adoption
 remain retained; training/API/corpus/deployment need their existing separate grants.
 
 ## Engineering responsibilities and factual window observations
@@ -107,11 +107,11 @@ another product, owner, data store, model service or acceptance standard.
 Actual scheduling belongs to the Product Owner, with current evidence readback.
 OpenCode remains shelved, not an execution fallback.
 
-### 2026-10-11 surface execution: parallel construction, independent acceptance
+### Surface execution: current PO device scope, independent acceptance
 
-The approved Public Website, Web Workspace, Windows/macOS Desktop and iOS
-Companion proceed in parallel through the existing Website and shared Flutter
-implementation. Native work does not wait for Website/Web closure. Preserve each
+Public Website, Web Workspace and Windows execute under the current PO scope;
+macOS/iOS wait for devices and new dispatch. Retain the existing Website/Flutter
+implementation and independent acceptance for all planned surfaces. Preserve each
 surface's approved role, complete requirements, editable assets and outstanding
 acceptance. The zero-new-cost boundary remains; update existing full-outcome
 Goals/continuity records without creating another queue, framework or product.
@@ -870,7 +870,7 @@ Production Truth. Improvements are versioned and pass applicable real E2E,
 page/effect evaluation, regression, observability and rollback. If no upgrade
 is justified, record RESEARCH COMPLETE / NO JUSTIFIED UPGRADE with evidence.
 
-When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and current screen-specific contract. Website/Web, Windows/macOS Desktop and iOS progress in parallel; each surface requires its own actual acceptance. Separate design-draft or M DESIGN_READY review is not a coding prerequisite. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
+When a round involves a page, deliver and run the actual operable page on every target surface promised by that round under the sole Experience Constitution and current screen-specific contract. Execute only the current PO device scope; every planned surface retains independent actual acceptance. Separate design-draft or M DESIGN_READY review is not a coding prerequisite. Commercial-readiness gaps are recorded as `COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY`; they set `COMMERCIAL_READY=NO` but do not stop unrelated in-scope engineering work.
 
 The Product Owner accepted the ROUND 01 source audit, missing-capability
 register and multi-surface direction on 2026-09-21 as planning evidence. The
