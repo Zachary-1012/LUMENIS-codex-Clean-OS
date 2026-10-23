@@ -24,7 +24,8 @@ appearance, localization and narrow-screen navigation are preserved.
 Local Web operation reopened the existing manuscript version 2 from the creation
 library and returned to Home with the unsent draft retained. This is bounded
 navigation/readback evidence, not new analysis, conversational inference or
-whole-product recovery acceptance. See [Home continuity](evidence/round-15/home-workspace-continuity-20261023.json).
+whole-product recovery acceptance. The affected route checks preserve restricted
+scope and direct analysis access; initial CI failures remain recorded. See [Home continuity](evidence/round-15/home-workspace-continuity-20261023.json).
 The remaining editor layouts, complete recent-task/result continuation, original
 visual assets and physical/motion interactions, CTH/BMP chains and each native
 surface still require their planned implementation and actual acceptance.

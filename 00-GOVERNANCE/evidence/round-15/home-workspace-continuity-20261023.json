@@ -10,7 +10,8 @@
     "app/test/features/account/acc03/acc03_screen_test.dart": "48125e890f92bb090d68ecb33a1979ce76ff06d237b56ebdf77dd4e6f93d7075",
     "app/test/features/ai01/ai01_conversations_test.dart": "ca605952aad0b6a8e608e3a15592b32d5f3f0b5aebe99ee66a2f5d002e392408",
     "app/test/shell/lumenis_workspace_shell_test.dart": "0bf4b1f55dfbe2fa4300ac4de7cf107efea9d175adde2a65add769aaaa08e953",
-    "contracts/experience/screen-specifications/ACC-03.md": "fc7977ea9e586cf3c29dc9d5ce60455b37686eb82b3905d68bd0535f29b0bad0"
+    "contracts/experience/screen-specifications/ACC-03.md": "fc7977ea9e586cf3c29dc9d5ce60455b37686eb82b3905d68bd0535f29b0bad0",
+    "app/test/navigation/lumenis_router_test.dart": "383b51ec04a9db2033c30bf6191e54b94bd2c8c73bf7f7592ce5612501440ed8"
   },
   "checks": {
     "flutter_analyze": "PASS - exact changed Home/panel/shell and three test files",
@@ -24,7 +25,12 @@
     "experience_authority": "PASS",
     "experience_anti_template_static": "PASS - not visual review",
     "screen_contracts": "PASS",
-    "source_adoption": "PASS - all 396 coverage rows and 30 outcomes retained"
+    "source_adoption": "PASS - all 396 coverage rows and 30 outcomes retained",
+    "router_regressions": {
+      "passed": 18,
+      "log_sha256": "7529cc0b8ab622cb6c2f7e13159080b62ce765379c2d64b9865489b75be3599e",
+      "classification": "isolated routing regression; not whole-product acceptance"
+    }
   },
   "runtime": {
     "port": 57946,
@@ -50,7 +56,8 @@
   "retained_failures": {
     "initial_home_widgets": "Layout overflow/stale layout assertions repaired; initial logs retained locally.",
     "unknown_creation_confirmation_test": "Initial cancellation locator used wrong locale; localized dialog cancellation now checked without issuing another create.",
-    "media_properties_change": "Changing media inspector initial visibility exposed 22 existing regressions. This unrelated layout change was withdrawn; media workbench matches HEAD. Logs retained."
+    "media_properties_change": "Changing media inspector initial visibility exposed 22 existing regressions. This unrelated layout change was withdrawn; media workbench matches HEAD. Logs retained.",
+    "pr134_app_gate_39883951353": "462 passed, four failed router expectations still required the removed embedded analysis form. Updated those Home checks to the actual conversation panel/input; direct analysis-route checks and all permission/navigation assertions retained. No gate weakened."
   },
   "limits": [
     "No new conversational inference was performed; history/persistence wiring has isolated checks only.",
