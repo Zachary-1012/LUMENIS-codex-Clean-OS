@@ -962,6 +962,17 @@
   "sh01.media.denoise_original": "原音频保留，导出时应用降噪。",
   "sh01.media.audio_files": "音频文件",
   "sh01.media.wav_included": "工程包包含 WAV，可同时添加：",
-  "sh01.media.audio_delivery_failed": "音频导出未完成，草稿及已有版本已保留。请调整处理设置后重试。"
+  "sh01.media.audio_delivery_failed": "音频导出未完成，草稿及已有版本已保留。请调整处理设置后重试。",
+  "sh01.media.audio_adjust": "试听与调整",
+  "sh01.media.audio_sample_range": "试听片段",
+  "sh01.media.audio_sample_hint": "最多试听60秒。处理按完整节目计算。",
+  "sh01.media.audio_prepare": "生成试听",
+  "sh01.media.audio_preparing": "正在准备试听…",
+  "sh01.media.audio_preview_failed": "暂时无法试听，请检查素材后重试。",
+  "sh01.media.audio_unprocessed": "处理前",
+  "sh01.media.audio_processed": "处理后",
+  "sh01.media.audio_programme_measurement": "整段节目测量",
+  "sh01.media.audio_adopt": "采用调整",
+  "sh01.media.audio_off": "关闭"
  }
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'audio_comparison_fixture.dart';
 import 'dart:ui' show Tristate;
 
 import 'package:file_selector/file_selector.dart';
@@ -82,6 +83,23 @@ Map<String, dynamic> _batchResponse(
 
 // These are widget contract fixtures, never media/render or user E2E evidence.
 class _Client extends LumenisCoreClient {
+  @override
+  Future<Map<String, dynamic>> inspectAudioProcessing({
+    required String? domainId,
+    List<String>? assetPaths,
+    List<String>? assetRefs,
+    required Map<String, dynamic> timeline,
+    required Map<String, double> renderOptions,
+    required double startSec,
+    required double endSec,
+  }) async => audioComparisonFixture(
+    timeline,
+    assetRefs,
+    renderOptions,
+    startSec,
+    endSec,
+  );
+
   int imports = 0;
   int importCalls = 0;
   int inspectCalls = 0;
@@ -682,7 +700,7 @@ void main() {
       expect(controller.deliveryOptions['audio_formats'], ['m4a', 'mp3']);
       expect(client.exports, 0);
       controller.setTitle('Audio delivery');
-    client.successfulExport = true;
+      client.successfulExport = true;
       await controller.export(outputKind: 'audio', renderMedia: false);
       await tester.pumpAndSettle();
       expect(controller.version!.rendered, isFalse);
@@ -3154,62 +3172,56 @@ void main() {
     },
   );
 
-  testWidgets(
-    'loudness selection remains explicit and does not process before export',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1440, 1100));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await _prepareEditableProject(client, controller);
-      await tester.pumpWidget(_app(client, controller));
-      await tester.pumpAndSettle();
-      final mastering = find.byKey(const Key('media-mastering'));
-      await tester.ensureVisible(mastering);
-      await tester.tap(mastering);
-      await tester.pumpAndSettle();
-      expect(find.text('保持原音量'), findsOneWidget);
-      final target = find.byKey(const ValueKey('media-loudness-target-null'));
-      await tester.ensureVisible(target);
-      await tester.tap(target);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('-16 LUFS').last);
-      await tester.pumpAndSettle();
-      expect(controller.renderOptions, {'loudness_target_lufs': -16});
-      expect(client.exports, 0);
-      expect(tester.takeException(), isNull);
-    },
-  );
-
-  testWidgets(
-    'noise reduction is explicit and preserves loudness without exporting',
-    (tester) async {
-      await tester.binding.setSurfaceSize(const Size(1440, 1100));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-      await _prepareEditableProject(client, controller);
-      controller.setLoudnessTarget(-16);
-      await tester.pumpWidget(_app(client, controller));
-      await tester.pumpAndSettle();
-      final section = find.byKey(const Key('media-denoise'));
-      await tester.ensureVisible(section);
-      await tester.tap(section);
-      await tester.pumpAndSettle();
-      final toggle = find.byKey(const Key('media-denoise-enabled'));
-      expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
-      await tester.ensureVisible(toggle);
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-      expect(controller.renderOptions, {
-        'loudness_target_lufs': -16,
-        'noise_reduction_db': 12,
-        'noise_floor_db': -50,
-      });
-      expect(find.byKey(const Key('media-denoise-amount')), findsOneWidget);
-      expect(client.exports, 0);
-      await tester.tap(toggle);
-      await tester.pumpAndSettle();
-      expect(controller.renderOptions, {'loudness_target_lufs': -16});
-      expect(tester.takeException(), isNull);
-    },
-  );
+  for (final adopt in [false, true]) {
+    testWidgets(
+      'audio preview ${adopt ? "adopts" : "cancels"} explicit settings without exporting',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1440, 1100));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await _prepareEditableProject(client, controller);
+        await tester.pumpWidget(_app(client, controller));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('media-mastering')));
+        await tester.tap(find.byKey(const Key('media-mastering')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('media-audio-adjust')));
+        await tester.tap(find.byKey(const Key('media-audio-adjust')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('audio-preview-target')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('-16 LUFS').last);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('audio-preview-denoise')));
+        await tester.pumpAndSettle();
+        expect(controller.renderOptions, isEmpty);
+        await tester.ensureVisible(
+          find.byKey(const Key('audio-preview-prepare')),
+        );
+        await tester.tap(find.byKey(const Key('audio-preview-prepare')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('audio-preview-select')), findsOneWidget);
+        expect(controller.renderOptions, isEmpty);
+        await tester.tap(
+          find.byKey(
+            Key(adopt ? 'audio-preview-adopt' : 'audio-preview-cancel'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          controller.renderOptions,
+          adopt
+              ? {
+                  'loudness_target_lufs': -16,
+                  'noise_reduction_db': 12,
+                  'noise_floor_db': -50,
+                }
+              : isEmpty,
+        );
+        expect(client.exports, 0);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
 
   testWidgets('no-change and stale-parent rejects use safe editor copy', (
     tester,

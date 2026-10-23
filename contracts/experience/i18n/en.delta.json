@@ -962,6 +962,17 @@
   "sh01.media.denoise_original": "Original audio is kept. Noise reduction applies on export.",
   "sh01.media.audio_files": "Audio files",
   "sh01.media.wav_included": "The project package includes WAV. Also include:",
-  "sh01.media.audio_delivery_failed": "Audio export did not finish. Your draft and saved versions are kept. Adjust processing settings and retry."
+  "sh01.media.audio_delivery_failed": "Audio export did not finish. Your draft and saved versions are kept. Adjust processing settings and retry.",
+  "sh01.media.audio_adjust": "Listen and adjust",
+  "sh01.media.audio_sample_range": "Listening range",
+  "sh01.media.audio_sample_hint": "Listen to up to 60 seconds. Processing uses the full programme.",
+  "sh01.media.audio_prepare": "Prepare preview",
+  "sh01.media.audio_preparing": "Preparing audio…",
+  "sh01.media.audio_preview_failed": "Preview unavailable. Check the source files and try again.",
+  "sh01.media.audio_unprocessed": "Before",
+  "sh01.media.audio_processed": "After",
+  "sh01.media.audio_programme_measurement": "Full-programme measurements",
+  "sh01.media.audio_adopt": "Use adjustments",
+  "sh01.media.audio_off": "Off"
  }
 }

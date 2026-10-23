@@ -152,3 +152,71 @@ def test_cross_domain_focus_cannot_be_relabelled(inspection_client, monkeypatch)
     })
     assert response.status_code == 403
     assert rows(store) == []
+
+
+def _audio_comparison_request(store, **changes):
+    from lumenis.shared.content_creation.video_editing import (
+        Timeline,
+        fingerprint_local_media,
+    )
+    asset = fingerprint_local_media(str(store["source"]))
+    timeline = Timeline.from_assets([asset]).add_audio_track("voice", audio_role="voiceover")
+    timeline = timeline.add_clip(asset.asset_id, track_id="voice", audio_stream_index=0)
+    options = {"start_sec": 0, "end_sec": .5, "render_options": {"loudness_target_lufs": -23}}
+    options.update(changes)
+    return {"asset_paths": [str(store["source"])], "timeline": timeline.to_dict(), "audio_comparison": options}
+
+
+def test_audio_comparison_decodes_real_same_range_without_saving(inspection_client):
+    import base64
+    import io
+    import wave
+    client, store, _ = inspection_client
+    original = store["source"].read_bytes()
+    response = inspect(client, store, payload=_audio_comparison_request(store))
+    assert response.status_code == 200, response.get_json()
+    result = response.get_json()["audio_comparison"]
+    assert response.headers["Cache-Control"] == "no-store"
+    assert result["persisted"] is False and result["export_performed"] is False
+    assert result["approval_required"] is True
+    assert abs(result["programme_measurements"]["processed"]["integrated_lufs"] + 23) < 1
+    assert result["samples"]["original"]["sha256"] != result["samples"]["processed"]["sha256"]
+    for sample in result["samples"].values():
+        data = base64.b64decode(sample["wav_base64"], validate=True)
+        assert len(data) == sample["size_bytes"] and hashlib.sha256(data).hexdigest() == sample["sha256"]
+        with wave.open(io.BytesIO(data)) as audio:
+            assert audio.getnframes() == 24000 and audio.getframerate() == 48000
+            assert audio.getnchannels() == 2 and audio.getsampwidth() == 2
+    assert store["source"].read_bytes() == original
+    assert rows(store) == [] and not store["root"].exists()
+
+
+@pytest.mark.parametrize("change", [
+    {"start_sec": -1}, {"end_sec": 61}, {"end_sec": 0},
+    {"start_sec": True}, {"render_options": {"noise_reduction_db": 30}},
+])
+def test_invalid_audio_preview_never_decodes_or_saves(inspection_client, monkeypatch, change):
+    from lumenis.shared.content_creation import rendering
+    client, store, _ = inspection_client
+    payload = _audio_comparison_request(store, **change)
+    monkeypatch.setattr(rendering, "_run", lambda *a, **k: pytest.fail("invalid preview decoded audio"))
+    assert inspect(client, store, payload=payload).status_code == 400
+    assert rows(store) == [] and not store["root"].exists()
+
+
+def test_audio_comparison_permission_change_stops_processing(inspection_client, monkeypatch):
+    import experience_runtime
+    from shared_artifacts import LocalArtifactError
+    client, store, _ = inspection_client
+    payload = _audio_comparison_request(store)
+    original_scope = experience_runtime._content_project_scope
+    count = 0
+    def changing_scope(action):
+        nonlocal count
+        count += 1
+        if count >= 3:
+            raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
+        return original_scope(action)
+    monkeypatch.setattr(experience_runtime, "_content_project_scope", changing_scope)
+    assert inspect(client, store, payload=payload).status_code != 200
+    assert count >= 3 and rows(store) == [] and not store["root"].exists()

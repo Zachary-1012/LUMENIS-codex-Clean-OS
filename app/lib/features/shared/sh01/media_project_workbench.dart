@@ -14,6 +14,7 @@ import '../../../core/lumenis_icon.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import '../../../navigation/lumenis_leave_guard.dart';
 import 'media_preview.dart';
+import 'media_audio_comparison.dart';
 import 'media_source_waveform.dart';
 import '../read_aloud_action.dart';
 import 'media_project_controller.dart';
@@ -2031,32 +2032,32 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       maintainState: true,
       children: [
         const SizedBox(height: 12),
-        DropdownButtonFormField<double>(
-          key: ValueKey('media-loudness-target-$target'),
-          initialValue: target ?? 0,
-          isExpanded: true,
-          icon: const LumenisIcon(Icons.keyboard_arrow_down_rounded, size: 18),
-          decoration: InputDecoration(
-            labelText: _copy(context, 'loudness_target'),
-          ),
-          items: [
-            DropdownMenuItem(
-              value: 0,
-              child: Text(_copy(context, 'master_off')),
-            ),
-            for (final target in [-16.0, -14.0, -23.0])
-              DropdownMenuItem(
-                value: target,
-                child: Text('${target.toInt()} LUFS'),
-              ),
-          ],
-          onChanged: _isBusy || !_canUseCurrentContext
+        Text(
+          target == null
+              ? _copy(context, 'master_off')
+              : '${target.toInt()} LUFS',
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          key: const Key('media-audio-adjust'),
+          onPressed:
+              _isBusy ||
+                  !_canUseCurrentContext ||
+                  (_controller.timeline?.durationSec ?? 0) <= 0
               ? null
-              : (value) {
-                  if (value != null) {
-                    _controller.setLoudnessTarget(value == 0 ? null : value);
+              : () async {
+                  setState(() => _batchPreviewOpen = true);
+                  try {
+                    await showAudioProcessingDialog(
+                      context,
+                      _controller,
+                      startSec: _timelinePlayheadSec ?? 0,
+                    );
+                  } finally {
+                    if (mounted) setState(() => _batchPreviewOpen = false);
                   }
                 },
+          child: Text(_copy(context, 'audio_adjust')),
         ),
         const SizedBox(height: 8),
         Text(_copy(context, 'master_on_export')),
@@ -2099,74 +2100,12 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   Widget _noiseReduction() {
     final options = _controller.renderOptions;
     final enabled = options.containsKey('noise_reduction_db');
-    final reduction = options['noise_reduction_db'] ?? 12.0;
-    final floor = options['noise_floor_db'] ?? -50.0;
-    final editable = !_isBusy && _canUseCurrentContext;
-    return ExpansionTile(
+    return Padding(
       key: const Key('media-denoise'),
-      tilePadding: EdgeInsets.zero,
-      trailing: const LumenisExpansionIndicator(),
-      title: Text(_copy(context, 'denoise')),
-      maintainState: true,
-      children: [
-        SwitchListTile.adaptive(
-          key: const Key('media-denoise-enabled'),
-          contentPadding: EdgeInsets.zero,
-          title: Text(_copy(context, 'denoise_enable')),
-          value: enabled,
-          onChanged: editable
-              ? (value) => _controller.setNoiseReduction(
-                  enabled: value,
-                  reduction: reduction,
-                  floor: floor,
-                )
-              : null,
-        ),
-        if (enabled) ...[
-          Text(
-            '${_copy(context, 'denoise_amount')} · ${reduction.toStringAsFixed(0)} dB',
-          ),
-          Slider(
-            key: const Key('media-denoise-amount'),
-            value: reduction,
-            min: 3,
-            max: 18,
-            divisions: 15,
-            label: '${reduction.toStringAsFixed(0)} dB',
-            semanticFormatterCallback: (value) =>
-                '${_copy(context, 'denoise_amount')} ${value.toStringAsFixed(0)} dB',
-            onChanged: editable
-                ? (value) => _controller.setNoiseReduction(
-                    enabled: true,
-                    reduction: value,
-                    floor: floor,
-                  )
-                : null,
-          ),
-          Text(
-            '${_copy(context, 'denoise_floor')} · ${floor.toStringAsFixed(0)} dB',
-          ),
-          Slider(
-            key: const Key('media-denoise-floor'),
-            value: floor,
-            min: -80,
-            max: -20,
-            divisions: 60,
-            label: '${floor.toStringAsFixed(0)} dB',
-            semanticFormatterCallback: (value) =>
-                '${_copy(context, 'denoise_floor')} ${value.toStringAsFixed(0)} dB',
-            onChanged: editable
-                ? (value) => _controller.setNoiseReduction(
-                    enabled: true,
-                    reduction: reduction,
-                    floor: value,
-                  )
-                : null,
-          ),
-        ],
-        Text(_copy(context, 'denoise_original')),
-        const SizedBox(height: 12),
-      ],
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Text(
+        '${_copy(context, 'denoise')} · ${enabled ? '${options['noise_reduction_db']!.toStringAsFixed(0)} dB' : _copy(context, 'audio_off')}',
+      ),
     );
   }
 

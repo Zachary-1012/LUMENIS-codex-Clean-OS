@@ -3537,7 +3537,7 @@ def inspect_content_project_media():
         if not isinstance(body, dict) or body.get("action_type") != "READ":
             raise LocalArtifactError("CONTENT_INSPECT_REQUIRES_READ")
         payload = body.get("input")
-        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcript_edit", "edit_batch"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
+        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcript_edit", "edit_batch", "audio_comparison"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
             raise LocalArtifactError("INVALID_CONTENT_INPUT")
         actor, scope = _content_project_scope("read")
         with _content_project_assets(payload, actor, scope) as (_, assets, source_refs):
@@ -3545,6 +3545,28 @@ def inspect_content_project_media():
                 current_actor, current_scope = _content_project_scope("read")
                 if current_actor != actor or current_scope != scope:
                     raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
+            if "audio_comparison" in payload:
+                from lumenis.shared.content_creation.rendering import (
+                    preview_audio_processing,
+                )
+                from lumenis.shared.content_creation.video_editing import Timeline
+                options = payload["audio_comparison"]
+                if (set(payload) - {"asset_paths", "asset_refs", "timeline", "audio_comparison"}
+                        or "timeline" not in payload or not isinstance(options, dict)
+                        or set(options) != {"start_sec", "end_sec", "render_options"}):
+                    raise LocalArtifactError("AUDIO_COMPARISON_INPUT_INVALID")
+                original = Timeline.from_dict(payload["timeline"], assets=assets)
+                comparison = preview_audio_processing(original, **options, check_continue=check_read)
+                check_read()
+                with _content_project_assets(payload, actor, scope) as (_, fresh_assets, _):
+                    if [asset.to_dict() for asset in fresh_assets] != [asset.to_dict() for asset in assets]:
+                        raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_AUDIO_PREVIEW")
+                response = jsonify({"ok": True, "audio_comparison": comparison,
+                                    "assets": [asset.to_dict() for asset in assets],
+                                    "source_artifact_refs": source_refs, "rights_state": "unknown",
+                                    "external_fetch": False})
+                response.headers["Cache-Control"] = "no-store"
+                return response
             edit_batch = None
             if "edit_batch" in payload:
                 from lumenis.shared.content_creation.video_editing import Timeline

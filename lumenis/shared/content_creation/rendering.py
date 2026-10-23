@@ -474,7 +474,7 @@ def _render_audio(timeline: Timeline, *, duration: float, ffmpeg: str, work: Pat
 
 
 def _probe_output(path: Path, ffprobe: str, *, output_kind: str, duration: float,
-                  has_audio: bool) -> dict[str, Any]:
+                  has_audio: bool, preview: bool = False) -> dict[str, Any]:
     try:
         result = subprocess.run(
             [ffprobe, "-v", "error", "-protocol_whitelist", "file", "-format_whitelist", "mov,wav",
@@ -502,7 +502,8 @@ def _probe_output(path: Path, ffprobe: str, *, output_kind: str, duration: float
         audio_metadata_valid = not audio or (
             int(audio[0]["sample_rate"]) == SAMPLE_RATE
             and int(audio[0]["channels"]) == 2
-            and audio[0].get("codec_name") == ("aac" if output_kind == "video" else "pcm_s24le")
+            and audio[0].get("codec_name") == ("aac" if output_kind == "video" else
+                                              "pcm_s16le" if preview else "pcm_s24le")
         )
         if (len(video) != expected_video or len(audio) != expected_audio
                 or (video and (frames != expected_video_frames or video[0].get("codec_name") != "h264"))
@@ -627,26 +628,7 @@ def _verify_final_audio_peak(rendered: Path, audio: Path, *, ffmpeg: str,
     }
 
 
-def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "video",
-                    check_continue: Callable[[], None] | None = None,
-                    render_options: dict[str, Any] | None = None,
-                    artifact_workspace: Path | None = None) -> dict[str, Any]:
-    """Render to a new private workspace file; never authorize export."""
-    from shared_artifacts import _ffmpeg_path
-
-    timeline.validate()
-    render_options = validate_render_options(render_options)
-    if check_continue:
-        check_continue()
-    run_options = {"check_continue": check_continue} if check_continue else {}
-    if output_kind not in {"video", "audio"}:
-        raise VideoEditingError("OUTPUT_KIND_NOT_SUPPORTED")
-    output = _validate_output_path(Path(output), output_kind=output_kind,
-                                   artifact_workspace=artifact_workspace)
-    if timeline.format_ratio not in FRAME_SIZES:
-        raise VideoEditingError("FORMAT_RATIO_NOT_SUPPORTED")
-    if timeline.overlays and output_kind != "video":
-        raise VideoEditingError("OVERLAYS_REQUIRE_VIDEO_OUTPUT")
+def _timeline_render_plan(timeline: Timeline, output_kind: str):
     clips = [clip for track in timeline.tracks for clip in track.clips]
     if not clips or len(clips) > MAX_RENDER_CLIPS:
         raise VideoEditingError("RENDER_REQUIRES_ONE_TO_128_CLIPS")
@@ -691,8 +673,33 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
     audio_clips = [clip for track in timeline.tracks for clip in track.clips
                    if clip.audio_role != "muted"
                    and next(asset for asset in timeline.assets if asset.asset_id == clip.media_asset_id).audio_stream_count]
-    if output_kind == "audio" and not audio_clips:
+    if output_kind in {"audio", "audio_preview"} and not audio_clips:
         raise VideoEditingError("AUDIO_EXPORT_REQUIRES_AUDIO_SOURCE")
+
+    return duration, video_tracks, ducked_clips, audio_clips, transitions
+
+
+def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "video",
+                    check_continue: Callable[[], None] | None = None,
+                    render_options: dict[str, Any] | None = None,
+                    artifact_workspace: Path | None = None) -> dict[str, Any]:
+    """Render to a new private workspace file; never authorize export."""
+    from shared_artifacts import _ffmpeg_path
+
+    timeline.validate()
+    render_options = validate_render_options(render_options)
+    if check_continue:
+        check_continue()
+    run_options = {"check_continue": check_continue} if check_continue else {}
+    if output_kind not in {"video", "audio"}:
+        raise VideoEditingError("OUTPUT_KIND_NOT_SUPPORTED")
+    output = _validate_output_path(Path(output), output_kind=output_kind,
+                                   artifact_workspace=artifact_workspace)
+    if timeline.format_ratio not in FRAME_SIZES:
+        raise VideoEditingError("FORMAT_RATIO_NOT_SUPPORTED")
+    if timeline.overlays and output_kind != "video":
+        raise VideoEditingError("OVERLAYS_REQUIRE_VIDEO_OUTPUT")
+    duration, video_tracks, ducked_clips, audio_clips, transitions = _timeline_render_plan(timeline, output_kind)
 
     ffmpeg = _ffmpeg_path()
     ffprobe = _ffprobe_path() if ffmpeg else None
@@ -713,15 +720,7 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                           "font_sha256": hashlib.sha256((work / "caption-font.ttc").read_bytes()).hexdigest()}
                          if overlays else {})
         audio = _render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=work, **run_options)
-        mastering = {};denoising = {}
-        if render_options and audio is None:
-            raise VideoEditingError("AUDIO_MASTER_REQUIRES_AUDIO")
-        if "noise_reduction_db" in render_options:
-            audio,denoising=_denoise_audio(audio,ffmpeg=ffmpeg,reduction=render_options["noise_reduction_db"],
-                                          noise_floor=render_options["noise_floor_db"],**run_options)
-        if "loudness_target_lufs" in render_options:
-            audio, mastering = _master_audio(audio, ffmpeg=ffmpeg,
-                                            target=render_options["loudness_target_lufs"], **run_options)
+        audio, mastering, denoising = _process_audio(audio, ffmpeg, render_options, **run_options)
         rendered = work / ("media.mp4" if output_kind == "video" else "media.wav")
         if video_tracks:
             segments: list[Path] = []
@@ -843,6 +842,79 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                                  "loudness_normalized": bool(mastering), "mastering": mastering,
                                  "noise_reduction_applied":bool(denoising),"denoising":denoising, **peak_processing},
             "rights_state": "unknown", "publish_status": "not_performed"}
+
+
+def _process_audio(audio, ffmpeg, options, *, check_continue=None):
+    mastering, denoising = {}, {}
+    if options and audio is None:
+        raise VideoEditingError("AUDIO_MASTER_REQUIRES_AUDIO")
+    if "noise_reduction_db" in options:
+        audio, denoising = _denoise_audio(
+            audio, ffmpeg=ffmpeg, reduction=options["noise_reduction_db"],
+            noise_floor=options["noise_floor_db"], check_continue=check_continue,
+        )
+    if "loudness_target_lufs" in options:
+        audio, mastering = _master_audio(
+            audio, ffmpeg=ffmpeg, target=options["loudness_target_lufs"], check_continue=check_continue,
+        )
+    return audio, mastering, denoising
+
+
+def preview_audio_processing(timeline: Timeline, *, start_sec: float, end_sec: float,
+                             render_options=None, check_continue=None) -> dict[str, Any]:
+    import base64
+
+    from shared_artifacts import _ffmpeg_path
+
+    timeline.validate()
+    options = validate_render_options(render_options)
+    duration, _, _, _, _ = _timeline_render_plan(timeline, "audio_preview")
+    if (type(start_sec) not in (int, float) or type(end_sec) not in (int, float)
+            or not math.isfinite(start_sec) or not math.isfinite(end_sec)
+            or not 0 <= start_sec < end_sec <= duration or end_sec - start_sec > 60):
+        raise VideoEditingError("AUDIO_COMPARISON_RANGE_INVALID")
+    ffmpeg, ffprobe = _ffmpeg_path(), _ffprobe_path()
+    if not ffmpeg or not ffprobe:
+        raise VideoEditingError("MEDIA_RENDER_TOOLS_UNAVAILABLE")
+    if check_continue:
+        check_continue()
+    _verify_sources(timeline)
+    with tempfile.TemporaryDirectory(prefix="audio-comparison-") as temporary:
+        work = Path(temporary)
+        original = _render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=work,
+                                 check_continue=check_continue)
+        before = _measure_loudness(original, ffmpeg, check_continue=check_continue)
+        processed, mastering, _ = _process_audio(original, ffmpeg, options, check_continue=check_continue)
+        processed, after, _ = _verify_final_audio_peak(
+            processed, processed, ffmpeg=ffmpeg, output_kind="audio", duration=duration,
+            check_continue=check_continue,
+        )
+        if mastering and (after["integrated_lufs"] is None or
+                          abs(after["integrated_lufs"] - mastering["target_lufs"]) > 1):
+            raise VideoEditingError("AUDIO_MASTER_TARGET_NOT_REACHED")
+        samples = {}
+        for name, source in (("original", original), ("processed", processed)):
+            output = work / f"{name}-sample.wav"
+            _run([ffmpeg, "-v", "error", "-nostdin", "-n", "-protocol_whitelist", "file",
+                  "-format_whitelist", "wav", "-i", str(source), "-map", "0:a:0", "-af",
+                  f"atrim=start={_number(start_sec)}:end={_number(end_sec)},asetpts=PTS-STARTPTS",
+                  "-ar", str(SAMPLE_RATE), "-ac", "2", "-c:a", "pcm_s16le", str(output)],
+                 cwd=work, check_continue=check_continue)
+            _probe_output(output, ffprobe, output_kind="audio", duration=end_sec-start_sec,
+                          has_audio=True, preview=True)
+            data = output.read_bytes()
+            if len(data) > 12 * 1024 * 1024:
+                raise VideoEditingError("AUDIO_COMPARISON_TOO_LARGE")
+            samples[name] = {"wav_base64": base64.b64encode(data).decode("ascii"),
+                             "sha256": hashlib.sha256(data).hexdigest(), "size_bytes": len(data)}
+        _verify_sources(timeline)
+        if check_continue:
+            check_continue()
+    return {"state": "preview", "base_version": timeline.version, "base_digest": timeline._view_digest(),
+            "start_sec": start_sec, "end_sec": end_sec, "programme_duration_sec": duration,
+            "render_options": options, "samples": samples,
+            "programme_measurements": {"original": before, "processed": after},
+            "persisted": False, "export_performed": False, "approval_required": True}
 
 
 def validate_render_options(options: Any = None) -> dict[str, Any]:
