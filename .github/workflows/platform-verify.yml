@@ -154,7 +154,7 @@ jobs:
               'tests/test_rectification_truth_chain_20261010.py',
               'tests/test_governance_machine_contract.py', 'tests/test_online_progress_governance.py', '.codex/tests/test_engineering.py',
               'tests/test_ai_task_engine.py', 'tests/test_content_generation_parent_evidence.py',
-              'tests/test_ai_conversation_owner.py', 'tests/test_ai_conversation_migration.py',
+              'tests/test_ai_conversation_migration.py',
               'tests/test_xhs_cdp_native_truth.py', 'tests/test_source_brief_job.py',
               'tests/test_business_decision_workflow.py', 'tests/test_runtime_api_diagnostics.py',
               'tests/agent_capability/test_router.py',
@@ -259,7 +259,7 @@ jobs:
               'tests/test_internal_pitch_shared_av.py::test_pitch_unauthenticated_read_cannot_initialize_account_database']))
           PY
 
-      - name: Test training-owner HTTP authorization with owned ephemeral listener (BLOCKING)
+      - name: Test owner HTTP authorization with owned ephemeral listener (BLOCKING)
         timeout-minutes: 3
         shell: bash
         env:
@@ -302,6 +302,7 @@ jobs:
           import pytest
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-owned-http.xml'),
+              'tests/test_ai_conversation_owner.py',
               'tests/test_owned_training_runtime_recovery.py::test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation']))
           PY
 

@@ -1,12 +1,12 @@
 {
-  "recorded_at": "2026-10-24T06:17:23.426404+00:00",
+  "recorded_at": "2026-10-24T06:36:40.294983+00:00",
   "source_base": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
   "scope": "Integrated Web/Windows Home, unsent draft and existing manuscript continuity. Entire 30 outcome groups / 396 requirements remain OPEN.",
   "state": "IMPLEMENTED_WITH_BOUNDED_WEB_OPERATION",
   "source_pins": {
     ".github/workflows/app-verify.yml": "05a4ca41e578fc306c66418e414aaec3eed8ba74f69ebe33f510afdd73199b79",
-    ".github/workflows/platform-verify.yml": "60ebf6c30189f48670e7c448bc3a6c9f2e2f429b88ea34575452ca3865b0823d",
-    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": "dd106c9fab2ab06c2eb929d1c3316c60f56b9356c09d8203802ebd8dfdb48f68",
+    ".github/workflows/platform-verify.yml": "ef0018ce28335243896c364193d6ebfa031aadbf291c1339479def55ec5c0eb1",
+    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": "1bb6acca3a764d754338342f1044a1112745ad3231bfd2859b305aa4e88227fb",
     "app/lib/core/lumenis_core_client.dart": "caf7c7b2c4b787ff927b27d8cc68a9dc5d57c333c1266195f96ed13a8c642e56",
     "app/lib/core/lumenis_theme.dart": "169f2abbc6b400877794a2b4b7867284ca9b5b1f164bbb0a5118afc341c3dabe",
     "app/lib/features/account/acc03/acc03_screen.dart": "0f5cdd0ba0ba98dfea7391edc1b7a9c3fe7fa61564dde269f580211c7d32bfdb",
@@ -22,21 +22,23 @@
     "app/test/shell/lumenis_workspace_shell_test.dart": "f2086822776266ce2c4aead6b36f8a349fd21b7d2a2bc04d737e7ec244fb8763",
     "contracts/experience/screen-specifications/ACC-03.md": "264c28b035c1af48cc4cbf0acfe6f388dd96cc39b015274b8475023daf6dffa4",
     "contracts/experience/screen-specifications/AI-01.md": "2e7c8117053b05eed8caddf46ee50899f7deaf0bcadebc751f0d1ed5bf756b20",
-    "contracts/experience/screen-specifications/SH-01.md": "8a5133c27d378b97aad59e698a561e0209de0459394f06cfb5287ca0269f8d9a",
+    "contracts/experience/screen-specifications/SH-01.md": "499d1e9f8edc4bd8a121d877dd47e5d1156f5744144849da55889165a42ced8b",
     "lumenis/ai_hub/conversations.py": "f08d8e36b7403bf79770050fa3d0efd8ecd40f8a4ec4fdbe0943742e18d67f7a",
     "lumenis/ai_hub/routes.py": "32432177e84007f416f7a320e1e82e4eb46ce824781e48b77e27a1c447c4c5a5",
     "lumenis/shared/database/migrations.py": "660d1a844357640b8c357781c4aa31359249107d3385175d5af183ad0d881ec6",
     "tests/test_ai_conversation_migration.py": "e872fd48175d3e75e2bd1a408acc86fdab398852f27e66ccd9a7d6a68ab5b413",
-    "tests/test_ai_conversation_owner.py": "f33cdeca12da1f95cb7b6c2855e34aa62560bfd23fd100ec946b391fb785f7de"
+    "tests/test_ai_conversation_owner.py": "f33cdeca12da1f95cb7b6c2855e34aa62560bfd23fd100ec946b391fb785f7de",
+    "app/lib/features/shared/sh01/sh01_screen.dart": "f1d2b35724357fe29de7aa99ebc978ad33e6637787a63248cc582446dc32d0dc"
   },
   "verification": {
     "python_owner_migration": "16 PASS, isolated SQLite, not production DB",
-    "flutter_affected": "59 distinct affected regressions: 26 shell, 15 manuscript controller, 10 manuscript editor, 4 draft including IME composition, 4 Home. Latest changed draft run 4 PASS; controller/editor run 25 PASS.",
-    "flutter_analyze": "PASS no issues",
-    "flutter_web_build": "PASS current source including IME protection, 100.5 seconds; work/product-closure-20261011/workspace-20261024/web-build-final.log",
-    "flutter_windows_build": "PASS current source including IME protection, 74.7 seconds; work/product-closure-20261011/workspace-20261024/windows-build-final.log. Prior release actually launched/read draft and manuscript v3; final build is not a new native interaction acceptance.",
+    "flutter_affected": "82 distinct affected regressions: 26 shell, 15 manuscript controller, 10 manuscript editor, 4 draft including IME, 4 Home and 23 creation-screen tests including Chinese/English/Korean at 200 percent. Not product acceptance.",
+    "flutter_analyze": "PASS no issues; latest creation layout 9.6 seconds",
+    "flutter_web_build": "PASS final paired narrow layout release, 108.5 seconds. Build is not user acceptance.",
+    "flutter_windows_build": "PASS final paired narrow layout release, 75.1 seconds. Native write acceptance remains NOT_VERIFIED.",
     "ruff": "46 baseline findings, 0 new against exact base; full-file lint is not clean",
-    "governance": "Constitution, Experience authority/anti-template/screen blueprints, machine governance, configuration, single product and refreshed source adoption PASS. Publication gate runs against staged change."
+    "governance": "Constitution, Experience authority/anti-template/screen blueprints, machine governance, configuration, single product and refreshed source adoption PASS. Publication gate runs against staged change.",
+    "owned_http_ci_step": "PASS all 12 existing selected tests under the exact workflow owned-ephemeral socket guard; no external connection, no thread leak."
   },
   "runtime": {
     "port": 58724,
@@ -71,6 +73,11 @@
       "action": "Open same actual workspace and persisted draft, select manuscript version2",
       "observed": "Latest Windows release opened the same persisted draft and Home manuscript v3. Native input still did not apply despite focused field; native writing NOT_VERIFIED. Earlier screenshot pins v2 only.",
       "screenshot_sha256": "bf4f20540654bf1f41b37dc78604049ffa61de48d49e489d65a6e8575fd6a131"
+    },
+    {
+      "surface": "Web",
+      "action": "Creation entry groups verified versions of the same work and previews actual saved text",
+      "observed": "At 1440x900, one manuscript folio displayed version3 and its version menu independently opened version2 and version1. Final 390x844 release uses two paired action rows; clicking the folio reopened actual saved version3 and returning retained the library. No Artifact edited or overwritten by grouping."
     }
   ],
   "retained_failures": [
@@ -81,7 +88,8 @@
     "Core restart rejected by execution policy, no workaround attempted.",
     "Real old-parent save returned WORK_REVISION_CONFLICT; task-pitch-72223d5779469ba0b6d5b189 was cancelled and read back cancelled. New explicit continue-from-latest operation subsequently saved v3 through original Owner/CAS, not replay or weakened guard.",
     "First staged publication guard found the historical RULES_ONLY_PUBLICATION marker still active; current publication state reconciled in the existing snapshot before commit, without changing the validator.",
-    "Authorized XLSX upload was denied by browser tool workspace-root enforcement for both the supplied attachment and a previously approved project-local seed; no upload occurred and no alternate transport was attempted."
+    "Authorized XLSX upload was denied by browser tool workspace-root enforcement for both the supplied attachment and a previously approved project-local seed; no upload occurred and no alternate transport was attempted.",
+    "PR140 first Product Gate failed because the complete conversation owner test file includes a real ephemeral TCP test and had been assigned to the offline-deny-all step. Entire owner file moved to existing guarded ephemeral HTTP step; no test or assertion removed, skipped or weakened. Exact step replay passed 12 tests."
   ],
   "remaining": [
     "Full planned visual acceptance and task-specific surfaces",
