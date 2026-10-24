@@ -546,7 +546,7 @@ void main() {
     expect(file.bytes, [0x50, 0x4b, 0x03, 0x04]);
     expect(
       server.requests.single.path,
-      '/api/experience/saved-work/ART-0123456789abcdef/export?format=pptx',
+      '/api/experience/saved-work/ART-0123456789abcdef/export?format=pptx&purpose=delivery',
     );
     expect(
       server.requests.single.workspaceScope,

@@ -182,6 +182,11 @@ class Sh04ViewModel extends ChangeNotifier {
     required String markdown,
     required String reason,
   }) async {
+    if (!parent.canReviseHere) {
+      throw const FormatException(
+        'This work must be revised in its original editor.',
+      );
+    }
     _validateUserDraft(title, markdown);
     if (reason.trim().isEmpty || reason.length > 4000) {
       throw const FormatException('A revision reason is required.');
@@ -221,17 +226,21 @@ class Sh04ViewModel extends ChangeNotifier {
     });
   }
 
-  Future<SavedWorkExportFile> export(Sh04Export item, String format) =>
-      _runOperation((generation) async {
-        final file = await _repository.export(
-          artifactId: item.internalId,
-          format: format,
-        );
-        if (file.bytes.isEmpty) {
-          throw const FormatException('The exported file is empty.');
-        }
-        return file;
-      });
+  Future<SavedWorkExportFile> export(
+    Sh04Export item,
+    String format, {
+    String purpose = 'delivery',
+  }) => _runOperation((generation) async {
+    final file = await _repository.export(
+      artifactId: item.internalId,
+      format: format,
+      purpose: purpose,
+    );
+    if (file.bytes.isEmpty) {
+      throw const FormatException('The exported file is empty.');
+    }
+    return file;
+  });
 
   @override
   void dispose() {

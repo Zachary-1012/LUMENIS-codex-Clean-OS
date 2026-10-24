@@ -11,6 +11,7 @@ import pytest
 
 from lumenis.shared.reporting.word_pdf_export import (
     ReportExporter,
+    delivery_markdown,
 )
 
 
@@ -198,3 +199,84 @@ def test_saved_work_owner_exports_pptx_with_rechecks_and_content_digest(monkeypa
 def test_saved_work_export_still_rejects_unsupported_format():
     with pytest.raises(ValueError, match="^unsupported saved document export format$"):
         ReportExporter.export_saved_document(snapshot(), sources=source_rows(), format="keynote")
+
+
+def test_delivery_quotes_match_only_revalidated_source_identity():
+    doc = {"title": "报告", "markdown": "正文", "citations": [
+        {"evidence_id": 71, "quote": "获准原文"},
+        {"evidence_id": 72, "quote": "无当前来源不得输出"},
+    ]}
+    result = delivery_markdown(doc, source_rows())
+    assert "获准原文" in result
+    assert "无当前来源不得输出" not in result
+    assert "evidence_id" not in result and "source_scope" not in result
+
+
+@pytest.mark.parametrize("format", ["docx", "xlsx", "pptx", "pdf"])
+def test_delivery_retains_user_content_without_internal_snapshot(format):
+    document = {
+        "title": "季度复盘 / Review / 검토",
+        "markdown": "## Findings\nConfirmed wording.\n\n| Metric | Value |\n| --- | --- |\n| Sales | 125 |\n| Missing | — |\n| Formula | =1+2 |\n\n## Next action\nKeep original records.",
+        "payload": {"internal_marker": "PRIVATE-AUDIT-ONLY"},
+        "context": {"actor_id": 712},
+    }
+    sources = [{"title": "Reviewed source", "source_url": "https://example.invalid/research",
+                "quote": "A quoted passage.", "scope": {"private_marker": "INTERNAL-SCOPE-ONLY"}}]
+    raw = ReportExporter.export_saved_document(document, sources=sources, format=format, purpose="delivery")
+    if format == "docx":
+        from docx import Document
+        from docx.oxml.ns import qn
+        result = Document(io.BytesIO(raw))
+        assert result.styles["Normal"].font.name == "Arial"
+        assert result.styles["Heading 2"].element.rPr.rFonts.get(qn("w:eastAsia")) == "Microsoft YaHei"
+        font_table = next(part for part in result.part.package.iter_parts()
+                          if str(part.partname) == "/word/fontTable.xml")
+        assert b'Courier' not in font_table.blob
+        assert any(p.style.name == "Heading 2" and p.text == "Findings" for p in result.paragraphs)
+        assert [[cell.text for cell in row.cells] for row in result.tables[0].rows] == [
+            ["Metric", "Value"], ["Sales", "125"], ["Missing", "—"], ["Formula", "=1+2"]]
+        text = "\n".join(p.text for p in result.paragraphs)
+    elif format == "xlsx":
+        from openpyxl import load_workbook
+        book = load_workbook(io.BytesIO(raw))
+        assert book.sheetnames == ["Report", "Table 1"]
+        assert book["Table 1"]["B4"].data_type == "s"
+        assert book["Table 1"]["B4"].value == "=1+2"
+        text = "\n".join(str(cell.value or "") for sheet in book for row in sheet for cell in row)
+    elif format == "pptx":
+        from pptx import Presentation
+        result = Presentation(io.BytesIO(raw))
+        text = "\n".join(shape.text for slide in result.slides for shape in slide.shapes if shape.has_text_frame)
+        assert "Metric | Value" in text
+    else:
+        import pdfplumber
+        with pdfplumber.open(io.BytesIO(raw)) as pdf:
+            text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+        assert "Metric" in text and "125" in text
+    assert "Confirmed wording." in text and "Keep original records." in text
+    assert "https://example.invalid/research" in text and "A quoted passage." in text
+    assert "PRIVATE-AUDIT-ONLY" not in text and "INTERNAL-SCOPE-ONLY" not in text
+    assert "Complete saved snapshot" not in text
+
+
+def test_delivery_purpose_is_part_of_effect_identity_and_rechecked(monkeypatch):
+    from lumenis.shared.reporting import saved_work
+
+    item = {"artifact": {"sha256": "a" * 64}, "document": snapshot(),
+            "receipt": {"sources": []}, "return_ref": {"version": 3}}
+    reads, resources = [], []
+    def read(*args, **kwargs):
+        reads.append(True)
+        return item
+    monkeypatch.setattr(saved_work, "read_committed_work", read)
+    monkeypatch.setattr(saved_work, "_check_effect", lambda actor, scope, operation, resource: resources.append(resource))
+    common = {"artifact_id": "ART-0123456789abcdef", "actor": None, "scope": {}, "format": "md"}
+    delivered = saved_work.export_work(**common, purpose="delivery")
+    assert delivered["content"] == item["document"]["markdown"].encode()
+    saved_work.export_work(**common, purpose="audit_snapshot")
+    assert len(reads) == 4
+    assert resources[0] == resources[1] and resources[2] == resources[3]
+    assert resources[0] != resources[2]
+    with pytest.raises(saved_work.SavedWorkError, match="WORK_EXPORT_PURPOSE_INVALID"):
+        saved_work.export_work(**common, purpose="ignore_permission")
+    assert len(reads) == 4

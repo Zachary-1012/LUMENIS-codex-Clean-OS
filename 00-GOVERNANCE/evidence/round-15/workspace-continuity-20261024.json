@@ -333,7 +333,7 @@
       "controller_regressions": 12,
       "same_process_other_instance": "PASS",
       "same_process_other_isolate": "PASS",
-      "linux_ci": "PENDING"
+      "linux_ci": "PASS exact head0ef281afd9a632be0367879f7f79d5e1e350daa8: App40079645849 / Product40079645752, merged ae3e7a4ba211d1d73c0e87f245096966a554eb3c"
     },
     "source_pins": {
       "app/lib/features/shared/sh01/native_media_cache.dart": "0b1c4b3811b9111c2ebdee38dd6abb50a02b5e7469eff6477e972002fec8491c",
@@ -344,5 +344,133 @@
       "Cross-isolate regression initially captured a live file handle; moved isolate closure into a top-level helper and reran successfully."
     ],
     "claim_boundary": "Local regressions are not native product playback or whole-product acceptance."
+  },
+  "report_delivery": {
+    "recorded_at": "2026-10-24T09:47:07.725913+00:00",
+    "source_base": "ae3e7a4ba211d1d73c0e87f245096966a554eb3c",
+    "source_pins": {
+      ".github/workflows/platform-verify.yml": "9b2f662d2671829da3cf42c3063af5ecde3f206a770405a9add6895b92e250fa",
+      "00-GOVERNANCE/LOOP-PLAN-20261014/execution-workorder.html": "e44bffb0b838975e1b4ced4afc80947af1f89d5d943a7728d7f1e7685cbc802b",
+      "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md": "e1caa619090c3a3f847bf658cc23cba0c8f72a6b4483d2d64698e2402cee543a",
+      "app.py": "6cb26f296a00b9091151ec6307976a1f39675c221e187959cf1c3810fb66d654",
+      "app/lib/core/lumenis_core_client.dart": "82698cf11be7ffa9884b118368f4afbf8cece3b66abeee650fc24a862e5cc639",
+      "app/lib/features/shared/sh04/sh04_repository.dart": "1de1b02bd779c3c4fc16fcdc684caff41642a141c7622053527e71bd31e771ed",
+      "app/lib/features/shared/sh04/sh04_screen.dart": "08b36d0724e3441b54a5fb7814b175c07f3651dc5f3dbec46603c3069afaf3fb",
+      "app/lib/features/shared/sh04/sh04_snapshot.dart": "f29d3b86b8ba49ec97f374f0cf549070f7dda4d5d41ad78bb397de4dc5dfbab4",
+      "app/lib/features/shared/sh04/sh04_view_model.dart": "b48464afd74f1090a1fdd7a034ee70cd05ddde08efdad199e78effd1bfd1283f",
+      "app/test/core/lumenis_core_client_test.dart": "91cadf93ea3c778c53f71a55d59b8c244fe019195805fcc03609c95efc89ba16",
+      "app/test/features/shared/sh04/sh04_screen_test.dart": "f8fb0606526f3de5375496a3cdd47f00eb2fe91336a0d4a2c14b6de0e76b3828",
+      "app/test/features/shared/sh04/sh04_view_model_race_test.dart": "12beb7e955dd9897ea1d70c5e73a7220a5603e9fa836cbdd4a049f5c362e7580",
+      "contracts/experience/screen-specifications/SH-04.md": "21c339e9aa4d149b9da5527ca8b9b8136b879f90312ea72496a8d42d0d3a3a5e",
+      "experience_runtime.py": "0a8e3291dcfaa8eb5a68a21f631f8ff826d15d49dc00ab23f7397d94de9fcc63",
+      "lumenis/shared/reporting/saved_work.py": "b2430b433ace83d2c690911f921182bfcf582d86db6bcb9e42563cbb2fc711e1",
+      "lumenis/shared/reporting/word_pdf_export.py": "748ace54fac158e35cbefbd67412276b089f6a82163b2dd4c41c900d79c3e361",
+      "tests/test_cold_start_owner_initialization.py": "4c2077c3883bf3b7c68900062c4d0152ca9dd44117ab583fd8d1d550d4e49176",
+      "tests/test_saved_work_pptx_exports.py": "f2006153bba044eff7f2459a3709ddbf776022cf398c9ea4cb7f720508a24b10"
+    },
+    "implemented": [
+      "Typed report contracts preserved; generic editing only on generic contract; manuscript opens original editor.",
+      "Delivery and audit exports separated; source identities revalidated before/after conversion.",
+      "Document shelf, full reading area and readable heading hierarchy.",
+      "Dedicated manual runtime under product root; production DB/hardlink/root rejection retained."
+    ],
+    "real_web": {
+      "report_v1": "ART-ed6eaab646674fe0",
+      "report_v2": "ART-253f6ae90ba043fd",
+      "operations": [
+        "Save authored report v1",
+        "Revise body and save v2 with parent",
+        "Independently reopen v1 and v2; old content unchanged",
+        "Read migrated manuscript v1/v2/v3; original editor v3 reopens",
+        "Export v2 DOCX through dialog, receive actual bytes; WPS opens headings and body"
+      ],
+      "artifact_sha256": {
+        "ART-253f6ae90ba043fd.json": "feda9ee27fdcdd154070d3e09644cb1cf3249eddabc241271b9a77f1d1e95559",
+        "ART-51fb1c73006248cd.json": "dfad995c651ef5e0a9db44e2dd1835099f8eff9e62c0489f8cc27031dc0ee693",
+        "ART-77a4e230240f4036.json": "19f16eec90d570f72c2ae48704ed6f001da830d83a941408736b2826f29365bf",
+        "ART-7ec9d3d92bc24fa9.json": "250f09448255dad73c018832e2409905782e812221079945253c2c34dc438393",
+        "ART-ed6eaab646674fe0.json": "a22fc00eff4ac01994f4c75448da9987114e3c49808c5ffb52a1e62f83948d55"
+      },
+      "export_after_font_repair_sha256": "4de8fe56ab2ed31ebc9ca7b80ee2175f7c278451008973dc3537ac37ae39301f",
+      "final_web_screenshot_sha256": "0d4365d262ee5bc980ca88cd009f5b96f466be7121ec08e87cb55b7381f880c3",
+      "native_export_readback": {
+        "at": "2026-10-24T09:54:16.386709+00:00",
+        "file": "delivery-report-v2-runtime-final.docx",
+        "sha256": "4de8fe56ab2ed31ebc9ca7b80ee2175f7c278451008973dc3537ac37ae39301f",
+        "application": "WPS Office 12.1.0.29161",
+        "result": "Headings and body displayed; font assistant reports no missing fonts."
+      }
+    },
+    "runtime": {
+      "data_root": "data/runtime/workspace-20261024",
+      "initial_move_preserved_files": 28,
+      "initial_move_preserved_artifacts": 10,
+      "first_move_launch": "FAILED guard required outside source checkout; retained original receipt",
+      "reload": {
+        "at": "2026-10-24T09:45:30.069982+00:00",
+        "root": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024",
+        "old_pids": [
+          9636,
+          21956
+        ],
+        "launcher_pid": 33584,
+        "backup": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024\\backups\\before-report-delivery-20261024T094523Z.db",
+        "backup_sha256": "a14b5dd0b7fbd0d39c3719d7582def3d766acaac1947e1abb07af66cdda737a1",
+        "unchanged_artifacts": {
+          "ART-1da4a8ad9d0748e9.docx": "aaa17edb5a8b0b320b5c1ca1cb3ea858130b565c79e5f12750604b3be6f4c0ae",
+          "ART-253f6ae90ba043fd.json": "feda9ee27fdcdd154070d3e09644cb1cf3249eddabc241271b9a77f1d1e95559",
+          "ART-51fb1c73006248cd.json": "dfad995c651ef5e0a9db44e2dd1835099f8eff9e62c0489f8cc27031dc0ee693",
+          "ART-636bc4c973ba4263.docx": "9266673c78a00610854e8b4f95d55b42b4dd3ae19d4499cea7e204e44899aac5",
+          "ART-77a4e230240f4036.json": "19f16eec90d570f72c2ae48704ed6f001da830d83a941408736b2826f29365bf",
+          "ART-7ec9d3d92bc24fa9.json": "250f09448255dad73c018832e2409905782e812221079945253c2c34dc438393",
+          "ART-89caa35e07dd4bf8.zip": "c2b5dea3534fdcb7f1ab91a9598c389e95b711ba384f1de530360aa7f9a48f46",
+          "ART-b338406a7bb6e1b666e74b5d42e36553.aecb0b23ed0b44118147b149acf6a05a.zip": "e3444d2d470d255d9364fe86de5066f758f9f7fad49b015c032b0bcd5a67e828",
+          "ART-c6e1b47959d74ee3.zip": "d6b4b954add86378e452e05c486d73e0df321e1a59352f3d754cf58ec9712cfe",
+          "ART-d473d3bd1a2940ea.zip": "8974a68080d1ba8eb23741ca40408fbdbfb4adccfe0f2b40ab29aef0f5d5b373",
+          "ART-e1ecb4603b284d7c.docx": "f50bcf9576cb6c6fe430d0e12a98123ad786c8cc11b5af2e1aacba887c04f761",
+          "ART-ed6eaab646674fe0.json": "a22fc00eff4ac01994f4c75448da9987114e3c49808c5ffb52a1e62f83948d55"
+        },
+        "health": {
+          "core_instance": {
+            "boot_id": "1b9c914299a2478b926799af908faeef",
+            "entry_sha256": "6cb26f296a00b9091151ec6307976a1f39675c221e187959cf1c3810fb66d654",
+            "launch_id": ""
+          },
+          "dependencies": {
+            "database": "ok"
+          },
+          "ok": true,
+          "runtime": {
+            "scheduler": "not_started",
+            "web_server": "waitress"
+          },
+          "service": "lumenis-core",
+          "status": "healthy",
+          "version": "5.9.9"
+        },
+        "source_pins": {
+          "app.py": "6cb26f296a00b9091151ec6307976a1f39675c221e187959cf1c3810fb66d654",
+          "experience_runtime.py": "0a8e3291dcfaa8eb5a68a21f631f8ff826d15d49dc00ab23f7397d94de9fcc63",
+          "lumenis\\shared\\reporting\\word_pdf_export.py": "748ace54fac158e35cbefbd67412276b089f6a82163b2dd4c41c900d79c3e361",
+          "lumenis\\shared\\reporting\\saved_work.py": "b2430b433ace83d2c690911f921182bfcf582d86db6bcb9e42563cbb2fc711e1"
+        },
+        "boundary": "Owned manual workspace only. Health is not user acceptance. No production 8201, production data or automatic collection touched."
+      },
+      "claim_boundary": "Exact owned process replaced after consistent backup; boot identity and working-source pins recorded. Not merged-version/full-product acceptance."
+    },
+    "checks": {
+      "isolated_python": "26 PASS cold-start and export; final font-specific export10 PASS. Initial accidental default-seed invocation refused protected WAL before collection; no production DB opened.",
+      "flutter": "61 targeted tests PASS, analysis PASS, Web release PASS89.1s, Windows release PASS76.2s targeting loopback58724.",
+      "ruff": "0 introduced findings against base, 643 existing findings retained",
+      "gates": "Constitution and three Experience validators PASS",
+      "native": "Latest Windows build opens same work; key injection produced draft; bulk Unicode injection did not apply, NOT_VERIFIED",
+      "office": "WPS opened both actual exports; first exposed template-font warnings. Corrected live export opened with headings/body; WPS font assistant reports no missing fonts. No claim of original Office package fidelity."
+    },
+    "remaining": [
+      "Full planned visual quality NOT_ACCEPTED; this is a bounded report surface.",
+      "Original Office object fidelity, editable professional slides and round-trip remain OPEN.",
+      "Windows Chinese typing/save/reopen/recovery remains NOT_VERIFIED.",
+      "All unmet PE01-24,30 groups,396coverage,213interactions retained; complete product NOT_DELIVERED."
+    ]
   }
 }

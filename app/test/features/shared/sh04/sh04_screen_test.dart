@@ -10,6 +10,24 @@ import 'package:lumenis_app/features/shared/sh04/sh04_snapshot.dart';
 import '../shared_test_support.dart';
 
 void main() {
+  test('typed manuscript remains readable and uses its original editor', () {
+    final item = _savedWorkItem();
+    item['document']['contract'] = {
+      'id': 'lumenis.internal-pitch',
+      'version': '4',
+      'required_payload_paths': ['manuscript', 'truth_state'],
+    };
+    item['document']['payload'] = {
+      'manuscript': {'title': 'Shared report'},
+      'truth_state': {'external_effect': 'NOT_PERFORMED'},
+    };
+    final work = Sh04Export.fromSavedWorkItem(item);
+    expect(work.isManuscript, isTrue);
+    expect(work.canReviseHere, isFalse);
+    item['document']['payload'].remove('truth_state');
+    expect(() => Sh04Export.fromSavedWorkItem(item), throwsFormatException);
+  });
+
   testWidgets('file export format picker includes PPTX on desktop', (
     tester,
   ) async {
@@ -378,6 +396,7 @@ class _FakeSh04Repository implements Sh04Repository {
   Future<SavedWorkExportFile> export({
     required String artifactId,
     required String format,
+    String purpose = 'delivery',
   }) async => SavedWorkExportFile(
     bytes: Uint8List.fromList(utf8.encode('exported $format')),
     filename: 'report.$format',

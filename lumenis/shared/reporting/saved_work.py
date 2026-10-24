@@ -1460,22 +1460,33 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
             if has_more else None, "verification_complete": unavailable_count == 0}
 
 
-def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "json") -> dict:
+def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "json",
+                purpose: str = "audit_snapshot") -> dict:
     if not isinstance(format, str) or format not in {"json", "md", "txt", "docx", "pdf", "xlsx", "pptx"}:
         raise SavedWorkError("WORK_EXPORT_FORMAT_INVALID")
+    if (not isinstance(purpose, str) or purpose not in {"delivery", "audit_snapshot"}
+            or (purpose == "delivery" and format == "json")):
+        raise SavedWorkError("WORK_EXPORT_PURPOSE_INVALID")
     item = read_committed_work(artifact_id, actor=actor, scope=scope)
-    resource = "saved-work-export:v1:" + _digest({"id": artifact_id,
-                                               "sha256": item["artifact"]["sha256"], "format": format})
+    binding = {"id": artifact_id, "sha256": item["artifact"]["sha256"], "format": format}
+    if purpose == "delivery":
+        binding["purpose"] = purpose
+    resource = "saved-work-export:v1:" + _digest(binding)
     _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
     if format == "json":
         raw = item["content"]
     elif format in {"md", "txt"}:
-        appendix = "\n\nSources (original scopes and rights):\n" + json.dumps(item["receipt"]["sources"], ensure_ascii=False, indent=2)
-        raw = (item["document"]["markdown"] + appendix).encode("utf-8")
+        if purpose == "delivery":
+            from .word_pdf_export import delivery_markdown
+            raw = delivery_markdown(item["document"], item["receipt"]["sources"]).encode("utf-8")
+        else:
+            appendix = "\n\nSources (original scopes and rights):\n" + json.dumps(item["receipt"]["sources"], ensure_ascii=False, indent=2)
+            raw = (item["document"]["markdown"] + appendix).encode("utf-8")
     else:
         try:
             from .word_pdf_export import ReportExporter
-            raw = ReportExporter.export_saved_document(item["document"], sources=item["receipt"]["sources"], format=format)
+            options = {"purpose": purpose} if purpose == "delivery" else {}
+            raw = ReportExporter.export_saved_document(item["document"], sources=item["receipt"]["sources"], format=format, **options)
         except ImportError as exc:
             raise SavedWorkError("WORK_EXPORT_DEPENDENCY_UNAVAILABLE") from exc
     # Recheck after conversion, including each original source scope. A changed
