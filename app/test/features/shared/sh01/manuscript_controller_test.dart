@@ -149,6 +149,75 @@ void main() {
   );
 
   test(
+    'restores older writing as a new version after independently reading the latest parent',
+    () async {
+      await controller.save();
+      final first = controller.savedWork!;
+      controller.updateDraft(_manuscript('Second version'));
+      await controller.save();
+      final second = controller.savedWork!;
+      await controller.reopen(first.artifactId);
+      controller.updateDraft(first.manuscript);
+      client.listReplies.addAll([
+        {'items': [], 'has_more': true, 'next_cursor': 'next'},
+        {
+          'items': [
+            client.savedRow(second.artifactId),
+            client.savedRow(first.artifactId),
+          ],
+          'has_more': false,
+          'next_cursor': null,
+        },
+      ]);
+
+      await controller.continueFromLatest();
+
+      expect(controller.errorCode, isNull);
+      expect(controller.draft.toJson(), first.manuscript.toJson());
+      expect(controller.savedWork?.artifactId, second.artifactId);
+      expect(client.prepareCalls, hasLength(2));
+      expect(controller.canSave, isTrue);
+      await controller.save();
+      expect(controller.savedWork?.version, 3);
+      expect(controller.savedWork?.previousArtifactId, second.artifactId);
+      expect(
+        controller.savedWork?.manuscript.toJson(),
+        first.manuscript.toJson(),
+      );
+      expect(
+        client.savedRow(second.artifactId)['document']['payload'],
+        isNotNull,
+      );
+      await controller.reopen(second.artifactId);
+      expect(controller.savedWork?.manuscript.title, 'Second version');
+    },
+  );
+
+  test(
+    'mismatched latest readback cannot replace the parent or current writing',
+    () async {
+      await controller.save();
+      final first = controller.savedWork!;
+      controller.updateDraft(_manuscript('Second version'));
+      await controller.save();
+      final second = controller.savedWork!;
+      await controller.reopen(first.artifactId);
+      controller.updateDraft(_manuscript('Unsaved local writing'));
+      client.listReplies.add({
+        'items': [client.savedRow(second.artifactId)],
+        'has_more': false,
+        'next_cursor': null,
+      });
+      client.reopenResult = client.savedRow(first.artifactId);
+      await controller.continueFromLatest();
+      expect(controller.errorCode, isNotNull);
+      expect(controller.savedWork?.artifactId, first.artifactId);
+      expect(controller.draft.title, 'Unsaved local writing');
+      expect(client.prepareCalls, hasLength(2));
+    },
+  );
+
+  test(
     'accepts the existing BMP to ZBMP SavedWork context normalization',
     () async {
       controller.updateScope(_bmpScope);

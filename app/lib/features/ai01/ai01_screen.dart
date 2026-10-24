@@ -13,6 +13,7 @@ import 'ai01_intent.dart';
 import 'ai01_repository.dart';
 import 'ai01_snapshot.dart';
 import 'ai01_view_model.dart';
+import 'ai01_workspace_draft.dart';
 
 class Ai01Screen extends StatefulWidget {
   const Ai01Screen({
@@ -445,6 +446,8 @@ class _Ai01ScreenState extends State<Ai01Screen> {
                   onExpand: _openFocusedEditor,
                   compact: phone,
                 ),
+                if (_draftController case final Ai01WorkspaceDraft draft)
+                  Ai01DraftStatus(draft: draft),
                 if (snapshot == null) ...[
                   const SizedBox(height: 14),
                   _ServiceReadStatus(

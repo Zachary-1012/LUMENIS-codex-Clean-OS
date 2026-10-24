@@ -136,13 +136,13 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
 abstract final class LumenisTheme {
   // Compatibility tokens for older callers and semantic-only code. New
   // neutral color consumers should resolve LumenisTheme.of(context).
-  static const canvas = Color(0xFFE6E5E1);
-  static const surface = Color(0xFFFCFCF7);
-  static const surfaceRaised = Color(0xFFDADCD6);
-  static const line = Color(0xFFBABEBA);
-  static const foreground = Color(0xFF252B2D);
-  static const muted = Color(0xFF596362);
-  static const quiet = Color(0xFF626B68);
+  static const canvas = Color(0xFFE0E3E4);
+  static const surface = Color(0xFFFAFAF7);
+  static const surfaceRaised = Color(0xFFCED3D4);
+  static const line = Color(0xFFAFB7BA);
+  static const foreground = Color(0xFF20292D);
+  static const muted = Color(0xFF505E63);
+  static const quiet = Color(0xFF59666B);
   static const accent = Color(0xFF286653);
   static const accentStrong = Color(0xFF214E40);
 
@@ -233,15 +233,18 @@ abstract final class LumenisTheme {
 
   static BoxDecoration chassis(LumenisPalette palette, {double radius = 0}) {
     final dark = palette.brightness == Brightness.dark;
+    final base = palette.canvas.a < .5
+        ? (dark ? const Color(0xFF252E32) : const Color(0xFFE4E7E8))
+        : palette.canvas;
     return BoxDecoration(
       borderRadius: BorderRadius.circular(radius),
       gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
         colors: [
-          Color.lerp(palette.canvas, Colors.white, dark ? .08 : .3)!,
-          palette.canvas,
-          Color.lerp(palette.canvas, Colors.black, dark ? .08 : .04)!,
+          Color.lerp(base, Colors.white, dark ? .06 : .35)!,
+          base,
+          Color.lerp(base, Colors.black, dark ? .10 : .03)!,
         ],
       ),
     );
@@ -253,7 +256,10 @@ abstract final class LumenisTheme {
     bool recessed = false,
   }) {
     final dark = palette.brightness == Brightness.dark;
-    final face = recessed ? palette.surface : palette.canvas;
+    final base = palette.canvas.a < .5
+        ? (dark ? const Color(0xFF303A3E) : const Color(0xFFE4E7E8))
+        : palette.canvas;
+    final face = recessed ? palette.surface : base;
     final highlight = Color.lerp(face, Colors.white, dark ? .09 : .6)!;
     final shadow = Colors.black.withValues(alpha: dark ? .3 : .12);
     return BoxDecoration(
@@ -265,7 +271,7 @@ abstract final class LumenisTheme {
         colors: recessed
             ? [Color.lerp(face, palette.line, .22)!, face, face]
             : [highlight, face, Color.lerp(face, palette.line, .16)!],
-        stops: recessed ? const [0, .035, 1] : const [0, .12, 1],
+        stops: recessed ? const [0, .025, 1] : const [0, .08, 1],
       ),
       boxShadow: [
         BoxShadow(
@@ -274,7 +280,7 @@ abstract final class LumenisTheme {
           blurRadius: 0,
         ),
         if (!recessed)
-          BoxShadow(color: shadow, offset: const Offset(0, 3), blurRadius: 6),
+          BoxShadow(color: shadow, offset: const Offset(0, 4), blurRadius: 8),
       ],
     );
   }

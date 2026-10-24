@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../../core/lumenis_icon.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
+import '../../navigation/lumenis_leave_guard.dart';
 import 'ai01_conversations.dart';
 import 'ai01_draft_actions.dart';
+import 'ai01_workspace_draft.dart';
 
 class Ai01ConversationPanel extends StatefulWidget {
   const Ai01ConversationPanel({
@@ -34,11 +36,110 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
   final _ownedDialogs = <DialogRoute<bool>>{};
   bool _historyVisible = false;
   bool _draftActionsVisible = false;
+  LumenisLeaveGuard? _draftGuard;
 
   @override
   void initState() {
     super.initState();
+    widget.draftController.addListener(_draftChanged);
     widget.viewModel.refreshList(selectFirstIfEmpty: !widget.embedded);
+    if (widget.embedded && widget.draftController is Ai01WorkspaceDraft) {
+      (widget.draftController as Ai01WorkspaceDraft).status.addListener(
+        _refreshGuard,
+      );
+    }
+  }
+
+  void _refreshGuard() => _draftGuard?.refresh();
+
+  void _draftChanged() {
+    if (mounted) setState(() {});
+    _refreshGuard();
+  }
+
+  @override
+  void didUpdateWidget(covariant Ai01ConversationPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.draftController != widget.draftController) {
+      oldWidget.draftController.removeListener(_draftChanged);
+      widget.draftController.addListener(_draftChanged);
+    }
+    if (oldWidget.draftController != widget.draftController ||
+        oldWidget.embedded != widget.embedded) {
+      if (oldWidget.draftController is Ai01WorkspaceDraft) {
+        (oldWidget.draftController as Ai01WorkspaceDraft).status.removeListener(
+          _refreshGuard,
+        );
+      }
+      _draftGuard?.unregister(this);
+      _draftGuard = null;
+      if (widget.embedded && widget.draftController is Ai01WorkspaceDraft) {
+        (widget.draftController as Ai01WorkspaceDraft).status.addListener(
+          _refreshGuard,
+        );
+      }
+      _bindDraftGuard();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _bindDraftGuard();
+  }
+
+  String _draftCopy(String zh, String en, String ko) =>
+      switch (context.lumenisL10n.locale.languageCode) {
+        'en' => en,
+        'ko' => ko,
+        _ => zh,
+      };
+
+  void _bindDraftGuard() {
+    final draft = widget.draftController;
+    if (!widget.embedded || draft is! Ai01WorkspaceDraft) return;
+    final guard = LumenisLeaveScope.maybeOf(context);
+    if (identical(guard, _draftGuard)) return;
+    _draftGuard?.unregister(this);
+    _draftGuard = guard;
+    guard?.register(
+      this,
+      needsProtection: () => draft.hasUnsavedChanges,
+      requestLeave: () async {
+        await draft.flush();
+        if (!mounted) return false;
+        if (!draft.hasUnsavedChanges) return true;
+        setState(() => _draftActionsVisible = true);
+        final discard = await _showOwnedConfirmation(
+          (context) => AlertDialog(
+            title: Text(
+              _draftCopy('草稿尚未保存', 'Draft not saved', '초안이 저장되지 않았습니다'),
+            ),
+            content: Text(
+              _draftCopy(
+                '可以先保存为文件，或放弃本次修改。',
+                'Save a copy to a file, or discard these changes.',
+                '파일로 사본을 저장하거나 변경 내용을 버릴 수 있습니다.',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(_draftCopy('继续编辑', 'Keep editing', '계속 편집')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(
+                  _draftCopy('放弃修改并离开', 'Discard and leave', '변경 사항을 버리고 나가기'),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (discard && mounted) draft.discardLocalChanges();
+        return discard;
+      },
+    );
   }
 
   Future<void> _send() async {
@@ -207,6 +308,13 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
 
   @override
   void dispose() {
+    widget.draftController.removeListener(_draftChanged);
+    _draftGuard?.unregister(this);
+    if (widget.embedded && widget.draftController is Ai01WorkspaceDraft) {
+      (widget.draftController as Ai01WorkspaceDraft).status.removeListener(
+        _refreshGuard,
+      );
+    }
     _closeOwnedDialogs();
     super.dispose();
   }
@@ -365,11 +473,15 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
                     },
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       color: theme.foreground,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w500,
+                      fontSize: MediaQuery.sizeOf(context).width < 600
+                          ? 28
+                          : 36,
+                      letterSpacing: -1,
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
                   if (model.issue != null)
                     _ConversationNotice(
                       issue: model.issue!,
@@ -401,8 +513,8 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
         : model.canSend;
     return Container(
       key: const ValueKey('ai01-conversation-composer'),
-      padding: const EdgeInsets.fromLTRB(18, 14, 10, 8),
-      decoration: LumenisTheme.panel(theme, radius: 17, recessed: true),
+      padding: const EdgeInsets.fromLTRB(22, 20, 14, 12),
+      decoration: LumenisTheme.panel(theme, radius: 14, recessed: true),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -410,7 +522,7 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
             key: const ValueKey('ai01-conversation-input'),
             controller: widget.draftController,
             enabled: !model.busy,
-            minLines: newConversation ? 2 : 1,
+            minLines: newConversation ? 3 : 1,
             maxLines: 5,
             maxLength: 4000,
             onChanged: (_) => setState(() {}),
@@ -466,6 +578,8 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
               ),
             ],
           ),
+          if (widget.draftController case final Ai01WorkspaceDraft draft)
+            Ai01DraftStatus(draft: draft),
           if (_draftActionsVisible)
             Ai01DraftActions(
               key: ObjectKey(widget.draftController),

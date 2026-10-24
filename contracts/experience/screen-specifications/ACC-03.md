@@ -110,6 +110,9 @@ offer real Open/Copy behavior instead of a fake Save success.
 
 ## 6. State, failure and recovery
 
+未发送草稿由现有 AI Hub `GET/PUT /v4/ai/workspace-draft` 管理，使用已认证 actor、workspace binding 和明确 scope；服务端 migration 22 创建同一业务库中的草稿表。PUT 必须携带 `scope_key/text/expected_revision`，4000 字以内，版本冲突返回 409，不覆盖另一窗口。界面区分保存中、已保存、失败与冲突；原稿保持可编辑，用户可读回已存稿再选择恢复或保留当前稿。同一客户端切换范围保留各范围草稿，换账号/工作区不沿用旧身份内容。打开首页、读回、输入、修订草稿均不触发模型或采集。光标/滚动位置的跨设备同步仍未验收，不能由草稿持久化推断。
+
+
 | State | Behavior | Recovery |
 | --- | --- | --- |
 | No focus | GLOBAL_ALL; editor and existing navigation remain available | Optional exact focus through existing Shell only |

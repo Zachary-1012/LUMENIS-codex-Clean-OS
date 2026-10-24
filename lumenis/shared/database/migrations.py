@@ -53,7 +53,7 @@ DB_PATH = main_db_path()
 BACKUP_DIR = os.path.join(os.path.dirname(DB_PATH), 'backups')
 
 # 当前最新版本
-CURRENT_VERSION = 21
+CURRENT_VERSION = 22
 
 # 迁移历史记录
 MIGRATION_HISTORY = {
@@ -78,6 +78,7 @@ MIGRATION_HISTORY = {
     19: "Add canonical CTH Case storage with Subject and Evidence references",
     20: "Integrate existing Agent Learning Memory schema into canonical startup migration",
     21: "Add AI Hub conversation and turn storage with explicit owner and workspace binding",
+    22: "Add actor/workspace-scoped unsent drafts with optimistic revision protection",
 }
 
 
@@ -864,6 +865,14 @@ def migration_20_to_21(conn: sqlite3.Connection):
     ensure_schema(conn)
 
 
+def migration_21_to_22(conn: sqlite3.Connection):
+    from lumenis.ai_hub.conversations import ensure_draft_schema
+
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
+    ensure_draft_schema(conn)
+
+
 def _ensure_migration_prerequisites(
     conn, current_version: int, target_version: int
 ) -> int:
@@ -1006,6 +1015,7 @@ MIGRATIONS = {
     18: migration_18_to_19,
     19: migration_19_to_20,
     20: migration_20_to_21,
+    21: migration_21_to_22,
 }
 
 

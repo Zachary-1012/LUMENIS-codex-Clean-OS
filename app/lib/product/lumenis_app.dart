@@ -261,21 +261,22 @@ class _OpticalFieldPainter extends CustomPainter {
   final bool dark;
   @override
   void paint(Canvas canvas, Size size) {
-    final radius = size.shortestSide * .62;
-    for (final bloom in [
-      (Offset(size.width * .78, size.height * .15), const Color(0xFF9198D3)),
-      (Offset(size.width * .1, size.height * .58), const Color(0xFFE3A68A)),
-      (Offset(size.width * .82, size.height * .9), const Color(0xFF8FBBC5)),
-    ]) {
-      canvas.drawCircle(
-        bloom.$1,
-        radius,
-        Paint()
-          ..shader = ui.Gradient.radial(bloom.$1, radius, [
-            bloom.$2.withValues(alpha: dark ? .22 : .26),
-            bloom.$2.withValues(alpha: 0),
-          ]),
-      );
+    final face = dark ? const Color(0xFF222B30) : const Color(0xFFE3E7E8);
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader =
+            ui.Gradient.linear(Offset.zero, Offset(size.width, size.height), [
+              Color.lerp(face, Colors.white, dark ? .04 : .3)!,
+              face,
+              Color.lerp(face, Colors.black, .06)!,
+            ]),
+    );
+    final brush = Paint()
+      ..color = (dark ? Colors.white : Colors.black).withValues(alpha: .018)
+      ..strokeWidth = .5;
+    for (double y = 1; y < size.height; y += 3) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), brush);
     }
   }
 

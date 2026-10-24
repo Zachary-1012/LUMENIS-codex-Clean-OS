@@ -168,6 +168,79 @@ def _connect():
     return get_repository().connect()
 
 
+def ensure_draft_schema(connection):
+    if not connection.in_transaction:
+        raise RuntimeError('CONVERSATION_SCHEMA_REQUIRES_MIGRATION_TRANSACTION')
+    connection.execute('''CREATE TABLE IF NOT EXISTS ai_workspace_drafts (
+        actor_ref TEXT NOT NULL,
+        workspace_binding TEXT NOT NULL CHECK(length(workspace_binding)=64),
+        scope_key TEXT NOT NULL CHECK(length(scope_key) BETWEEN 1 AND 512),
+        text TEXT NOT NULL CHECK(length(text)<=4000),
+        revision INTEGER NOT NULL CHECK(revision>=1),
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(actor_ref,workspace_binding,scope_key)
+    )''')
+    info = connection.execute('PRAGMA table_info(ai_workspace_drafts)').fetchall()
+    columns = {'actor_ref', 'workspace_binding', 'scope_key', 'text', 'revision', 'updated_at'}
+    if ({row[1] for row in info} != columns or any(not row[3] for row in info)
+            or [(row[1], row[5]) for row in info if row[5]] != [
+                ('actor_ref', 1), ('workspace_binding', 2), ('scope_key', 3)]):
+        raise RuntimeError('WORKSPACE_DRAFT_EXISTING_SCHEMA_INCOMPATIBLE')
+    sql = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='ai_workspace_drafts'",
+    ).fetchone()[0]
+    normalized = ''.join(sql.lower().split())
+    checks = ['check(length(workspace_binding)=64)', 'check(length(scope_key)between1and512)',
+              'check(length(text)<=4000)', 'check(revision>=1)']
+    if any(expression not in normalized for expression in checks):
+        raise RuntimeError('WORKSPACE_DRAFT_EXISTING_CHECKS_INCOMPATIBLE')
+
+
+def _draft_scope(value):
+    if (type(value) is not str or len(value) > 512
+            or not re.fullmatch(r'GLOBAL_ALL::|FOCUS:(?:CTH|BMP):[^\x00-\x20:]{1,240}', value)):
+        raise ValueError('WORKSPACE_DRAFT_SCOPE_INVALID')
+    return value
+
+
+def workspace_draft(actor, *, scope_key, text=None, expected_revision=None):
+    scope_key = _draft_scope(scope_key)
+    writing = text is not None
+    if writing:
+        if type(text) is not str or len(text) > 4000 or type(expected_revision) is not int or expected_revision < 0:
+            raise ValueError('WORKSPACE_DRAFT_INVALID')
+        _safe_content(text)
+    con = _connect()
+    try:
+        if writing:
+            con.execute('BEGIN IMMEDIATE')
+        ref, workspace = _identity(actor, 'write' if writing else 'read', con)
+        key = (ref, workspace, scope_key)
+        row = con.execute('''SELECT text,revision,updated_at FROM ai_workspace_drafts
+            WHERE actor_ref=? AND workspace_binding=? AND scope_key=?''', key).fetchone()
+        current = dict(row) if row else {'text': '', 'revision': 0, 'updated_at': None}
+        if writing:
+            if expected_revision != current['revision']:
+                if text != current['text']:
+                    raise RuntimeError('WORKSPACE_DRAFT_REVISION_CONFLICT')
+            elif text != current['text'] or row is None:
+                current = {'text': text, 'revision': current['revision'] + 1, 'updated_at': _now()}
+                con.execute('''INSERT INTO ai_workspace_drafts
+                    (actor_ref,workspace_binding,scope_key,text,revision,updated_at) VALUES (?,?,?,?,?,?)
+                    ON CONFLICT(actor_ref,workspace_binding,scope_key) DO UPDATE SET
+                    text=excluded.text,revision=excluded.revision,updated_at=excluded.updated_at''',
+                    (*key, current['text'], current['revision'], current['updated_at']))
+            _identity(actor, 'write', con)
+            con.commit()
+        return {'draft': {**current, 'scope_key': scope_key}}
+    except BaseException:
+        if writing:
+            con.rollback()
+        raise
+    finally:
+        con.close()
+
+
 @contextmanager
 def _write(conversation_id, actor):
     connection = _connect()
