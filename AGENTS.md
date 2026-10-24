@@ -109,7 +109,7 @@ OpenCode remains shelved, not an execution fallback.
 
 ### Surface execution: current PO device scope, independent acceptance
 
-Public Website, Web Workspace and Windows execute under the current PO scope;
+Web Workspace and Windows take priority; Website follows without blocking them.
 macOS/iOS wait for devices and new dispatch. Retain the existing Website/Flutter
 implementation and independent acceptance for all planned surfaces. Preserve each
 surface's approved role, complete requirements, editable assets and outstanding
@@ -161,7 +161,7 @@ Figma delivery and per-screen M DESIGN_READY are not coding prerequisites. Reuse
 update specs alongside code, and record DESIGN_READY only after real review. Actual
 usability, visual quality, security and E2E remain mandatory.
 
-PO 2026-10-23: execute Website/Web/Windows; defer macOS/iOS until devices and new PO dispatch. Retain all planned scope and shared contracts.
+PO: Web/Windows first, Website later; macOS/iOS await devices and dispatch. Retain all planned scope and contracts.
 
 Desktop targets Windows/macOS; native mobile targets iOS. Android/Linux clients are
 removed from active requirements, not deferred; preserve source/history. Linux servers,

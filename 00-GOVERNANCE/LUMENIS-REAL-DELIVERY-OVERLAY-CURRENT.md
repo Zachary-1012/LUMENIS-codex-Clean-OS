@@ -139,7 +139,7 @@ Existing R/J/U and three Gate tiers remain unchanged. Targeted unit/integration 
 C1 and M retain original source/candidate/material responsibilities. This record
 is not current dispatch/model selection; actual PO choice and dated evidence apply.
 
-四表面角色沿2026-10-11批准；2026-10-23直接PO限定当前实施Website/Web/Windows，macOS/iOS待设备和后续指令，完整要求与逐端验收不变。使用原REAL DELIVERY CARD与三层Gate，注明适用表面、真实输入/结果/保存修订重开恢复/Evidence/版本和未完成项。已有真实Core/API立即接入，未有接口的既有行为由原Owner接续并保持OPEN/UNBOUND；不等待全部后端、不用模拟结果。官网内容、真实演示状态和入口，以及各端业务正常成功路径均实际验证。任一端的工程、设备或包缺口只阻止对应表面验收，不阻止其他端建设；不得把缺口标PASS、删除R/J/U或宣告全产品RELEASED。部署、费用及外部效果授权不变。原生目标仅Windows/macOS桌面和iOS移动；Android/Linux原生客户端不再是交付项，保留历史源码/回执。前端直接构建，独立设计稿/Figma/M设计审批不作为实现前置。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+四表面角色沿2026-10-11批准；最新直接PO优先Web/Windows产品闭环、官网后置且不阻塞产品验收，macOS/iOS待设备和后续指令，完整要求与逐端验收不变。使用原REAL DELIVERY CARD与三层Gate，注明适用表面、真实输入/结果/保存修订重开恢复/Evidence/版本和未完成项。已有真实Core/API立即接入，未有接口的既有行为由原Owner接续并保持OPEN/UNBOUND；不等待全部后端、不用模拟结果。官网内容、真实演示状态和入口，以及各端业务正常成功路径均实际验证。任一端的工程、设备或包缺口只阻止对应表面验收，不阻止其他端建设；不得把缺口标PASS、删除R/J/U或宣告全产品RELEASED。部署、费用及外部效果授权不变。原生目标仅Windows/macOS桌面和iOS移动；Android/Linux原生客户端不再是交付项，保留历史源码/回执。前端直接构建，独立设计稿/Figma/M设计审批不作为实现前置。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 本协议按五轮架构成果验收，C1–C6保留原工程源码责任。旧编号01–15仅为历史验收/依赖覆盖，映射继续保留；不是新的窗口、派工队列、六轮产品或十五段串行执行计划。
 
