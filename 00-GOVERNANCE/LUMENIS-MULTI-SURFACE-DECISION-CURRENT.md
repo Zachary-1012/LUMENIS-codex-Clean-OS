@@ -14,7 +14,7 @@ current detailed screen specification establish `DESIGN_READY`.
 
 ### 当前端范围：既定四表面，按设备条件独立验收
 
-Public Website、Web Workspace与Windows Desktop为当前执行端；macOS/iOS保留完整角色和合同，待设备及后续PO指令后实施，按本端真实任务、运行、恢复与适用验收独立记录。Website使用既有`website/`；Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接建设任务化完整前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并保持OPEN/UNBOUND，不用模拟结果。44份现有ScreenSpec是覆盖基线，不是页面或产品范围上限。保留全部R/J/U、官网内容家族、原件/源码/设计/回执；一个表面通过不代表其他表面或整产品通过。此规则不派发窗口、不更改实际调度或零新增付费边界。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
+当前优先完成Web Workspace与Windows Desktop的真实产品工作；Public Website后置，不作为产品开发、运行或工作流闭环的前置；macOS/iOS保留完整角色和合同，待设备及后续PO指令后实施，按本端真实任务、运行、恢复与适用验收独立记录。Website使用既有`website/`；Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接建设任务化完整前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并保持OPEN/UNBOUND，不用模拟结果。44份现有ScreenSpec是覆盖基线，不是页面或产品范围上限。保留全部R/J/U、官网内容家族、原件/源码/设计/回执；一个表面通过不代表其他表面或整产品通过。此规则不派发窗口、不更改实际调度或零新增付费边界。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
 四个表面各自交付其既有角色适用的完整真实任务、研究/业务/创作、来源和权限、成果保存/修改/重开/恢复/评价。已存在的Core/API均直接接入；其他依赖由对应Owner继续，不因表面排期或客户端类型而遗漏。官网展示不得夸大能力，Web不使用模拟后端或桌面端跳转代替已批准能力。手机浏览器窄屏属于Web响应式验收，不等于原生Mobile Companion。
 
@@ -22,7 +22,7 @@ Public Website、Web Workspace与Windows Desktop为当前执行端；macOS/iOS�
 
 F依既有Experience/ScreenSpec/真实合同建设当前获派表面并保留其余表面的完整合同，不先做独立设计稿，不等待Figma或M的DESIGN_READY前置审批；必要设计决定随代码回写原规范。既有设计/审核状态只记录实际评审，不等同真实用户验收。原生目标为Windows/macOS与iOS；Android/Linux原生客户端已移出交付要求，原件/源码/旧构建证据保留为历史。Linux服务端/CI、各操作系统浏览器与窄屏Web不受影响。已有真实API/Core立即接入，缺失合同/行为按原Owner标OPEN/UNBOUND。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-2026-10-23直接PO执行调整：本轮先完成Public Website、Web Workspace与Windows Desktop；因没有设备，macOS与iOS暂不实施、不作通过声明。四表面产品范围及共享合同保留，有设备并获得后续指令后继续对应实机验收。共享源码须保持暂缓端的合同兼容，不以未执行的设备验收宣称通过。
+最新直接PO执行调整：先完成Web Workspace与Windows Desktop的产品能力、视觉和完整工作流，再完成Public Website全部内容家族、真实演示、帮助与入口；官网未完成保持OPEN，不阻塞产品两端有界验收，也不能据此宣称完整四表面已交付；因没有设备，macOS与iOS暂不实施、不作通过声明。四表面产品范围及共享合同保留，有设备并获得后续指令后继续对应实机验收。共享源码须保持暂缓端的合同兼容，不以未执行的设备验收宣称通过。
 
 ## 1. Approved product-surface structure
 

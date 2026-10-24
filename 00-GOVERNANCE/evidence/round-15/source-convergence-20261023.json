@@ -4,10 +4,12 @@
   "scope": "existing protected source convergence and complete derived execution work order; not whole-product completion",
   "publication": "branch and main state must be independently read back; this receipt does not self-certify merge",
   "devices": {
-    "current": [
-      "Public Website",
+    "priority": [
       "Web Workspace",
       "Windows"
+    ],
+    "later_without_blocking_product": [
+      "Public Website"
     ],
     "deferred_by_PO_no_device": [
       "macOS",
@@ -181,7 +183,7 @@
     "initial_attempt": "Earlier compound deletion commands were blocked before execution. After renewed explicit PO approval, bounded literal-path native PowerShell removal succeeded.",
     "protected": "Product source, plans, originals, historical evidence, production data and installed toolchains are retained. No frontend rebuild performed."
   },
-  "updated_at": "2026-10-23T21:35:03.663615+08:00",
+  "updated_at": "2026-10-24T12:48:37.577629+08:00",
   "runtime_readback_after_frontend_withdrawal": {
     "at": "2026-10-23T20:58:22.164262+08:00",
     "scope": "read-only HTTP after approved frontend build withdrawal; Core not restarted",
@@ -295,5 +297,56 @@
       "browser": "Reloaded current HTML; 30 outcome disclosures and 396 nonempty coverage disclosures observed; header explicitly states frontend builds withdrawn and not rebuilt.",
       "scope": "Documentation consistency and work-order operation only; no product source changes, rebuild, data write, model call or runtime restart."
     }
+  },
+  "product_first_review": {
+    "at": "2026-10-24T12:48:37.577629+08:00",
+    "baseline": "aa06f26286f2101d9ffe4ce8966e38a1902c7aa7",
+    "po_instruction": "Deep-check current execution documents; prioritize usable product, Website may follow; continued 2026-10-24.",
+    "findings_and_corrections": [
+      "J01 Website was in batch 01 and combined with product release; moved to the explicit later Website exit with full requirements retained.",
+      "Owner construction and full sketch still required concurrent all-device work; corrected in place to current product priority and deferred native devices.",
+      "Shared interface dependencies could be confused with completed outcome prerequisites; clarified early identity/Artifact contracts, independent creation and actual affected gates.",
+      "J08 release/developer-mode completion was overloaded into first usable work; kept early safety requirements and moved full acceptance to combination/release batch.",
+      "All 30 outcome groups and 396 coverage entries remain; Website and unavailable devices are not counted as passed.",
+      "Second cross-reference pass also corrected the F card heading, its current upgrade row and the owner outcome goal; all retain the full planned capabilities."
+    ],
+    "verification": {
+      "documents": 85,
+      "local_links_checked": 518,
+      "missing": [],
+      "outcomes_unchanged": 30,
+      "coverage_ids_unchanged": 396,
+      "goals_acceptance_dependencies_unchanged": true,
+      "website_only_in_later_filter": true,
+      "html_fragment_targets_valid": true,
+      "external_dependencies": 0,
+      "scope": "Document and generated work-order validation only",
+      "guards": {
+        "constitution": "PASS",
+        "machine_contract": "PASS",
+        "source_adoption": "PASS",
+        "current_configuration": "PASS",
+        "single_product": "PASS",
+        "experience_authority": "PASS",
+        "anti_template_strict": "PASS",
+        "screen_blueprints": "PASS",
+        "staged_takeover": "PASS"
+      },
+      "historical_binding_changes": 0,
+      "browser": {
+        "page": "execution-workorder.html",
+        "website_filter": [
+          "J01"
+        ],
+        "first_batch_excludes_website": true,
+        "reset_outcomes": 30,
+        "video_search_matches": 16,
+        "reset_coverage": 396,
+        "expanded_outcomes": 30,
+        "collapsed_outcomes": 0,
+        "scope": "Actual local HTML controls; not product workflow acceptance"
+      }
+    },
+    "limits": "Documentation review only; no product implementation, frontend rebuild, Core restart, production data write, model call, collection, training or deployment."
   }
 }
