@@ -4102,40 +4102,58 @@ def api_system_dlq():
     """DLQ统计"""
     try:
         import runtime_guardian as _rg
-        g = _rg.get_guardian("system")
-        stats = g.dlq.stats() if hasattr(g, 'dlq') else {"total": 0}
-        return jsonify({"ok": True, "dlq": stats})
-    except Exception as e:
-        return jsonify({"ok": True, "dlq": {"total": 0, "error": str(e)[:100]}})
+        g = _rg.existing_guardian("app_main")
+        stats_reader = getattr(getattr(g, 'dlq', None), 'stats', None)
+        if not callable(stats_reader):
+            return jsonify({"ok": False, "state": "UNAVAILABLE",
+                            "code": "SYSTEM_DLQ_UNAVAILABLE", "dlq": None}), 503
+        stats = stats_reader()
+        if not isinstance(stats, dict) or not isinstance(stats.get("total"), int) or isinstance(stats.get("total"), bool) or stats["total"] < 0:
+            return jsonify({"ok": False, "state": "UNAVAILABLE",
+                            "code": "SYSTEM_DLQ_RESULT_UNAVAILABLE", "dlq": None}), 503
+        return jsonify({"ok": True, "state": "AVAILABLE", "dlq": stats})
+    except Exception:
+        app.logger.exception("system dlq read failed")
+        return jsonify({"ok": False, "state": "ERROR",
+                        "code": "SYSTEM_DLQ_READ_FAILED", "dlq": None}), 503
 
 @app.route('/api/system/database')
 def api_system_database():
     """数据库状态：表数量、非空表、核心表记录数"""
     try:
-        c = get_db()
-        tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
-        non_empty = 0
-        table_stats = []
-        for t in tables:
-            try:
-                cnt = c.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0]
-                if cnt > 0:
-                    non_empty += 1
-                if cnt > 0 or t in ("notes", "events", "users", "daily_reports"):
-                    table_stats.append({"name": t, "count": cnt})
-            except Exception:
-                pass
-        core = {}
-        for t in ("notes", "events", "comments", "daily_reports", "users", "kos_operations"):
-            if t in tables:
+        with get_repository().connection(read_only=True, wal=False) as c:
+            c.execute("BEGIN")
+            tables = [r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").fetchall()]
+            counts = {}
+            table_stats = []
+            for t in tables:
                 try:
-                    core[t] = c.execute(f'SELECT COUNT(*) FROM "{t}"').fetchone()[0]
+                    quoted = t.replace('"', '""')
+                    counts[t] = c.execute(f'SELECT COUNT(*) FROM "{quoted}"').fetchone()[0]
                 except Exception:
-                    core[t] = 0
-        return jsonify({"ok": True, "table_count": len(tables), "non_empty": non_empty,
-                        "empty": len(tables)-non_empty, "core": core, "tables": table_stats[:50]})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+                    counts[t] = None
+                    app.logger.warning("system database table count unavailable")
+                table_stats.append({"name": t, "count": counts[t],
+                                    "state": "ERROR" if counts[t] is None else "AVAILABLE"})
+        core_names = ("notes", "events", "comments", "daily_reports", "users", "kos_operations")
+        unreadable = sum(value is None for value in counts.values())
+        return jsonify({
+            "ok": unreadable == 0, "state": "PARTIAL" if unreadable else "AVAILABLE",
+            "code": "SYSTEM_DATABASE_PARTIAL" if unreadable else None,
+            "table_count": len(tables),
+            "non_empty": None if unreadable else sum(value > 0 for value in counts.values()),
+            "empty": None if unreadable else sum(value == 0 for value in counts.values()),
+            "unreadable": unreadable,
+            "core": {name: counts.get(name) for name in core_names},
+            "core_states": {name: "NOT_PRESENT" if name not in counts else
+                            "ERROR" if counts[name] is None else "AVAILABLE" for name in core_names},
+            "tables": table_stats[:50], "tables_truncated": len(table_stats) > 50,
+        })
+    except Exception:
+        app.logger.exception("system database read failed")
+        return jsonify({"ok": False, "state": "ERROR", "code": "SYSTEM_DATABASE_READ_FAILED",
+                        "table_count": None, "non_empty": None, "empty": None,
+                        "core": None, "tables": None}), 503
 
 @app.route('/api/system/security')
 def api_system_security():

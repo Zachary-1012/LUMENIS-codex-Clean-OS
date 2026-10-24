@@ -85,6 +85,34 @@ void main() {
     expect(await cacheRoot.exists(), isFalse);
   });
 
+  for (final item in {
+    'audio/mpeg': 'mp3',
+    'audio/mp4': 'm4a',
+    'video/webm': 'webm',
+    'video/quicktime': 'mov',
+  }.entries) {
+    test(
+      'original ${item.value} uses an owned lease and preserves bytes',
+      () async {
+        final bytes = Uint8List.fromList([4, 3, 2, 1]);
+        final lease = await cache.create(
+          ContentProjectFile(
+            bytes: bytes,
+            filename: r'..\outside\untrusted.name',
+            mediaType: item.key,
+          ),
+        );
+        leases.add(lease);
+        expect(lease.path, endsWith('preview.${item.value}'));
+        expect(await File(lease.path).readAsBytes(), bytes);
+        await cache.reclaimStale();
+        expect(await File(lease.path).exists(), isTrue);
+        await lease.release();
+        expect(await File(lease.path).exists(), isFalse);
+      },
+    );
+  }
+
   test(
     'writes generated names and release removes only its lease files',
     () async {

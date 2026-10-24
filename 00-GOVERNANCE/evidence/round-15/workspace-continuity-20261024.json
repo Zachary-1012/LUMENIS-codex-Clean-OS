@@ -139,6 +139,188 @@
       "Windows release compiled but native write/interaction not verified.",
       "Core restart remains blocked by execution policy; exact merged runtime load not proved."
     ],
-    "native_hot_reload": "No attached Flutter runtime was available; release builds and Web reload used, not a successful hot reload."
+    "native_hot_reload": "No attached Flutter runtime was available; release builds and Web reload used, not a successful hot reload.",
+    "integration": {
+      "pr": 141,
+      "merge_sha": "27a92b7c04ba6a75bc01c6cb6de3a2340fdab3ef",
+      "product_gate": 40073007052,
+      "app_gate": 40073007071,
+      "local_remote_main_matched": true
+    }
+  },
+  "media_source_preview": {
+    "recorded_at": "2026-10-24T08:35:22.037534+00:00",
+    "base_sha": "27a92b7c04ba6a75bc01c6cb6de3a2340fdab3ef",
+    "source_pins": {
+      "app.py": "6fd49d880644a4ec193916df49e2de4cd88732922f921156741b19be8bd11b07",
+      "runtime_guardian.py": "bd5c616656a70ecadf1194f08ab614318f5231d448fdaf2d580b7eeef28155d2",
+      "shared_artifacts.py": "f54e0162da829f86a491fe45b896943ad862919fce83428443c63350941ab7f9",
+      "experience_runtime.py": "cddc4dbe74d4dcfa0eeb4b4c88262a5d81d4032ea8869290f00141b6978fb631",
+      "tests/test_runtime_api_diagnostics.py": "b4cb1d82280eaade8c12fb5bb97c7d6f3cf7b0939be40d01ee5a46a7175df5d5",
+      "tests/test_local_content_source_routes.py": "be07903aa8c554100271bff553a1e443f49e1b253ae4cb897b12dd1af0979df5",
+      "app/lib/core/lumenis_core_client.dart": "1b0e56b53036c9dcb9bbc0860c1201c48d111fcdafd301cc6b27d051d7a60a99",
+      "app/lib/core/lumenis_theme.dart": "05ae2feb2fbbc2452e30fb306fbef9674b1c1ab2b168e3887c37d7c15c59f665",
+      "app/lib/features/shared/sh01/media_preview_web.dart": "d59253eaafa9a06a6008d999e43e26e6d334d3c502d85bccf074dc6f5fb5c70e",
+      "app/lib/features/shared/sh01/media_project_workbench.dart": "e3a3cf13ebf8075585164c6e4b5bde2c164946cc188d715b1fcd166ac91c1694",
+      "app/lib/features/shared/sh01/native_media_cache.dart": "15762f91041f6e5ba95aa7ed5b8d704251ddbebe90764f389c0ca1fca39d297e",
+      "app/lib/l10n/lumenis_copy.g.dart": "535f1980eb918d73c83993603b81db9941fe92ad9671b73d05e32b854de397dd",
+      "app/lib/shell/lumenis_workspace_shell.dart": "f573055db6444aae47c9dfc3f1836156d6a90ffbee16dce971920aecc27d9cd1",
+      "app/test/core/lumenis_core_client_test.dart": "df69315414276b646d57fd5587a4d0b6bfbf145d742a14fc6e18b6af900069b4",
+      "app/test/features/shared/sh01/media_preview_web_test.dart": "f7b7ebc006ea26878e3f878e4c960583ab06a6a65e298a6aa5999dae063fc045",
+      "app/test/features/shared/sh01/media_project_workbench_test.dart": "d9ed6eac7f220ba9c9fe824f63e84e0b47adc669f6b227369196f939955c4a3a",
+      "app/test/features/shared/sh01/native_media_cache_test.dart": "d5b4853858debf2ac7eb75d67c0d0cc31dcb39b16ee07e473136e785206914a1"
+    },
+    "implementation": [
+      "Existing source Artifact/Permission route serves bounded original media only for exact source SHA; rechecks the immutable package, bytes, scope and source identity before returning.",
+      "Independent source monitor preserves editing/playhead intent, narrow-layout continuity, explicit retry, cancellation and scope invalidation.",
+      "Existing export handler preserves parent-revision rejection through the Skill failure envelope; no failed operation promoted to success."
+    ],
+    "verification": {
+      "python_routes": {
+        "passed": 21,
+        "scope": "isolated imported WAV bytes, metadata/read authorization, corruption/version mismatch, export/revision/reopen and recovery contracts; not live user E2E"
+      },
+      "workbench_widgets": 78,
+      "core_client_contracts": 32,
+      "flutter_analyze": "PASS 14.4 seconds; exact publish source",
+      "web_release_seconds": 110.8,
+      "windows_release_seconds": 80.7,
+      "ruff": [
+        {
+          "path": "app.py",
+          "baseline": 443,
+          "current": 439,
+          "introduced": []
+        },
+        {
+          "path": "runtime_guardian.py",
+          "baseline": 100,
+          "current": 100,
+          "introduced": []
+        },
+        {
+          "path": "shared_artifacts.py",
+          "baseline": 81,
+          "current": 81,
+          "introduced": []
+        },
+        {
+          "path": "experience_runtime.py",
+          "baseline": 173,
+          "current": 173,
+          "introduced": []
+        },
+        {
+          "path": "tests/test_runtime_api_diagnostics.py",
+          "baseline": 3,
+          "current": 3,
+          "introduced": []
+        },
+        {
+          "path": "tests/test_local_content_source_routes.py",
+          "baseline": 4,
+          "current": 4,
+          "introduced": []
+        }
+      ],
+      "diagnostics_regressions": 38,
+      "theme_regressions": 3,
+      "shell_regressions": 26,
+      "native_cache_and_controller": 24,
+      "browser_player": 3
+    },
+    "runtime": {
+      "url": "http://127.0.0.1:58724/workspace/SH-01?entry=video",
+      "recorded_at": "2026-10-24T08:35:22.037534+00:00",
+      "mode": "manual-workspace --no-scheduler",
+      "boot_id": "d504200f4a784268badb5ea0008ba02b",
+      "boot_source_pins": {
+        "app.py": "f4a576d7970cb77e52a43db7992915243cbb8a052007968557dfba5d57abf2f0",
+        "runtime_guardian.py": "18ff8b5ed85b0097c61f926a03b48a58c0b1702e8fb553df2fea585c1339d7f3",
+        "shared_artifacts.py": "8ccad753871fe64ea7fae765501f3b9e3b4b2cd65ffe4643cf53257ed26472b0",
+        "experience_runtime.py": "58dda46b27c232b0484bee51c18f88828b3ea21afdec88fd9601fbc6995f2070"
+      },
+      "loaded_version_boundary": "Observed restart, health boot identity and real new source/diagnostic routes. runtime_guardian return annotation was subsequently modernized only; do not equate all current disk hashes with loaded modules.",
+      "consistent_backup_sha256": "23536a43bf39ac50e5ad029ce76c88e6899dbbd72a282ec10c75a776bacc9fd7",
+      "artifact_files_verified_unchanged": 10,
+      "database_diagnostics": "HTTP 200 AVAILABLE",
+      "dlq_diagnostics": "HTTP 503 UNAVAILABLE; no existing manual-workspace guardian",
+      "actual_saved_media_versions": [
+        "ART-d473d3bd1a2940ea",
+        "ART-89caa35e07dd4bf8",
+        "ART-c6e1b47959d74ee3"
+      ],
+      "real_source_playback_save_revision_recovery": "Observed original source playback, v1 save, v2 trim revision, v3 render/save, independent older-version reopen, reload and post-Core-restart v3 playback.",
+      "post_restart_playback": {
+        "duration_seconds": 6,
+        "observed_playback_time_seconds": 0.908554,
+        "ready_state": 4,
+        "media_error": null
+      },
+      "native_playback_and_write": "NOT_VERIFIED",
+      "screenshot_sha256": "436c9f8939dcc58015b04ebebd2b7ecae1f2009837a4d094d0cabcd0ccdb6af1"
+    },
+    "retained_failures": [
+      "First Python invocation refused the protected seed with WAL/SHM before tests; subsequent run used explicit disposable test seed, leaving protected DB unchanged.",
+      "Initial preview test incorrectly expected 403 for an origin that cannot establish a local principal; corrected expected result is 401.",
+      "Existing no-change project revision was incorrectly masked as SKILL_HANDLER_FAILED; repaired the owning handler without weakening rejection.",
+      "Redirect transport fails before an HTTP result is delivered; client regression now asserts explicit unavailable and only one request.",
+      "Initial Dart analyze required braces; fixed.",
+      "Initial Material-less pane caused ink assertion; restored Material and reran affected widgets successfully.",
+      "Initial changed dark palette failed the retained contrast assertion; semantic colors now meet the existing contrast threshold.",
+      "Initial Ruff invocation selected nonexistent pyproject; corrected identical isolated baseline/current comparison. UP045/I001 introduced findings fixed without broad legacy autofix."
+    ],
+    "unresolved": [
+      "Full planned visual acceptance remains NOT_ACCEPTED.",
+      "Large-file authenticated streaming/Range, proxy/cache and professional complexity remain OPEN; source preview has a 128 MiB whole-read bound.",
+      "Windows media interaction/recovery NOT_VERIFIED.",
+      "Complete professional media/podcast, CTH/BMP, research, AI and same-version whole-product release remain OPEN."
+    ],
+    "production_effects": "No production service restart, DB mutation, collection, inference, training or deployment.",
+    "previous_observation": {
+      "recorded_at": "2026-10-24T07:33:21.584312+00:00",
+      "source_pins": {
+        "shared_artifacts.py": "f54e0162da829f86a491fe45b896943ad862919fce83428443c63350941ab7f9",
+        "experience_runtime.py": "cddc4dbe74d4dcfa0eeb4b4c88262a5d81d4032ea8869290f00141b6978fb631",
+        "tests/test_local_content_source_routes.py": "be07903aa8c554100271bff553a1e443f49e1b253ae4cb897b12dd1af0979df5",
+        "app/lib/core/lumenis_core_client.dart": "1b0e56b53036c9dcb9bbc0860c1201c48d111fcdafd301cc6b27d051d7a60a99",
+        "app/lib/features/shared/sh01/media_project_workbench.dart": "a46a5f3954bdb5d500700b8c961fd4c54fbd1ca5dd54d11585500f9e3e863c3b",
+        "app/test/core/lumenis_core_client_test.dart": "df69315414276b646d57fd5587a4d0b6bfbf145d742a14fc6e18b6af900069b4",
+        "app/test/features/shared/sh01/media_project_workbench_test.dart": "292f5c64dd140eddfcf4ff79e192cc39e8f617840467ec79cd10fe0ccda1d402",
+        "app/lib/l10n/lumenis_copy.g.dart": "535f1980eb918d73c83993603b81db9941fe92ad9671b73d05e32b854de397dd",
+        "contracts/experience/i18n/zh-CN.delta.json": "2d7d52eab9213b3d89347d745c2838d5bef0b32665b4532e9e653ad779bcc112",
+        "contracts/experience/i18n/en.delta.json": "270a102048bb2b52f8fd0353436cc314b5f29e975daaac75851a4b782d2d10a8",
+        "contracts/experience/i18n/ko.delta.json": "4fc35a2282606545350f6970c0a13cbfcbab8049e50c4b116cd48cc6065cdae9",
+        "contracts/experience/screen-specifications/SH-01.md": "b024cd76d74be9f629181116ba60db080f60fa75219b0e8e0574eb9c8d841d53"
+      },
+      "runtime": {
+        "url": "http://127.0.0.1:58724/workspace/SH-01?entry=video",
+        "web_build_reloaded": true,
+        "actual_saved_media_list": "empty in current authorized workspace",
+        "backend_new_route_loaded": "NOT_VERIFIED",
+        "native_playback_and_write": "NOT_VERIFIED",
+        "real_source_playback_save_revision_recovery": "NOT_VERIFIED"
+      },
+      "unresolved": [
+        "Prior tool policy rejected runtime restart and file upload; no alternate transport used.",
+        "No live source playback or same-version backend/native acceptance.",
+        "Complete planned visual/media/podcast/CTH/BMP/research/AI and whole-product outcomes remain open."
+      ]
+    }
+  },
+  "professional_enhancement": {
+    "adopted_at": "2026-10-24T08:35:22.037534+00:00",
+    "original": "00-GOVERNANCE/evidence/round-15/professional-enhancement-20261024.md",
+    "plan": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md#90-一体化执行批次",
+    "scope": "All PE01-24, original 30 groups/396 coverage/213 interactions retained. Adoption not completion.",
+    "partial_implementation": [
+      "PE01 bounded source preview",
+      "PE02 truthful read-only diagnostics",
+      "PE23 media editing layout"
+    ],
+    "remaining": "All unsatisfied original and enhanced professional outcomes remain required.",
+    "original_sha256": "521c1dbb662722a25f68a6688ecec3d7f3d5feb9d15025f88c005ebaa1c0ba2f",
+    "repository_copy_sha256": "a8ec872ac029a161bb608c53e7c5bb04fbdd044484abc5f206afe20a229eca61",
+    "copy_boundary": "Complete supplied specification retained; line endings and trailing Markdown whitespace normalized only. Unchanged original attachment remains outside Git."
   }
 }

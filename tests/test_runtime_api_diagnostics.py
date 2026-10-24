@@ -11,10 +11,12 @@ import ast
 import base64
 import json
 import secrets
+import sqlite3
 import subprocess
 import sys
 import types
 import urllib.parse
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -24,6 +26,91 @@ from flask import Flask, jsonify, request
 _ROOT = Path(__file__).resolve().parents[1]
 _APP_SOURCE = _ROOT / "app.py"
 _AGG_SOURCE = _ROOT / "lumenis_agg_api.py"
+
+
+@pytest.mark.parametrize("reader", [None, lambda: None, lambda: {"total": -1}])
+def test_dlq_missing_observation_is_not_a_zero(reader, monkeypatch):
+    guardian = types.SimpleNamespace(dlq=types.SimpleNamespace(stats=reader))
+    monkeypatch.setitem(sys.modules, "runtime_guardian", types.SimpleNamespace(existing_guardian=lambda _: guardian))
+    client, _ = _client_for(_APP_SOURCE, "api_system_dlq", "/api/system/dlq")
+    response = client.get("/api/system/dlq")
+    assert response.status_code == 503
+    assert response.json["ok"] is False
+    assert response.json["dlq"] is None
+
+
+def test_dlq_read_error_is_not_success_or_secret_text(monkeypatch):
+    def fail():
+        raise RuntimeError("private-local-path")
+    guardian = types.SimpleNamespace(dlq=types.SimpleNamespace(stats=fail))
+    monkeypatch.setitem(sys.modules, "runtime_guardian", types.SimpleNamespace(existing_guardian=lambda _: guardian))
+    client, _ = _client_for(_APP_SOURCE, "api_system_dlq", "/api/system/dlq")
+    response = client.get("/api/system/dlq")
+    assert response.status_code == 503
+    assert response.json["state"] == "ERROR"
+    assert response.json["dlq"] is None
+    assert "private-local-path" not in response.text
+
+
+def test_dlq_observed_empty_queue_remains_zero(monkeypatch):
+    guardian = types.SimpleNamespace(dlq=types.SimpleNamespace(stats=lambda: {"total": 0}))
+    monkeypatch.setitem(sys.modules, "runtime_guardian", types.SimpleNamespace(existing_guardian=lambda _: guardian))
+    client, _ = _client_for(_APP_SOURCE, "api_system_dlq", "/api/system/dlq")
+    response = client.get("/api/system/dlq")
+    assert response.status_code == 200
+    assert response.json["ok"] is True
+    assert response.json["dlq"]["total"] == 0
+
+
+@pytest.mark.parametrize("deny_notes", [False, True])
+def test_database_counts_preserve_missing_failed_and_actual_zero(tmp_path, deny_notes):
+    database = tmp_path / "diagnostics.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE notes (id INTEGER)")
+        connection.execute("CREATE TABLE users (id INTEGER)")
+        connection.execute("INSERT INTO users VALUES (1)")
+        connection.execute('CREATE TABLE "quoted""name" (id INTEGER)')
+    original = database.read_bytes()
+
+    @contextmanager
+    def read_connection(*, read_only, wal):
+        assert read_only is True and wal is False
+        connection = sqlite3.connect(database.as_uri() + "?mode=ro", uri=True)
+        if deny_notes:
+            connection.set_authorizer(lambda op, table, *_: sqlite3.SQLITE_DENY
+                                      if op == sqlite3.SQLITE_READ and table == "notes" else sqlite3.SQLITE_OK)
+        try:
+            yield connection
+        finally:
+            connection.close()
+
+    repository = types.SimpleNamespace(connection=read_connection)
+    client, _ = _client_for(_APP_SOURCE, "api_system_database", "/api/system/database",
+                            get_repository=lambda: repository)
+    response = client.get("/api/system/database")
+    assert response.status_code == 200
+    result = response.json
+    assert result["state"] == ("PARTIAL" if deny_notes else "AVAILABLE")
+    assert result["core"]["users"] == 1
+    assert result["core"]["notes"] == (None if deny_notes else 0)
+    assert result["core"]["events"] is None
+    assert result["core_states"]["events"] == "NOT_PRESENT"
+    assert result["empty"] == (None if deny_notes else 2)
+    assert result["unreadable"] == int(deny_notes)
+    assert database.read_bytes() == original
+
+
+def test_database_read_failure_has_no_fabricated_counts():
+    def fail(**_):
+        raise RuntimeError("private-db-location")
+    repository = types.SimpleNamespace(connection=fail)
+    client, _ = _client_for(_APP_SOURCE, "api_system_database", "/api/system/database",
+                            get_repository=lambda: repository)
+    response = client.get("/api/system/database")
+    assert response.status_code == 503
+    assert response.json["ok"] is False
+    assert response.json["table_count"] is None
+    assert "private-db-location" not in response.text
 
 
 def _load_function(source_path: Path, function_name: str, **extra_globals):

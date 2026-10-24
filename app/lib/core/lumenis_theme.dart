@@ -45,7 +45,9 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
     final color = brightness == Brightness.dark
         ? Color.lerp(source, const Color(0xFFFFFFFF), 0.35)!
         : source;
-    final background = contrastBackground;
+    final background =
+        contrastBackground ??
+        (brightness == Brightness.dark ? surfaceRaised : null);
     if (background == null ||
         LumenisTheme._contrast(color, background) >= 4.5) {
       return color;
@@ -136,10 +138,10 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
 abstract final class LumenisTheme {
   // Compatibility tokens for older callers and semantic-only code. New
   // neutral color consumers should resolve LumenisTheme.of(context).
-  static const canvas = Color(0xFFE0E3E4);
-  static const surface = Color(0xFFFAFAF7);
-  static const surfaceRaised = Color(0xFFCED3D4);
-  static const line = Color(0xFFAFB7BA);
+  static const canvas = Color(0xFFF0F0EC);
+  static const surface = Color(0xFFFCFCF9);
+  static const surfaceRaised = Color(0xFFE2E5DF);
+  static const line = Color(0xFFC4CBC5);
   static const foreground = Color(0xFF20292D);
   static const muted = Color(0xFF505E63);
   static const quiet = Color(0xFF59666B);
@@ -259,18 +261,18 @@ abstract final class LumenisTheme {
     final base = palette.canvas.a < .5
         ? (dark ? const Color(0xFF303A3E) : const Color(0xFFE4E7E8))
         : palette.canvas;
-    final face = recessed ? palette.surface : base;
+    final face = recessed ? base : palette.surface;
     final highlight = Color.lerp(face, Colors.white, dark ? .09 : .6)!;
     final shadow = Colors.black.withValues(alpha: dark ? .3 : .12);
     return BoxDecoration(
       borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: palette.line),
+      border: Border.all(color: palette.line.withValues(alpha: .65)),
       gradient: LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: recessed
             ? [Color.lerp(face, palette.line, .22)!, face, face]
-            : [highlight, face, Color.lerp(face, palette.line, .16)!],
+            : [highlight, face, Color.lerp(face, palette.line, .05)!],
         stops: recessed ? const [0, .025, 1] : const [0, .08, 1],
       ),
       boxShadow: [
@@ -280,7 +282,7 @@ abstract final class LumenisTheme {
           blurRadius: 0,
         ),
         if (!recessed)
-          BoxShadow(color: shadow, offset: const Offset(0, 4), blurRadius: 8),
+          BoxShadow(color: shadow, offset: const Offset(0, 3), blurRadius: 12),
       ],
     );
   }
@@ -375,7 +377,7 @@ abstract final class LumenisTheme {
       ),
       cardTheme: CardThemeData(
         color: palette.surface,
-        elevation: 3,
+        elevation: 1,
         shadowColor: Colors.black.withValues(alpha: .12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -420,12 +422,12 @@ abstract final class LumenisTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          backgroundColor: palette.canvas,
+          backgroundColor: palette.surface,
           foregroundColor: palette.foreground,
           minimumSize: const Size(48, 44),
           side: BorderSide(color: palette.line),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        ).copyWith(backgroundBuilder: _buttonFace),
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: palette.surface,

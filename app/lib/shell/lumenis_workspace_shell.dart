@@ -377,7 +377,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         if (constraints.maxWidth < 768) {
           return _buildPhone(context);
         }
-        if (constraints.maxWidth < 1080 || _activeScreen.value == 'SYS-06') {
+        if (constraints.maxWidth < 1080 ||
+            _activeScreen.value == 'SYS-06' ||
+            _activeScreen.value == 'SH-01') {
           return _buildCompactWorkspace(context);
         }
         return _buildWideWorkspace(

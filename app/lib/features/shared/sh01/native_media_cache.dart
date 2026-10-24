@@ -44,8 +44,20 @@ class NativeMediaCache {
 
   static const int maxBytes = 512 * 1024 * 1024;
   static const String _markerName = 'lease-v1.json';
-  static const String _videoName = 'preview.mp4';
-  static const String _audioName = 'preview.wav';
+  static const _mediaNames = {
+    'video/mp4': 'preview.mp4',
+    'video/quicktime': 'preview.mov',
+    'video/webm': 'preview.webm',
+    'video/x-matroska': 'preview.mkv',
+    'video/x-msvideo': 'preview.avi',
+    'audio/wav': 'preview.wav',
+    'audio/mpeg': 'preview.mp3',
+    'audio/mp4': 'preview.m4a',
+    'audio/flac': 'preview.flac',
+    'audio/ogg': 'preview.ogg',
+    'audio/aac': 'preview.aac',
+    'audio/aiff': 'preview.aiff',
+  };
   static const int _lockStart = 0;
   static const int _lockEnd = 1;
   static const int _maxMarkerBytes = 512;
@@ -53,11 +65,7 @@ class NativeMediaCache {
   final Directory _root;
 
   Future<NativeMediaFileLease> create(ContentProjectFile file) async {
-    final mediaName = switch (file.mediaType) {
-      'video/mp4' => _videoName,
-      'audio/wav' => _audioName,
-      _ => null,
-    };
+    final mediaName = _mediaNames[file.mediaType];
     if (mediaName == null) {
       throw const NativeMediaCacheException(
         NativeMediaCacheFailure.unsupportedType,
@@ -297,8 +305,7 @@ class NativeMediaCache {
           !initialNames.contains(_markerName) ||
           initialNames.length > 3 ||
           initialNames.any(
-            (name) =>
-                name != _markerName && name != _videoName && name != _audioName,
+            (name) => name != _markerName && !_mediaNames.containsValue(name),
           )) {
         return;
       }
@@ -523,8 +530,9 @@ class NativeMediaCache {
       '{"version":1,"files":["$_markerName","$mediaName"]}';
 
   String? _mediaNameFromMarker(String contents) {
-    if (contents == _markerContents(_videoName)) return _videoName;
-    if (contents == _markerContents(_audioName)) return _audioName;
+    for (final name in _mediaNames.values) {
+      if (contents == _markerContents(name)) return name;
+    }
     return null;
   }
 }

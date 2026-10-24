@@ -1507,6 +1507,48 @@ def read_content_source_artifact(
             **({"speech_source": speech} if speech is not None else {}), **_media_license_public(metadata)}
 
 
+def read_content_source_media(
+    artifact_id: str,
+    *,
+    expected_sha256: str,
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
+    domain_id: str | None = None,
+    subject_id: str | None = None,
+    brand_focus_id: str | None = None,
+    global_scope: bool = False,
+    shared_workspace_scope: Mapping[str, Any] | None = None,
+) -> tuple[bytes, str, str]:
+    if not isinstance(expected_sha256, str) or not re.fullmatch(r"[a-f0-9]{64}", expected_sha256):
+        raise LocalArtifactError("CONTENT_SOURCE_VERSION_REQUIRED")
+    scope = {"actor": actor, "domain_id": domain_id, "subject_id": subject_id,
+             "brand_focus_id": brand_focus_id, "global_scope": global_scope,
+             "shared_workspace_scope": shared_workspace_scope}
+    metadata, record, context, candidate = _verified_content_source(artifact_id, **scope)
+    if metadata["asset"]["sha256"] != expected_sha256:
+        raise LocalArtifactError("CONTENT_SOURCE_VERSION_MISMATCH")
+    filename = metadata["media_filename"]
+    media_types = {
+        ".mp4": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm",
+        ".mkv": "video/x-matroska", ".avi": "video/x-msvideo",
+        ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4",
+        ".flac": "audio/flac", ".ogg": "audio/ogg", ".aac": "audio/aac",
+        ".aiff": "audio/aiff", ".png": "image/png", ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif",
+    }
+    media_type = media_types.get(Path(filename).suffix.lower())
+    if media_type is None:
+        raise LocalArtifactError("LOCAL_ASSET_TYPE_NOT_ALLOWED")
+    with zipfile.ZipFile(candidate, "r") as archive, archive.open(filename) as media:
+        content = media.read(_MAX_CONTENT_SOURCE_BYTES + 1)
+    if len(content) != record["media_size_bytes"] or hashlib.sha256(content).hexdigest() != expected_sha256:
+        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    current_metadata, current_record, current_context, current_path = _verified_content_source(artifact_id, **scope)
+    if (current_metadata != metadata or current_record != record
+            or current_context != context or current_path != candidate):
+        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    return content, filename, media_type
+
+
 @contextmanager
 def resolve_content_source_assets(
     artifact_refs: Any,
