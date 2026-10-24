@@ -44,6 +44,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   final List<Sys06BrowserSession> _tabs = <Sys06BrowserSession>[];
   bool _collapsed = false;
   bool _contextVisible = false;
+  Key _contextOwnerKey = UniqueKey();
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   // or a backgrounded/hidden app ends the stream so the server records
   // USER_LEFT_VIEW; returning re-establishes it from a fresh frame.
   void _setViewVisible(bool visible) {
+    visible = visible && !_collapsed;
     if (_viewVisible == visible) return;
     _viewVisible = visible;
     if (!visible) {
@@ -112,6 +114,10 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
     _returning = false;
     _cancelFrameStream();
     _addressController.clear();
+    _tabs.clear();
+    _contextVisible = false;
+    _collapsed = false;
+    _contextOwnerKey = UniqueKey();
   }
 
   @override
@@ -994,6 +1000,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
               child: ColoredBox(
                 color: theme.surface.withValues(alpha: 1),
                 child: Sys06PageContext(
+                  key: _contextOwnerKey,
                   embedded: true,
                   read: _readPageContext,
                   pageIdentity:
@@ -1018,8 +1025,10 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
                     onSelect: _switchTab,
                     onClose: _closeTab,
                     onNewTab: _open,
-                    onToggleCollapsed: () =>
-                        setState(() => _collapsed = !_collapsed),
+                    onToggleCollapsed: () {
+                      setState(() => _collapsed = !_collapsed);
+                      _setViewVisible(!_collapsed);
+                    },
                     onViewExternally: _viewOriginalExternally,
                   ),
                 ),
@@ -1067,36 +1076,45 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
                       ),
                     ),
                   Divider(height: 1, thickness: 1, color: theme.line),
-                  Expanded(
-                    child: wide
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(child: preview),
-                              if (_contextVisible)
-                                VerticalDivider(width: 1, color: theme.line),
-                              Offstage(
-                                offstage: !_contextVisible,
-                                child: panel,
-                              ),
-                            ],
-                          )
-                        : Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Offstage(
-                                offstage: _contextVisible,
-                                child: preview,
-                              ),
-                              Offstage(
-                                offstage: !_contextVisible,
-                                child: panel,
-                              ),
-                            ],
+                ],
+                Expanded(
+                  key: const ValueKey('sys06-reader-content'),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Positioned.fill(
+                        right: wide && _contextVisible ? panelWidth : 0,
+                        child: Offstage(
+                          offstage: _collapsed || (!wide && _contextVisible),
+                          child: ExcludeFocus(
+                            excluding: _collapsed || (!wide && _contextVisible),
+                            child: preview,
                           ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 0,
+                        bottom: 0,
+                        right: 0,
+                        width: panelWidth,
+                        child: Offstage(
+                          offstage: _collapsed || !_contextVisible,
+                          child: ExcludeFocus(
+                            excluding: _collapsed || !_contextVisible,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  left: BorderSide(color: theme.line),
+                                ),
+                              ),
+                              child: panel,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ] else
-                  const Spacer(),
+                ),
               ],
             );
           },
@@ -1162,34 +1180,28 @@ class _ReaderTabs extends StatelessWidget {
                       closeLabel: copy.text('tab.close'),
                     ),
                   ),
-                Tooltip(
-                  message: copy.text('tab.add'),
-                  child: IconButton(
-                    key: const ValueKey('sys06-tab-new'),
-                    onPressed: busy ? null : onNewTab,
-                    icon: const Icon(Icons.add_rounded),
-                  ),
+                IconButton(
+                  tooltip: copy.text('tab.add'),
+                  key: const ValueKey('sys06-tab-new'),
+                  onPressed: busy ? null : onNewTab,
+                  icon: const Icon(Icons.add_rounded),
                 ),
               ],
             ),
           ),
         ),
-        Tooltip(
-          message: copy.text('viewExternal'),
-          child: IconButton(
-            key: const ValueKey('sys06-view-external'),
-            onPressed: canViewExternally ? onViewExternally : null,
-            icon: Icon(Icons.open_in_new_rounded, color: theme.muted),
-          ),
+        IconButton(
+          tooltip: copy.text('viewExternal'),
+          key: const ValueKey('sys06-view-external'),
+          onPressed: canViewExternally ? onViewExternally : null,
+          icon: Icon(Icons.open_in_new_rounded, color: theme.muted),
         ),
-        Tooltip(
-          message: copy.text(collapsed ? 'expand' : 'collapse'),
-          child: IconButton(
-            key: const ValueKey('sys06-collapse'),
-            onPressed: onToggleCollapsed,
-            icon: Icon(
-              collapsed ? Icons.unfold_more_rounded : Icons.unfold_less_rounded,
-            ),
+        IconButton(
+          tooltip: copy.text(collapsed ? 'expand' : 'collapse'),
+          key: const ValueKey('sys06-collapse'),
+          onPressed: onToggleCollapsed,
+          icon: Icon(
+            collapsed ? Icons.unfold_more_rounded : Icons.unfold_less_rounded,
           ),
         ),
       ],

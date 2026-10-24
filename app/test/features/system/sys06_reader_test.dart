@@ -94,6 +94,92 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('the same question survives resizing, collapse and reopening', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final repository = _ReaderRepository();
+    await tester.pumpWidget(
+      _host(
+        Sys06Screen(client: LumenisCoreClient(), browserRepository: repository),
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey('sys06-read-page')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('sys06-context-question')),
+      'Find opening hours',
+    );
+    for (final size in [const Size(390, 844), const Size(1280, 900)]) {
+      await tester.binding.setSurfaceSize(size);
+      await tester.pumpAndSettle();
+      expect(find.text('Find opening hours'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('sys06-collapse')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('sys06-context-question')),
+        findsNothing,
+      );
+      await tester.tap(find.byKey(const ValueKey('sys06-collapse')));
+      await tester.pumpAndSettle();
+      expect(find.text('Find opening hours'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+    expect(repository.openCalls, 0);
+  });
+  testWidgets(
+    'changing the authenticated client drops old tabs and question state',
+    (tester) async {
+      final repository = _ReaderRepository();
+      await tester.pumpWidget(
+        _host(
+          Sys06Screen(
+            client: LumenisCoreClient(),
+            browserRepository: repository,
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(const ValueKey('sys06-open')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('sys06-tab-bs_0123456789ab')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('sys06-read-page')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('sys06-context-question')),
+        'Private draft',
+      );
+      await tester.pumpWidget(
+        _host(
+          Sys06Screen(
+            client: LumenisCoreClient(),
+            browserRepository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('sys06-tab-bs_0123456789ab')),
+        findsNothing,
+      );
+      await tester.tap(find.byKey(const ValueKey('sys06-read-page')));
+      await tester.pumpAndSettle();
+      expect(find.text('Private draft'), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('sys06-context-question')),
+            )
+            .controller!
+            .text,
+        isEmpty,
+      );
+      expect(repository.openCalls, 1);
+    },
+  );
   testWidgets(
     'SYS-06 reads an authorized frame inside the product without exposing browser identity',
     (tester) async {

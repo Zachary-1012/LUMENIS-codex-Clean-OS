@@ -112,6 +112,9 @@ jobs:
         run: |
           flutter test --no-pub \
             test/features/system/sys_waiting_feedback_test.dart \
+            test/features/system/sys06_reader_test.dart \
+            test/features/system/sys06_page_context_test.dart \
+            test/features/system/sys06_frame_stream_test.dart \
             test/features/bmp08/bmp08_saved_work_test.dart \
             test/features/bmp08/bmp08_saved_editor_widget_test.dart \
             test/features/bmp04/bmp04_classification_test.dart \
