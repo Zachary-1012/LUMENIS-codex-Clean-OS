@@ -44,16 +44,19 @@ class NativeMediaPreviewController extends ChangeNotifier {
     required this.file,
     Future<NativeMediaFileLease> Function(ContentProjectFile)? createFile,
     NativeMediaPlayer Function(String)? createPlayer,
+    NativeMediaPlayer Function(Uri)? createStreamPlayer,
     NativePlaybackSlot? slot,
     this.initializationTimeout = const Duration(seconds: 15),
   }) : _createFile = createFile ?? NativeMediaCache().create,
        _createPlayer = createPlayer ?? WindowsMediaPlayer.new,
+       _createStreamPlayer = createStreamPlayer ?? WindowsMediaPlayer.stream,
        _slot = slot ?? _sharedSlot;
 
   static final _sharedSlot = NativePlaybackSlot();
   final ContentProjectFile file;
   final Future<NativeMediaFileLease> Function(ContentProjectFile) _createFile;
   final NativeMediaPlayer Function(String) _createPlayer;
+  final NativeMediaPlayer Function(Uri) _createStreamPlayer;
   final NativePlaybackSlot _slot;
   final Duration initializationTimeout;
   NativeMediaFileLease? _lease;
@@ -105,12 +108,15 @@ class NativeMediaPreviewController extends ChangeNotifier {
         return;
       }
       _setPhase(NativePreviewPhase.loading);
-      _lease = await _createFile(file);
+      final uri = file.streamUri;
+      if (uri == null) _lease = await _createFile(file);
       if (_closeRequested) {
         await _releaseResources();
         return;
       }
-      final player = _player = _createPlayer(_lease!.path);
+      final player = _player = uri == null
+          ? _createPlayer(_lease!.path)
+          : _createStreamPlayer(uri);
       player.addListener(_playerChanged);
       await player.initialize().timeout(initializationTimeout);
       if (!player.value.isInitialized || player.value.hasError) {

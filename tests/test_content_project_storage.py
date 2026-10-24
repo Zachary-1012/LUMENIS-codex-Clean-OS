@@ -739,6 +739,8 @@ def test_processing_only_revision_preserves_original_and_exact_scope(media_store
 def test_delivery_preferences_save_without_encoding_then_export(media_store, monkeypatch):
     from lumenis.shared.content_creation import rendering
 
+    media_store["root"] = media_store["root"] / "寰意 素材"
+    monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(media_store["root"]))
     approve(media_store)
     source_id = import_source(media_store)["artifact"]["artifact_id"]
     with artifacts.resolve_content_source_assets([source_id], actor=ACTOR, **SCOPE) as sources:

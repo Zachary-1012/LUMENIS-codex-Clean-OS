@@ -102,10 +102,17 @@ class ContentProjectFile {
     required this.bytes,
     required this.filename,
     required this.mediaType,
-  });
+  }) : streamUri = null;
+  ContentProjectFile.stream({
+    required Uri uri,
+    required this.filename,
+    required this.mediaType,
+  }) : streamUri = uri,
+       bytes = Uint8List(0);
   final Uint8List bytes;
   final String filename;
   final String mediaType;
+  final Uri? streamUri;
 }
 
 class SavedWorkExportFile {
@@ -1439,19 +1446,23 @@ class LumenisCoreClient {
       throw const FormatException('Invalid source version.');
     }
     final context = _mediaContentContext(domainId);
-    final uri = _uri(
-      '/api/experience/content-sources/$artifactId',
-    ).replace(queryParameters: {'format': 'media', 'sha256': expectedSha256});
+    final uri = _uri('/api/experience/content-sources/$artifactId').replace(
+      queryParameters: {
+        'format': 'media',
+        'sha256': expectedSha256,
+        'context': jsonEncode(context),
+      },
+    );
     try {
       final response = await sendLumenisBinaryRequest(
         LumenisTransportRequest(
-          method: 'GET',
+          method: 'HEAD',
           uri: uri,
           headers: {...context, 'Accept': 'video/*, audio/*, image/*'},
           connectionTimeout: const Duration(minutes: 2),
           followRedirects: false,
         ),
-        maxBytes: 128 * 1024 * 1024,
+        maxBytes: 4096,
       );
       if (response.statusCode != 200) {
         throw LumenisCoreException(
@@ -1478,11 +1489,14 @@ class LumenisCoreClient {
         'image/webp': 'webp',
         'image/gif': 'gif',
       }[type];
-      if (extension == null || response.bytes.isEmpty) {
+      if (extension == null ||
+          response.headers['accept-ranges'] != 'bytes' ||
+          response.headers['etag'] != '"$expectedSha256"' ||
+          (int.tryParse(response.headers['content-length'] ?? '') ?? 0) <= 0) {
         throw const FormatException('Unsupported source preview.');
       }
-      return ContentProjectFile(
-        bytes: response.bytes,
+      return ContentProjectFile.stream(
+        uri: uri,
         filename: '$artifactId.$extension',
         mediaType: type!,
       );

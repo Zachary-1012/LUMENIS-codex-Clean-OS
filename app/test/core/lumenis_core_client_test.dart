@@ -701,10 +701,14 @@ void main() {
         expectedSha256: digest,
       );
       final request = server.requests.single;
-      expect(request.method, 'GET');
+      expect(request.method, 'HEAD');
       expect(Uri.parse(request.path).queryParameters, {
         'format': 'media',
         'sha256': digest,
+        'context': jsonEncode({
+          'X-Lumenis-Workspace-Scope':
+              '{"scope_kind":"shared_workspace","version":1}',
+        }),
       });
       expect(
         request.workspaceScope,
@@ -712,7 +716,8 @@ void main() {
       );
       expect(request.authorization, isNull);
       expect(file.mediaType, 'audio/wav');
-      expect(file.bytes, [82, 73, 70, 70]);
+      expect(file.bytes, isEmpty);
+      expect(file.streamUri, Uri.parse('${server.baseUrl}${request.path}'));
       await expectLater(
         client.contentSourcePreview(
           domainId: null,
@@ -1193,8 +1198,10 @@ class _CoreStub {
       request.response
         ..statusCode = authorized ? fileStatus : HttpStatus.unauthorized
         ..headers.contentType = ContentType('audio', 'wav')
-        ..headers.set(HttpHeaders.locationHeader, '/redirected')
-        ..add([82, 73, 70, 70]);
+        ..contentLength = 1024 * 1024 * 1024
+        ..headers.set('accept-ranges', 'bytes')
+        ..headers.set('etag', '"${request.uri.queryParameters['sha256']}"')
+        ..headers.set(HttpHeaders.locationHeader, '/redirected');
       await request.response.close();
       return;
     }

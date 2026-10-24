@@ -22,11 +22,13 @@ import re
 import secrets
 import shutil
 import sqlite3
+import struct
 import subprocess
 import tempfile
 import threading
 import uuid
 import zipfile
+from collections import OrderedDict
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
@@ -58,6 +60,18 @@ _CONTENT_PROJECT_LIST_SCAN_LIMIT = 100
 _CONTENT_PROJECT_LIST_CURSOR_LIMIT = 256
 _CONTENT_PROJECT_LIST_CURSOR_LOCK = threading.Lock()
 _CONTENT_PROJECT_LIST_CURSORS: Dict[str, tuple[str, str, str]] = {}
+_SOURCE_DIGEST_CACHE: OrderedDict[tuple, bool] = OrderedDict()
+_SOURCE_DIGEST_LOCK = threading.Lock()
+
+
+def _source_file_identity(path: Path, stat=None) -> tuple:
+    if stat is None:
+        with path.open("rb") as source:
+            current = os.fstat(source.fileno())
+    else:
+        current = stat
+    return (str(path), current.st_dev, current.st_ino, current.st_size,
+            current.st_mtime_ns, current.st_ctime_ns)
 
 
 class LocalArtifactError(ValueError):
@@ -989,7 +1003,11 @@ def _verified_content_source(
     max_package_size = _MAX_CONTENT_SOURCE_BYTES + _MAX_CONTENT_SOURCE_METADATA_BYTES + 4096
     if size <= 0 or size > max_package_size or size != record.get("size_bytes"):
         raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
-    if _hash_file(candidate) != record.get("sha256"):
+    file_identity = _source_file_identity(candidate)
+    digest_key = (*file_identity, record.get("sha256"))
+    with _SOURCE_DIGEST_LOCK:
+        verified_digest = digest_key in _SOURCE_DIGEST_CACHE
+    if not verified_digest and _hash_file(candidate) != record.get("sha256"):
         raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
 
     expected_context = _content_artifact_context(actor, actor_id, scope)
@@ -1044,15 +1062,23 @@ def _verified_content_source(
         declaration = validate_media_license(metadata["media_license"], asset_sha256=metadata["asset"]["sha256"])
         if declaration is None or _media_license_digest(declaration) != metadata["media_license_sha256"]:
             raise LocalArtifactError("CONTENT_MEDIA_LICENSE_INTEGRITY_FAILED")
-    digest = hashlib.sha256()
-    with zipfile.ZipFile(candidate, "r") as archive, archive.open(media_filename) as media:
-        for chunk in iter(lambda: media.read(1024 * 1024), b""):
-            digest.update(chunk)
-    if digest.hexdigest() != metadata["asset"]["sha256"]:
+    if not verified_digest:
+        digest = hashlib.sha256()
+        with zipfile.ZipFile(candidate, "r") as archive, archive.open(media_filename) as media:
+            for chunk in iter(lambda: media.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != metadata["asset"]["sha256"]:
+            raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    if _source_file_identity(candidate) != file_identity:
         raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
     if record.get("media_type") != "application/zip":
         raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
     _authorize_content_project(actor, action=action, **scope)
+    with _SOURCE_DIGEST_LOCK:
+        _SOURCE_DIGEST_CACHE[digest_key] = True
+        _SOURCE_DIGEST_CACHE.move_to_end(digest_key)
+        while len(_SOURCE_DIGEST_CACHE) > 128:
+            _SOURCE_DIGEST_CACHE.popitem(last=False)
     return metadata, {**record, "media_member": media_filename, "media_size_bytes": media_info.file_size}, expected_context, candidate
 
 
@@ -1507,7 +1533,43 @@ def read_content_source_artifact(
             **({"speech_source": speech} if speech is not None else {}), **_media_license_public(metadata)}
 
 
-def read_content_source_media(
+@dataclass(frozen=True)
+class ContentSourceMedia:
+    filename: str
+    media_type: str
+    sha256: str
+    size_bytes: int
+    path: Path
+    offset: int
+    file_identity: tuple
+    artifact_id: str
+    scope: dict
+    metadata: dict
+    record: dict
+    context: dict
+
+    def iter_bytes(self, start: int, stop: int, *, authorize=None) -> Iterator[bytes]:
+        if not 0 <= start <= stop <= self.size_bytes:
+            raise LocalArtifactError("CONTENT_SOURCE_RANGE_INVALID")
+        with self.path.open("rb") as media:
+            media.seek(self.offset + start)
+            remaining = stop - start
+            while remaining:
+                if authorize is not None:
+                    authorize()
+                current = _verified_content_source(self.artifact_id, **self.scope)
+                if (current != (self.metadata, self.record, self.context, self.path)
+                        or _source_file_identity(self.path) != self.file_identity
+                        or _source_file_identity(self.path, os.fstat(media.fileno())) != self.file_identity):
+                    raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+                chunk = media.read(min(remaining, 1024 * 1024))
+                if not chunk or _source_file_identity(self.path, os.fstat(media.fileno())) != self.file_identity:
+                    raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+                remaining -= len(chunk)
+                yield chunk
+
+
+def open_content_source_media(
     artifact_id: str,
     *,
     expected_sha256: str,
@@ -1517,7 +1579,7 @@ def read_content_source_media(
     brand_focus_id: str | None = None,
     global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
-) -> tuple[bytes, str, str]:
+) -> ContentSourceMedia:
     if not isinstance(expected_sha256, str) or not re.fullmatch(r"[a-f0-9]{64}", expected_sha256):
         raise LocalArtifactError("CONTENT_SOURCE_VERSION_REQUIRED")
     scope = {"actor": actor, "domain_id": domain_id, "subject_id": subject_id,
@@ -1538,15 +1600,30 @@ def read_content_source_media(
     media_type = media_types.get(Path(filename).suffix.lower())
     if media_type is None:
         raise LocalArtifactError("LOCAL_ASSET_TYPE_NOT_ALLOWED")
-    with zipfile.ZipFile(candidate, "r") as archive, archive.open(filename) as media:
-        content = media.read(_MAX_CONTENT_SOURCE_BYTES + 1)
-    if len(content) != record["media_size_bytes"] or hashlib.sha256(content).hexdigest() != expected_sha256:
+    identity = _source_file_identity(candidate)
+    with zipfile.ZipFile(candidate, "r") as archive, candidate.open("rb") as media:
+        info = archive.getinfo(filename)
+        media.seek(info.header_offset)
+        header = media.read(30)
+        if len(header) != 30:
+            raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
+        signature, _, flags, compression, _, _, _, _, _, name_size, extra_size = struct.unpack("<4s5H3I2H", header)
+        name = media.read(name_size).decode("utf-8" if flags & 0x800 else "cp437")
+        offset = info.header_offset + 30 + name_size + extra_size
+        if (signature != b"PK\x03\x04" or compression != zipfile.ZIP_STORED
+                or flags & 1 or name != filename or info.compress_size != info.file_size
+                or offset + info.file_size > identity[3]
+                or _source_file_identity(candidate, os.fstat(media.fileno())) != identity):
+            raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
+    if _source_file_identity(candidate) != identity:
         raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
-    current_metadata, current_record, current_context, current_path = _verified_content_source(artifact_id, **scope)
-    if (current_metadata != metadata or current_record != record
-            or current_context != context or current_path != candidate):
-        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
-    return content, filename, media_type
+    return ContentSourceMedia(filename, media_type, expected_sha256, record["media_size_bytes"],
+                              candidate, offset, identity, artifact_id, scope, metadata, record, context)
+
+
+def read_content_source_media(artifact_id: str, **kwargs) -> tuple[bytes, str, str]:
+    media = open_content_source_media(artifact_id, **kwargs)
+    return b"".join(media.iter_bytes(0, media.size_bytes)), media.filename, media.media_type
 
 
 @contextmanager

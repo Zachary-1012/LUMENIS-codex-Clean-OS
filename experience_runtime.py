@@ -1205,7 +1205,7 @@ def cth_platform_collection_search():
         return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
 
 
-def _content_project_scope(action: str, *, module="content", include_decision=False, read_only_auth=False):
+def _content_project_scope(action: str, *, module="content", include_decision=False, read_only_auth=False, selectors=None):
     """Resolve selectors through the canonical registry, then ask Permission."""
     from lumenis.auth.service import get_current_user
     from lumenis.system.security.permission import (
@@ -1214,6 +1214,8 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
     )
     from subject_registry import get_subject_by_id, normalize_domain
     from shared_artifacts import LocalArtifactError
+
+    selectors = request.headers if selectors is None else selectors
 
     try:
         local_principal = resolve_local_workspace_principal(module=module, action=action)
@@ -1226,7 +1228,7 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
         not isinstance(actor, dict) or type(actor.get("id")) is not int or actor["id"] <= 0
     ):
         raise LocalArtifactError("AUTH_REQUIRED")
-    if request.headers.get(_SHARED_WORKSPACE_SCOPE_HEADER) is not None:
+    if selectors.get(_SHARED_WORKSPACE_SCOPE_HEADER) is not None:
         if module != "content" or not _shared_content_project_route_allowed():
             raise LocalArtifactError("SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED")
         try:
@@ -1235,7 +1237,7 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
                 validate_shared_workspace_scope,
             )
 
-            shared_scope = validate_shared_workspace_scope(_parse_shared_workspace_scope_header())
+            shared_scope = validate_shared_workspace_scope(_parse_shared_workspace_scope_header(selectors))
             authorize_shared_workspace(actor, shared_scope, module="content", action=action)
         except PermissionError as exc:
             raise LocalArtifactError(str(exc)) from exc
@@ -1245,18 +1247,18 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
             raise LocalArtifactError("SHARED_WORKSPACE_SCOPE_NOT_SUPPORTED")
         return actor, {"shared_workspace_scope": shared_scope}
     try:
-        selected_domain = normalize_domain(request.headers.get("X-Domain-Id", ""))
+        selected_domain = normalize_domain(selectors.get("X-Domain-Id", ""))
     except ValueError as exc:
         raise LocalArtifactError("DOMAIN_REQUIRED") from exc
     if selected_domain not in {"CTH", "BMP"}:
         raise LocalArtifactError("DOMAIN_REQUIRED")
     domain = "cth" if selected_domain == "CTH" else "zbmp"
-    product = request.headers.get("X-Product-Id", selected_domain)
+    product = selectors.get("X-Product-Id", selected_domain)
     if product not in ({"CTH"} if domain == "cth" else {"BMP", "ZBMP"}):
         raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
-    mode = request.headers.get("X-Lumenis-Context-Mode", "GLOBAL_ALL")
-    selected_subject = request.headers.get("X-Subject-ID", "") or None
-    selected_brand = request.headers.get("X-Brand-Focus-ID", "") or None
+    mode = selectors.get("X-Lumenis-Context-Mode", "GLOBAL_ALL")
+    selected_subject = selectors.get("X-Subject-ID", "") or None
+    selected_brand = selectors.get("X-Brand-Focus-ID", "") or None
     if any(value is not None and value != value.strip() for value in (selected_subject, selected_brand)):
         raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
     subject, brand = None, None
@@ -2487,7 +2489,7 @@ def _shared_content_project_route_allowed():
             "/api/experience/content-source-confirmations/<confirmation_id>", "POST",
             r"/api/experience/content-source-confirmations/[A-Za-z0-9_-]{32,128}"),
         "experience_runtime.content_source_detail": (
-            "/api/experience/content-sources/<artifact_id>", "GET",
+            "/api/experience/content-sources/<artifact_id>", ("GET", "HEAD"),
             r"/api/experience/content-sources/ART-(?:[0-9a-f]{16}|[0-9a-f]{32})"),
         "experience_runtime.export_content_project": (
             "/api/experience/content-projects/export", "POST",
@@ -2524,13 +2526,15 @@ def _shared_content_project_route_allowed():
     }
     expected = routes.get(request.endpoint)
     return (expected is not None and request.url_rule is not None
-            and request.url_rule.rule == expected[0] and request.method == expected[1]
+            and request.url_rule.rule == expected[0]
+            and request.method in (expected[1] if isinstance(expected[1], tuple) else (expected[1],))
             and re.fullmatch(expected[2], request.path) is not None)
 
 
-def _parse_shared_workspace_scope_header():
+def _parse_shared_workspace_scope_header(headers=None):
     """Parse the exact actor-free Shared workspace wire scope."""
-    values = request.headers.getlist(_SHARED_WORKSPACE_SCOPE_HEADER)
+    headers = request.headers if headers is None else headers
+    values = headers.getlist(_SHARED_WORKSPACE_SCOPE_HEADER)
     if (len(values) != 1 or not isinstance(values[0], str)
             or len(values[0].encode("utf-8")) > 256):
         raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID")
@@ -2554,7 +2558,7 @@ def _parse_shared_workspace_scope_header():
         scope = validate_shared_workspace_scope(scope)
     except (TypeError, ValueError, UnicodeError) as exc:
         raise ValueError("SHARED_WORKSPACE_SCOPE_INVALID") from exc
-    header_names = {name.casefold() for name in request.headers.keys()}  # noqa: SIM118 - Werkzeug Headers iterates pairs.
+    header_names = {name.casefold() for name in headers.keys()}  # noqa: SIM118 - Werkzeug Headers iterates pairs.
     if header_names.intersection(_SHARED_WORKSPACE_LEGACY_SCOPE_HEADERS):
         raise ValueError("SHARED_WORKSPACE_SCOPE_MIXED_CONTEXT")
     if _SHARED_WORKSPACE_CLIENT_IDENTITY_ARGS.intersection(request.args):
@@ -4045,24 +4049,52 @@ def confirm_content_source_import_request(confirmation_id: str):
 
 @experience_bp.route("/api/experience/content-sources/<artifact_id>")
 def content_source_detail(artifact_id: str):
-    from shared_artifacts import read_content_source_artifact, read_content_source_media
+    from pathlib import Path
+
+    from shared_artifacts import open_content_source_media, read_content_source_artifact
 
     try:
-        actor, scope = _content_project_scope("read")
+        selectors = _content_media_selectors()
+        actor, scope = _content_project_scope("read", selectors=selectors)
         formats = request.args.getlist("format")
         if formats:
-            if formats != ["media"] or set(request.args) != {"format", "sha256"} or len(request.args.getlist("sha256")) != 1:
+            if (formats != ["media"] or set(request.args) - {"format", "sha256", "context"}
+                    or len(request.args.getlist("sha256")) != 1):
                 raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
-            content, filename, media_type = read_content_source_media(
+            if not _content_source_same_origin():
+                raise ValueError("CONTENT_SOURCE_ORIGIN_DENIED")
+            media = open_content_source_media(
                 artifact_id, expected_sha256=request.args["sha256"], actor=actor, **scope)
-            from io import BytesIO
+            from flask import Response, stream_with_context
 
-            from flask import send_file
-            response = send_file(BytesIO(content), mimetype=media_type, download_name=filename,
-                                 as_attachment=False, conditional=False, etag=False, max_age=0)
-            response.headers["Cache-Control"] = "private, no-store"
-            response.headers["X-Content-Type-Options"] = "nosniff"
+            etag = f'"{media.sha256}"'
+            headers = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+                       "Accept-Ranges": "bytes", "ETag": etag,
+                       "Cross-Origin-Resource-Policy": "same-origin",
+                       "Content-Disposition": f'inline; filename="{artifact_id}{Path(media.filename).suffix}"'}
+            start, stop, status = 0, media.size_bytes, 200
+            if request.method != "HEAD" and request.headers.get("Range") and request.headers.get("If-Range", etag) == etag:
+                ranges = request.range
+                selected = ranges.range_for_length(media.size_bytes) if ranges is not None and ranges.units == "bytes" else None
+                if selected is None:
+                    headers["Content-Range"] = f"bytes */{media.size_bytes}"
+                    return Response(status=416, headers=headers)
+                start, stop = selected
+                status = 206
+                headers["Content-Range"] = f"bytes {start}-{stop - 1}/{media.size_bytes}"
+
+            def authorize_stream():
+                if (actor, scope) != _content_project_scope("read", selectors=selectors):
+                    raise ValueError("CONTENT_SOURCE_CONTEXT_MISMATCH")
+
+            response = Response(
+                () if request.method == "HEAD" else stream_with_context(media.iter_bytes(start, stop, authorize=authorize_stream)),
+                status=status, headers=headers, mimetype=media.media_type, direct_passthrough=True,
+            )
+            response.content_length = stop - start
             return response
+        if "context" in request.args:
+            raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
         source = read_content_source_artifact(artifact_id, actor=actor, **scope)
         return jsonify({"ok": True, "result": source, "publish_status": "not_performed"})
     except ValueError as exc:
@@ -4070,6 +4102,43 @@ def content_source_detail(artifact_id: str):
     except Exception:
         return jsonify({"ok": False, "code": "CONTENT_SOURCE_UNAVAILABLE",
                         "publish_status": "not_performed"}), 503
+
+
+def _content_media_selectors():
+    from werkzeug.datastructures import Headers
+
+    if "context" not in request.args:
+        return request.headers
+    values = request.args.getlist("context")
+    if len(values) != 1 or len(values[0].encode("utf-8")) > 2048 or request.args.getlist("format") != ["media"]:
+        raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
+
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
+            result[key] = value
+        return result
+
+    try:
+        context = json.loads(values[0], object_pairs_hook=unique)
+    except (ValueError, TypeError) as exc:
+        raise ValueError("CONTENT_SOURCE_FORMAT_INVALID") from exc
+    allowed = {_SHARED_WORKSPACE_SCOPE_HEADER, "X-Domain-Id", "X-Product-Id",
+               "X-Lumenis-Context-Mode", "X-Subject-ID", "X-Brand-Focus-ID"}
+    if (not isinstance(context, dict) or not context or set(context) - allowed
+            or any(not isinstance(value, str) or "\r" in value or "\n" in value for value in context.values())):
+        raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
+    selectors = Headers(context)
+    for key in allowed:
+        if key in request.headers and request.headers[key] != selectors.get(key):
+            raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
+    if {name.casefold() for name in request.headers.keys()}.intersection(  # noqa: SIM118
+        _SHARED_WORKSPACE_LEGACY_SCOPE_HEADERS - {name.casefold() for name in allowed}
+    ):
+        raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
+    return selectors
 
 
 @experience_bp.route("/api/experience/content-projects/export", methods=["POST"])

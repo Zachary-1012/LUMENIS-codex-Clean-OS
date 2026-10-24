@@ -7,8 +7,6 @@ import 'package:web/web.dart' as web;
 import '../../../core/lumenis_core_client.dart';
 import '../../../l10n/lumenis_localizations.dart';
 
-/// Playback consumes only bytes already authorized through Product Core. No
-/// credential or external URL is handed to an HTML media element.
 class MediaPreview extends StatefulWidget {
   const MediaPreview({
     required this.file,
@@ -161,16 +159,26 @@ class _MediaPreviewState extends State<MediaPreview> {
           if (!mounted || generation != _generation) return;
           final media = element as web.HTMLMediaElement;
           _element = media;
-          _objectUrl = web.URL.createObjectURL(
-            web.Blob(
-              [file.bytes.toJS].toJS,
-              web.BlobPropertyBag(type: file.mediaType),
-            ),
-          );
+          final stream = file.streamUri;
+          if (stream != null && stream.origin != Uri.base.origin) {
+            _failed = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() {});
+            });
+            return;
+          }
+          if (stream == null) {
+            _objectUrl = web.URL.createObjectURL(
+              web.Blob(
+                [file.bytes.toJS].toJS,
+                web.BlobPropertyBag(type: file.mediaType),
+              ),
+            );
+          }
           media
             ..controls = true
             ..preload = 'metadata'
-            ..src = _objectUrl!
+            ..src = stream?.toString() ?? _objectUrl!
             ..setAttribute(
               'aria-label',
               context.lumenisL10n.text('sh01.media.preview'),

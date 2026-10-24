@@ -472,5 +472,108 @@
       "Windows Chinese typing/save/reopen/recovery remains NOT_VERIFIED.",
       "All unmet PE01-24,30 groups,396coverage,213interactions retained; complete product NOT_DELIVERED."
     ]
+  },
+  "media_range": {
+    "recorded_at": "2026-10-24T10:26:50.614510+00:00",
+    "base": "695eceb83552f51b493346299d1276dbf8f9081f",
+    "implementation": "Existing content source HEAD/single-range immutable package stream, server-authored scope/identity recheck, bounded digest cache, Web/native player adapters. No alternate media store.",
+    "real_web": {
+      "at": "2026-10-24T10:26:50.614510+00:00",
+      "source_base": "695eceb83552f51b493346299d1276dbf8f9081f",
+      "entry": "http://127.0.0.1:58724/workspace/SH-01?entry=video",
+      "operations": [
+        "Open saved real video project v3",
+        "Select original user-supplied recording preview",
+        "Click browser player Play; observed playback reached original duration 12.9 seconds without media error",
+        "Click seek slider, Home then ArrowRight; observed paused position 0.129 seconds, readyState4"
+      ],
+      "source_artifact": "ART-b338406a7bb6e1b666e74b5d42e36553",
+      "source_media_sha256": "9fed3f8e84a6bedd275b822f3b90d7509d25bba241850dd45a35e3a4232a7e9b",
+      "request_evidence": {
+        "HEAD": 200,
+        "Range": "bytes=3014656-",
+        "status": 206,
+        "Content-Range": "bytes 3014656-4417235/4417236",
+        "Content-Length": 1402580,
+        "Cache-Control": "private, no-store",
+        "browser_cancellations": "Observed ERR_ABORTED after browser cancellation; server reports client disconnect, no traceback; not claimed as full transfer completion"
+      },
+      "boundary": "Real short supplied recording in dedicated manual workspace. Not large-file capacity, Windows native playback, visual acceptance or complete PE01."
+    },
+    "runtime_reload": {
+      "at": "2026-10-24T10:18:32.775098+00:00",
+      "root": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024",
+      "old_pids": [
+        33584,
+        34160
+      ],
+      "launcher_pid": 15560,
+      "backup": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024\\backups\\before-range-20261024T101826Z.db",
+      "backup_sha256": "dfeec85db5df208647de51043df6373262a16b7be4e51873d3f169ec7ee69bd4",
+      "unchanged_artifacts": {
+        "ART-1da4a8ad9d0748e9.docx": "aaa17edb5a8b0b320b5c1ca1cb3ea858130b565c79e5f12750604b3be6f4c0ae",
+        "ART-253f6ae90ba043fd.json": "feda9ee27fdcdd154070d3e09644cb1cf3249eddabc241271b9a77f1d1e95559",
+        "ART-51fb1c73006248cd.json": "dfad995c651ef5e0a9db44e2dd1835099f8eff9e62c0489f8cc27031dc0ee693",
+        "ART-636bc4c973ba4263.docx": "9266673c78a00610854e8b4f95d55b42b4dd3ae19d4499cea7e204e44899aac5",
+        "ART-77a4e230240f4036.json": "19f16eec90d570f72c2ae48704ed6f001da830d83a941408736b2826f29365bf",
+        "ART-7ec9d3d92bc24fa9.json": "250f09448255dad73c018832e2409905782e812221079945253c2c34dc438393",
+        "ART-89caa35e07dd4bf8.zip": "c2b5dea3534fdcb7f1ab91a9598c389e95b711ba384f1de530360aa7f9a48f46",
+        "ART-b338406a7bb6e1b666e74b5d42e36553.aecb0b23ed0b44118147b149acf6a05a.zip": "e3444d2d470d255d9364fe86de5066f758f9f7fad49b015c032b0bcd5a67e828",
+        "ART-c6e1b47959d74ee3.zip": "d6b4b954add86378e452e05c486d73e0df321e1a59352f3d754cf58ec9712cfe",
+        "ART-d473d3bd1a2940ea.zip": "8974a68080d1ba8eb23741ca40408fbdbfb4adccfe0f2b40ab29aef0f5d5b373",
+        "ART-e1ecb4603b284d7c.docx": "f50bcf9576cb6c6fe430d0e12a98123ad786c8cc11b5af2e1aacba887c04f761",
+        "ART-ed6eaab646674fe0.json": "a22fc00eff4ac01994f4c75448da9987114e3c49808c5ffb52a1e62f83948d55"
+      },
+      "health": {
+        "core_instance": {
+          "boot_id": "3c2f0971e8514d0db60988bc8e44ea7e",
+          "entry_sha256": "6cb26f296a00b9091151ec6307976a1f39675c221e187959cf1c3810fb66d654",
+          "launch_id": ""
+        },
+        "dependencies": {
+          "database": "ok"
+        },
+        "ok": true,
+        "runtime": {
+          "scheduler": "not_started",
+          "web_server": "waitress"
+        },
+        "service": "lumenis-core",
+        "status": "healthy",
+        "version": "5.9.9"
+      },
+      "source_pins": {
+        "app.py": "6cb26f296a00b9091151ec6307976a1f39675c221e187959cf1c3810fb66d654",
+        "experience_runtime.py": "757100a525e5f829bc7150a7f5a267e0196b2ee1f48a1c5c62a6fbcd6c87d7e0",
+        "lumenis\\shared\\reporting\\word_pdf_export.py": "748ace54fac158e35cbefbd67412276b089f6a82163b2dd4c41c900d79c3e361",
+        "lumenis\\shared\\reporting\\saved_work.py": "b2430b433ace83d2c690911f921182bfcf582d86db6bcb9e42563cbb2fc711e1",
+        "shared_artifacts.py": "42e2a6d158d87cdeff78745e83eab1b2f764519af123ab9d1560b0af683c073d",
+        "lumenis\\shared\\content_creation\\rendering.py": "ba779c02bef1e699f3ebaabd910b04850efe8a7058bd4daca59c8782318eb48c"
+      },
+      "boundary": "Owned manual workspace only. Health is not user acceptance. No production 8201, production data or automatic collection touched."
+    },
+    "verification": {
+      "isolated_python": "65 PASS source route + project storage; added warm-cache mutation with restored mtime regression PASS",
+      "flutter": "123 affected tests PASS, analyze PASS, Web release build PASS",
+      "windows": "Native interaction NOT_VERIFIED; minimized app activation blocked by desktop input guard",
+      "ruff": "0 introduced findings against exact695eceb8base; 265 existing findings retained. Dynamic diagnostic line references normalized only for comparison.",
+      "gates": "Constitution, three Experience validators, source adoption, current configuration and machine governance PASS; source compile PASS.",
+      "preserved_failure": "First recheck refused protected repository seed with WAL/SHM before tests; no product DB copy/mutation. Corrected to the existing CI explicit isolated seed and no-network guard."
+    },
+    "remaining": [
+      "Large-file upload beyond current128MiB limit, proxy/cache capacity",
+      "Professional multitrack and full PE01-24 retained",
+      "Windows native stream playback and full visual acceptance",
+      "Whole product NOT_DELIVERED"
+    ],
+    "source_pins": {
+      "shared_artifacts.py": "4571e7a9837f1558915720452cf6e31e2cfcef094e40e2aafef7c804953fb64f",
+      "experience_runtime.py": "af3f92f51e0b9c87b128bb76478f5e14eabda68a1a93cab3540a18eca46e1393",
+      "lumenis\\shared\\content_creation\\rendering.py": "ba779c02bef1e699f3ebaabd910b04850efe8a7058bd4daca59c8782318eb48c",
+      "app\\lib\\core\\lumenis_core_client.dart": "9638cde709b7aeaf98f5f23b5caaf4a5155c5c79909301ed5bba1ba51c1f82c9",
+      "app\\lib\\features\\shared\\sh01\\media_preview_web.dart": "016574f7c3c7732ba1fd3a8f6200fcc5b1b419c4d8dfad2e37038794bbdbc0da",
+      "app\\lib\\features\\shared\\sh01\\native_media_player.dart": "550c6e594bda9f6cabdca486246e2fe36aec693d2f08f703a5235ca322ef9740",
+      "app\\lib\\features\\shared\\sh01\\native_media_preview_controller.dart": "13b37d7cc9be037b33ff73fff4aba6cdf354f2ea4720ad86c87251e011ead604"
+    }
   }
 }
