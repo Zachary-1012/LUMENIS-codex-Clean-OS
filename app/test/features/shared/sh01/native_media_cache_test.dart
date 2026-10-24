@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -157,19 +158,31 @@ void main() {
     },
   );
 
-  // Windows locks exclude a second handle in the same process. POSIX locks
-  // are process-wide; the native preview and this guarantee are Windows-only.
   test('an active lease is skipped during stale recovery', () async {
     final lease = await cache.create(
       _content(<int>[7, 8, 9], filename: 'active.mp4'),
     );
     leases.add(lease);
 
-    await cache.reclaimStale();
+    await NativeMediaCache(root: cacheRoot).reclaimStale();
 
     expect(await File(lease.path).exists(), isTrue);
     expect(await File(lease.path).readAsBytes(), <int>[7, 8, 9]);
-  }, testOn: 'windows');
+  });
+
+  test('another isolate preserves a live process lease', () async {
+    final lease = await cache.create(
+      _content(<int>[6, 5, 4], filename: 'active.mp4'),
+    );
+    leases.add(lease);
+    final rootPath = cacheRoot.path;
+
+    await _reclaimInIsolate(rootPath);
+
+    expect(await File(lease.path).readAsBytes(), <int>[6, 5, 4]);
+    await lease.release();
+    expect(await File(lease.path).exists(), isFalse);
+  });
 
   test('reclaims a stale directory with the exact versioned marker', () async {
     await cacheRoot.create(recursive: true);
@@ -282,6 +295,10 @@ void main() {
     expect(await rootFile.readAsString(), 'preserve');
   });
 }
+
+Future<void> _reclaimInIsolate(String rootPath) => Isolate.run(
+  () => NativeMediaCache(root: Directory(rootPath)).reclaimStale(),
+);
 
 ContentProjectFile _content(
   List<int> bytes, {

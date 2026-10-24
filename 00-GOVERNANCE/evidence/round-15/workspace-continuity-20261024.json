@@ -322,5 +322,27 @@
     "original_sha256": "521c1dbb662722a25f68a6688ecec3d7f3d5feb9d15025f88c005ebaa1c0ba2f",
     "repository_copy_sha256": "a8ec872ac029a161bb608c53e7c5bb04fbdd044484abc5f206afe20a229eca61",
     "copy_boundary": "Complete supplied specification retained; line endings and trailing Markdown whitespace normalized only. Unchanged original attachment remains outside Git."
+  },
+  "media_lease_repair": {
+    "recorded_at": "2026-10-24T08:50:24.598726+00:00",
+    "failure": "PR142 App run40078998376: 4 active-media cache preservation assertions failed on Linux; POSIX advisory locks are process-wide. Original CI failure retained.",
+    "repair": "New lease directories bind the creating process. Stale recovery skips current-process directories before opening a second marker handle; OS locks still protect other processes. Explicit release remains exact-file and retryable.",
+    "reference": "https://api.dart.dev/dart-io/RandomAccessFile/lock.html",
+    "checks": {
+      "cache_regressions": 13,
+      "controller_regressions": 12,
+      "same_process_other_instance": "PASS",
+      "same_process_other_isolate": "PASS",
+      "linux_ci": "PENDING"
+    },
+    "source_pins": {
+      "app/lib/features/shared/sh01/native_media_cache.dart": "0b1c4b3811b9111c2ebdee38dd6abb50a02b5e7469eff6477e972002fec8491c",
+      "app/test/features/shared/sh01/native_media_cache_test.dart": "c683467bbc76fe43b8edb29f680f09c903db1930a8c60a0d57ae9739d1c97a85"
+    },
+    "failed_attempts": [
+      "Wrong controller test filename in first local command; cache assertions passed.",
+      "Cross-isolate regression initially captured a live file handle; moved isolate closure into a top-level helper and reran successfully."
+    ],
+    "claim_boundary": "Local regressions are not native product playback or whole-product acceptance."
   }
 }

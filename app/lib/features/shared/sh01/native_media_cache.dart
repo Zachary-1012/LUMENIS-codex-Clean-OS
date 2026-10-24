@@ -93,7 +93,7 @@ class NativeMediaCache {
 
     try {
       canonicalRoot = await _ensureRoot();
-      leaseDirectory = await canonicalRoot.createTemp('lease-');
+      leaseDirectory = await canonicalRoot.createTemp('lease-$pid-');
       final verifiedDirectory = await _verifiedChild(
         canonicalRoot,
         leaseDirectory,
@@ -292,6 +292,8 @@ class NativeMediaCache {
   }
 
   Future<void> _reclaimOne(Directory root, Directory directory) async {
+    // POSIX locks are process-wide, including across Dart isolates.
+    if (_basename(directory.path).startsWith('lease-$pid-')) return;
     final marker = File(_join(directory.path, _markerName));
     if (!await _isRegularFileAtPath(root, directory, marker.path)) return;
 
