@@ -183,6 +183,38 @@ Future<void> _pump(WidgetTester tester) async {
 }
 
 void main() {
+  test(
+    'streaming source skips file cache and releases native playback',
+    () async {
+      final player = _FakePlayer();
+      final uri = Uri.parse(
+        'http://127.0.0.1:58724/api/experience/content-sources/ART-stream?format=media',
+      );
+      final controller = NativeMediaPreviewController(
+        file: ContentProjectFile.stream(
+          uri: uri,
+          filename: 'source.mp4',
+          mediaType: 'video/mp4',
+        ),
+        createFile: (_) =>
+            throw StateError('A stream must not copy the entire source'),
+        createPlayer: (_) =>
+            throw StateError('A stream must not open a cache file'),
+        createStreamPlayer: (source) {
+          expect(source, uri);
+          return player;
+        },
+        slot: NativePlaybackSlot(),
+      );
+      await controller.start();
+      expect(controller.phase, NativePreviewPhase.ready);
+      await controller.seek(const Duration(seconds: 20));
+      expect(player.seekPositions.last, const Duration(seconds: 20));
+      await _close(controller);
+      expect(player.releaseCalls, 1);
+    },
+  );
+
   test('initialization exposes a paused first frame', () async {
     final player = _FakePlayer();
     final harness = _Harness(players: [player]);

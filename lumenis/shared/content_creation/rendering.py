@@ -1120,7 +1120,7 @@ def encode_audio_delivery(audio: Path, *, format: str, duration: float,
          cwd=audio.parent,check_continue=check_continue)
     raw=subprocess.run([ffprobe,"-v","error","-protocol_whitelist","file","-format_whitelist","mov,mp3",
                         "-show_streams","-show_format","-of","json",str(output)],capture_output=True,text=True,
-                       check=True,timeout=30,shell=False)
+                       encoding="utf-8",check=True,timeout=30,shell=False)
     try:
         probe=json.loads(raw.stdout);streams=probe['streams'];stream=streams[0]
         if (len(streams)!=1 or stream['codec_type']!='audio' or stream['codec_name']!=('mp3' if format=='mp3' else 'aac')

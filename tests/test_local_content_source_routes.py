@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import zipfile
+import wave
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -146,13 +147,88 @@ def test_original_media_preview_rejects_changed_source_package(local_client):
     import shared_artifacts
     record = shared_artifacts._artifact_record(artifact_id)
     path = store["root"] / record["relative_path"]
+    route = f"/api/experience/content-sources/{artifact_id}?format=media&sha256={digest}"
+    assert client.head(route, headers=HEADERS).status_code == 200
+    original_stat = path.stat()
     changed = bytearray(path.read_bytes())
     changed[-1] ^= 1
     path.write_bytes(changed)
+    os.utime(path, ns=(original_stat.st_atime_ns, original_stat.st_mtime_ns))
     response = client.get(f"/api/experience/content-sources/{artifact_id}?format=media&sha256={digest}",
                           headers=HEADERS)
     assert response.status_code == 400
     assert response.get_json()["code"] == "CONTENT_SOURCE_INTEGRITY_FAILED"
+
+
+def test_media_ranges_head_and_query_context_preserve_source(local_client):
+    client, store, app = local_client
+    confirmation = pending(client, store)
+    assert confirm(client, confirmation).status_code == 200
+    result = upload(client, store).get_json()["result"]
+    digest = result["asset"]["sha256"]
+    route = f'/api/experience/content-sources/{result["artifact"]["artifact_id"]}'
+    query = {"format": "media", "sha256": digest, "context": json.dumps({
+        "X-Domain-Id": "BMP", "X-Product-Id": "ZBMP",
+    })}
+    raw = store["source"].read_bytes()
+    before = rows(store)
+    head = client.head(route, query_string=query)
+    assert head.status_code == 200
+    assert head.data == b""
+    assert head.content_length == len(raw)
+    assert head.headers["Accept-Ranges"] == "bytes"
+    assert head.headers["ETag"] == f'"{digest}"'
+    for requested, start, stop in [("bytes=8-15", 8, 16), ("bytes=-12", len(raw) - 12, len(raw)),
+                                    ("bytes=20-", 20, len(raw))]:
+        response = client.get(route, query_string=query, headers={"Range": requested})
+        assert response.status_code == 206
+        assert response.data == raw[start:stop]
+        assert response.content_length == stop - start
+        assert response.headers["Content-Range"] == f"bytes {start}-{stop - 1}/{len(raw)}"
+    for requested in (f"bytes={len(raw)}-", "bytes=4-2", "bytes=0-1,4-5", "items=0-1"):
+        response = client.get(route, query_string=query, headers={"Range": requested})
+        assert response.status_code == 416
+        assert response.headers["Content-Range"] == f"bytes */{len(raw)}"
+        assert response.data == b""
+    stale_range = client.get(route, query_string=query, headers={"Range": "bytes=4-9", "If-Range": '"old"'})
+    assert stale_range.status_code == 200 and stale_range.data == raw
+    assert client.head(route, query_string={**query, "context": json.dumps({
+        "X-Lumenis-Workspace-Scope": json.dumps(SHARED_SCOPE),
+    })}).status_code == 200
+    assert client.get(route, query_string=query, headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
+    assert client.get(route, query_string=query, headers={"X-Domain-Id": "CTH"}).status_code == 400
+    for context in ('{"actor_id":1}', '{"X-Domain-Id":"BMP","X-Domain-Id":"CTH"}', '[]'):
+        assert client.get(route, query_string={**query, "context": context}).status_code == 400
+    app.config["LUMENIS_OPEN_WORKSPACE"] = False
+    assert client.get(route, query_string=query, headers={"Range": "bytes=0-9"}).status_code == 401
+    assert rows(store) == before
+
+
+def test_range_stream_rechecks_permission_and_closes_on_disconnect(local_client):
+    client, store, app = local_client
+    with wave.open(str(store["source"]), "wb") as audio:
+        audio.setparams((1, 2, 8000, 0, "NONE", "not compressed"))
+        audio.writeframes(b"\0\0" * 600000)
+    confirmation = pending(client, store)
+    assert confirm(client, confirmation).status_code == 200
+    result = upload(client, store).get_json()["result"]
+    route = f'/api/experience/content-sources/{result["artifact"]["artifact_id"]}'
+    query = {"format": "media", "sha256": result["asset"]["sha256"]}
+    response = client.get(route, query_string=query, headers=HEADERS, buffered=False)
+    assert response.status_code == 200, response.get_json()
+    stream = iter(response.response)
+    assert len(next(stream)) < store["source"].stat().st_size
+    app.config["LUMENIS_OPEN_WORKSPACE"] = False
+    with pytest.raises(ValueError, match="AUTH_REQUIRED"):
+        next(stream)
+    response.close()
+    app.config["LUMENIS_OPEN_WORKSPACE"] = True
+    resumed = client.get(route, query_string=query, headers={**HEADERS, "Range": "bytes=-32"})
+    assert resumed.status_code == 206
+    assert resumed.data == store["source"].read_bytes()[-32:]
+    interrupted = client.get(route, query_string=query, headers=HEADERS, buffered=False)
+    interrupted.close()
+    assert client.head(route, query_string=query, headers=HEADERS).status_code == 200
 
 
 def test_cancel_cannot_be_replayed_and_can_start_fresh(local_client):

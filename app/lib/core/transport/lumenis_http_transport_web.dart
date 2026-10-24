@@ -87,7 +87,7 @@ Future<LumenisBinaryTransportResponse> _sendBinaryRequest(
       'Binary response redirects are rejected.',
     );
   }
-  if ((incoming.contentLength ?? -1) > maxBytes) {
+  if (request.method != 'HEAD' && (incoming.contentLength ?? -1) > maxBytes) {
     throw const LumenisTransportException('Binary response exceeds maxBytes.');
   }
 

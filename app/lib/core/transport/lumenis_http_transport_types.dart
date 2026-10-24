@@ -88,6 +88,9 @@ class LumenisBinaryTransportResponse {
   static const _allowedHeaders = {
     'content-type',
     'cache-control',
+    'content-length',
+    'accept-ranges',
+    'etag',
     'x-lumenis-frame-id',
     'x-lumenis-target-id',
     'x-lumenis-page-revision',

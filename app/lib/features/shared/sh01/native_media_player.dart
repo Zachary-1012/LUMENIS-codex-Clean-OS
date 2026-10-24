@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart';
 
-/// A presentation adapter. It receives a lease path, never a URL or credentials.
 abstract class NativeMediaPlayer extends ValueNotifier<VideoPlayerValue> {
   NativeMediaPlayer() : super(const VideoPlayerValue.uninitialized());
 
@@ -22,6 +21,14 @@ class WindowsMediaPlayer extends NativeMediaPlayer {
         File(path),
         // Disable the package's automatic resume. The preview owns all pause
         // decisions, including inactive/covered states; background play is off.
+        videoPlayerOptions: VideoPlayerOptions(allowBackgroundPlayback: true),
+      ) {
+    _controller.addListener(_changed);
+  }
+
+  WindowsMediaPlayer.stream(Uri uri)
+    : _controller = VideoPlayerController.networkUrl(
+        uri,
         videoPlayerOptions: VideoPlayerOptions(allowBackgroundPlayback: true),
       ) {
     _controller.addListener(_changed);
