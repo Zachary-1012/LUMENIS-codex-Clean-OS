@@ -1,4 +1,4 @@
-"""Canonical v21 migration keeps conversation identities and turn uniqueness."""
+"""Canonical migrations retain conversations and actor-bound workspace drafts."""
 import sqlite3
 
 import pytest
@@ -28,7 +28,7 @@ def test_default_schema_and_reopen_preserve_conversation(tmp_path, monkeypatch):
     seed_v20(path, monkeypatch)
     assert migrations.migrate() is True
     with sqlite3.connect(path) as connection:
-        assert migrations.get_current_version(connection) == 21
+        assert migrations.get_current_version(connection) == 22
         create_conversation(connection)
     assert migrations.migrate() is True
     with sqlite3.connect(path) as connection:
@@ -89,3 +89,17 @@ def test_incompatible_preexisting_conversation_table_is_not_overwritten(tmp_path
         assert migrations.get_current_version(connection) == 20
         assert connection.execute("SELECT * FROM ai_conversations").fetchall() == [("keep",)]
         assert connection.execute("SELECT name FROM sqlite_master WHERE name='ai_conversation_turns'").fetchone() is None
+
+
+def test_incompatible_draft_table_retains_original_data_and_version(tmp_path, monkeypatch):
+    path = tmp_path / 'draft-schema.db'
+    seed_v20(path, monkeypatch)
+    assert migrations.migrate(target_version=21) is True
+    with sqlite3.connect(path) as connection:
+        connection.execute('CREATE TABLE ai_workspace_drafts(text TEXT)')
+        connection.execute("INSERT INTO ai_workspace_drafts VALUES ('retained draft')")
+    assert migrations.migrate() is False
+    with sqlite3.connect(path) as connection:
+        assert migrations.get_current_version(connection) == 21
+        assert connection.execute('SELECT * FROM ai_workspace_drafts').fetchall() == [('retained draft',)]
+        assert connection.execute('SELECT value FROM retained_business').fetchone()[0] == 'preserve'

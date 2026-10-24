@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:lumenis_app/core/lumenis_icon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,6 +12,7 @@ import '../features/account/acc03/acc03_screen.dart';
 import '../features/account/acc03/acc03_snapshot.dart';
 import '../features/account/acc04/acc04_screen.dart';
 import '../features/ai01/ai01_screen.dart';
+import '../features/ai01/ai01_workspace_draft.dart';
 import '../features/ai02/ai02_screen.dart';
 import '../features/ai03/ai03_screen.dart';
 import '../features/ai04/ai04_screen.dart';
@@ -223,7 +225,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   int _editorScopeRevision = 0;
   String? _localWorkspaceEntry;
   String? _localReturnScreenId;
-  var _taskDraftController = TextEditingController();
+  late TextEditingController _taskDraftController;
+  final _scopeDrafts = <String, TextEditingController>{};
   String _taskDraftScope = 'GLOBAL_ALL::';
   bool _inspectorVisible = false;
 
@@ -235,7 +238,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     super.initState();
     _contextEnvelope =
         widget.contextEnvelope ?? widget.client.currentContextEnvelope;
-    _alignTaskDraftScope(_contextEnvelope);
+    _taskDraftScope = _fingerprintFor(_contextEnvelope);
+    _taskDraftController = _newTaskDraft(_taskDraftScope);
     _hasConfirmedFocusRecoveryHint = _isConfirmedFocusEnvelope(
       _contextEnvelope,
     );
@@ -260,8 +264,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       _hasConfirmedFocusRecoveryHint = _isConfirmedFocusEnvelope(
         _contextEnvelope,
       );
-      _replaceTaskDraft();
-      _taskDraftScope = 'GLOBAL_ALL::';
+      _replaceTaskDraft(flush: false);
+      _taskDraftScope = _fingerprintFor(_contextEnvelope);
     } else if (oldWidget.contextEnvelope != widget.contextEnvelope &&
         widget.contextEnvelope != null &&
         !identical(widget.contextEnvelope, _unavailableContextEnvelope)) {
@@ -360,7 +364,9 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     _activeScreen.dispose();
     _lastOpenedScreen.dispose();
     _localLeaveGuard.dispose();
-    _taskDraftController.dispose();
+    for (final draft in _scopeDrafts.values) {
+      draft.dispose();
+    }
     super.dispose();
   }
 
@@ -371,7 +377,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         if (constraints.maxWidth < 768) {
           return _buildPhone(context);
         }
-        if (constraints.maxWidth < 1280 || _activeScreen.value == 'SYS-06') {
+        if (constraints.maxWidth < 1080 || _activeScreen.value == 'SYS-06') {
           return _buildCompactWorkspace(context);
         }
         return _buildWideWorkspace(
@@ -848,8 +854,8 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
       body: Row(
         children: [
           Container(
-            width: 208,
-            decoration: LumenisTheme.chassis(LumenisTheme.of(context)),
+            width: 224,
+            decoration: LumenisTheme.panel(LumenisTheme.of(context), radius: 0),
             child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 22, 12, 16),
@@ -874,7 +880,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                               ko: '작업 시작',
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const Divider(height: 32, indent: 12, endIndent: 12),
                           _workRailEntry(
                             'CTH-01',
                             Icons.timeline_rounded,
@@ -895,7 +901,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
                               ko: '브랜드 & 마켓',
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const Divider(height: 32, indent: 12, endIndent: 12),
                           _workRailEntry(
                             'SH-02',
                             Icons.library_books_outlined,
@@ -1032,26 +1038,29 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
         (screen == 'CTH-01' && _activeScreen.value.startsWith('CTH-')) ||
         (screen == 'BMP-01' && _activeScreen.value.startsWith('BMP-'));
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Semantics(
-        selected: selected,
-        child: TextButton.icon(
-          key: ValueKey('workspace-rail-$screen'),
-          onPressed: () => _activateScreen(screen),
-          style: TextButton.styleFrom(
-            foregroundColor: selected ? theme.foreground : theme.muted,
-            backgroundColor: selected
-                ? theme.surfaceRaised
-                : Colors.transparent,
-            alignment: Alignment.centerLeft,
-            minimumSize: const Size(48, 48),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+      padding: const EdgeInsets.only(bottom: 6),
+      child: DecoratedBox(
+        decoration: selected
+            ? LumenisTheme.panel(theme, radius: 9, recessed: true)
+            : const BoxDecoration(),
+        child: Semantics(
+          selected: selected,
+          child: TextButton.icon(
+            key: ValueKey('workspace-rail-$screen'),
+            onPressed: () => _activateScreen(screen),
+            style: TextButton.styleFrom(
+              foregroundColor: selected ? theme.foreground : theme.muted,
+              backgroundColor: Colors.transparent,
+              alignment: Alignment.centerLeft,
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
+            icon: LumenisIcon(icon, size: 19),
+            label: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
           ),
-          icon: LumenisIcon(icon, size: 19),
-          label: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
         ),
       ),
     );
@@ -1091,26 +1100,49 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     if (next != _taskDraftScope) {
       // A pending file chooser or outgoing editor must never write into the
       // new scope. Replace both the controller and its mounted host together.
-      _replaceTaskDraft();
+      _replaceTaskDraft(scope: next);
       _screenHostKey = GlobalKey(debugLabel: 'workspace-screen-host');
     }
     _taskDraftScope = next;
   }
 
-  void _replaceTaskDraft() {
+  void _replaceTaskDraft({String? scope, bool flush = true}) {
     final previous = _taskDraftController;
-    _taskDraftController = TextEditingController();
-    WidgetsBinding.instance.addPostFrameCallback((_) => previous.dispose());
+    final retired = flush
+        ? <TextEditingController>[]
+        : _scopeDrafts.values.toList();
+    if (!flush) _scopeDrafts.clear();
+    _taskDraftController = _newTaskDraft(
+      scope ?? _fingerprintFor(_contextEnvelope),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (flush && previous is Ai01WorkspaceDraft) {
+        unawaited(previous.flush());
+      }
+      for (final draft in retired) {
+        draft.dispose();
+      }
+    });
   }
+
+  TextEditingController _newTaskDraft(String scope) => _scopeDrafts.putIfAbsent(
+    scope,
+    () => scope == 'GLOBAL_ALL::' || scope.startsWith('FOCUS:')
+        ? Ai01WorkspaceDraft(widget.client, scope)
+        : TextEditingController(),
+  );
 
   String _fingerprintFor(Map<String, dynamic>? envelope) {
     final raw = envelope?['context'];
     final selection = raw is Map
         ? raw.map((key, value) => MapEntry('$key', value))
         : null;
+    final focusId = selection?['domain_id'] == 'BMP'
+        ? (selection?['brand_focus_id'] ?? selection?['subject_id'])
+        : selection?['subject_id'];
     return "${selection?['mode'] ?? 'unknown'}:"
         "${selection?['domain_id'] ?? ''}:"
-        "${selection?['subject_id'] ?? ''}";
+        "${focusId ?? ''}";
   }
 
   String _contextLabel() {
@@ -1612,7 +1644,8 @@ class _WorkspaceHeader extends StatelessWidget {
               ),
             ),
           ),
-          if (onRetryRuntime != null) ...[
+          if (onRetryRuntime != null ||
+              coreLabel != copy.text('shell.connected')) ...[
             const SizedBox(width: 14),
             if (onRetryRuntime != null)
               Tooltip(
@@ -1638,13 +1671,16 @@ class _WorkspaceHeader extends StatelessWidget {
           else
             Flexible(
               flex: 2,
-              child: TextButton.icon(
-                onPressed: onOpenContextPicker,
-                icon: const LumenisIcon(Icons.expand_more_rounded, size: 18),
-                label: Text(
-                  contextLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              child: Tooltip(
+                message: copy.text('context.selector.open'),
+                child: TextButton.icon(
+                  onPressed: onOpenContextPicker,
+                  icon: const LumenisIcon(Icons.expand_more_rounded, size: 18),
+                  label: Text(
+                    contextLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
             ),

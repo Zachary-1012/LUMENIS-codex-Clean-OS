@@ -515,6 +515,26 @@ class LumenisCoreClient {
   Future<Map<String, dynamic>> runtimeIdentity() =>
       _get('/api/experience/runtime/identity', withContext: false);
 
+  Future<Map<String, dynamic>> workspaceDraft(String scopeKey) => _get(
+    '/v4/ai/workspace-draft?${Uri(queryParameters: {'scope_key': scopeKey}).query}',
+    withContext: false,
+  );
+
+  Future<Map<String, dynamic>> saveWorkspaceDraft(
+    String scopeKey,
+    String text,
+    int revision,
+  ) => _request(
+    'PUT',
+    '/v4/ai/workspace-draft',
+    withContext: false,
+    payload: {
+      'scope_key': scopeKey,
+      'text': text,
+      'expected_revision': revision,
+    },
+  );
+
   Future<List<Map<String, dynamic>>> subjects() async {
     final payload = await settingsSubjects();
     if (payload['source'] != 'lumenis_subject_registry' ||

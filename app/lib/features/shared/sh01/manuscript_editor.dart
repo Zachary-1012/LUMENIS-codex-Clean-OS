@@ -571,6 +571,42 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
     }
   }
 
+  Future<void> _continueFromLatest() async {
+    if (!_controller.canContinueFromLatest) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          _t('保留当前文字继续修订？', 'Continue with this writing?', '현재 내용으로 계속 수정할까요?'),
+        ),
+        content: Text(
+          _t(
+            '下一次保存会在最新版本之后新增一版，已有版本保持不变。',
+            'Your next save adds a version after the latest one. Existing versions stay unchanged.',
+            '다음 저장은 최신 버전 다음에 새 버전을 추가합니다. 기존 버전은 유지됩니다.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(_t('取消', 'Cancel', '취소')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(_t('继续修订', 'Continue revising', '계속 수정')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _controller.continueFromLatest();
+    if (!mounted || _controller.errorCode != null) return;
+    _appliedArtifact = _controller.savedWork?.artifactId;
+    _baseline = jsonEncode(_controller.savedWork!.manuscript.toJson());
+    _guard?.refresh();
+    setState(() => _notice = null);
+  }
+
   String _errorText() {
     final error = _controller.errorCode ?? '';
     if (error.contains('CONFLICT') ||
@@ -706,13 +742,24 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                                 : () => _recover(_controller.retryRun),
                             child: Text(_t('重试保存', 'Retry saving', '저장 재시도')),
                           ),
-                        if (_controller.taskState != 'succeeded')
+                        if (_controller.hasUnresolvedSave)
                           TextButton(
                             onPressed: _busy
                                 ? null
                                 : () => _recover(_controller.cancel),
                             child: Text(
                               _t('停止本次保存', 'Stop this save', '이번 저장 중지'),
+                            ),
+                          ),
+                        if (_controller.canContinueFromLatest)
+                          TextButton(
+                            onPressed: _continueFromLatest,
+                            child: Text(
+                              _t(
+                                '保留当前文字继续修订',
+                                'Continue with this writing',
+                                '현재 내용으로 계속 수정',
+                              ),
                             ),
                           ),
                       ],
@@ -787,8 +834,17 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
       if (action == 'save-local') _saveLocal();
       if (action == 'open-local') _openLocal();
       if (action == 'export') _export();
+      if (action == 'continue-latest') _continueFromLatest();
     },
     itemBuilder: (context) => [
+      if (_controller.savedWork != null)
+        PopupMenuItem(
+          value: 'continue-latest',
+          enabled: _controller.canContinueFromLatest,
+          child: Text(
+            _t('保留当前文字继续修订', 'Continue with this writing', '현재 내용으로 계속 수정'),
+          ),
+        ),
       PopupMenuItem(
         value: 'save-local',
         enabled: _draftFiles.canSave,
@@ -1010,14 +1066,14 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
 
   InputDecoration _writingField(String label, {String? error}) =>
       InputDecoration(
-        labelText: label,
-        floatingLabelBehavior: FloatingLabelBehavior.never,
+        hintText: label,
         errorText: error,
         filled: false,
         border: InputBorder.none,
         enabledBorder: InputBorder.none,
         focusedBorder: InputBorder.none,
         contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        isDense: true,
       );
 
   Widget _editor({bool compact = false}) => ListView(
@@ -1149,6 +1205,7 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
           key: ValueKey('manuscript-body-$_selected'),
           controller: _sections[_selected].body,
           readOnly: _busy,
+          textAlignVertical: TextAlignVertical.top,
           minLines: 10,
           maxLines: null,
           decoration: _writingField(_t('正文', 'Body', '본문')),

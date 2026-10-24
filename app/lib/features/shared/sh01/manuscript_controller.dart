@@ -136,6 +136,82 @@ final class ManuscriptController extends ChangeNotifier {
     return attempt != null && _attemptNeedsResolution(attempt);
   }
 
+  bool get canContinueFromLatest =>
+      _scope != null && _savedWork != null && !busy && !hasUnresolvedSave;
+
+  Future<void> continueFromLatest() async {
+    if (!canContinueFromLatest) return;
+    final scope = _scope!;
+    final original = _savedWork!;
+    if (!_begin(ManuscriptControllerPhase.reopening)) return;
+    final generation = _scopeGeneration;
+    try {
+      InternalPitchSavedManuscript? latest;
+      String? cursor;
+      final seen = <String>{};
+      do {
+        final response = scope is SharedWorkspaceScope
+            ? await _client.listSharedAuthoredManuscripts(
+                scope: scope,
+                cursor: cursor,
+              )
+            : await _client.listAuthoredManuscripts(
+                domainId: (scope as InternalPitchScope).domainId,
+                cursor: cursor,
+              );
+        if (!_isCurrent(generation, scope)) return;
+        final page = _parsePage(response, expectedScope: scope);
+        for (final item in page.items.where(
+          (item) => item.workId == original.workId,
+        )) {
+          if (latest == null || item.version > latest.version) {
+            latest = item;
+          } else if (item.version == latest.version &&
+              !_sameSaved(item, latest)) {
+            throw const FormatException('Conflicting manuscript version.');
+          }
+        }
+        if (!page.hasMore) break;
+        cursor = page.nextCursor;
+        if (cursor == null || !seen.add(cursor)) {
+          throw const FormatException('SavedWork cursor repeated or missing.');
+        }
+      } while (true);
+      if (latest == null || latest.version < original.version) {
+        throw const FormatException('Current manuscript version unavailable.');
+      }
+      final response = scope is SharedWorkspaceScope
+          ? await _client.reopenSharedSavedManuscript(
+              scope: scope,
+              artifactId: latest.artifactId,
+            )
+          : await _client.reopenSavedManuscript(
+              domainId: (scope as InternalPitchScope).domainId,
+              artifactId: latest.artifactId,
+            );
+      if (!_isCurrent(generation, scope)) return;
+      final verified = _parseSavedManuscript(
+        response,
+        expectedScope: scope,
+        requireReceipt: true,
+      );
+      if (!_sameSaved(latest, verified)) {
+        throw const FormatException('Manuscript readback changed.');
+      }
+      _savedWork = verified;
+      _revisionParent = verified;
+      _activeAttempt = null;
+      _taskId = verified.taskId;
+      _taskState = 'succeeded';
+      _taskError = null;
+      _errorCode = null;
+    } catch (error) {
+      if (_isCurrent(generation, scope)) _errorCode = _errorCodeFor(error);
+    } finally {
+      _end(generation);
+    }
+  }
+
   bool get canSave {
     if (_scope == null || busy || prepareAcknowledgementLost) return false;
     if (runRetryAvailable) return false;

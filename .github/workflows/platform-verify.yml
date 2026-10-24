@@ -154,6 +154,7 @@ jobs:
               'tests/test_rectification_truth_chain_20261010.py',
               'tests/test_governance_machine_contract.py', 'tests/test_online_progress_governance.py', '.codex/tests/test_engineering.py',
               'tests/test_ai_task_engine.py', 'tests/test_content_generation_parent_evidence.py',
+              'tests/test_ai_conversation_owner.py', 'tests/test_ai_conversation_migration.py',
               'tests/test_xhs_cdp_native_truth.py', 'tests/test_source_brief_job.py',
               'tests/test_business_decision_workflow.py', 'tests/test_runtime_api_diagnostics.py',
               'tests/agent_capability/test_router.py',

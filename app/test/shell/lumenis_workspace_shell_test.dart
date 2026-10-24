@@ -1033,6 +1033,40 @@ void main() {
     },
   );
 
+  testWidgets(
+    'scope refresh preserves an unsaved draft without leaking it into another scope',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 1000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final client = _ShellClient()..draftWriteFails = true;
+      await tester.pumpWidget(_app(client, initialScreenId: 'AI-01'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '断线期间的原范围草稿');
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('草稿尚未保存'), findsOneWidget);
+      client._envelope = _focusEnvelope(
+        domain: 'CTH',
+        subjectId: 'ANOTHER-SUBJECT',
+        nameZh: '另一个主体',
+        nameEn: 'Another subject',
+      );
+      await tester.pumpWidget(_app(client, initialScreenId: 'AI-01'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        '',
+      );
+      client._envelope = _globalEnvelope;
+      await tester.pumpWidget(_app(client, initialScreenId: 'AI-01'));
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        '断线期间的原范围草稿',
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('runtime connection state stays honest', (tester) async {
     await tester.binding.setSurfaceSize(const Size(1440, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -1140,6 +1174,31 @@ class _ShellClient extends LumenisCoreClient {
 
   @override
   Future<Map<String, dynamic>> runtimeIdentity() async => _legacyRuntime;
+
+  final _drafts = <String, Map<String, dynamic>>{};
+  bool draftWriteFails = false;
+
+  @override
+  Future<Map<String, dynamic>> workspaceDraft(String scopeKey) async => {
+    'ok': true,
+    'draft':
+        _drafts[scopeKey] ?? {'scope_key': scopeKey, 'text': '', 'revision': 0},
+  };
+
+  @override
+  Future<Map<String, dynamic>> saveWorkspaceDraft(
+    String scopeKey,
+    String text,
+    int revision,
+  ) async {
+    if (draftWriteFails) throw StateError('offline');
+    _drafts[scopeKey] = {
+      'scope_key': scopeKey,
+      'text': text,
+      'revision': revision + 1,
+    };
+    return workspaceDraft(scopeKey);
+  }
 
   @override
   Future<Map<String, dynamic>> settingsContext() async {

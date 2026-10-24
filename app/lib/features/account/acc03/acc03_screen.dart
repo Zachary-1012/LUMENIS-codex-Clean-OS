@@ -98,7 +98,7 @@ class _Acc03ScreenState extends State<Acc03Screen> {
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 840),
+            constraints: const BoxConstraints(maxWidth: 920),
             child: Ai01ConversationPanel(
               key: ObjectKey(_conversations),
               viewModel: _conversations,
@@ -238,33 +238,49 @@ class _StartWork extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = LumenisTheme.of(context);
-    return OutlinedButton.icon(
-      key: ValueKey(
-        id == 'research' ? 'acc03-destination-SH-02' : 'acc03-start-$id',
-      ),
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size(48, 56),
-        foregroundColor: palette.foreground,
-        padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-      ),
-      icon: DecoratedBox(
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .10),
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(12),
-            topRight: Radius.circular(9),
-            bottomLeft: Radius.circular(8),
-            bottomRight: Radius.circular(12),
+    return DecoratedBox(
+      decoration: LumenisTheme.panel(palette, radius: 10),
+      child: OutlinedButton.icon(
+        key: ValueKey(
+          id == 'research' ? 'acc03-destination-SH-02' : 'acc03-start-$id',
+        ),
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(140, 64),
+          foregroundColor: palette.foreground,
+          padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
+          side: BorderSide.none,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(9),
-          child: LumenisIcon(icon, size: 22, color: color),
+        icon: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(color, palette.surface, .86)!,
+                Color.lerp(color, palette.surface, .62)!,
+              ],
+            ),
+            border: Border.all(color: color.withValues(alpha: .3)),
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: palette.foreground.withValues(alpha: .12),
+                offset: const Offset(0, 2),
+                blurRadius: 2,
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(9),
+            child: LumenisIcon(icon, size: 22, color: color),
+          ),
         ),
+        label: Text(label),
       ),
-      label: Text(label),
     );
   }
 }

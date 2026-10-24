@@ -119,6 +119,21 @@ def _conversation_body(allowed):
     return data
 
 
+@ai_bp.route('/ai/workspace-draft', methods=['GET', 'PUT'])
+def ai_workspace_draft():
+    from . import conversations as owner
+    def call():
+        writing = request.method == 'PUT'
+        actor = owner.current_actor('write' if writing else 'read')
+        if not writing:
+            return owner.workspace_draft(actor, scope_key=request.args.get('scope_key'))
+        data = _conversation_body({'scope_key', 'text', 'expected_revision'})
+        if set(data) != {'scope_key', 'text', 'expected_revision'} or data['text'] is None:
+            raise ValueError('WORKSPACE_DRAFT_INVALID')
+        return owner.workspace_draft(actor, **data)
+    return _conversation_response(call)
+
+
 @ai_bp.route('/ai/conversations', methods=['GET', 'POST'])
 def ai_conversations_list_create():
     from . import conversations as owner
@@ -183,6 +198,7 @@ def authorize_conversation_root_request():
     """Exact full-app perimeter delegation; Owner rechecks every DB operation."""
     from . import conversations as owner
     entries = {
+        'v4.v4_ai.ai_workspace_draft': ('/v4/ai/workspace-draft', {'GET','PUT'}),
         'v4.v4_ai.ai_conversations_list_create': ('/v4/ai/conversations', {'GET','POST'}),
         'v4.v4_ai.ai_conversation_read_update': ('/v4/ai/conversations/<conversation_id>', {'GET','PATCH'}),
         'v4.v4_ai.ai_conversation_append': ('/v4/ai/conversations/<conversation_id>/turns', {'POST'}),

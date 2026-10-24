@@ -316,3 +316,37 @@ def test_scoped_skill_conversation_link_rechecks_original_scope(conversation_cli
     hidden = api.get(root, headers=own).get_json()['conversation']['turns'][0]
     assert hidden['content'].get('task_id') is None
     assert 'source_access_unavailable' in json.dumps(hidden)
+
+
+def test_workspace_draft_restart_scope_conflict_and_account_isolation(conversation_client):
+    api, app, path = conversation_client
+    route = '/v4/ai/workspace-draft'
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    scope = {'scope_key': 'GLOBAL_ALL::'}
+    def read(headers=own, key='GLOBAL_ALL::'):
+        return api.get(route, headers=headers, query_string={'scope_key': key})
+    assert read().get_json()['draft']['revision'] == 0
+    body = {**scope, 'text': 'Draft to resume after closing the window.', 'expected_revision': 0}
+    saved = api.put(route, headers=own, json=body)
+    assert saved.status_code == 200, saved.get_json()
+    assert saved.get_json()['draft']['revision'] == 1
+    assert api.put(route, headers=own, json=body).get_json()['draft']['revision'] == 1
+    assert app.test_client().get(route, headers=own, query_string=scope).get_json()['draft']['text'] == body['text']
+    changed = {**body, 'text': 'Revised draft', 'expected_revision': 1}
+    assert api.put(route, headers=own, json=changed).get_json()['draft']['revision'] == 2
+    assert api.put(route, headers=own, json={**body, 'text': 'Stale overwrite'}).status_code == 409
+    assert read().get_json()['draft']['text'] == 'Revised draft'
+    assert read(key='FOCUS:CTH:isolated-subject').get_json()['draft']['text'] == ''
+    with sqlite3.connect(path) as con:
+        con.executemany("INSERT INTO v4_member_authorizations(user_id,product_id,module,action) VALUES(2,'SHARED','conversation',?)", [('read',),('write',)])
+    other = {'Authorization': 'Bearer fixture-session-two'}
+    assert read(other).get_json()['draft']['revision'] == 0
+    assert api.put(route, headers=own, json={**changed, 'actor_ref': 'actor:2'}).status_code == 400
+    assert api.put(route, headers=own, json={**changed, 'text': None}).status_code == 400
+    assert api.put(route, headers=own, json={**changed, 'expected_revision': True}).status_code == 400
+    assert read(key='../another').status_code == 400
+    assert api.put(route, headers=own, json={**changed, 'text': '', 'expected_revision': 2}).get_json()['draft']['revision'] == 3
+    assert read().get_json()['draft']['text'] == ''
+    with sqlite3.connect(path) as con:
+        con.execute("DELETE FROM v4_member_authorizations WHERE module='conversation' AND user_id=1")
+    assert read().status_code == 403
