@@ -156,7 +156,7 @@ class _MediaPreviewState extends State<MediaPreview> {
       },
       child: HtmlElementView.fromTagName(
         key: ObjectKey(file),
-        tagName: file.mediaType == 'video/mp4' ? 'video' : 'audio',
+        tagName: file.mediaType.startsWith('video/') ? 'video' : 'audio',
         onElementCreated: (Object element) {
           if (!mounted || generation != _generation) return;
           final media = element as web.HTMLMediaElement;
@@ -179,7 +179,7 @@ class _MediaPreviewState extends State<MediaPreview> {
             ..width = '100%'
             ..height = '100%'
             ..objectFit = 'contain';
-          if (file.mediaType == 'video/mp4') {
+          if (file.mediaType.startsWith('video/')) {
             (media as web.HTMLVideoElement).playsInline = true;
           }
           final takeMediaFocus = ((web.Event event) {

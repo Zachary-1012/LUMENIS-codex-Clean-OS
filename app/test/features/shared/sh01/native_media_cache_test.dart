@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -85,6 +86,34 @@ void main() {
     expect(await cacheRoot.exists(), isFalse);
   });
 
+  for (final item in {
+    'audio/mpeg': 'mp3',
+    'audio/mp4': 'm4a',
+    'video/webm': 'webm',
+    'video/quicktime': 'mov',
+  }.entries) {
+    test(
+      'original ${item.value} uses an owned lease and preserves bytes',
+      () async {
+        final bytes = Uint8List.fromList([4, 3, 2, 1]);
+        final lease = await cache.create(
+          ContentProjectFile(
+            bytes: bytes,
+            filename: r'..\outside\untrusted.name',
+            mediaType: item.key,
+          ),
+        );
+        leases.add(lease);
+        expect(lease.path, endsWith('preview.${item.value}'));
+        expect(await File(lease.path).readAsBytes(), bytes);
+        await cache.reclaimStale();
+        expect(await File(lease.path).exists(), isTrue);
+        await lease.release();
+        expect(await File(lease.path).exists(), isFalse);
+      },
+    );
+  }
+
   test(
     'writes generated names and release removes only its lease files',
     () async {
@@ -129,19 +158,31 @@ void main() {
     },
   );
 
-  // Windows locks exclude a second handle in the same process. POSIX locks
-  // are process-wide; the native preview and this guarantee are Windows-only.
   test('an active lease is skipped during stale recovery', () async {
     final lease = await cache.create(
       _content(<int>[7, 8, 9], filename: 'active.mp4'),
     );
     leases.add(lease);
 
-    await cache.reclaimStale();
+    await NativeMediaCache(root: cacheRoot).reclaimStale();
 
     expect(await File(lease.path).exists(), isTrue);
     expect(await File(lease.path).readAsBytes(), <int>[7, 8, 9]);
-  }, testOn: 'windows');
+  });
+
+  test('another isolate preserves a live process lease', () async {
+    final lease = await cache.create(
+      _content(<int>[6, 5, 4], filename: 'active.mp4'),
+    );
+    leases.add(lease);
+    final rootPath = cacheRoot.path;
+
+    await _reclaimInIsolate(rootPath);
+
+    expect(await File(lease.path).readAsBytes(), <int>[6, 5, 4]);
+    await lease.release();
+    expect(await File(lease.path).exists(), isFalse);
+  });
 
   test('reclaims a stale directory with the exact versioned marker', () async {
     await cacheRoot.create(recursive: true);
@@ -254,6 +295,10 @@ void main() {
     expect(await rootFile.readAsString(), 'preserve');
   });
 }
+
+Future<void> _reclaimInIsolate(String rootPath) => Isolate.run(
+  () => NativeMediaCache(root: Directory(rootPath)).reclaimStale(),
+);
 
 ContentProjectFile _content(
   List<int> bytes, {

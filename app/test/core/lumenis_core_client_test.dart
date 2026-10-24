@@ -688,6 +688,76 @@ void main() {
     expect(server.requests.last.domainId, 'CTH');
   });
 
+  test(
+    'source preview carries the exact source hash and independent scope',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+      final digest = 'a' * 64;
+      final file = await client.contentSourcePreview(
+        domainId: null,
+        artifactId: 'ART-contract',
+        expectedSha256: digest,
+      );
+      final request = server.requests.single;
+      expect(request.method, 'GET');
+      expect(Uri.parse(request.path).queryParameters, {
+        'format': 'media',
+        'sha256': digest,
+      });
+      expect(
+        request.workspaceScope,
+        '{"scope_kind":"shared_workspace","version":1}',
+      );
+      expect(request.authorization, isNull);
+      expect(file.mediaType, 'audio/wav');
+      expect(file.bytes, [82, 73, 70, 70]);
+      await expectLater(
+        client.contentSourcePreview(
+          domainId: null,
+          artifactId: 'ART-contract',
+          expectedSha256: 'unknown',
+        ),
+        throwsFormatException,
+      );
+      expect(server.requests, hasLength(1));
+    },
+  );
+
+  for (final status in [401, 403, 302]) {
+    test(
+      'source preview HTTP $status never bootstraps or follows redirects',
+      () async {
+        final server = await _CoreStub.start(fileStatus: status);
+        addTearDown(server.close);
+        final client = LumenisCoreClient(baseUrl: server.baseUrl);
+        await expectLater(
+          client.contentSourcePreview(
+            domainId: null,
+            artifactId: 'ART-contract',
+            expectedSha256: 'a' * 64,
+          ),
+          throwsA(
+            status == 302
+                ? isA<LumenisCoreException>().having(
+                    (e) => e.errorCode,
+                    'code',
+                    'CONTENT_SOURCE_UNAVAILABLE',
+                  )
+                : isA<LumenisCoreException>().having(
+                    (e) => e.statusCode,
+                    'status',
+                    status,
+                  ),
+          ),
+        );
+        expect(server.requests, hasLength(1));
+        expect(server.requests.single.authorization, isNull);
+      },
+    );
+  }
+
   for (final status in [HttpStatus.unauthorized, HttpStatus.forbidden]) {
     test(
       'media HTTP $status remains denied without bootstrap or retry',
@@ -1118,6 +1188,16 @@ class _CoreStub {
     // Simulate the server-owned open-workspace boundary, which rejects any
     // client-supplied identity credential. This is contract evidence only.
     final authorized = authorization == null;
+    if (request.uri.path == '/api/experience/content-sources/ART-contract' &&
+        request.uri.queryParameters['format'] == 'media') {
+      request.response
+        ..statusCode = authorized ? fileStatus : HttpStatus.unauthorized
+        ..headers.contentType = ContentType('audio', 'wav')
+        ..headers.set(HttpHeaders.locationHeader, '/redirected')
+        ..add([82, 73, 70, 70]);
+      await request.response.close();
+      return;
+    }
     if (path == '/api/experience/content-projects/ART-contract/package') {
       request.response
         ..statusCode = authorized ? fileStatus : HttpStatus.unauthorized

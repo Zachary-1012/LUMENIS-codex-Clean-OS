@@ -83,6 +83,30 @@ Map<String, dynamic> _batchResponse(
 
 // These are widget contract fixtures, never media/render or user E2E evidence.
 class _Client extends LumenisCoreClient {
+  Completer<ContentProjectFile>? sourcePreviewPending;
+  int sourcePreviewCalls = 0;
+  String? previewSourceRef;
+  String? previewSourceSha;
+  bool sourcePreviewFailure = false;
+
+  @override
+  Future<ContentProjectFile> contentSourcePreview({
+    required String? domainId,
+    required String artifactId,
+    required String expectedSha256,
+  }) async {
+    sourcePreviewCalls++;
+    previewSourceRef = artifactId;
+    previewSourceSha = expectedSha256;
+    if (sourcePreviewPending != null) return sourcePreviewPending!.future;
+    if (sourcePreviewFailure) throw const FormatException();
+    return ContentProjectFile(
+      bytes: Uint8List.fromList([1, 2]),
+      filename: 'source.mp4',
+      mediaType: 'video/mp4',
+    );
+  }
+
   @override
   Future<Map<String, dynamic>> inspectAudioProcessing({
     required String? domainId,
@@ -600,6 +624,96 @@ void main() {
     );
   });
   tearDown(() => controller.dispose());
+
+  testWidgets(
+    'source preview preserves the edit and returns after narrow layout',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await controller.importFile('chosen.mp4', Uint8List.fromList([1]));
+      controller.edit(
+        (s) =>
+            s.addClip(s.assets.single.assetId, trackId: 'video', sourceOut: 1),
+      );
+      final before = controller.timeline!.toJson();
+      await tester.pumpWidget(_app(client, controller));
+      await tester.tap(
+        find.byKey(
+          Key(
+            'media-preview-source-${controller.timeline!.assets.single.assetId}',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(client.previewSourceRef, controller.sourceRefs.single);
+      expect(
+        client.previewSourceSha,
+        controller.timeline!.assets.single.sha256,
+      );
+      final player = tester.widget<MediaPreview>(find.byType(MediaPreview));
+      expect(player.onPositionChanged, isNull);
+      expect(player.seekPosition, isNull);
+      expect(controller.timeline!.toJson(), before);
+      tester.view.physicalSize = const Size(390, 844);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-source-monitor')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const Key('media-close-source-preview')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-source-monitor')), findsNothing);
+      expect(controller.timeline!.toJson(), before);
+      expect(controller.hasUnsavedChanges, isTrue);
+      expect(client.retrievalCalls, 0);
+    },
+  );
+
+  testWidgets(
+    'source preview retries without editing and discards revoked response',
+    (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await controller.importFile('chosen.mp4', Uint8List.fromList([1]));
+      final before = controller.timeline!.toJson();
+      client.sourcePreviewFailure = true;
+      await tester.pumpWidget(_app(client, controller));
+      await tester.tap(
+        find.byKey(
+          Key(
+            'media-preview-source-${controller.timeline!.assets.single.assetId}',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('media-retry-source-preview')),
+        findsOneWidget,
+      );
+      expect(controller.timeline!.toJson(), before);
+      client.sourcePreviewPending = Completer<ContentProjectFile>();
+      await tester.tap(find.byKey(const Key('media-retry-source-preview')));
+      await tester.pump();
+      await tester.pumpWidget(
+        _app(client, controller, contextAvailable: false),
+      );
+      await tester.pump();
+      client.sourcePreviewPending!.complete(
+        ContentProjectFile(
+          bytes: Uint8List.fromList([1]),
+          filename: 'source.mp4',
+          mediaType: 'video/mp4',
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(MediaPreview), findsNothing);
+      expect(find.byKey(const Key('media-source-monitor')), findsNothing);
+      expect(client.sourcePreviewCalls, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   Future<void> prepareAudioProject() async {
     client.asset
@@ -2807,6 +2921,15 @@ void main() {
       await controller.export(outputKind: 'video');
       await tester.pumpAndSettle();
 
+      await tester.tap(
+        find.byKey(
+          Key(
+            'media-preview-source-${controller.timeline!.assets.single.assetId}',
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-source-monitor')), findsOneWidget);
       final action = find.byKey(const Key('media-version-preview'));
       await _openActionsForTarget(tester, action);
       await tester.ensureVisible(action);
@@ -2816,6 +2939,7 @@ void main() {
       final preview = find.byType(MediaPreview);
       final matte = find.byKey(const Key('media-preview-matte'));
       final timeline = find.byKey(const Key('media-timeline-region'));
+      expect(find.byKey(const Key('media-source-monitor')), findsNothing);
       expect(preview, findsOneWidget);
       expect(controller.version?.artifactId, 'ART-version');
       expect(client.retrievalCalls, 1);
@@ -3041,14 +3165,14 @@ void main() {
     client.successfulExport = true;
     await tester.pumpWidget(_app(client, controller));
     await tester.pumpAndSettle();
-    expect(find.text('导出后可预览真实成片。'), findsOneWidget);
+    expect(find.byKey(const Key('media-monitor-start')), findsOneWidget);
     expect(find.byKey(const Key('media-load-preview')), findsNothing);
 
     await controller.export(outputKind: 'video');
     await tester.pumpAndSettle();
     final load = find.byKey(const Key('media-load-preview'));
     expect(load, findsOneWidget);
-    expect(find.text('导出后可预览真实成片。'), findsNothing);
+    expect(find.byKey(const Key('media-monitor-start')), findsNothing);
     expect(find.textContaining('成片预览 · v'), findsOneWidget);
     expect(tester.getSize(load).shortestSide, greaterThanOrEqualTo(48));
 

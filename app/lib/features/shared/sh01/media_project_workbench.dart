@@ -105,14 +105,19 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   final _versions = <MediaProjectVersion>[];
   ContentProjectFile? _preview;
   String? _previewArtifact;
+  MediaProjectAsset? _sourcePreviewAsset;
+  ContentProjectFile? _sourcePreview;
+  bool _sourcePreviewFailed = false;
+  int _sourcePreviewGeneration = 0;
   String? _notice;
   bool _choosing = false;
   bool _retrieving = false;
   bool _batchPreviewOpen = false;
   int _layerGeneration = 0;
   bool _sourcesVisible = true;
-  bool _propertiesVisible = true;
-  double _timelineFraction = .38;
+  bool _propertiesVisible = false;
+  String? _inspectorSelection;
+  double _timelineFraction = .32;
   double _timelineZoom = 1;
   double? _timelinePlayheadSec;
   Duration? _previewSeekPosition;
@@ -179,6 +184,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     final savedContextChanged =
         _controllerInitialized && _savedListContextKey != _savedContextKey;
     if (savedContextChanged) _savedListContextKey = _savedContextKey;
+    if (savedContextChanged ||
+        !widget.contextAvailable ||
+        !identical(oldWidget.client, widget.client)) {
+      _clearSourcePreview();
+    }
     if (oldWidget.contextAvailable && !widget.contextAvailable) {
       if (_controllerInitialized) {
         _controller.quarantineDraftSources();
@@ -210,6 +220,8 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
       _ownsController = true;
     }
     _controllerInitialized = true;
+    _inspectorSelection = _controller.selectedClipId;
+    _propertiesVisible = _inspectorSelection != null;
     _controller.addListener(_changed);
     _savedListContextKey = _savedContextKey;
     _savedProjects = SavedMediaProjectsController(
@@ -241,6 +253,19 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 
   void _changed() {
     if (!mounted) return;
+    if (_inspectorSelection != _controller.selectedClipId) {
+      _inspectorSelection = _controller.selectedClipId;
+      if (_inspectorSelection != null) _propertiesVisible = true;
+    }
+    if (_sourcePreviewAsset != null &&
+        (!_canUseCurrentContext ||
+            !(_controller.timeline?.assets ?? <MediaProjectAsset>[]).any(
+              (asset) =>
+                  asset.assetId == _sourcePreviewAsset!.assetId &&
+                  asset.sha256 == _sourcePreviewAsset!.sha256,
+            ))) {
+      _clearSourcePreview();
+    }
     _sheetUpdates.refresh();
     _leaveGuard?.refresh();
     final version = _controller.version;
@@ -1155,6 +1180,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         }
       } else {
         setState(() {
+          _clearSourcePreview();
           _preview = file;
           _previewArtifact = version.artifactId;
         });
@@ -1333,7 +1359,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             final textSize = MediaQuery.textScalerOf(context).scale(14);
-            final wide = constraints.maxWidth >= 1180 && textSize <= 22;
+            final wide = constraints.maxWidth >= 1100 && textSize <= 22;
             final compact = constraints.maxWidth < 700 || textSize > 22;
             final height = constraints.hasBoundedHeight
                 ? constraints.maxHeight
@@ -1341,7 +1367,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
             return SizedBox(
               height: height,
               child: Padding(
-                padding: EdgeInsets.all(compact ? 8 : 12),
+                padding: EdgeInsets.all(compact ? 8 : 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1355,7 +1381,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 12),
                     Expanded(
                       key: const ValueKey('media-editing-stage'),
                       child: LayoutBuilder(
@@ -1387,7 +1413,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                       children: [
                                         if (wide && _sourcesVisible) ...[
                                           SizedBox(
-                                            width: 232,
+                                            width: 244,
                                             child: SingleChildScrollView(
                                               key: const Key(
                                                 'media-source-rail',
@@ -1395,7 +1421,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                               child: _sources(timeline),
                                             ),
                                           ),
-                                          const SizedBox(width: 12),
+                                          const SizedBox(width: 18),
                                         ],
                                         Expanded(
                                           key: const ValueKey(
@@ -1404,7 +1430,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                           child: _previewArea(),
                                         ),
                                         if (wide && _propertiesVisible) ...[
-                                          const SizedBox(width: 12),
+                                          const SizedBox(width: 18),
                                           SizedBox(
                                             width: 280,
                                             child: SingleChildScrollView(
@@ -1422,7 +1448,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                     ),
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.only(top: 12),
+                                    padding: const EdgeInsets.only(top: 18),
                                     child: SizedBox(
                                       key: const Key('media-timeline-region'),
                                       height: timelineHeight,
@@ -1648,6 +1674,10 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                       Navigator.of(sheetContext).pop();
                       _choose();
                     },
+                    onPreview: (asset) {
+                      Navigator.of(sheetContext).pop();
+                      _previewSource(asset);
+                    },
                   ),
                 );
               }
@@ -1695,14 +1725,14 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   }) => Semantics(
     key: Key('$key-selected-semantics'),
     selected: selected,
-    child: OutlinedButton.icon(
+    child: TextButton.icon(
       key: Key(key),
-      style: OutlinedButton.styleFrom(
+      style: TextButton.styleFrom(
         minimumSize: const Size(48, 48),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
         backgroundColor: selected
-            ? LumenisTheme.of(context).surfaceRaised
-            : null,
+            ? LumenisTheme.of(context).accent.withValues(alpha: .1)
+            : Colors.transparent,
       ),
       onPressed: onPressed,
       icon: Icon(icon),
@@ -1710,7 +1740,150 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     ),
   );
 
+  void _clearSourcePreview() {
+    _sourcePreviewGeneration++;
+    _sourcePreviewAsset = null;
+    _sourcePreview = null;
+    _sourcePreviewFailed = false;
+  }
+
+  String? _sourceRef(MediaProjectAsset asset) {
+    final assets = _controller.timeline?.assets ?? <MediaProjectAsset>[];
+    final refs = _controller.sourceRefs;
+    final index = assets.indexWhere(
+      (item) => item.assetId == asset.assetId && item.sha256 == asset.sha256,
+    );
+    return index >= 0 && refs.length == assets.length ? refs[index] : null;
+  }
+
+  Future<void> _previewSource(MediaProjectAsset asset) async {
+    final ref = _sourceRef(asset);
+    if (!_canUseCurrentContext || ref == null) return;
+    final client = widget.client;
+    final scope = _savedContextKey;
+    final generation = ++_sourcePreviewGeneration;
+    setState(() {
+      _sourcePreviewAsset = asset;
+      _sourcePreview = null;
+      _sourcePreviewFailed = false;
+    });
+    bool current() =>
+        mounted &&
+        generation == _sourcePreviewGeneration &&
+        identical(client, widget.client) &&
+        scope == _savedContextKey &&
+        _canUseCurrentContext &&
+        _sourceRef(asset) == ref;
+    try {
+      final file = await client.contentSourcePreview(
+        domainId: _controller.domain,
+        artifactId: ref,
+        expectedSha256: asset.sha256,
+      );
+      if (current()) setState(() => _sourcePreview = file);
+    } catch (_) {
+      if (current()) setState(() => _sourcePreviewFailed = true);
+    }
+  }
+
+  Widget _sourceMonitor() {
+    final asset = _sourcePreviewAsset!;
+    final palette = LumenisTheme.of(context);
+    return Container(
+      key: const Key('media-source-monitor'),
+      padding: const EdgeInsets.all(12),
+      decoration: _monitorHousing(palette),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                asset.hasVideo
+                    ? Icons.movie_outlined
+                    : Icons.audio_file_outlined,
+                size: 20,
+                color: palette.muted,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  asset.filename,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge,
+                ),
+              ),
+              IconButton(
+                key: const Key('media-close-source-preview'),
+                tooltip: _copy(context, 'back_to_project'),
+                onPressed: () => setState(() {
+                  _clearSourcePreview();
+                  if (_timelinePlayheadSec != null) {
+                    _previewSeekPosition = Duration(
+                      microseconds:
+                          (_timelinePlayheadSec! *
+                                  Duration.microsecondsPerSecond)
+                              .round(),
+                    );
+                    _previewSeekRequest++;
+                  }
+                }),
+                icon: const LumenisIcon(Icons.close_rounded),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Container(
+              decoration: LumenisTheme.panel(
+                palette,
+                radius: 7,
+                recessed: true,
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: _sourcePreview != null
+                  ? MediaPreview(
+                      key: ValueKey(asset.sha256),
+                      file: _sourcePreview!,
+                    )
+                  : Center(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: _sourcePreviewFailed
+                            ? Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(_copy(context, 'source_preview_failed')),
+                                  const SizedBox(height: 12),
+                                  OutlinedButton.icon(
+                                    key: const Key(
+                                      'media-retry-source-preview',
+                                    ),
+                                    onPressed: () => _previewSource(asset),
+                                    icon: const LumenisIcon(
+                                      Icons.refresh_rounded,
+                                    ),
+                                    label: Text(
+                                      _copy(context, 'source_preview'),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : const WaitingFeedback(scene: WaitingScene.search),
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _previewArea() {
+    if (_sourcePreviewAsset != null && _canUseCurrentContext) {
+      return _sourceMonitor();
+    }
     if (_isAudio) return _audioPreviewArea();
     final version = _controller.version;
     final available = _canUseCurrentContext && _preview != null;
@@ -1735,7 +1908,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     return Container(
       key: _previewKey,
       padding: const EdgeInsets.all(12),
-      decoration: LumenisTheme.panel(LumenisTheme.of(context), radius: 13),
+      decoration: _monitorHousing(LumenisTheme.of(context)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1837,7 +2010,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                                         _editorCopy(context, 'preview'),
                                       ),
                                     )
-                                  : Text(_editorCopy(context, 'preview_empty')),
+                                  : _monitorStartAction(),
                             ),
                           ),
                   ),
@@ -1847,6 +2020,48 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _monitorStartAction() {
+    final source = _controller.timeline?.assets
+        .where((asset) => _sourceRef(asset) != null)
+        .firstOrNull;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          _isAudio ? Icons.graphic_eq_rounded : Icons.video_library_outlined,
+          size: 48,
+          color: _isAudio ? LumenisTheme.of(context).muted : Colors.white60,
+        ),
+        const SizedBox(height: 20),
+        OutlinedButton.icon(
+          key: const Key('media-monitor-start'),
+          style: _isAudio
+              ? null
+              : OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.transparent,
+                  side: const BorderSide(color: Colors.white54),
+                  minimumSize: const Size(48, 48),
+                ),
+          onPressed:
+              !_canUseCurrentContext ||
+                  _isBusy ||
+                  _controller.needsOriginalFiles
+              ? null
+              : source == null
+              ? _choose
+              : () => _previewSource(source),
+          icon: Icon(
+            source == null ? Icons.add_rounded : Icons.play_arrow_rounded,
+          ),
+          label: Text(
+            _copy(context, source == null ? 'import' : 'source_preview'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1889,7 +2104,9 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                     sourceOut: clip.sourceOut,
                     streamIndex: clip.audioStreamIndex ?? 0,
                   )
-                : Center(child: Text(_copy(context, 'waveform_select'))),
+                : Center(
+                    child: SingleChildScrollView(child: _monitorStartAction()),
+                  ),
           ),
           const SizedBox(height: 12),
           Text(
@@ -1916,8 +2133,15 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
                 label: Text(_editorCopy(context, 'preview')),
               ),
             )
-          else
-            Text(_editorCopy(context, 'preview_empty')),
+          else if (asset != null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => _previewSource(asset),
+                icon: const LumenisIcon(Icons.headphones_outlined),
+                label: Text(_copy(context, 'source_preview')),
+              ),
+            ),
         ],
       ),
     );
@@ -2173,8 +2397,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   );
 
   void _selectClip(String? id) {
-    _selectedOverlayId = null;
-    _newOverlayKind = null;
+    setState(() {
+      _selectedOverlayId = null;
+      _newOverlayKind = null;
+      if (id != null) _propertiesVisible = true;
+    });
     _controller.selectClip(id);
   }
 
@@ -2565,6 +2792,7 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
   Widget _sources(
     MediaProjectSnapshot? timeline, {
     VoidCallback? onChoose,
+    ValueChanged<MediaProjectAsset>? onPreview,
   }) => _pane(
     context,
     'sources',
@@ -2583,29 +2811,36 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
           icon: const LumenisIcon(Icons.add),
           label: Text(_copy(context, 'choose')),
         ),
-        if (timeline == null)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Text(_copy(context, 'empty')),
-          ),
         for (final asset in timeline?.assets ?? <MediaProjectAsset>[])
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            margin: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: LumenisTheme.of(context).line),
+                bottom: BorderSide(
+                  color: LumenisTheme.of(context).line.withValues(alpha: .5),
+                ),
               ),
+              color: _sourcePreviewAsset?.assetId == asset.assetId
+                  ? LumenisTheme.of(context).accent.withValues(alpha: .08)
+                  : Colors.transparent,
             ),
             child: Row(
               children: [
-                Icon(
-                  asset.hasVideo
-                      ? Icons.movie_outlined
-                      : Icons.audio_file_outlined,
-                  size: 20,
-                  color: LumenisTheme.of(context).muted,
+                IconButton(
+                  key: Key('media-preview-source-${asset.assetId}'),
+                  tooltip:
+                      '${_copy(context, 'source_preview')} · ${asset.filename}',
+                  onPressed: !_canUseCurrentContext || _sourceRef(asset) == null
+                      ? null
+                      : () => (onPreview ?? _previewSource)(asset),
+                  icon: Icon(
+                    asset.hasVideo
+                        ? Icons.play_circle_outline_rounded
+                        : Icons.headphones_outlined,
+                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 4),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2652,7 +2887,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
     final overlays = timeline?.overlays ?? <MediaProjectOverlay>[];
     return Material(
       color: palette.surface,
-      shape: Border(top: BorderSide(color: palette.line)),
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: palette.line.withValues(alpha: .6)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -3173,12 +3412,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(3),
               ),
-              backgroundColor: selected
-                  ? palette.surfaceRaised
-                  : palette.surface,
+              backgroundColor: (asset.hasVideo ? palette.bmp : palette.ai)
+                  .withValues(alpha: selected ? .28 : .12),
               foregroundColor: palette.foreground,
               side: BorderSide(
-                color: selected ? palette.foreground : palette.line,
+                color: selected ? palette.accent : palette.line,
                 width: selected ? 2 : 1,
               ),
               minimumSize: const Size(0, 48),
@@ -3202,10 +3440,11 @@ class _MediaProjectWorkbenchState extends State<MediaProjectWorkbench> {
 Widget _pane(BuildContext context, String title, Widget child) => Material(
   color: LumenisTheme.of(context).surface,
   shape: RoundedRectangleBorder(
-    side: BorderSide(color: LumenisTheme.of(context).line),
-    borderRadius: BorderRadius.circular(4),
+    borderRadius: BorderRadius.circular(12),
+    side: BorderSide(
+      color: LumenisTheme.of(context).line.withValues(alpha: .5),
+    ),
   ),
-  clipBehavior: Clip.antiAlias,
   child: Padding(
     padding: const EdgeInsets.all(12),
     child: Column(
@@ -3220,6 +3459,24 @@ Widget _pane(BuildContext context, String title, Widget child) => Material(
       ],
     ),
   ),
+);
+
+BoxDecoration _monitorHousing(LumenisPalette palette) => BoxDecoration(
+  color: palette.surface,
+  borderRadius: BorderRadius.circular(16),
+  border: Border.all(color: palette.line),
+  boxShadow: [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: .12),
+      offset: const Offset(0, 8),
+      blurRadius: 20,
+    ),
+    BoxShadow(
+      color: palette.surfaceRaised.withValues(alpha: .5),
+      offset: const Offset(0, 2),
+      blurRadius: 1,
+    ),
+  ],
 );
 
 class _NewClip {

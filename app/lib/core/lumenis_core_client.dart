@@ -1429,6 +1429,71 @@ class LumenisCoreClient {
     );
   }
 
+  Future<ContentProjectFile> contentSourcePreview({
+    required String? domainId,
+    required String artifactId,
+    required String expectedSha256,
+  }) async {
+    _validateContentArtifactId(artifactId);
+    if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(expectedSha256)) {
+      throw const FormatException('Invalid source version.');
+    }
+    final context = _mediaContentContext(domainId);
+    final uri = _uri(
+      '/api/experience/content-sources/$artifactId',
+    ).replace(queryParameters: {'format': 'media', 'sha256': expectedSha256});
+    try {
+      final response = await sendLumenisBinaryRequest(
+        LumenisTransportRequest(
+          method: 'GET',
+          uri: uri,
+          headers: {...context, 'Accept': 'video/*, audio/*, image/*'},
+          connectionTimeout: const Duration(minutes: 2),
+          followRedirects: false,
+        ),
+        maxBytes: 128 * 1024 * 1024,
+      );
+      if (response.statusCode != 200) {
+        throw LumenisCoreException(
+          'Source preview was not returned.',
+          statusCode: response.statusCode,
+        );
+      }
+      final type = response.contentType?.split(';').first.trim().toLowerCase();
+      final extension = const {
+        'video/mp4': 'mp4',
+        'video/quicktime': 'mov',
+        'video/webm': 'webm',
+        'video/x-matroska': 'mkv',
+        'video/x-msvideo': 'avi',
+        'audio/wav': 'wav',
+        'audio/mpeg': 'mp3',
+        'audio/mp4': 'm4a',
+        'audio/flac': 'flac',
+        'audio/ogg': 'ogg',
+        'audio/aac': 'aac',
+        'audio/aiff': 'aiff',
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/webp': 'webp',
+        'image/gif': 'gif',
+      }[type];
+      if (extension == null || response.bytes.isEmpty) {
+        throw const FormatException('Unsupported source preview.');
+      }
+      return ContentProjectFile(
+        bytes: response.bytes,
+        filename: '$artifactId.$extension',
+        mediaType: type!,
+      );
+    } on LumenisTransportException {
+      throw const LumenisCoreException(
+        'Source preview is unavailable.',
+        errorCode: 'CONTENT_SOURCE_UNAVAILABLE',
+      );
+    }
+  }
+
   Future<ContentProjectFile> contentProjectFile({
     required String? domainId,
     required String artifactId,

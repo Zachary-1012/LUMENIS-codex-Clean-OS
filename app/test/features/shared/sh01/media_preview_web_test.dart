@@ -34,6 +34,56 @@ Uint8List _silentWave() {
 }
 
 void main() {
+  testWidgets('original WebM source uses a video surface without autoplay', (
+    tester,
+  ) async {
+    final environment = ui_web.TestEnvironment.instance;
+    ui_web.TestEnvironment.setUp(
+      ui_web.TestEnvironment(
+        ignorePlatformMessages: false,
+        forceTestFonts: environment.forceTestFonts,
+        disableFontFallbacks: environment.disableFontFallbacks,
+        keepSemanticsDisabledOnUpdate:
+            environment.keepSemanticsDisabledOnUpdate,
+        defaultToTestUrlStrategy: environment.defaultToTestUrlStrategy,
+      ),
+    );
+    addTearDown(() => ui_web.TestEnvironment.setUp(environment));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: const [LumenisLocalizations.delegate],
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 220,
+            child: MediaPreview(
+              file: ContentProjectFile(
+                bytes: Uint8List.fromList([1]),
+                filename: 'container-contract.webm',
+                mediaType: 'video/webm',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pump();
+    final surface = tester.widget<PlatformViewSurface>(
+      find.byType(PlatformViewSurface),
+    );
+    final media =
+        ui_web.platformViewRegistry.getViewById(surface.controller.viewId)
+            as web.HTMLMediaElement;
+    expect(media.tagName, 'VIDEO');
+    expect(media.autoplay, isFalse);
+    expect(media.controls, isTrue);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pumpAndSettle();
+    expect(media.getAttribute('src'), isNull);
+  });
+
   testWidgets('queued seek survives metadata loading and source replacement', (
     tester,
   ) async {

@@ -4043,10 +4043,24 @@ def confirm_content_source_import_request(confirmation_id: str):
 
 @experience_bp.route("/api/experience/content-sources/<artifact_id>")
 def content_source_detail(artifact_id: str):
-    from shared_artifacts import read_content_source_artifact
+    from shared_artifacts import read_content_source_artifact, read_content_source_media
 
     try:
         actor, scope = _content_project_scope("read")
+        formats = request.args.getlist("format")
+        if formats:
+            if formats != ["media"] or set(request.args) != {"format", "sha256"} or len(request.args.getlist("sha256")) != 1:
+                raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
+            content, filename, media_type = read_content_source_media(
+                artifact_id, expected_sha256=request.args["sha256"], actor=actor, **scope)
+            from io import BytesIO
+
+            from flask import send_file
+            response = send_file(BytesIO(content), mimetype=media_type, download_name=filename,
+                                 as_attachment=False, conditional=False, etag=False, max_age=0)
+            response.headers["Cache-Control"] = "private, no-store"
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            return response
         source = read_content_source_artifact(artifact_id, actor=actor, **scope)
         return jsonify({"ok": True, "result": source, "publish_status": "not_performed"})
     except ValueError as exc:
@@ -4103,13 +4117,18 @@ def export_content_project():
             )
 
             def render(ctx):
-                staged = stage_timeline_artifact(
-                    timeline, actor=actor, **scope, source_execution_id=ctx.execution_id,
-                    output_kind=normalized["output_kind"],
-                title=normalized["title"], render_media=normalized["render_media"],
-                    previous_artifact_id=normalized["previous_artifact_id"],
-                    source_artifact_refs=source_refs, render_options=render_options, delivery_options=delivery_options,
-                )
+                try:
+                    staged = stage_timeline_artifact(
+                        timeline, actor=actor, **scope, source_execution_id=ctx.execution_id,
+                        output_kind=normalized["output_kind"],
+                        title=normalized["title"], render_media=normalized["render_media"],
+                        previous_artifact_id=normalized["previous_artifact_id"],
+                        source_artifact_refs=source_refs, render_options=render_options, delivery_options=delivery_options,
+                    )
+                except LocalArtifactError as exc:
+                    if str(exc) != "CONTENT_PROJECT_PARENT_REVISION_REQUIRED":
+                        raise
+                    return {"success": False, "error": str(exc)}
                 from shared_artifacts import _verified_content_project
                 verified_project,verified_render,verified_record,_=_verified_content_project(staged["artifact"]["artifact_id"],actor=actor,**scope)
                 reopened={"project":verified_project,"render":verified_render}

@@ -1431,6 +1431,11 @@ def get_guardian(name: str = "default") -> RuntimeGuardian:
     return RuntimeGuardian.get_instance(name)
 
 
+def existing_guardian(name: str) -> RuntimeGuardian | None:
+    with _module_lock:
+        return _instances.get(name)
+
+
 def legacy_health_check() -> Dict[str, Any]:
     """供 system_guardian 等 Legacy 模块委托的健康检查"""
     return get_guardian("legacy").health_check()

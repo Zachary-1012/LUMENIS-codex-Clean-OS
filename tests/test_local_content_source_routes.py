@@ -105,6 +105,56 @@ def test_real_open_workspace_import_reopen_without_accounts(local_client):
     assert len(rows(store)) == 1
 
 
+def test_original_media_preview_is_version_bound_and_read_only(local_client):
+    client, store, app = local_client
+    confirmation = pending(client, store)
+    assert confirm(client, confirmation).status_code == 200
+    imported = upload(client, store).get_json()["result"]
+    artifact_id = imported["artifact"]["artifact_id"]
+    digest = imported["asset"]["sha256"]
+    route = f"/api/experience/content-sources/{artifact_id}"
+    before = rows(store)
+    preview = client.get(f"{route}?format=media&sha256={digest}", headers=HEADERS)
+    assert preview.status_code == 200, preview.get_json()
+    assert preview.data == store["source"].read_bytes()
+    assert preview.content_type == "audio/wav"
+    assert preview.headers["Cache-Control"] == "private, no-store"
+    assert preview.headers["X-Content-Type-Options"] == "nosniff"
+    assert "inline" in preview.headers["Content-Disposition"]
+    for query in ("format=media", f"format=media&sha256={'0' * 64}",
+                  f"format=media&sha256={digest}&sha256={digest}",
+                  f"format=media&format=json&sha256={digest}"):
+        response = client.get(f"{route}?{query}", headers=HEADERS)
+        assert response.status_code == 400
+        assert response.is_json
+    wrong_scope = {**HEADERS, "X-Domain-Id": "CTH", "X-Product-Id": "CTH"}
+    assert client.get(f"{route}?format=media&sha256={digest}", headers=wrong_scope).status_code == 403
+    assert client.get(f"{route}?format=media&sha256={digest}",
+                      headers={**HEADERS, "Origin": "https://external.invalid"}).status_code == 401
+    app.config["LUMENIS_OPEN_WORKSPACE"] = False
+    assert client.get(f"{route}?format=media&sha256={digest}", headers=HEADERS).status_code == 401
+    assert rows(store) == before
+
+
+def test_original_media_preview_rejects_changed_source_package(local_client):
+    client, store, _ = local_client
+    confirmation = pending(client, store)
+    assert confirm(client, confirmation).status_code == 200
+    imported = upload(client, store).get_json()["result"]
+    artifact_id = imported["artifact"]["artifact_id"]
+    digest = imported["asset"]["sha256"]
+    import shared_artifacts
+    record = shared_artifacts._artifact_record(artifact_id)
+    path = store["root"] / record["relative_path"]
+    changed = bytearray(path.read_bytes())
+    changed[-1] ^= 1
+    path.write_bytes(changed)
+    response = client.get(f"/api/experience/content-sources/{artifact_id}?format=media&sha256={digest}",
+                          headers=HEADERS)
+    assert response.status_code == 400
+    assert response.get_json()["code"] == "CONTENT_SOURCE_INTEGRITY_FAILED"
+
+
 def test_cancel_cannot_be_replayed_and_can_start_fresh(local_client):
     client, store, _app = local_client
     confirmation = pending(client, store)
