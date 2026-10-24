@@ -98,5 +98,47 @@
     "Provider/model and owned training gains retain separate authorization/acceptance",
     "Exact merged-source runtime load and final user acceptance"
   ],
-  "hash_method": "SHA256 UTF-8 source with CRLF normalized to LF"
+  "hash_method": "SHA256 UTF-8 source with CRLF normalized to LF",
+  "integration": {
+    "pr": 140,
+    "merge_sha": "875cd8b31d0b5b77234945b3dbcdd1d30a9b4de6",
+    "product_gate": 40070918727,
+    "app_gate": 40070918788,
+    "local_remote_parity": "Confirmed after PR140 merge; each subsequent batch requires fresh readback."
+  },
+  "browser_continuity": {
+    "recorded_at": "2026-10-24T07:07:54.778344+00:00",
+    "base_sha": "875cd8b31d0b5b77234945b3dbcdd1d30a9b4de6",
+    "source_pins": {
+      "app/lib/features/system/sys06/sys06_screen.dart": "ec97f823e83986336d67d9ac379da9df6c4f5165fdfd1ec5c6dc5ed55af850e9",
+      "app/test/features/system/sys06_reader_test.dart": "1d643ceed0218c563f5c5157e02a356fb3b4ede7ddd946d740f46df2fd63903a",
+      ".github/workflows/app-verify.yml": "7fb7e1c5eb6dfccc7531931dfb234c1aa9b645810716e997c54ac39470c605d6",
+      "contracts/experience/screen-specifications/SYS-06.md": "1b13ff7b3f8b75c7f1ef77b7a6b62a63fde76254e2b0d9fa72125fe3b1522c38"
+    },
+    "changes": [
+      "Same mounted question editor across wide/narrow resizing and collapse; hidden content excluded from focus; frame stream suspended while collapsed.",
+      "Authenticated client/repository replacement clears prior tabs and questions.",
+      "Localized accessible names on new-tab, external-view and collapse controls."
+    ],
+    "verification": {
+      "widget_regressions": "21 PASS in browser reader, page-context and frame-stream files; not product acceptance.",
+      "analyze": "PASS, 12.1 seconds",
+      "web_release": "PASS, 93.6 seconds",
+      "windows_release": "PASS, 78.4 seconds",
+      "experience_and_governance": "Constitution, Experience authority/anti-template/blueprints and current source adoption PASS."
+    },
+    "real_web_operations": [
+      "Latest Web release retained typed question when resized 1440 to 390 and back, and after collapsing/expanding.",
+      "A new controlled session opened; navigation to the IANA example-domains page was refused by the existing domain policy, displayed as unavailable rather than success.",
+      "End session completed through the actual product button; tab was removed and the view showed session ended."
+    ],
+    "unresolved": [
+      "Public IANA navigation is denied by the existing browser-domain allowlist. No policy bypass or successful page-reading claim.",
+      "Prior idle-expired session produced an honest but generic error on stop.",
+      "Browser extraction remains SOURCE_EXCERPT / NOT_GENERATED; analysis, source admission and saved-result continuity are not closed.",
+      "Windows release compiled but native write/interaction not verified.",
+      "Core restart remains blocked by execution policy; exact merged runtime load not proved."
+    ],
+    "native_hot_reload": "No attached Flutter runtime was available; release builds and Web reload used, not a successful hot reload."
+  }
 }
