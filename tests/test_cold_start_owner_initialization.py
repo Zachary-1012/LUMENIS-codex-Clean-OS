@@ -109,6 +109,7 @@ def test_manual_workspace_refuses_unsafe_configuration(tmp_path):
         (argv, {**valid, 'ZBC_DATA_DIR': '.'}),
         (argv, {**valid, 'ZBC_DB_PATH': str(tmp_path / 'outside.db')}),
         (argv, {'ZBC_DATA_DIR': str(Path.cwd() / 'data'), 'ZBC_DB_PATH': str(Path.cwd() / 'data' / 'monitor.db')}),
+        (argv, {'ZBC_DATA_DIR': str(Path.cwd() / 'data/runtime'), 'ZBC_DB_PATH': str(Path.cwd() / 'data/runtime/monitor.db')}),
         (['--manual-workspace', '--host', '0.0.0.0', '--port', '18375'], valid),
         (['--manual-workspace', '--host', '127.0.0.1', '--port', '8201'], valid),
         (argv + ['--internal-beta-acceptance'], valid),
@@ -117,6 +118,34 @@ def test_manual_workspace_refuses_unsafe_configuration(tmp_path):
     for arguments, environment in invalid:
         with pytest.raises(ValueError):
             app._activate_manual_workspace(arguments, dict(environment))
+
+
+def test_manual_workspace_accepts_dedicated_in_project_runtime(tmp_path, monkeypatch):
+    import app
+    repository = tmp_path / 'product'
+    monkeypatch.setattr(app, '__file__', str(repository / 'app.py'))
+    data = repository / 'data/runtime/manual'
+    env = {'ZBC_DATA_DIR': str(data), 'ZBC_DB_PATH': str(data / 'monitor.db')}
+    argv = ['--manual-workspace', '--host', '127.0.0.1', '--port', '18375']
+    assert app._activate_manual_workspace(argv, env) == (str(data / 'monitor.db'), str(data))
+    assert not repository.exists()
+
+
+def test_manual_workspace_rejects_production_database_hardlink(tmp_path, monkeypatch):
+    import pytest
+
+    import app
+    repository = tmp_path / 'product'
+    monkeypatch.setattr(app, '__file__', str(repository / 'app.py'))
+    data = repository / 'data/runtime/manual'
+    data.mkdir(parents=True)
+    production = repository / 'data/monitor.db'
+    production.write_bytes(b'protected-test-sentinel')
+    os.link(production, data / 'monitor.db')
+    env = {'ZBC_DATA_DIR': str(data), 'ZBC_DB_PATH': str(data / 'monitor.db')}
+    with pytest.raises(ValueError, match='production database'):
+        app._activate_manual_workspace(['--manual-workspace', '--host', '127.0.0.1', '--port', '18375'], env)
+    assert production.read_bytes() == b'protected-test-sentinel'
 
 
 def test_manual_workspace_suppresses_only_automatic_services(monkeypatch):
@@ -164,7 +193,7 @@ def test_ordinary_profile_retains_existing_dotenv_override(tmp_path, monkeypatch
     import config
     local_env = tmp_path / 'ordinary.env'
     value = str(tmp_path / 'explicit-ordinary-config.db')
-    local_env.write_text('ZBC_DB_PATH=' + value + '\n')
+    local_env.write_text('ZBC_DB_PATH=' + value + '\n', encoding='utf-8')
     monkeypatch.setattr(config, 'ENV_FILE', str(local_env))
     monkeypatch.setattr(sys, 'argv', ['app.py', '--no-scheduler'])
     monkeypatch.setenv('ZBC_DB_PATH', str(tmp_path / 'prior.db'))

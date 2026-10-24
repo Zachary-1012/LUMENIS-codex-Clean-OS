@@ -2445,10 +2445,14 @@ class LumenisCoreClient {
   Future<SavedWorkExportFile> exportSharedSavedWork({
     required String artifactId,
     required String format,
+    String purpose = 'delivery',
   }) async {
     _validateSavedWorkArtifactId(artifactId);
     if (!const {'md', 'txt', 'docx', 'pdf', 'xlsx', 'pptx'}.contains(format)) {
       throw ArgumentError.value(format, 'format');
+    }
+    if (!const {'delivery', 'audit_snapshot'}.contains(purpose)) {
+      throw ArgumentError.value(purpose, 'purpose');
     }
     final expectedMediaType = switch (format) {
       'md' => 'text/markdown',
@@ -2464,7 +2468,7 @@ class LumenisCoreClient {
     };
     final uri = _uri(
       '/api/experience/saved-work/$artifactId/export?'
-      '${Uri(queryParameters: {'format': format}).query}',
+      '${Uri(queryParameters: {'format': format, 'purpose': purpose}).query}',
     );
     try {
       final response = await sendLumenisBinaryRequest(

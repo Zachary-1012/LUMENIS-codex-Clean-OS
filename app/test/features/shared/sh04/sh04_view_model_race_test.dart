@@ -426,6 +426,7 @@ class _ControlledRepository implements Sh04Repository {
   Future<SavedWorkExportFile> export({
     required String artifactId,
     required String format,
+    String purpose = 'delivery',
   }) {
     final pending = Completer<SavedWorkExportFile>();
     exports.add(pending);

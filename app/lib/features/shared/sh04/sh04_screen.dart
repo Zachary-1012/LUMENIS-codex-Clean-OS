@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/lumenis_icon.dart';
 
@@ -125,6 +126,16 @@ class _Sh04ScreenState extends State<Sh04Screen> {
   }
 
   Future<void> _revise(Sh04Export item) async {
+    if (item.isManuscript) {
+      context.go(
+        Uri(
+          path: '/workspace/SH-01',
+          queryParameters: {'entry': 'manuscript', 'artifact': item.internalId},
+        ).toString(),
+      );
+      return;
+    }
+    if (!item.canReviseHere) return;
     final viewModel = _viewModel;
     final generation = viewModel.readGeneration;
     final saved = await showDialog<bool>(
@@ -194,15 +205,20 @@ class _Sh04ScreenState extends State<Sh04Screen> {
     final formats = _exportFiles.canSaveFile
         ? const ['md', 'txt', 'docx', 'pdf', 'xlsx', 'pptx']
         : const ['md', 'txt'];
-    final format = await showDialog<String>(
+    final choice = await showDialog<({String format, String purpose})>(
       context: context,
       builder: (dialogContext) => _Sh04FormatDialog(formats: formats),
     );
-    if (format == null || !_isCurrent(viewModel, generation)) {
+    if (choice == null || !_isCurrent(viewModel, generation)) {
       return;
     }
     try {
-      final file = await viewModel.export(item, format);
+      final format = choice.format;
+      final file = await viewModel.export(
+        item,
+        format,
+        purpose: choice.purpose,
+      );
       if (!mounted || !_isCurrent(viewModel, generation)) return;
       if (_exportFiles.canSaveFile) {
         final saved = await _exportFiles.save(
@@ -271,7 +287,6 @@ class _Workspace extends StatelessWidget {
     required this.onRevise,
     required this.onExport,
   });
-
   final Sh04ViewModel viewModel;
   final VoidCallback onCreate;
   final ValueChanged<Sh04Export> onReopen;
@@ -281,212 +296,127 @@ class _Workspace extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 1120;
       final snapshot = viewModel.snapshot!;
-      final queue = _ExportQueue(viewModel: viewModel, onReopen: onReopen);
-      final inspector = _ArtifactInspector(
-        exportItem: viewModel.selected,
-        scope: snapshot.scope,
-        busy: viewModel.operationBusy,
-        onRevise: viewModel.selected == null
-            ? null
-            : () => onRevise(viewModel.selected!),
-        onExport: viewModel.selected == null
-            ? null
-            : () => onExport(viewModel.selected!),
-      );
-      return Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1480),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              wide ? 32 : 18,
-              24,
-              wide ? 32 : 18,
-              44,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Header(),
-                const SizedBox(height: 18),
-                _ScopeBanner(scope: snapshot.scope),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FilledButton.icon(
-                    key: const Key('sh04-create-report'),
-                    onPressed: viewModel.operationBusy ? null : onCreate,
-                    icon: const LumenisIcon(Icons.edit_note_rounded),
-                    label: Text(
-                      _copy(context, '撰写报告', 'Write a report', '보고서 작성'),
-                    ),
-                  ),
-                ),
-                if (!snapshot.verificationComplete ||
-                    snapshot.unverifiedCandidates > 0) ...[
-                  const SizedBox(height: 12),
-                  _InfoMessage(
-                    _copy(
-                      context,
-                      '部分保存成果未能完成核验，已暂时隐藏。重新读取后可再次检查。',
-                      'Some saved reports could not be verified and are hidden for now. Read again to check later.',
-                      '일부 저장된 보고서를 확인하지 못해 임시로 숨겼습니다. 목록을 다시 읽어 확인하세요.',
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                if (wide)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(width: 390, child: queue),
-                      const SizedBox(width: 16),
-                      Expanded(child: inspector),
-                    ],
-                  )
-                else
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [queue, const SizedBox(height: 14), inspector],
-                  ),
-                if (snapshot.hasMore) ...[
-                  const SizedBox(height: 14),
-                  if (viewModel.loadMoreFailureKind != null) ...[
-                    _InfoMessage(
-                      _copy(
-                        context,
-                        '更多报告暂未读取，已显示的版本仍可用。可重试读取。',
-                        'More reports could not be read. The versions already shown remain available; you can retry.',
-                        '추가 보고서를 읽지 못했습니다. 이미 표시된 버전은 계속 사용할 수 있으며 다시 시도할 수 있습니다.',
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: OutlinedButton(
-                      key: const Key('sh04-load-more'),
-                      onPressed: viewModel.operationBusy
-                          ? null
-                          : viewModel.loadMore,
-                      child: Text(
-                        viewModel.loadMoreFailureKind == null
-                            ? _copy(context, '加载更多', 'Load more', '더 보기')
-                            : _copy(context, '重试读取', 'Retry reading', '다시 읽기'),
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: OutlinedButton.icon(
-                    onPressed: viewModel.refresh,
-                    icon: const LumenisIcon(Icons.refresh_rounded),
-                    label: Text(_copy(context, '重新读取', 'Read again', '다시 읽기')),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
-class _Header extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      _Eyebrow(_copy(context, '可回溯成果', 'REOPENABLE OUTPUT', '다시 열 수 있는 결과물')),
-      const SizedBox(height: 9),
-      Text(
-        context.lumenisL10n.text('screen.SH-04'),
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-          color: LumenisTheme.of(context).foreground,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      const SizedBox(height: 6),
-      Text(
-        _copy(
-          context,
-          '在共享工作区撰写和修订报告，重新打开保存版本，并通过权限检查后导出。',
-          'Write and revise reports in the Shared workspace, reopen saved versions, and export after access checks.',
-          '공유 작업공간에서 보고서를 작성하고 수정한 뒤 저장 버전을 다시 열고 권한 확인 후 내보냅니다.',
-        ),
-        style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.45),
-      ),
-    ],
-  );
-}
-
-class _ScopeBanner extends StatelessWidget {
-  const _ScopeBanner({required this.scope});
-
-  final Sh04Scope scope;
-
-  @override
-  Widget build(BuildContext context) {
-    final range = _copy(context, '共享工作区', 'Shared workspace', '공유 작업 공간');
-    return Semantics(
-      liveRegion: true,
-      label: _copy(
-        context,
-        '当前成果范围：$range',
-        'Current output range: $range',
-        '현재 결과 범위: $range',
-      ),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-        decoration: BoxDecoration(
-          color: LumenisTheme.of(context).accentStrong.withValues(alpha: 0.08),
-          border: Border.all(
-            color: LumenisTheme.of(
-              context,
-            ).accentStrong.withValues(alpha: 0.35),
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.lock_outline_rounded,
-              color: LumenisTheme.of(context).accentStrong,
-              size: 19,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                range,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            Text(
+      final selected = viewModel.selected;
+      final palette = LumenisTheme.of(context);
+      final wide = constraints.maxWidth >= 900;
+      final shelf = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _ExportQueue(viewModel: viewModel, onReopen: onReopen),
+          if (!snapshot.verificationComplete ||
+              snapshot.unverifiedCandidates > 0)
+            _InfoMessage(
               _copy(
                 context,
-                '每次操作均检查工作区权限',
-                'Workspace access is checked for each action',
-                '각 작업에서 작업공간 권한을 확인합니다',
+                '部分作品暂时无法读取。',
+                'Some works could not be read.',
+                '일부 작품을 읽을 수 없습니다.',
               ),
-              style: TextStyle(
-                color: LumenisTheme.of(context).muted,
-                fontSize: 12,
+            ),
+          if (snapshot.hasMore)
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: OutlinedButton(
+                key: const Key('sh04-load-more'),
+                onPressed: viewModel.operationBusy ? null : viewModel.loadMore,
+                child: Text(
+                  viewModel.loadMoreFailureKind == null
+                      ? _copy(context, '加载更多', 'Load more', '더 보기')
+                      : _copy(context, '重试读取', 'Retry reading', '다시 읽기'),
+                ),
               ),
+            ),
+        ],
+      );
+      final page = _ArtifactInspector(
+        exportItem: selected,
+        scope: snapshot.scope,
+        busy: viewModel.operationBusy,
+        onRevise:
+            selected != null &&
+                (selected.canReviseHere || selected.isManuscript)
+            ? () => onRevise(selected)
+            : null,
+        onExport: selected == null ? null : () => onExport(selected),
+      );
+      final toolbar = Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        decoration: LumenisTheme.panel(palette, radius: 0),
+        child: Wrap(
+          spacing: 18,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              context.lumenisL10n.text('screen.SH-04'),
+              style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w600),
+            ),
+            Text(
+              _copy(context, '共享工作区', 'Shared workspace', '공유 작업 공간'),
+              style: TextStyle(color: palette.muted, fontSize: 12),
+            ),
+            FilledButton.icon(
+              key: const Key('sh04-create-report'),
+              onPressed: viewModel.operationBusy ? null : onCreate,
+              icon: const LumenisIcon(Icons.edit_note_rounded),
+              label: Text(_copy(context, '撰写报告', 'Write a report', '보고서 작성')),
+            ),
+            IconButton(
+              onPressed: viewModel.refresh,
+              tooltip: _copy(context, '重新读取', 'Read again', '다시 읽기'),
+              icon: const LumenisIcon(Icons.refresh_rounded),
             ),
           ],
         ),
-      ),
-    );
-  }
+      );
+      final compact = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          toolbar,
+          shelf,
+          Padding(padding: const EdgeInsets.all(18), child: page),
+        ],
+      );
+      return DecoratedBox(
+        decoration: LumenisTheme.chassis(palette),
+        child:
+            wide && constraints.hasBoundedHeight && constraints.maxHeight >= 460
+            ? Column(
+                children: [
+                  toolbar,
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          width: 300,
+                          decoration: LumenisTheme.panel(
+                            palette,
+                            radius: 0,
+                            recessed: true,
+                          ),
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(12),
+                            child: shelf,
+                          ),
+                        ),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(32, 28, 32, 40),
+                            child: page,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : SingleChildScrollView(child: compact),
+      );
+    },
+  );
 }
 
 typedef _Sh04Submit =
@@ -640,10 +570,17 @@ class _Sh04EditorDialogState extends State<_Sh04EditorDialog> {
   }
 }
 
-class _Sh04FormatDialog extends StatelessWidget {
+class _Sh04FormatDialog extends StatefulWidget {
   const _Sh04FormatDialog({required this.formats});
 
   final List<String> formats;
+
+  @override
+  State<_Sh04FormatDialog> createState() => _Sh04FormatDialogState();
+}
+
+class _Sh04FormatDialogState extends State<_Sh04FormatDialog> {
+  String _purpose = 'delivery';
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -653,12 +590,29 @@ class _Sh04FormatDialog extends StatelessWidget {
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final format in formats)
+        SegmentedButton<String>(
+          segments: [
+            ButtonSegment(
+              value: 'delivery',
+              label: Text(_copy(context, '交付文件', 'Delivery', '전달 파일')),
+            ),
+            ButtonSegment(
+              value: 'audit_snapshot',
+              label: Text(_copy(context, '归档副本', 'Archive', '보관 사본')),
+            ),
+          ],
+          selected: {_purpose},
+          onSelectionChanged: (value) =>
+              setState(() => _purpose = value.single),
+        ),
+        const SizedBox(height: 12),
+        for (final format in widget.formats)
           ListTile(
             key: Key('sh04-export-$format'),
             leading: const LumenisIcon(Icons.article_outlined),
             title: Text(format.toUpperCase()),
-            onTap: () => Navigator.of(context).pop(format),
+            onTap: () =>
+                Navigator.of(context).pop((format: format, purpose: _purpose)),
           ),
       ],
     ),
@@ -682,12 +636,6 @@ class _ExportQueue extends StatelessWidget {
     final items = viewModel.exports;
     return _Panel(
       title: _copy(context, '成果队列', 'Output queue', '결과물 대기열'),
-      detail: _copy(
-        context,
-        '每个条目都是已保存的报告版本；选择条目会向服务器重新打开该版本。',
-        'Each entry is a saved report version. Selecting one reopens that version on the server.',
-        '각 항목은 저장된 보고서 버전입니다. 선택하면 서버에서 해당 버전을 다시 엽니다.',
-      ),
       child: items.isEmpty
           ? _InfoMessage(
               _copy(
@@ -826,7 +774,6 @@ class _ArtifactInspector extends StatelessWidget {
     required this.onRevise,
     required this.onExport,
   });
-
   final Sh04Export? exportItem;
   final Sh04Scope scope;
   final bool busy;
@@ -836,111 +783,68 @@ class _ArtifactInspector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final item = exportItem;
-    return _Panel(
-      title: _copy(context, '成果预览', 'Output preview', '결과물 미리보기'),
-      detail: _copy(
-        context,
-        '只显示由 Shared SavedWork 返回、版本链和原始引用已由服务器核验的报告。',
-        'Only reports returned by Shared SavedWork with server-verified version and source references are shown.',
-        'Shared SavedWork가 반환하고 서버가 버전 및 원본 참조를 확인한 보고서만 표시합니다.',
-      ),
-      child: item == null
-          ? _InfoMessage(
-              _copy(
-                context,
-                '选择一个成果查看状态。',
-                'Select an output to inspect its state.',
-                '결과물을 선택해 상태를 확인하세요.',
+    final palette = LumenisTheme.of(context);
+    if (item == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 64),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LumenisIcon(
+                Icons.menu_book_outlined,
+                size: 64,
+                color: palette.quiet,
               ),
-            )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 20),
+              Text(
+                _copy(context, '选择一份作品', 'Choose a work', '작품 선택'),
+                style: TextStyle(fontSize: 18, color: palette.muted),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 840),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Wrap(
+              spacing: 12,
+              runSpacing: 10,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 Text(
-                  item.title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                  _copy(
+                    context,
+                    '版本 ${item.version}',
+                    'Version ${item.version}',
+                    '버전 ${item.version}',
                   ),
+                  style: TextStyle(color: palette.muted),
                 ),
-                const SizedBox(height: 12),
-                _DetailLine(
-                  label: _copy(context, '格式', 'Format', '형식'),
-                  value: item.formatLabel,
+                if (onRevise != null)
+                  OutlinedButton.icon(
+                    key: const Key('sh04-revise-report'),
+                    onPressed: busy ? null : onRevise,
+                    icon: const LumenisIcon(Icons.edit_outlined),
+                    label: Text(
+                      item.isManuscript
+                          ? _copy(context, '打开文稿', 'Open document', '문서 열기')
+                          : _copy(context, '修订版本', 'Revise version', '버전 수정'),
+                    ),
+                  ),
+                FilledButton.icon(
+                  key: const Key('sh04-export-report'),
+                  onPressed: busy ? null : onExport,
+                  icon: const LumenisIcon(Icons.file_download_outlined),
+                  label: Text(_copy(context, '导出', 'Export', '내보내기')),
                 ),
-                _DetailLine(
-                  label: _copy(context, '状态', 'State', '상태'),
-                  value: _exportStateLabel(context, item.state),
-                ),
-                _DetailLine(
-                  label: _copy(context, '引用数', 'Citations', '인용 수'),
-                  value: '${item.evidenceCount}',
-                ),
-                _DetailLine(
-                  label: _copy(context, '版本', 'Version', '버전'),
-                  value: '${item.version}',
-                ),
-                if (item.parentArtifactId != null)
-                  _DetailLine(
-                    label: _copy(context, '版本关系', 'Version history', '버전 기록'),
-                    value: _copy(
-                      context,
-                      '基于上一保存版本修订',
-                      'Revised from an earlier saved version',
-                      '이전 저장 버전에서 수정됨',
-                    ),
-                  ),
-                if (item.generatedAt.isNotEmpty)
-                  _DetailLine(
-                    label: _copy(context, '保存时间', 'Saved', '저장'),
-                    value: item.generatedAt,
-                  ),
-                if (item.state == Sh04ExportState.ready && item.reopenable)
-                  _VerifiedNotice(
-                    _copy(
-                      context,
-                      '这是一个已保存的版本，可重新读取或修订。',
-                      'This saved version can be reopened or revised.',
-                      '저장된 버전을 다시 열거나 수정할 수 있습니다.',
-                    ),
-                  )
-                else
-                  _InfoMessage(
-                    _copy(
-                      context,
-                      '当前没有可重新打开的真实成果。',
-                      'There is no real output available to reopen.',
-                      '다시 열 수 있는 실제 결과물이 없습니다.',
-                    ),
-                  ),
-                if (item.preview.isNotEmpty) ...[
-                  const SizedBox(height: 15),
-                  Text(
-                    _copy(context, '已保存内容', 'Saved content', '저장된 내용'),
-                    style: TextStyle(
-                      color: LumenisTheme.of(context).quiet,
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(13),
-                    decoration: BoxDecoration(
-                      color: LumenisTheme.of(context).canvas,
-                      borderRadius: BorderRadius.circular(9),
-                    ),
-                    child: Text(
-                      item.preview,
-                      maxLines: 12,
-                      overflow: TextOverflow.fade,
-                      style: const TextStyle(height: 1.5),
-                    ),
-                  ),
-                ],
-                if (item.state == Sh04ExportState.ready &&
-                    item.reopenable &&
-                    item.preview.isNotEmpty)
+                if (item.reopenable)
                   ReadAloudAction(
                     sessionId: 'sh04:${item.internalId}',
                     scopeVersion:
@@ -948,69 +852,115 @@ class _ArtifactInspector extends StatelessWidget {
                     text: item.preview,
                     purpose: ReadAloudPurpose.savedPreview,
                   ),
-                const SizedBox(height: 13),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      key: const Key('sh04-revise-report'),
-                      onPressed: busy ? null : onRevise,
-                      icon: const LumenisIcon(Icons.edit_outlined),
-                      label: Text(
-                        _copy(context, '修订版本', 'Revise version', '버전 수정'),
-                      ),
-                    ),
-                    FilledButton.tonalIcon(
-                      key: const Key('sh04-export-report'),
-                      onPressed: busy ? null : onExport,
-                      icon: const LumenisIcon(Icons.file_download_outlined),
-                      label: Text(_copy(context, '导出', 'Export', '내보내기')),
-                    ),
-                  ],
-                ),
               ],
             ),
+            const SizedBox(height: 22),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(
+                MediaQuery.sizeOf(context).width < 600 ? 22 : 42,
+              ),
+              decoration: BoxDecoration(
+                color: palette.surface,
+                border: Border.all(color: palette.line),
+                borderRadius: BorderRadius.circular(3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: .16),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: palette.surfaceRaised,
+                    offset: const Offset(3, 3),
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: SelectionArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      item.title,
+                      style: const TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    _ReportText(item.preview),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _VerifiedNotice extends StatelessWidget {
-  const _VerifiedNotice(this.message);
+class _ReportText extends StatelessWidget {
+  const _ReportText(this.text);
 
-  final String message;
+  final String text;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-    decoration: BoxDecoration(
-      color: LumenisTheme.of(context).positive.withValues(alpha: 0.1),
-      border: Border.all(
-        color: LumenisTheme.of(context).positive.withValues(alpha: 0.35),
-      ),
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: Row(
-      children: [
-        Icon(
-          Icons.check_circle_outline_rounded,
-          color: LumenisTheme.of(context).positive,
-          size: 18,
-        ),
-        const SizedBox(width: 8),
-        Expanded(
+  Widget build(BuildContext context) {
+    var fenced = false;
+    final blocks = <Widget>[];
+    final paragraph = <String>[];
+    void flush() {
+      if (paragraph.isEmpty) return;
+      blocks.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 14),
           child: Text(
-            message,
-            style: TextStyle(
-              color: LumenisTheme.of(context).muted,
-              height: 1.4,
-            ),
+            paragraph.join('\n'),
+            style: const TextStyle(fontSize: 16, height: 1.8),
           ),
         ),
-      ],
-    ),
-  );
+      );
+      paragraph.clear();
+    }
+
+    for (final line in text.split('\n')) {
+      if (line.trimLeft().startsWith('```')) fenced = !fenced;
+      final heading = fenced
+          ? null
+          : RegExp(r'^(#{1,6})\s+(.+)$').firstMatch(line);
+      if (heading != null) {
+        flush();
+        blocks.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 12),
+            child: Semantics(
+              header: true,
+              child: Text(
+                heading.group(2)!,
+                style: TextStyle(
+                  fontSize: heading.group(1)!.length == 1 ? 23 : 19,
+                  fontWeight: FontWeight.w600,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ),
+        );
+      } else if (!fenced && line.trim().isEmpty) {
+        flush();
+      } else {
+        paragraph.add(line);
+      }
+    }
+    flush();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: blocks,
+    );
+  }
 }
 
 class _LoadingState extends StatelessWidget {
@@ -1152,10 +1102,9 @@ class _StateMessage extends StatelessWidget {
 }
 
 class _Panel extends StatelessWidget {
-  const _Panel({required this.title, required this.child, this.detail});
+  const _Panel({required this.title, required this.child});
 
   final String title;
-  final String? detail;
   final Widget child;
 
   @override
@@ -1174,52 +1123,8 @@ class _Panel extends StatelessWidget {
           title,
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
-        if (detail != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            detail!,
-            style: TextStyle(
-              color: LumenisTheme.of(context).quiet,
-              fontSize: 11,
-              height: 1.45,
-            ),
-          ),
-        ],
         const SizedBox(height: 12),
         child,
-      ],
-    ),
-  );
-}
-
-class _DetailLine extends StatelessWidget {
-  const _DetailLine({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 86,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: LumenisTheme.of(context).quiet,
-              fontSize: 11,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-        ),
       ],
     ),
   );
@@ -1261,23 +1166,6 @@ class _InfoMessage extends StatelessWidget {
     child: Text(
       message,
       style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.45),
-    ),
-  );
-}
-
-class _Eyebrow extends StatelessWidget {
-  const _Eyebrow(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    label,
-    style: TextStyle(
-      color: LumenisTheme.of(context).accentStrong,
-      fontSize: 10,
-      letterSpacing: 1.1,
-      fontWeight: FontWeight.w700,
     ),
   );
 }

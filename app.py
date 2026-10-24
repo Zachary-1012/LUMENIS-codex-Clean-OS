@@ -270,9 +270,16 @@ def _activate_manual_workspace(argv, environ=None):
     data = os.path.realpath(data)
     database = os.path.realpath(database)
     repository = os.path.dirname(os.path.abspath(__file__))
-    if (data == os.path.dirname(data) or _is_path_within(data, repository)
+    runtime_root = os.path.realpath(os.path.join(repository, 'data', 'runtime'))
+    managed_runtime = data != runtime_root and _is_path_within(data, runtime_root)
+    if (data == os.path.dirname(data)
+            or (_is_path_within(data, repository) and not managed_runtime)
             or database == data or not _is_path_within(database, data)):
-        raise ValueError('manual Workspace requires a dedicated data directory outside the source checkout and its DB inside that directory')
+        raise ValueError('manual Workspace requires a dedicated directory under data/runtime or outside the source checkout, with its DB inside that directory')
+    production_db = os.path.join(repository, 'data', 'monitor.db')
+    if (os.path.isfile(database) and os.path.isfile(production_db)
+            and os.path.samefile(database, production_db)):
+        raise ValueError('manual Workspace cannot reuse the production database')
     if os.path.isdir(database):
         raise ValueError('manual Workspace ZBC_DB_PATH must name a file')
     env['ZBC_DATA_DIR'] = data

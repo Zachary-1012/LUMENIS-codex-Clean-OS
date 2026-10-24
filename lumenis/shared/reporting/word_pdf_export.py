@@ -9,6 +9,7 @@ Word / PDF 报告导出模块
 import hashlib
 import json
 import os
+import re
 import uuid
 from contextlib import contextmanager
 from datetime import datetime
@@ -102,6 +103,233 @@ def pdf_text_context():
         yield fonts[0].fontName, markup
 
 
+def delivery_markdown(document: dict, sources: list) -> str:
+    text = document["markdown"]
+    if not sources:
+        return text
+    language = "ko" if re.search(r"[가-힣]", document["title"]) else (
+        "zh" if re.search(r"[\u3400-\u9fff]", document["title"]) else "en")
+    labels = {"zh": ("来源", "资料"), "en": ("Sources", "Material"), "ko": ("출처", "자료")}[language]
+    lines = [text, "", "## " + labels[0], ""]
+    for index, source in enumerate(sources, 1):
+        title = source.get("title") or f"{labels[1]} {index}"
+        lines.append(f"{index}. {title}")
+        for field in ("source_url", "quote"):
+            if isinstance(source.get(field), str) and source[field]:
+                lines.append(source[field])
+        quoted = {source.get("quote")}
+        for citation in document.get("citations", []):
+            quote = citation.get("quote")
+            if (source.get("evidence_id") is not None
+                    and citation.get("evidence_id") == source["evidence_id"]
+                    and isinstance(quote, str) and quote and quote not in quoted):
+                lines.append(quote)
+                quoted.add(quote)
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _delivery_blocks(markdown: str):
+    lines = markdown.splitlines()
+    index = 0
+    fenced = False
+    while index < len(lines):
+        line = lines[index]
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+            yield "paragraph", line
+            index += 1
+            continue
+        heading = None if fenced else re.fullmatch(r"(#{1,6})\s+(.+)", line)
+        if heading:
+            yield "heading", (len(heading[1]), heading[2])
+        elif (not fenced and index + 1 < len(lines) and "|" in line
+              and re.fullmatch(r"\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*", lines[index + 1])
+              and "\\|" not in line):
+            header = [value.strip() for value in line.strip().strip("|").split("|")]
+            rows = [header]
+            index += 2
+            while index < len(lines) and "|" in lines[index] and "\\|" not in lines[index]:
+                row = [value.strip() for value in lines[index].strip().strip("|").split("|")]
+                if len(row) != len(header):
+                    break
+                rows.append(row)
+                index += 1
+            yield "table", rows
+            continue
+        else:
+            yield "paragraph", line
+        index += 1
+
+
+def _export_delivery(document: dict, *, sources: list, format: str) -> bytes:
+    import io
+
+    output = io.BytesIO()
+    markdown = delivery_markdown(document, sources)
+    blocks = list(_delivery_blocks(markdown))
+    if format == "docx":
+        from docx import Document
+        from docx.oxml import OxmlElement
+        from docx.oxml.ns import qn
+        from docx.shared import Pt
+        from lxml import etree
+
+        doc = Document()
+        doc.core_properties.title = document["title"]
+        doc.core_properties.author = ""
+        for style in doc.styles:
+            if hasattr(style, "font"):
+                style.font.name = "Arial"
+                fonts = style.element.get_or_add_rPr().get_or_add_rFonts()
+                fonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+                for attribute in ("asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"):
+                    fonts.attrib.pop(qn("w:" + attribute), None)
+        for fonts in doc.styles.element.iter(qn("w:rFonts")):
+            for name in ("ascii", "hAnsi", "cs"):
+                fonts.set(qn("w:" + name), "Arial")
+            fonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+            for attribute in ("asciiTheme", "hAnsiTheme", "eastAsiaTheme", "cstheme"):
+                fonts.attrib.pop(qn("w:" + attribute), None)
+        doc.styles["Normal"].font.size = Pt(11)
+        font_table = next(part for part in doc.part.package.iter_parts()
+                          if str(part.partname) == "/word/fontTable.xml")
+        fonts = OxmlElement("w:fonts")
+        for name in ("Arial", "Microsoft YaHei"):
+            font = OxmlElement("w:font")
+            font.set(qn("w:name"), name)
+            fonts.append(font)
+        font_table._blob = etree.tostring(fonts, xml_declaration=True, encoding="UTF-8", standalone=True)
+        doc.add_heading(document["title"], level=0)
+        for kind, value in blocks:
+            if kind == "heading":
+                doc.add_heading(value[1], level=value[0])
+            elif kind == "table":
+                table = doc.add_table(rows=1, cols=len(value[0]))
+                table.style = "Light Shading Accent 1"
+                for cell, text in zip(table.rows[0].cells, value[0]):
+                    cell.text = text
+                for row in value[1:]:
+                    for cell, text in zip(table.add_row().cells, row):
+                        cell.text = text
+            else:
+                doc.add_paragraph(value)
+        doc.save(output)
+    elif format == "pdf":
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.platypus import (
+            LongTable,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            TableStyle,
+        )
+
+        with pdf_text_context() as (font_name, markup):
+            normal = ParagraphStyle("Delivery", fontName=font_name, fontSize=10, leading=15,
+                                    wordWrap="CJK", spaceAfter=6)
+            title = ParagraphStyle("DeliveryTitle", parent=normal, fontSize=22, leading=30, spaceAfter=18)
+            heading = ParagraphStyle("DeliveryHeading", parent=normal, fontSize=14, leading=20,
+                                     spaceBefore=10, spaceAfter=8, keepWithNext=True)
+            story = [Paragraph(markup(document["title"]), title)]
+            for kind, value in blocks:
+                if kind == "heading":
+                    story.append(Paragraph(markup(value[1]), heading))
+                elif kind == "table":
+                    cells = [[Paragraph(markup(text), normal) for text in row] for row in value]
+                    table = LongTable(cells, colWidths=[(A4[0] - 96) / len(value[0])] * len(value[0]), repeatRows=1)
+                    table.setStyle(TableStyle([
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E6ECE8")),
+                        ("LINEBELOW", (0, 0), (-1, 0), .6, colors.HexColor("#728477")),
+                        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ]))
+                    story.extend([table, Spacer(1, 10)])
+                elif value:
+                    story.append(Paragraph(markup(value), normal))
+                else:
+                    story.append(Spacer(1, 6))
+            SimpleDocTemplate(output, pagesize=A4, leftMargin=48, rightMargin=48,
+                              title=document["title"], author="").build(story)
+    elif format == "xlsx":
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+
+        book = Workbook()
+        sheet = book.active
+        sheet.title = "Report"
+        sheet.column_dimensions["A"].width = 90
+        table_index = 0
+        for kind, value in [("heading", (1, document["title"])), *blocks]:
+            if kind == "table":
+                table_index += 1
+                table = book.create_sheet(f"Table {table_index}")
+                for row in value:
+                    if any(len(text) > 32767 for text in row):
+                        raise ValueError("WORK_EXPORT_CELL_TOO_LARGE")
+                    table.append(row)
+                    for cell in table[table.max_row]:
+                        cell.data_type = "s"
+                        cell.alignment = Alignment(wrap_text=True, vertical="top")
+                table.freeze_panes = "A2"
+                table.auto_filter.ref = table.dimensions
+                for cell in table[1]:
+                    cell.font = Font(bold=True)
+                    cell.fill = PatternFill("solid", fgColor="E6ECE8")
+                    table.column_dimensions[cell.column_letter].width = 28
+                text = table.title
+            else:
+                text = value[1] if kind == "heading" else value
+            for start in range(0, max(1, len(text)), 30000):
+                sheet.append([text[start:start + 30000]])
+                cell = sheet.cell(sheet.max_row, 1)
+                cell.data_type = "s"
+                cell.alignment = Alignment(wrap_text=True, vertical="top")
+                cell.font = Font(size=14 if kind == "heading" else 11, bold=kind == "heading")
+                if kind == "table":
+                    cell.hyperlink = f"#'Table {table_index}'!A1"
+        book.save(output)
+    elif format == "pptx":
+        from pptx import Presentation
+        from pptx.util import Inches, Pt
+
+        sections = []
+        title, body = document["title"], []
+        for kind, value in blocks:
+            if kind == "heading":
+                if body or title != document["title"]:
+                    sections.append((title, "\n".join(body)))
+                title, body = value[1], []
+            elif kind == "table":
+                body.extend(" | ".join(row) for row in value)
+            else:
+                body.append(value)
+        sections.append((title, "\n".join(body)))
+        presentation = Presentation()
+        presentation.slide_width, presentation.slide_height = Inches(13.333333), Inches(7.5)
+        cover = presentation.slides.add_slide(presentation.slide_layouts[0])
+        cover.shapes.title.text = document["title"]
+        for title, page, lines in _saved_pptx_pages(sections):
+            slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+            header = slide.shapes.add_textbox(Inches(.6), Inches(.4), Inches(12), Inches(.6))
+            header.text_frame.text = title if page == 1 else f"{title} · {page}"
+            header.text_frame.paragraphs[0].font.size = Pt(24)
+            box = slide.shapes.add_textbox(Inches(.65), Inches(1.25), Inches(12), Inches(5.8))
+            box.text_frame.word_wrap = True
+            for index, text in enumerate(lines):
+                paragraph = box.text_frame.paragraphs[0] if index == 0 else box.text_frame.add_paragraph()
+                paragraph.text = text
+                paragraph.font.size = Pt(13)
+                paragraph.space_after = Pt(1)
+        presentation.save(output)
+    else:
+        raise ValueError("WORK_EXPORT_FORMAT_INVALID")
+    return output.getvalue()
+
+
 class ReportExporter:
     """报告导出器"""
 
@@ -110,7 +338,8 @@ class ReportExporter:
         os.makedirs(output_dir, exist_ok=True)
 
     @staticmethod
-    def export_saved_document(document: dict, *, sources: list, format: str) -> bytes:
+    def export_saved_document(document: dict, *, sources: list, format: str,
+                              purpose: str = "audit_snapshot") -> bytes:
         """Export the complete saved snapshot in memory, including source lineage.
 
         Uses the existing Reporting exporter dependencies. A missing converter
@@ -119,6 +348,10 @@ class ReportExporter:
         """
         import io
         import json
+        if purpose == "delivery":
+            return _export_delivery(document, sources=sources, format=format)
+        if purpose != "audit_snapshot":
+            raise ValueError("WORK_EXPORT_PURPOSE_INVALID")
         snapshot = json.dumps(document, ensure_ascii=False, sort_keys=True, indent=2)
         sections = [document["title"], document["markdown"],
                     "Sources / original scope / rights", json.dumps(sources, ensure_ascii=False, indent=2),

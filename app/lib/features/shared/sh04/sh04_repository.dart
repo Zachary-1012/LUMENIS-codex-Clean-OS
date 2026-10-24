@@ -23,6 +23,7 @@ abstract interface class Sh04Repository {
   Future<SavedWorkExportFile> export({
     required String artifactId,
     required String format,
+    String purpose = 'delivery',
   });
 }
 
@@ -78,5 +79,10 @@ class CoreSh04Repository implements Sh04Repository {
   Future<SavedWorkExportFile> export({
     required String artifactId,
     required String format,
-  }) => _client.exportSharedSavedWork(artifactId: artifactId, format: format);
+    String purpose = 'delivery',
+  }) => _client.exportSharedSavedWork(
+    artifactId: artifactId,
+    format: format,
+    purpose: purpose,
+  );
 }

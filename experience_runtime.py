@@ -3068,10 +3068,12 @@ def export_shared_work(artifact_id):
         import io
         from flask import send_file
         from lumenis.shared.reporting.saved_work import export_work
-        if set(request.args) != {"format"} or len(request.args.getlist("format")) != 1:
+        if ("format" not in request.args or set(request.args) - {"format", "purpose"}
+                or any(len(request.args.getlist(key)) != 1 for key in request.args)):
             raise ValueError("WORK_EXPORT_FORMAT_INVALID")
         actor, scope = _shared_work_actor_scope("read")
-        result = export_work(artifact_id, actor=actor, scope=scope, format=request.args["format"])
+        result = export_work(artifact_id, actor=actor, scope=scope, format=request.args["format"],
+                             purpose=request.args.get("purpose", "audit_snapshot"))
         response = send_file(io.BytesIO(result["content"]), mimetype=result["media_type"],
                              download_name=result["filename"], as_attachment=True, max_age=0)
         response.headers["Cache-Control"] = "no-store"

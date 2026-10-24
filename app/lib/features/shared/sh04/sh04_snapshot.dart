@@ -29,6 +29,8 @@ class Sh04Export {
     required this.parentArtifactId,
     required this.citations,
     required this.generatedAt,
+    this.contractId = 'lumenis.saved-work',
+    this.contractVersion = '1',
   });
 
   /// Used for API calls only. The screen must not render internal identifiers.
@@ -46,6 +48,13 @@ class Sh04Export {
   /// them from its immutable parent after server-side reauthorization.
   final List<Map<String, dynamic>> citations;
   final String generatedAt;
+  final String contractId;
+  final String contractVersion;
+
+  bool get canReviseHere =>
+      contractId == 'lumenis.saved-work' && contractVersion == '1';
+  bool get isManuscript =>
+      contractId == 'lumenis.internal-pitch' && contractVersion == '4';
 
   Sh04Format get format => Sh04Format.markdown;
   bool get scopeVerified => true;
@@ -106,7 +115,7 @@ class Sh04Export {
         returnRef?['version'] != version ||
         !_isServerSharedContext(context) ||
         !_isSharedScope(scope) ||
-        !_isGenericReportContract(contract) ||
+        !_isReportContract(contract, _asMap(document?['payload'])) ||
         citations is! List ||
         citations.any((item) => item is! Map) ||
         (version == 1 && (parentArtifactId != null || parentSha256 != null)) ||
@@ -133,6 +142,8 @@ class Sh04Export {
           .map((citation) => Map<String, dynamic>.unmodifiable(citation))
           .toList(growable: false),
       generatedAt: createdAt,
+      contractId: contract!['id'] as String,
+      contractVersion: contract['version'] as String,
     );
   }
 }
@@ -237,6 +248,35 @@ bool _isGenericReportContract(Map<String, dynamic>? value) =>
     value['version'] == '1' &&
     value['required_payload_paths'] is List &&
     (value['required_payload_paths'] as List).isEmpty;
+
+bool _isReportContract(
+  Map<String, dynamic>? contract,
+  Map<String, dynamic>? payload,
+) {
+  if (_isGenericReportContract(contract)) return true;
+  if (contract == null ||
+      contract.length != 3 ||
+      _string(contract['id']) == null ||
+      _string(contract['version']) == null ||
+      contract['required_payload_paths'] is! List ||
+      payload == null) {
+    return false;
+  }
+  final paths = contract['required_payload_paths'] as List;
+  if (paths.length > 100) return false;
+  for (final path in paths) {
+    if (path is! String || path.isEmpty) return false;
+    Object? value = payload;
+    for (final segment in path.split('.')) {
+      if (segment.isEmpty || value is! Map || !value.containsKey(segment)) {
+        return false;
+      }
+      value = value[segment];
+    }
+    if (value == null) return false;
+  }
+  return true;
+}
 
 Map<String, dynamic>? _asMap(Object? value) {
   if (value is! Map) return null;
