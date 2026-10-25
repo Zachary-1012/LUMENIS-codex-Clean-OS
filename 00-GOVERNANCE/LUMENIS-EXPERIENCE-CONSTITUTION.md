@@ -11,7 +11,7 @@ CTH/BMP是业务领域；Shared内容制作提供独立入口。用户可直接�
 
 AI 在资料检索/理解、分析解释、研究、方案、创作与步骤辅助中上下文贯通；建议可检查、修改、拒绝，采用形成明确新版本。正常功能无模型仍可运行，AI 专属动作不可用应局部表达。不能把 AI 限成孤立聊天页，也不能让增强失败覆盖整个任务。
 
-**采集资料的视觉呈现**：依已批准研究、当前任务和数据语义选择卡片、列表、表格或时间线，展示实际标题/正文片段、真实代表封面、作者、平台/原帖、原生时间与采集时间、真实指标与缺失原因。手绘彩绘只用于身份/对象图标及适合的局部页面元素；整体采用PO确定的像素赛博＋植物生态＋复古未来主义风格，任务结构、布局与操作依现行规划。来源类别同权；未取得字段显示“—”，真实零显示0。不得复制平台 Feed、伪造图片/热度，单封面不冒称媒体已读。原文、确定性派生、AI解释与人工判断分别可追溯。
+**采集资料的视觉呈现**：依已批准研究、当前任务和数据语义选择卡片、列表、表格或时间线，展示实际标题/正文片段、真实代表封面、作者、平台/原帖、原生时间与采集时间、真实指标与缺失原因。像素植物图形只用于身份/对象图标及适合的局部页面元素；整体采用PO确定的像素赛博＋植物生态＋复古未来主义风格，任务结构、布局与操作依现行规划。来源类别同权；未取得字段显示“—”，真实零显示0。不得复制平台 Feed、伪造图片/热度，单封面不冒称媒体已读。原文、确定性派生、AI解释与人工判断分别可追溯。
 
 **报告的视觉与内容层级**：结论与业务问题 → 依据/比较/图表 → 不确定性与适用范围 → 可执行建议及继续动作；来源与方法可展开。不能只交样本统计、原文拼接或等待用户配置算法的空报告。部分成果标明缺口，保留已有编辑，不用增量更新覆盖用户改稿。
 
@@ -1402,7 +1402,7 @@ applicable real user E2E under the formal PO verification policy.
 6. **用户操作优先且不丢失。** 流入新内容不得抢焦点、强制滚动、重置选区/播放头/用户输入或覆盖已编辑块。用户改参数后绑定新的输入版本；迟到的旧计算结果失效。纯筛选和公式计算复用确定性Owner/单位与精度，不让每次拖动都重启模型或全任务；涉及保存/执行的变化仍走现有版本和Permission合同。
 7. **草稿、保存、执行分清。** 分段预览可读可编辑不等于已正式保存；草稿若可恢复，必须真实有原Owner持久化回执。用户采用后通过SavedWork/Artifact或对应媒体Owner保存父版本与来源。暂停阅读、取消任务、取消外部动作分别处理；浏览器关掉不能假称任务已停止或持续执行。撤权/切换scope后旧内容及动作依当前读取权限处理，断线重试不重复效果。
 8. **等待时间进入质量判断。** 同时记录请求受理、首个有用且有依据结果、首个实际可操作块、完整结果、保存成功耗时，以及事实/引用错误、修订成功、人工补救、总成本。用同任务/同材料/同预算对比原路径，兼顾p50/p95与慢设备；没有测量不承诺提速比例。不通过删内容、降准确度、偷偷换模型或开启1.5x来缩短等待。
-9. **四端熟悉且连贯。** 遵循用户已批准研究及本屏视觉动线，手绘彩绘限于图标及适合页面元素；保留本屏任务结构、中英韩与可访问性，增量更新保持稳定布局，屏幕阅读器按有用段落受控播报，减少动效设置生效。必要长内容可滚动，操作端无无意义整页纵向堆叠；官网仅演示已证行为，不能执行客户私有任务。
+9. **四端熟悉且连贯。** 遵循用户已批准研究及本屏视觉动线，像素植物图形限于图标及适合页面元素；保留本屏任务结构、中英韩与可访问性，增量更新保持稳定布局，屏幕阅读器按有用段落受控播报，减少动效设置生效。必要长内容可滚动，操作端无无意义整页纵向堆叠；官网仅演示已证行为，不能执行客户私有任务。
 
 **真实验收场景：**品牌同口径比较逐步呈现且缺值为“—”；活动预算修改后只更新受影响部分并保留人工修改；研究多来源陆续到达且矛盾被标明、更正可追溯；视频/播客参数调整保持轨道/选区/播放头并得到实际产物；中断/重连/旧run迟到/撤权/格式损坏时无重复效果。每Owner选择相关风险进行有意义验收，不全屏重复同一套测试。
 
@@ -1426,7 +1426,7 @@ C2后续可将经准入的“任务→表现选择→操作结果→评价”作
 5. **变化可解释、可采用。** 调整预算、时间、来源或作品局部后，显示影响范围和建议差异；用户明确采用后由原Owner保存新版本、父版本与原因。未受影响内容保持；旧成果可重开/回滚。预测场景不覆盖真实观测，来源更正不改原Evidence。
 6. **执行真实且可恢复。** 可交互项绑定现有服务动作、版本与Permission。加载/部分/无记录/未知/离线/拒绝/失败/取消/重试有本屏含义；可安全恢复同一任务，不重复外部效果。只有Core确认的保存/执行回执才能显示成功。AI不可用时保留仍可工作的确定性阅读、筛选、编辑与保存，不假装AI已执行。
 7. **四端与无障碍。** 官网解释和演示须对应实证状态；Web/Desktop承载完整工作；Mobile按已有职责重排查看、审阅、调整和接续，不缩小PC画面。键盘、触控、屏幕阅读器、焦点、缩放和减少动效均可用；保留中英韩。操作端无必要的整页上下滚动，必要长文/表格/无障碍区域仍能滚动，视频与播客有实际横向时间轴。
-8. **寰意自己的视觉。** 五位架构身份与功能对象可用原创手绘彩绘图标；部分适合的页面元素也可用彩绘。整体视觉空间、层级、布局、动效和交互依用户已批准研究、当前任务及本屏合同，不限定二维，也不预设全三维。功能glyph清晰，身份图标、功能图标和第三方来源icon分层；颜色丰富但有语义节制，图像不表示数据或权限状态。人物按当前脚本描述创造，不复制参考照片人物。不复制ChatGPT、社交平台或通用SaaS模板。外来方法、组件、工具及采集/导入内容的产品外壳、阅读视图、反馈、结果与编辑器遵循适用研究和任务合同，不直接暴露供应商控制台或开发诊断。保留原文、署名、真实封面/媒体和原始网页；内置浏览器的来源页面不是可为统一风格改写的证据。
+8. **寰意自己的视觉。** 五位架构身份与功能对象可用原创像素植物图形图标；部分适合的页面元素也可用彩绘。整体视觉空间、层级、布局、动效和交互依用户已批准研究、当前任务及本屏合同，不限定二维，也不预设全三维。功能glyph清晰，身份图标、功能图标和第三方来源icon分层；颜色丰富但有语义节制，图像不表示数据或权限状态。人物按当前脚本描述创造，不复制参考照片人物。不复制ChatGPT、社交平台或通用SaaS模板。外来方法、组件、工具及采集/导入内容的产品外壳、阅读视图、反馈、结果与编辑器遵循适用研究和任务合同，不直接暴露供应商控制台或开发诊断。保留原文、署名、真实封面/媒体和原始网页；内置浏览器的来源页面不是可为统一风格改写的证据。
 
 **真实世界验收至少覆盖：**不同城市同名主体、不同期间/币种不可直接比较、来源撤回、预算变更、长任务中断、权限收回、模型不可用、资料不足及跨端继续。每个屏幕挑其实际相关风险，不在不相关页面硬加控件或重复全部测试。验收同时证明正常成功路径：有用结果→用户调整→正确局部结果→保存→重开/恢复；仅能拒绝错误输入仍不交付。
 
@@ -1448,7 +1448,7 @@ historical-video reading gate. No current rule update itself analyzes frames.
 
 ### Five architecture role identities — current visual map (2026-10-06)
 
-The five recurring architecture roles use distinct original painted identity
+The five recurring architecture roles use distinct original botanical pixel identity
 icons. This map defines icon identity only. It does not add product
 domains, Agents, services, model providers, user-selectable roles or
 authentication/Permission roles.
@@ -1466,7 +1466,7 @@ not a sixth role identity. The owned-AI identity adds no Gateway, model service,
 autonomous permission or product domain. Users do not choose these identities
 for login, account, access or action authority.
 
-The five painted identity icons use distinct task-relevant silhouettes and
+The five botanical pixel identity icons use distinct task-relevant silhouettes and
 controlled accent colors; this icon treatment does not define the product-wide
 visual style. Functional controls continue to use clear linear glyphs. The five role
 identities, third-party source marks and functional glyphs remain separate
@@ -1496,7 +1496,7 @@ useful interaction. Define UI/AIGC balance by screen/task/purpose, not a generic
 percentage or replacement of factual controls. Keep the existing approved
 original OEVIRA mark consistent across App, Website, favicon and native/package
 uses under §23; reuse the existing mark and do not design a replacement here.
-Keep functional line glyphs, the five painted identity icons and third-party
+Keep functional line glyphs, the five botanical pixel identity icons and third-party
 source marks distinct under this section. Startup/re-entry and task progress
 must show the actual approved state, next action and useful result; user-facing
 AIGC effects must serve the current task/Brief and real supported capability,
@@ -1660,7 +1660,7 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 
 本条控制 §§23、34–36 和本节中所有“逐端实现/设计/回归/打包”的产品要求：四表面保留既有角色，按当前PO设备范围建设，每个表面通过本端真实任务、运行、恢复和适用验收独立记录；一端通过不代表其他端通过或整产品Release。所有现有资料、能力与屏幕要求继续逐项映射至既有规则、Owner源码/操作及真实验收；44份ScreenSpec是基线而非上限。窗口执行依最新根AGENTS与PO直接派工，本规范不保存当前窗口停/开指令。没有接口的既有能力保持OPEN/UNBOUND并由原Owner接续；不新增产品、Owner、设计系统或付费服务。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-每个表面分别验收其真实入口、任务操作、结果、来源/权限、保存/修订/重开/恢复、语言与无障碍；同时遵守官网真实内容/操作视频状态及窄屏浏览器等既有要求。整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究与任务；手绘彩绘限于图标及适合页面元素，并保留可编辑设计。对已有Core/API立即真实绑定，尚未提供的接口按Owner接续并明确OPEN/UNBOUND。按Multi-Surface Decision及Real Delivery逐端记录证据；完整四表面Goal与Release要求仍按原标准核验。
+每个表面分别验收其真实入口、任务操作、结果、来源/权限、保存/修订/重开/恢复、语言与无障碍；同时遵守官网真实内容/操作视频状态及窄屏浏览器等既有要求。整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究与任务；像素植物图形限于图标及适合页面元素，并保留可编辑设计。对已有Core/API立即真实绑定，尚未提供的接口按Owner接续并明确OPEN/UNBOUND。按Multi-Surface Decision及Real Delivery逐端记录证据；完整四表面Goal与Release要求仍按原标准核验。
 
 ### 可编辑设计工程与源码同步 — 2026-10-08 审计增补
 
@@ -1668,7 +1668,7 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 
 在现有 ScreenSpec/README 保存 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence` 映射。Figma 载体记录 file/node/revision；源码载体记录 Dart/Token/SVG 路径、版本及编辑/预览方法，明确不等同于原生 Figma。工具受限仅标记该路径，禁止 PNG、PPT、静态截图或伪造 .fig 冒充完整可编辑交付。复用现有文件，不重复创建，不新增收费服务。唯一 Experience、设计状态及 Product Core 真相不变。
 
-整体升级覆盖信息架构、任务入口、导航返回、内容层级、图表/报告、资料阅读、制作编辑、浏览器、设置通知及全部状态；不能只接API、改配色或升级几个样板页。完整信息架构、组件/变量、现有屏幕与官网家族的可编辑源码和真实任务交互仍须交付，不另立设计稿阶段；不要求全部Figma页面先完成才修已有Flutter交互。当前获派端依现有合同构建，暂缓端保留完整要求，已有真实Core/API立即接入，其他依赖按Owner逐项连通并记录OPEN/UNBOUND，不造模拟后端。各屏依本屏任务定义独立层级、构图和操作路径；共享可访问行为和设计变量不意味着通用重复模板。必要设计决定与验收证据同步回写原规范。ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06等既有例子帮助排序，不缩减其余能力、ScreenSpec、官网家族或新增范围。整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究与任务；手绘彩绘限于图标及适合页面元素。保留中英韩、主题、字号/宽度、无障碍和失败恢复。Figma复用可编辑组件/变量/原型，源码路径保留可编辑组件/变量/矢量与预览；提供真实载体/版本和ScreenSpec覆盖缺口。主题映射既有LumenisTheme，Website Astro/CSS共享既有语义决策；Widget通过不等于保存或跨端运行验收。
+整体升级覆盖信息架构、任务入口、导航返回、内容层级、图表/报告、资料阅读、制作编辑、浏览器、设置通知及全部状态；不能只接API、改配色或升级几个样板页。完整信息架构、组件/变量、现有屏幕与官网家族的可编辑源码和真实任务交互仍须交付，不另立设计稿阶段；不要求全部Figma页面先完成才修已有Flutter交互。当前获派端依现有合同构建，暂缓端保留完整要求，已有真实Core/API立即接入，其他依赖按Owner逐项连通并记录OPEN/UNBOUND，不造模拟后端。各屏依本屏任务定义独立层级、构图和操作路径；共享可访问行为和设计变量不意味着通用重复模板。必要设计决定与验收证据同步回写原规范。ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06等既有例子帮助排序，不缩减其余能力、ScreenSpec、官网家族或新增范围。整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究与任务；像素植物图形限于图标及适合页面元素。保留中英韩、主题、字号/宽度、无障碍和失败恢复。Figma复用可编辑组件/变量/原型，源码路径保留可编辑组件/变量/矢量与预览；提供真实载体/版本和ScreenSpec覆盖缺口。主题映射既有LumenisTheme，Website Astro/CSS共享既有语义决策；Widget通过不等于保存或跨端运行验收。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 
@@ -1684,7 +1684,7 @@ UI/UX/AIGC、中英韩及四端要求全部保留。增量结果不抢焦点、�
 | Apple：动作可预测、反馈清楚、能挽回误操作 | 控件/快捷键/触控语义一致；Undo/Redo说明撤回对象并展示受影响位置；进度、完成、失败各有真实反馈；普通状态内联表达，重要边界才中断 | 撤回后可见内容、项目版本和导出一致；状态不要求猜测；反馈不能谎称已保存 |
 | Tesla：在当前任务里直接控制并看到状态，偏好可保存/恢复 | 复用现有任务/设置Owner保存布局/播放位置/可允许偏好，区分未保存与已保存；明确继续/停止/恢复，设备切换只恢复已授权适用状态 | 重开保留同一工作、失败不丢输入；自动状态可停止；Scope/权限不随偏好或设备转移而扩大 |
 
-这是基于已读官方材料的寰意设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究和当前任务；手绘彩绘用于原创图标及适合页面元素。保留丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
+这是基于已读官方材料的寰意设计适配，不宣称GPT/Apple/Tesla全站全部已研究，不复制UI/品牌资产、车辆功能或第三方登录依赖。官方读取出处及限制记于现有 `INTELLIGENT-UI-ADOPTION-20261008.md`。整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究和当前任务；像素植物图形用于原创图标及适合页面元素。保留丰富而克制的色彩、按脚本创作角色、中英韩和无障碍。官网以外非必要不整页上下滚动；媒体横向时间轴和必要长内容滚动保留，不以压缩布局或减少交互损失功能。
 
 J5/J6具体操作归既有SH-01、BMP-08规范；完整44屏与官网家族均须核对和升级，复用正确部分、定向改进真实差距，不机械全量重写或只改这两屏。实时预览、临时导出、正式保存、重开不同；Read Aloud、录音、ASR、节目成品不同；脚本变更不代表录音已改。现有组件/变量/可编辑Figma映射沿原规则，不因文档新增晋升DESIGN_READY/IMPLEMENTED。映射保留F/C1-C6完整职责；窗口状态只按最新直接PO指令和新鲜事实判断，历史恢复/等待记录不自动生效。文档更新仍不代表实现或验收完成。
 
