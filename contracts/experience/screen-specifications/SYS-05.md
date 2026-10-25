@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-05
 status: DESIGN_READY
-revision: 6
+revision: 7
 owner_domain: SYSTEM Settings
 binding_ids:
   - BACKEND-GAP-040 (read-only SYS-05 screen snapshot)
@@ -28,7 +28,7 @@ local_preference_owner: Sys05AppearanceController via SharedPreferencesAsync
 - The frontend candidate is prepared for co-publication in the forthcoming frontend commit with the Round 08 evidence. This supersedes the earlier stale source/hash and untracked-file observation; no commit, remote publication, or release is asserted by this specification.
 - Root completed source review and a bounded guarded-Web pass. The browser checks and remaining platform limits are recorded below. Appearance-modal ghosting still has a final visual fix under work, so this is not a claim that the latest modal revision is visually final.
 - Source review and a bounded Web pass do not pass the whole Round or the full product. Overall runtime acceptance remains `PENDING`.
-- Design intent: one global device-local appearance editor, with the existing `LumenisTheme` remaining the owner of shared semantic contrast roles. Reuse the existing product palette and controls; do not add a second design system.
+- Design intent: one global device-local appearance editor, with the existing `LumenisTheme` remaining the owner of shared semantic contrast roles. Retain the existing theme owner and control behavior, applying the current visual language from Experience §23; do not add a second design system.
 
 ## 1. User job and invariant
 
@@ -46,7 +46,17 @@ use this same entry. A local appearance preference cannot stand in for persisted
 registry membership. Existing source/history is preserved when an object is removed;
 the current user's selection is restored from its owner after reopening. These
 directory actions require implementation and runtime acceptance independently of
-the already supported appearance editor.
+the already supported appearance editor. The 2026-10-24 bounded source binding
+adds the existing localized directory action above the SYS-05 appearance content.
+`Sys05Screen.onOpenSubjects` is bound by the workspace shell to its existing
+`onNavigate('ACC-02')` callback, preserving the shell's navigation and unsaved-work
+guards. The same entry stays visible while the legacy remote settings branch is
+loading or unavailable; the normal local-appearance route makes no settings API
+request. Opening the directory does not select a Subject, start collection or
+create registry data. ACC-02 owns domain selection, normal batch prepare,
+explicit confirmation, apply, directory readback and context selection. Directory
+removal/re-addition remains an independent open owner capability; this entry does
+not claim that absent mutation contract or runtime acceptance has been closed.
 
 | Concern | Current owner/source evidence |
 | --- | --- |

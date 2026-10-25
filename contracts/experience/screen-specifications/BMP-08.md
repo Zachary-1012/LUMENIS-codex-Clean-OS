@@ -521,3 +521,5 @@ require execution on the supported toolchain before surface acceptance.
 选题面板沿当前 `podcast/intelligence/topic_scoring.py` / editorial Owner，缺输入为input_required，不套旧 `topic_score.py` 公式；分数/阈值/舍入以真实Owner为准，不将JS golden fixture另立评分权威。人工信号与AI建议逐项并读，建议绑定baseRevision，人工改稿/信号后旧建议失效。嘉宾三项人工判断只约束对应嘉宾提纲入口，不阻自己的脚本/音频独立制作。
 
 章节编辑与试听沿 `app/lib/features/bmp08/` 及Shared媒体工程，不另建播放器。章节标签重排不改音频样本；范围是明确时基的半开区间，采样点到实际Owner时间单位显式转换，播放头/波形不弹性插值。源ID/版本/章节revision与循环session同时匹配才可播放或采用；换源、取消、媒体错误废弃旧loop/undo，保原项目。改稿不等音频已重合成，听审与实际导出需独立证明。验收首末采样点、四舍五入端点、源切换迟到回调、同一工作区单播放器和保存重开，Node样例不算听感验收。
+
+同一 Shared 媒体工作面的时间线按实际可见轨道/叠层与字号估算初始高度，单轨以紧凑180px起，多轨增加并保全部轨道滚动；用户手动扩缩后保其比例与选区，不缩减人声/BGM/音效。素材与属性为边界清晰的工具域，采用当前像素植物视觉，主试听/词稿保主次；材质和排印只改变呈现，不伪造波形或改变源/播放头/渲染版本。

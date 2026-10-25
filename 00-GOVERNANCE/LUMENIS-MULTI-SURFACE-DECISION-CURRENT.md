@@ -63,7 +63,7 @@ Latest 2026-10-12 PO: entering an operational workspace opens the existing conve
 All four surfaces receive the approved creative UI/UX/AIGC, reference-informed
 and interaction upgrades under the Experience Constitution. Painted style
 applies to original icons and suitable page elements; overall visuals follow
-the PO-selected digital skeuomorphic style and existing task needs.
+the PO-selected pixel-cyber, botanical-ecology and retro-futurist style and existing task needs.
 The roles above constrain actual execution and data ownership, not design ambition
 or which surface receives improvements. Device-appropriate composition preserves
 the user's capabilities and continuity; it does not justify a generic thin shell,
@@ -180,7 +180,7 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 | Desktop | 延续同一工作对象，适配多窗格、大文件、真实播放器、横向轨道/选区和本机系统朗读。 | 不新建本地业务真相；本机处理/服务端执行分别显示；关闭/重启恢复版本及用户选区，修改后旧播放不继续。 |
 | Mobile Companion | 用触控顺序重排事实、依据、审阅、允许的轻编辑/参数调整、审批和通知返回；可把复杂工作接续到Web/Desktop。 | 不把不可运行的重计算假装在手机完成；可用动作与原权限一致，不重新解释任务或重复选择来源；焦点与回退可达。 |
 
-四端共同要求：整体视觉采用PO确定的拟物数码风格，布局与操作依当前任务和屏幕合同；原创手绘彩绘用于身份/功能图标及适合的局部页面元素。功能glyph与第三方来源标识分层，颜色有节制；保留有用丰富交互、中英韩/无障碍，操作端避免不必要整页上下滑动且不截断必要长文。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
+四端共同要求：整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依当前任务和屏幕合同；原创像素植物图形用于身份/功能图标及适合的局部页面元素。功能glyph与第三方来源标识分层，颜色有节制；保留有用丰富交互、中英韩/无障碍，操作端避免不必要整页上下滑动且不截断必要长文。各端实际实现/运行证据独立记录，文档同步不提升已有状态。本轮仅更新规则和设计输入，不自动派工。
 
 
 ### 2026-10-08 前端审计与工具维护增补（历史授权快照）

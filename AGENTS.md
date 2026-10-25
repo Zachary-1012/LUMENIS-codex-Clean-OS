@@ -1002,7 +1002,7 @@ renderers remain retired; reference study does not grant third-party code/asset
 rights. The Product Owner's 2026-10-03 correction requires full four-surface creative
 UI/UX/AIGC, useful rich interaction and no unnecessary scrolling. The 2026-10-12
 clarification confines painted style to icons and suitable page elements;
-overall visuals use the PO-selected digital skeuomorphic style. Preserve the
+overall visuals use the PO-selected pixel-cyber, botanical-ecology and retro-futurist style. Preserve the
 approved task layouts, workflows and full interaction scope.
 
 The approved audit PDF, its 44 sketches and any later AI/Figma/wireframe output are
@@ -1574,7 +1574,7 @@ its evidence limits, including the later Website-only 319b input. Retain two new
 the earlier five, existing analysis, OpenAI official material and current product
 rules/requirements/architecture. This explicitly supersedes exhaustive further
 historical-video study for F; retain old originals/analysis as archives. Experience
-§38 governs linear and colored hand-drawn icons, recorded launch principles,
+§38 governs functional glyphs and botanical pixel identity icons, recorded launch principles,
 Manus-inspired task/operation presentation and Website operation videos, all four
 surfaces and task-justified UI/AIGC balance. All operational surfaces except the
 Public Website avoid unnecessary page-level up/down scrolling; preserve necessary
@@ -1671,8 +1671,8 @@ navigation, source/results, editing, settings, notifications and failure/recover
 Do not limit adoption to AI chat, a homepage or decorative result cards. Each
 screen records its real job, source/action/version contract, task-specific visual
 interaction, four-surface differences and normal-success/recovery acceptance in
-its existing specification. Preserve full scope; paint icons and suitable page
-elements. Overall visuals use the PO-selected digital skeuomorphic style with the
+its existing specification. Preserve full scope; use botanical pixel icons and suitable page
+elements under Experience §23. Overall visuals use the PO-selected pixel-cyber, botanical-ecology and retro-futurist style with the
 existing task-specific layouts and full interaction scope. AI-independent deterministic work remains operable when
 inference is unavailable. The sole blueprint, Experience, surface decision,
 Owner index, screen specs, the unique full-product plan/sketch and README are co-published.

@@ -93,7 +93,7 @@ Reuse the current Architecture and Experience corrections for the shared product
 ### 共用验收边界
 
 - Web Workspace、Desktop App、Mobile Companion、Public Website 共享 Product Core、ViewModel、Actor、Scope、Source/Evidence、Task、Artifact 和版本语义；布局按端侧职责区别。官网仅呈现已验证公开能力或清楚标记的示例。
-- 保留足够交互与可访问性；整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究、任务和屏幕合同。手绘彩绘用于身份/对象图标及适合的页面元素；颜色有层次但不过量。人物服从用户脚本/描述，不复制参考人物。
+- 保留足够交互与可访问性；整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究、任务和屏幕合同。身份/对象图标及适合的页面元素使用当前像素植物语言；满天星Logo及五角色依Experience §23；颜色有层次但不过量。人物服从用户脚本/描述，不复制参考人物。
 - 研究进入决策或创作时继续携带同一Brief、来源、Evidence、scope、时间、预算约束和版本，不要求用户重复解释或重选资料；变化时定位影响范围、显式采用新版本、保留父版本和回滚。
 - Intelligent UI 只改变呈现方式，不拥有数据真相、权限或效果执行。未知、未采集、过期、错误、拒绝和partial分别显示，不补零、不伪造成功。此映射不改变任一屏幕状态，也不自动批准 DESIGN_READY。
 
@@ -103,7 +103,7 @@ Reuse the current Architecture and Experience corrections for the shared product
 
 现有映射为 `Screen ID → 设计规格 → 可编辑载体/路径/版本 → Flutter Screen/Component → Repository/ViewModel/Action → Core/Permission → 测试/运行/Evidence`。Figma 保留 file/node/revision；源码载体保留 Dart/Token/SVG 路径、版本、编辑和预览方式，不能称为原生 Figma。工具受限单独记录；禁止 PNG、PPT、静态截图、假 .fig 替代完整可编辑交付，不重复创建设计文件或新增收费服务。Experience仍是唯一设计权威。
 
-完整信息架构、组件/变量、全部44屏及官网家族直接通过可编辑源码和真实任务交互交付，不另立设计稿阶段；已有Flutter交互按其现有真实合同直接修复，不等待全部Figma页面完成。优先ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06接线，Golden Pages均为排序而非范围上限。整体视觉采用PO确定的拟物数码风格，布局与操作依已批准研究与任务；手绘彩绘用于图标及适合页面元素。保留四端、中英韩、主题、字号/宽度、可访问性与失败恢复。Figma或源码载体均给出真实可编辑路径/版本、原有ScreenSpec映射和缺口；截图仅辅助。主题复用LumenisTheme，官网Astro/CSS保持既定边界；真实Core/Permission/来源/保存/恢复与跨端验收不可由Widget测试替代。
+完整信息架构、组件/变量、全部44屏及官网家族直接通过可编辑源码和真实任务交互交付，不另立设计稿阶段；已有Flutter交互按其现有真实合同直接修复，不等待全部Figma页面完成。优先ACC-03、AI-01、CTH/BMP、SH-01/BMP-08、SYS-06接线，Golden Pages均为排序而非范围上限。整体视觉采用PO确定的像素赛博＋植物生态＋复古未来主义风格，布局与操作依已批准研究与任务；图标与局部元素遵循Experience §23的满天星和五植物身份，不复用已否定的旧外观。保留四端、中英韩、主题、字号/宽度、可访问性与失败恢复。Figma或源码载体均给出真实可编辑路径/版本、原有ScreenSpec映射和缺口；截图仅辅助。主题复用LumenisTheme所属Owner，重新实现视觉而保留有效行为；官网Astro/CSS保持既定边界。真实Core/Permission/来源/保存/恢复与跨端验收不可由Widget测试替代。
 
 每次设计修改必须定位受影响源组件/Token/动作、必要回归和回退版本，保留未修改工作、状态恢复、焦点和路由；不得为了重构巨型 Screen/Shell 或统一样式而重写业务。CTH事件因果边、ACC-03/04绑定登记及默认入口需分别核对，缺少关系数据或真实 callable 不能靠绘图宣告完成。
 

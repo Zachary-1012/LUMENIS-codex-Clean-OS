@@ -73,8 +73,8 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 Accept each surface independently, following the current PO instruction for execution order over one Product Core, permissions, materials and result versions. Workspace, Windows/macOS and iOS reuse one Flutter implementation. Language, visual and accessibility requirements belong to the sole Experience Constitution; this README neither dispatches work nor treats one surface as full-product acceptance.
 
 
-产品采用拟物数码视觉，任务专属布局、原创图标、可选动效和三语无障碍遵循现行体验规范。
-The digital skeuomorphic visual language follows the current Experience specification, with task-specific layouts, original icons, selectable motion and accessible Chinese/English/Korean operation.
+产品采用像素赛博＋植物生态＋复古未来主义视觉，满天星Logo与五植物角色沿现行体验规范统一；保留任务专属布局、原创图标、可选动效和三语无障碍。
+The pixel-cyber, botanical-ecology and retro-futurist visual language uses a Gypsophila logo and five botanical characters, with task-specific layouts, original icons, selectable motion and accessible Chinese/English/Korean operation.
 
 ## 工程结构 / Repository structure
 

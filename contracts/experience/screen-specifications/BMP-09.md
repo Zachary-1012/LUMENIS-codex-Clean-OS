@@ -1,5 +1,15 @@
 # BMP-09 — 品牌评估
 
+## 2026-10-24 品牌资料 / SourceBrief / BusinessWork 独立接线
+
+BMP-09 保留实际评估维度、结果与来源的原 owner 合同；新 SourceBrief/BusinessWork 工作面不把人工意见或报告完成换成品牌分数。当前已选 BMP BrandFocus 的“导入本范围资料”复用 CTH-10 同一文件选择、来源用途声明及 Domain documents prepare → 明确确认 import，保持 `domain_id=zbmp` 和实际 `brand_focus_id`，不带 Shared workspace header，不以 CTH Subject 替代品牌身份。
+
+按已选导入 source_ids 提交 SourceBrief，保留稳定请求身份，独立读取 task/job 后进入品牌工作；记录逐项匹配所选 BrandFocus，错品牌或错主体拒绝。方案选择、修订和成果保存沿原 BusinessDecisionWorkflow/Shared owner；人工执行未独立核实、内部制作、外部平台动作、来源报告的效果和因果归因保持独立。观察与费用增量各保原件/窗口/引用，旧指标不能被新费用来源替换；费用/退款/预算与跨币种未知分别呈现，来源撤回拒绝依赖重开。
+
+同域保存使用服务端引用候选，用户明确确认后复用 Shared exact DATA_EXPORT 与父版本合同；saved_results 的最新精确 Artifact/draft digest 用于后续保存，重复同 revision 不重复生成。隔离消费者验证沿 `source_brief_domain_import_test.dart` 和 `business_work_panel_test.dart`；无AI基础路径可用不等于专业市场/创作者/传播判断、营销外发或实际商业效果已验收。
+
+目录移除仍缺原注册 owner 生命周期HTTP合同；完整品牌专业链、全部原 coverage、四表面及真实用户验收均保留。本节记录实际接线边界，不提升现有整屏设计/验收状态，也不把历史 mock/样例或隔离测试当真实品牌材料。
+
 ```yaml
 screen_id: BMP-09
 status: OWNER_REVIEW
@@ -146,6 +156,14 @@ Current decision: `IMPLEMENTED / BLOCKED_FOR_EVALUATION_SCOPE`; canonical evalua
 ## 2026-10-18 完整工作面细化：迁移、业务与内容模式
 
 保留原状态/Owner/接口和完整终态；本文补足视觉交互，不宣称已接通或已验收。
+
+既有品牌业务工作子视图沿同一 `BusinessWorkPanel` 使用宽屏三域：左侧当前 BrandFocus 的原研究依据并可打开经 Owner 重新核验的引用；中间纸面比较方案并保留报告回答、假设、未知、执行成果与版本阅读；右侧固定当前决定、负责人、复核时间、资源约束及执行/观察/费用入口。普通字号以导航后实际内容宽度 960px 为三域起点，1280×720 窗口保留原侧栏仍同屏；按实际文字缩放提高所需宽度，空间不足或大于 150% 字号时重排。窄屏与放大字体重排为单列分段，决定置前、来源可展开，保持全部功能可达，不替换本屏其他指标、作者与财报工作面。
+
+纸面问题默认至两行，长问题可展开为完整可选择原文；折叠不改问题。原核对动作移至工具栏。方案标题、依据、核查、假设和未知通过排印与段距分层，保全部正文与动作；来源/决定工具面与正文纸层区分，外壳不再重复套通用纸卡。材质变化不改 BrandFocus、版本或授权。
+
+“修改决定”复用原严格日期表单和 `adopt` 合同，分别提交新的决定原因、负责人、复核时间与修订原因；保留同一来源简报、问题、方案、所选方案及资源约束，沿原 revision/CAS 和稳定提交身份追加版本。历史决定、原 Artifact 与撤权/冲突保护保留；新决定不借旧成果显示已保存。本段仅同步现有构图与消费者行为，独立运行和视觉验收仍按实际证据记录。
+
+业务已保存成果的原版本阅读对话提供导出，复用唯一 SavedWork export 路由及 `Sh04ExportFiles`，使用当前精确 BMP/BrandFocus 范围，保持 ZBMP 兼容标识，不改独立 Shared workspace 权限。明确选择 DOCX/PDF/MD/TXT/XLSX/PPTX；默认交付文件，归档副本另选。导出前重新核对所选 Artifact/hash/version/draft digest 和业务工作 revision，新旧版本不互换，不为导出另存新版本。取消目的地、撤权、来源/范围变化和失败均不显示成功；浏览器仅确认已交付下载，桌面仅在用户所选位置保存完成后确认。短内容区或大字时，原底部动作随内容滚动，保留正文和全部操作的可达性。
 
 ### 作者、传播与同口径品牌比较
 
