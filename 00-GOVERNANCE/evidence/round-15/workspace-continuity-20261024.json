@@ -2485,7 +2485,15 @@
       "screen_blueprints": "PASS",
       "takeover_governance_initial": "FAILED: stale .codex/README.md binding; retained local log",
       "source_secret_pattern_scan": "No high-confidence key/private-key patterns found in frozen source; not a complete security acceptance",
-      "required_pr_ci": "NOT_RUN",
+      "required_pr_ci": {
+        "pr": 146,
+        "head": "c79bbccc4c66a8259650702be39ab1e04ce5da81",
+        "windows_run": 40200629329,
+        "windows_job": 121190849528,
+        "result": "FAILED at checkout before packaging: Filename too long",
+        "integration_fix": "Windows CI job-local core.longpaths=true; no product behavior or workstation configuration change",
+        "product_and_flutter": "IN_PROGRESS at readback"
+      },
       "takeover_governance_staged": "PASS after updating the single .codex/README.md hash binding; original failure retained",
       "credential_path_boundary": "PASS: 0 tracked credential paths",
       "diff_whitespace": "PASS"

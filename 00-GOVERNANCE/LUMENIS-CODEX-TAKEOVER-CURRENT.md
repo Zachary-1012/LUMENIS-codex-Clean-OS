@@ -9,7 +9,7 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 The latest direct PO instruction pauses all product development and collaborating
 agents, with source synchronization as the only active task. The earlier
 planning-only restriction was superseded by the subsequent implementation order;
-that implementation is now paused. This publication does not resume development,
+that implementation is now paused. PR #146 preserves the snapshot. Its first Windows CI checkout failed on an existing long research path before packaging checks ran; the CI job now enables Git long-path support only within that runner. The failed run is retained in the existing round evidence. This publication does not resume development,
 collection, model execution, training, services or deployment.
 
 The frozen working branch is `codex/full-product-implementation-20261025`, based on
