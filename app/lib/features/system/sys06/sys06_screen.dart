@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../core/lumenis_split_handle.dart';
+import '../../../core/lumenis_icon.dart';
 import '../../../platform/lumenis_external_view.dart';
 import 'sys06_browser_repository.dart';
 import 'sys06_page_context.dart';
@@ -28,6 +30,8 @@ class Sys06Screen extends StatefulWidget {
 class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   late Sys06BrowserRepository _repository;
   late final TextEditingController _addressController;
+  final _addressFocus = FocusNode();
+  double _contextWidth = 360;
 
   Sys06BrowserSession? _session;
   Sys06BrowserFrame? _frame;
@@ -130,6 +134,7 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _cancelFrameStream();
     _addressController.dispose();
+    _addressFocus.dispose();
     super.dispose();
   }
 
@@ -979,145 +984,181 @@ class _Sys06ScreenState extends State<Sys06Screen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final copy = _Sys06Copy.of(context);
     final theme = LumenisTheme.of(context);
-    return ColoredBox(
-      color: theme.canvas,
-      child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final wide = constraints.maxWidth >= 840;
-            final panelWidth = wide
-                ? (constraints.maxWidth * .3).clamp(320.0, 390.0)
-                : constraints.maxWidth;
-            final preview = _ReaderPreview(
-              copy: copy,
-              frame: _frame,
-              notice: _notice,
-              busy: _busy || _stopping,
-              onRefresh: _refreshFrame,
-            );
-            final panel = SizedBox(
-              width: panelWidth,
-              child: ColoredBox(
-                color: theme.surface.withValues(alpha: 1),
-                child: Sys06PageContext(
-                  key: _contextOwnerKey,
-                  embedded: true,
-                  read: _readPageContext,
-                  pageIdentity:
-                      '${_session?.sessionId}:${_session?.targetId}:${_session?.pageRevision}',
-                  onClose: _openPageContext,
-                ),
-              ),
-            );
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                  child: _ReaderTabs(
-                    copy: copy,
-                    tabs: _tabs,
-                    activeSessionId: _session?.sessionId,
-                    collapsed: _collapsed,
-                    busy: _busy || _stopping,
-                    canViewExternally:
-                        _session?.currentUrl.startsWith('http') == true,
-                    onSelect: _switchTab,
-                    onClose: _closeTab,
-                    onNewTab: _open,
-                    onToggleCollapsed: () {
-                      setState(() => _collapsed = !_collapsed);
-                      _setViewVisible(!_collapsed);
-                    },
-                    onViewExternally: _viewOriginalExternally,
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyL, control: true): () {
+          _addressFocus.requestFocus();
+          _addressController.selection = TextSelection(
+            baseOffset: 0,
+            extentOffset: _addressController.text.length,
+          );
+        },
+      },
+      child: ColoredBox(
+        color: theme.canvas,
+        child: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final wide = constraints.maxWidth >= 840;
+              final panelWidth = wide
+                  ? _contextWidth.clamp(320.0, constraints.maxWidth * .48)
+                  : constraints.maxWidth;
+              final preview = _ReaderPreview(
+                copy: copy,
+                frame: _frame,
+                notice: _notice,
+                busy: _busy || _stopping,
+                onRefresh: _refreshFrame,
+              );
+              final panel = SizedBox(
+                width: panelWidth,
+                child: ColoredBox(
+                  color: theme.surface.withValues(alpha: 1),
+                  child: Sys06PageContext(
+                    key: _contextOwnerKey,
+                    embedded: true,
+                    read: _readPageContext,
+                    pageIdentity:
+                        '${_session?.sessionId}:${_session?.targetId}:${_session?.pageRevision}',
+                    onClose: _openPageContext,
                   ),
                 ),
-                if (!_collapsed) ...[
-                  _ReaderControls(
-                    copy: copy,
-                    addressController: _addressController,
-                    session: _session,
-                    frame: _frame,
-                    busy: _busy || _stopping,
-                    stopping: _stopping,
-                    returning: _returning,
-                    lease: _humanLease,
-                    onOpen: _open,
-                    onNavigate: _navigate,
-                    onAcquireControl: _acquireHumanControl,
-                    onReleaseControl: _releaseHumanControl,
-                    onHumanAction: _humanAction,
-                    onOpenPageLinks: _openVisibleLinks,
-                    onRefreshFrame: _refreshFrame,
-                    onStop: _stop,
-                    onReturn: _returnToTask,
-                    onResearchNotes: _openResearchNotes,
-                    onReadPage: _openPageContext,
-                  ),
-                  SizedBox(
-                    height: 2,
-                    child: _busy || _stopping
-                        ? LinearProgressIndicator(color: theme.accent)
-                        : const SizedBox.shrink(),
-                  ),
-                  if (_notice.isFailure)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 6,
-                      ),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Text(
-                          copy.notice(_notice, session: _session),
-                          key: const ValueKey('sys06-status'),
-                          style: TextStyle(color: theme.caution),
-                        ),
-                      ),
+              );
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
+                    child: _ReaderTabs(
+                      copy: copy,
+                      tabs: _tabs,
+                      activeSessionId: _session?.sessionId,
+                      collapsed: _collapsed,
+                      busy: _busy || _stopping,
+                      canViewExternally:
+                          _session?.currentUrl.startsWith('http') == true,
+                      onSelect: _switchTab,
+                      onClose: _closeTab,
+                      onNewTab: _open,
+                      onToggleCollapsed: () {
+                        setState(() => _collapsed = !_collapsed);
+                        _setViewVisible(!_collapsed);
+                      },
+                      onViewExternally: _viewOriginalExternally,
                     ),
-                  Divider(height: 1, thickness: 1, color: theme.line),
-                ],
-                Expanded(
-                  key: const ValueKey('sys06-reader-content'),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Positioned.fill(
-                        right: wide && _contextVisible ? panelWidth : 0,
-                        child: Offstage(
-                          offstage: _collapsed || (!wide && _contextVisible),
-                          child: ExcludeFocus(
-                            excluding: _collapsed || (!wide && _contextVisible),
-                            child: preview,
+                  ),
+                  if (!_collapsed) ...[
+                    _ReaderControls(
+                      copy: copy,
+                      addressController: _addressController,
+                      addressFocus: _addressFocus,
+                      session: _session,
+                      frame: _frame,
+                      busy: _busy || _stopping,
+                      stopping: _stopping,
+                      returning: _returning,
+                      lease: _humanLease,
+                      onOpen: _open,
+                      onNavigate: _navigate,
+                      onAcquireControl: _acquireHumanControl,
+                      onReleaseControl: _releaseHumanControl,
+                      onHumanAction: _humanAction,
+                      onOpenPageLinks: _openVisibleLinks,
+                      onRefreshFrame: _refreshFrame,
+                      onStop: _stop,
+                      onReturn: _returnToTask,
+                      onResearchNotes: _openResearchNotes,
+                      onReadPage: _openPageContext,
+                    ),
+                    SizedBox(
+                      height: 2,
+                      child: _busy || _stopping
+                          ? LinearProgressIndicator(color: theme.accent)
+                          : const SizedBox.shrink(),
+                    ),
+                    if (_notice.isFailure)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 6,
+                        ),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            copy.notice(_notice, session: _session),
+                            key: const ValueKey('sys06-status'),
+                            style: TextStyle(color: theme.caution),
                           ),
                         ),
                       ),
-                      Positioned(
-                        top: 0,
-                        bottom: 0,
-                        right: 0,
-                        width: panelWidth,
-                        child: Offstage(
-                          offstage: _collapsed || !_contextVisible,
-                          child: ExcludeFocus(
-                            excluding: _collapsed || !_contextVisible,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  left: BorderSide(color: theme.line),
-                                ),
-                              ),
-                              child: panel,
+                    Divider(height: 1, thickness: 1, color: theme.line),
+                  ],
+                  Expanded(
+                    key: const ValueKey('sys06-reader-content'),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Positioned.fill(
+                          right: wide && _contextVisible ? panelWidth + 12 : 0,
+                          child: Offstage(
+                            offstage: _collapsed || (!wide && _contextVisible),
+                            child: ExcludeFocus(
+                              excluding:
+                                  _collapsed || (!wide && _contextVisible),
+                              child: preview,
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                        if (wide && _contextVisible && !_collapsed)
+                          Positioned(
+                            top: 0,
+                            bottom: 0,
+                            right: panelWidth,
+                            width: 12,
+                            child: LumenisSplitHandle(
+                              key: const ValueKey('sys06-context-resize'),
+                              label: switch (Localizations.localeOf(
+                                context,
+                              ).languageCode) {
+                                'zh' => '调整并读区域',
+                                'ko' => '나란히 읽기 너비 조절',
+                                _ => 'Resize reading panel',
+                              },
+                              onDelta: (delta) => setState(
+                                () => _contextWidth = (_contextWidth - delta)
+                                    .clamp(320.0, constraints.maxWidth * .48),
+                              ),
+                              onReset: () =>
+                                  setState(() => _contextWidth = 360),
+                            ),
+                          ),
+                        Positioned(
+                          top: 0,
+                          bottom: 0,
+                          right: 0,
+                          width: panelWidth,
+                          child: Offstage(
+                            offstage: _collapsed || !_contextVisible,
+                            child: ExcludeFocus(
+                              excluding: _collapsed || !_contextVisible,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    left: BorderSide(color: theme.line),
+                                  ),
+                                ),
+                                child: panel,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1294,6 +1335,7 @@ class _ReaderControls extends StatelessWidget {
   const _ReaderControls({
     required this.copy,
     required this.addressController,
+    required this.addressFocus,
     required this.session,
     required this.frame,
     required this.busy,
@@ -1315,6 +1357,7 @@ class _ReaderControls extends StatelessWidget {
 
   final _Sys06Copy copy;
   final TextEditingController addressController;
+  final FocusNode addressFocus;
   final Sys06BrowserSession? session;
   final Sys06BrowserFrame? frame;
   final bool busy;
@@ -1363,7 +1406,7 @@ class _ReaderControls extends StatelessWidget {
       tooltip: copy.text(label),
       onPressed: action,
       visualDensity: VisualDensity.compact,
-      icon: Icon(icon, size: 19),
+      icon: LumenisIcon(icon, size: 19),
     );
     final navigation = [
       control(
@@ -1398,6 +1441,7 @@ class _ReaderControls extends StatelessWidget {
                   child: TextField(
                     key: const ValueKey('sys06-address'),
                     controller: addressController,
+                    focusNode: addressFocus,
                     keyboardType: TextInputType.url,
                     textInputAction: TextInputAction.go,
                     autocorrect: false,
@@ -1422,8 +1466,8 @@ class _ReaderControls extends StatelessWidget {
                         busy ? null : onNavigate,
                       ),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(9),
-                        borderSide: BorderSide.none,
+                        borderRadius: BorderRadius.circular(3),
+                        borderSide: BorderSide(color: theme.line),
                       ),
                     ),
                   ),

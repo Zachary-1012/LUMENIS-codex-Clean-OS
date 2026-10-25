@@ -209,7 +209,27 @@ def _parse_approved(prepared: dict) -> dict:
 def document_import_resource(file_path: str, *, actor: Any, scope: Mapping,
                              provenance: Mapping) -> str:
     """The W6 confirmation adapter may request approval for these exact bytes/scope."""
-    return _prepare(file_path, actor=actor, scope=scope, provenance=provenance)["resource"]
+    prepared = _prepare(file_path, actor=actor, scope=scope, provenance=provenance)
+    _require_document_evidence_signer()
+    return prepared["resource"]
+
+
+def _require_document_evidence_signer():
+    """Read the existing signer configuration without creating or exposing a key."""
+    try:
+        evidence_store._integrity_key_ring()
+    except evidence_store.EvidenceIntegrityError as exc:
+        raise SavedWorkError("DOCUMENT_EVIDENCE_SIGNING_UNAVAILABLE") from exc
+
+
+def _record_document_evidence(**kwargs):
+    try:
+        return evidence_store.record_evidence(**kwargs)
+    except evidence_store.EvidenceIntegrityError as exc:
+        # A configuration change during the transaction must still be a stable
+        # failure, and a material/signature defect must never be bypassed.
+        _require_document_evidence_signer()
+        raise SavedWorkError("DOCUMENT_EVIDENCE_INTEGRITY_FAILED") from exc
 
 
 def _selected_source_rows(parsed, *, selected_row_indices, preview_row_count,
@@ -252,6 +272,7 @@ def import_document(file_path: str, *, actor: Any, scope: Mapping,
     scope = {k: prepared["context"][k] for k in ("domain_id", "subject_id", "brand_focus_id", "global_scope")}
     provenance = prepared["descriptor"]["provenance"]
     context = _check_effect(actor, scope, OperationType.DATA_IMPORT, prepared["resource"])
+    _require_document_evidence_signer()
     prepared = _parse_approved(prepared)
     parsed, source_id = prepared["parsed"], prepared["source_id"]
     selected_indices, selected_rows = _selected_source_rows(
@@ -315,7 +336,7 @@ def _write_document(con, prepared, context, provenance, product, metadata, scope
     committed = False
     try:
         metadata = {**metadata, "source_artifact_ref": record["artifact_id"]}
-        evidence_id = evidence_store.record_evidence(
+        evidence_id = _record_document_evidence(
             source="document_import", product=product, feature_id="DOCUMENT_IMPORT",
             asset_id=source_id, version=prepared["descriptor"]["importer_contract"], env="staging",
             capture_mode="file_import", captured_at=provenance["captured_at"],
@@ -497,6 +518,7 @@ def _verify_collected_source(con, evidence, raw, record):
     """
     if evidence.get('version') == 'collected-browser-snapshot:v1':
         return _verify_browser_snapshot_source(con, evidence, raw, record)
+    public_mode = evidence.get('version') == 'collected-public-source:live-v1'
     signed = evidence['provenance']
     binding = signed.get('native_source_binding')
     try:
@@ -516,8 +538,10 @@ def _verify_collected_source(con, evidence, raw, record):
     try:
         # Native identity/lineage/public URL validation remains Collector-owned.
         # This pure reader makes no collection, session or network invocation.
-        from lumenis.system.collector.adapters.secondary_collection import NativePublicCapture, _native_capture_record
-        original = _native_capture_record(NativePublicCapture(binding['platform'], raw, record['sha256']))
+        from lumenis.system.collector.adapters.secondary_collection import (
+            NativePublicCapture, _native_capture_record, validate_public_source_original)
+        original = (validate_public_source_original(raw, record['sha256']) if public_mode else
+                    _native_capture_record(NativePublicCapture(binding['platform'], raw, record['sha256'])))
     except (TypeError, ValueError, UnicodeError) as exc:
         raise SavedWorkError('COLLECTED_SOURCE_ORIGINAL_INVALID') from exc
     if not isinstance(original, dict) or not isinstance(original.get('publication') or {}, dict):
@@ -537,7 +561,7 @@ def _verify_collected_source(con, evidence, raw, record):
             or source.get('published_at') != (original.get('publication') or {}).get('published_at_utc')
             or original.get('body_state') in {'OG_PREVIEW_ONLY_NOT_NATIVE_FULL_POST','NATIVE_BODY_UNAVAILABLE'}):
         raise SavedWorkError('COLLECTED_SOURCE_ORIGINAL_INVALID')
-    expected_locator = {'unit':'native-post-body', 'json_path':'$.body',
+    expected_locator = {'unit':'public-document-body' if public_mode else 'native-post-body', 'json_path':'$.body',
                         'start':0, 'end':len(body), 'offset_unit':'unicode-codepoint'}
     if signed.get('locators') != [expected_locator]:
         raise SavedWorkError('COLLECTED_SOURCE_LOCATOR_INVALID')
@@ -556,7 +580,9 @@ def _verify_collected_source(con, evidence, raw, record):
     live_version = evidence_version == 'collected-native-source:live-v1'
     pending_version = evidence_version == 'collected-native-source:pending-v1'
     if (live_mode != live_version or pending_mode != pending_version
-            or (pending_version and not pending_mode)):
+            or (pending_version and not pending_mode)
+            or public_mode != (capture_mode == 'live_public_response_intake')
+            or (public_mode and binding['platform'] != 'public_http')):
         raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
     if pending_mode:
         assignment = signed.get('entity_assignment')
@@ -625,16 +651,19 @@ def _verify_collected_source(con, evidence, raw, record):
           or binding['source_id'] not in [str(value) for value in parent_inputs.get('source_ids', [])]):
         raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
 
-    if live_mode or pending_mode:
+    if live_mode or pending_mode or public_mode:
         lineage = original.get('source_lineage')
         if (signed.get('source_lineage') != lineage or not isinstance(lineage, list)
-                or len(lineage) != 1 or not isinstance(lineage[0], dict)
-                or set(lineage[0]) != {'sha256', 'locator', 'kind', 'transport_original'}
-                or lineage[0].get('kind') != 'SIGNED_NATIVE_OBSERVATION_JSON'
-                or lineage[0].get('transport_original') is not False):
+                or len(lineage) != (2 if public_mode else 1)):
+            raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        observed_lineage = lineage[1] if public_mode else lineage[0]
+        if (not isinstance(observed_lineage, dict)
+                or set(observed_lineage) != {'sha256', 'locator', 'kind', 'transport_original'}
+                or observed_lineage.get('kind') != ('SIGNED_SOURCE_OBSERVATION_JSON' if public_mode else 'SIGNED_NATIVE_OBSERVATION_JSON')
+                or observed_lineage.get('transport_original') is not False):
             raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
         observations = parent_inputs.get('source_observation_records')
-        locator = lineage[0].get('locator')
+        locator = observed_lineage.get('locator')
         locator_match = (re.fullmatch(
             re.escape(ref) + r':inputs\.source_observation_records\[(0|[1-9]\d*)\]',
             locator) if isinstance(locator, str) else None)
@@ -652,14 +681,22 @@ def _verify_collected_source(con, evidence, raw, record):
         observation_bytes = json.dumps(
             observation, ensure_ascii=False, sort_keys=True, separators=(',', ':')
         ).encode('utf-8')
-        if (lineage[0].get('locator') !=
+        if (observed_lineage.get('locator') !=
                 ref + ':inputs.source_observation_records[' + str(observation_index) + ']'
-                or lineage[0].get('sha256') != hashlib.sha256(observation_bytes).hexdigest()
+                or observed_lineage.get('sha256') != hashlib.sha256(observation_bytes).hexdigest()
                 or original.get('native_record') != observation
                 or original.get('body') != observation.get('content')
                 or original.get('source_url') != observation.get('url')):
             raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
-        if pending_mode:
+        if public_mode:
+            # The pure PublicHttp producer above reparses its own preserved HTTP
+            # bytes. A signed parent observation must still be that exact item;
+            # neither URL discovery nor a parent grant supplies SourceUse rights.
+            if (original.get('native_id') != observation.get('content_id')
+                    or original.get('native_id') != str(evidence.get('asset_id'))
+                    or original.get('body_state') != (observation.get('source_raw') or {}).get('content_observation', {}).get('completeness')):
+                raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
+        elif pending_mode:
             try:
                 from lumenis.system.collector.adapters.secondary_collection import (
                     _verified_live_native_observation,
@@ -887,6 +924,115 @@ def save_private_document(file_path, *, actor, scope, request_id, title=None,
         citations=[], request_id=request_id, actor=actor, scope=scope,
         attachments=[attachment],
     )
+
+
+def _office_snapshot(artifact_id, *, actor, scope):
+    from lumenis.importer.office_package import OfficePackage
+    from lumenis.shared.reporting import saved_work
+    if scope != {"scope_kind": "shared_workspace", "version": 1}:
+        raise ValueError('DOCUMENT_PRIVATE_SCOPE_REQUIRED')
+    item = saved_work.read_committed_work(artifact_id, actor=actor, scope=scope)
+    material = item['document']['payload'].get('source_material')
+    if type(material) is not dict or material.get('allowed_use') != 'private_custody_and_analysis':
+        raise ValueError('DOCUMENT_ORIGINAL_REQUIRED')
+    attachment = saved_work.download_attachment(artifact_id, name=material.get('attachment_name'), actor=actor, scope=scope)
+    if material.get('sha256') != attachment['sha256'] or material.get('size_bytes') != len(attachment['content']):
+        raise ValueError('DOCUMENT_ORIGINAL_CHANGED')
+    extension = Path(attachment['filename']).suffix.lstrip('.')
+    if extension not in saved_work._OFFICE_FORMATS:
+        raise ValueError('OFFICE_PACKAGE_INVALID')
+    attachment['media_type'] = saved_work._OFFICE_FORMATS[extension]['media_type']
+    package = OfficePackage(attachment['content'], filename=attachment['filename'], media_type=attachment['media_type'])
+    return item, attachment, package
+
+
+def read_office_document(artifact_id, *, actor, scope, offset=0, limit=100):
+    """Project exact authorized original objects; offsets never imply complete coverage."""
+    from lumenis.shared.reporting import saved_work
+    if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 500:
+        raise ValueError('OFFICE_OBJECT_PAGE_INVALID')
+    item, attachment, package = _office_snapshot(artifact_id, actor=actor, scope=scope)
+    projection = package.projection()
+    objects = projection['objects']
+    projection['objects'] = objects[offset:offset + limit]
+    projection['has_more'] = offset + limit < len(objects)
+    projection['next_offset'] = offset + limit if projection['has_more'] else None
+    context = saved_work.authorize_saved_work(actor, scope, action='read')
+    with saved_work.get_repository().connection(read_only=True, wal=False) as con:
+        versions = saved_work._versions(con, item['document']['work_id'], context, actor)
+        current = versions[-1]['artifact']['artifact_id'] == artifact_id
+        saved_work.authorize_saved_work(actor, scope, action='read', connection=con)
+    # A source changed/replaced while parsing cannot supply a successful object view.
+    if saved_work.download_attachment(artifact_id, name=attachment['filename'], actor=actor, scope=scope)['sha256'] != package.sha256:
+        raise ValueError('DOCUMENT_ORIGINAL_CHANGED')
+    return {'source_artifact_id': artifact_id, 'source_artifact_sha256': item['artifact']['sha256'],
+            'work_id': item['document']['work_id'], 'version': item['document']['version'],
+            'current_version': current, 'attachment_name': attachment['filename'], **projection}
+
+
+def edit_office_document(artifact_id, *, actor, scope, request_id, expected_sha256,
+                         expected_package_sha256, reason, commands,
+                         acknowledge_signature_invalidation=False):
+    """Commit a local object edit as the same SavedWork's next immutable version."""
+    from lumenis.importer.analyzer import analyze_source_basics
+    from lumenis.shared.reporting import saved_work
+    if type(reason) is not str or not reason.strip() or len(reason) > 2000:
+        raise ValueError('OFFICE_EDIT_REASON_REQUIRED')
+    if type(acknowledge_signature_invalidation) is not bool:
+        raise ValueError('OFFICE_SIGNATURE_CONFIRMATION_INVALID')
+    saved_work.authorize_saved_work(actor, scope, action='write')
+    item, attachment, package = _office_snapshot(artifact_id, actor=actor, scope=scope)
+    if item['artifact']['sha256'] != expected_sha256:
+        raise ValueError('OFFICE_WORK_REVISION_CONFLICT')
+    edited = package.edit(commands, expected_package_sha256=expected_package_sha256,
+                          acknowledge_signature_invalidation=acknowledge_signature_invalidation)
+    name = 'edited-' + edited['receipt']['package_sha256'][:20] + package.spec['extension']
+    with tempfile.TemporaryDirectory(prefix='lumenis-office-edit-') as temporary:
+        path = Path(temporary) / name
+        path.write_bytes(edited['content'])
+        parsed = parse_file(str(path))
+    if parsed.metadata.get('source_fingerprint') != edited['receipt']['package_sha256']:
+        raise ValueError('OFFICE_EDIT_REPARSE_MISMATCH')
+    payload = json.loads(json.dumps(item['document']['payload'], ensure_ascii=False))
+    payload['source_material'] = {**payload['source_material'],
+        'sha256': edited['receipt']['package_sha256'], 'size_bytes': len(edited['content']),
+        'attachment_name': name, 'origin': 'user-edited-original-version'}
+    payload['parsed_source'] = {'text': parsed.text, 'tables': parsed.tables,
+        'source_tables': getattr(parsed, 'source_tables', []), 'source_blocks': getattr(parsed, 'source_blocks', []),
+        'locators': parsed.locators, 'metadata': parsed.metadata}
+    analysis = analyze_source_basics(parsed)
+    payload['basic_analysis'] = analysis
+    payload['office_edit'] = {**edited['receipt'], 'reason': reason,
+        'source_artifact_id': artifact_id, 'source_artifact_sha256': expected_sha256,
+        'parent_attachment_name': attachment['filename'], 'result_attachment_name': name,
+        'original_retained_in_parent_version': True}
+    markdown = '# ' + item['document']['title'] + '\n\n' + reason + '\n\n' + '\n\n'.join(
+        excerpt['text'] for excerpt in analysis['source_excerpts'])
+    def recheck_source(con, _record, _document):
+        parent = saved_work.read_committed_work(artifact_id, actor=actor, scope=scope, connection=con)
+        if parent['artifact']['sha256'] != expected_sha256:
+            raise ValueError('OFFICE_WORK_REVISION_CONFLICT')
+        binding = next(entry for entry in parent['document']['attachments'] if entry['name'] == attachment['filename'])
+        context = saved_work.authorize_saved_work(actor, scope, action='read', connection=con)
+        source = saved_work._read_attachment(con, binding, context, parent['document']['work_id'], actor=actor)
+        if hashlib.sha256(source).hexdigest() != package.sha256:
+            raise ValueError('DOCUMENT_ORIGINAL_CHANGED')
+    result = saved_work.save_work(
+        title=item['document']['title'], markdown=markdown, kind=item['document']['kind'], payload=payload,
+        citations=item['document']['citations'], request_id=request_id, actor=actor, scope=scope,
+        work_id=item['document']['work_id'], previous_artifact_id=artifact_id,
+        expected_draft_digest=item['document']['draft_digest'], contract=item['document']['contract'],
+        before_commit=recheck_source,
+        attachments=[{'name': name, 'content': edited['content'], 'media_type': attachment['media_type']}])
+    # Storage readback and caller-bound attachment identity are the actual export;
+    # it never runs the report serializer to reconstruct the customer's package.
+    downloaded = saved_work.download_attachment(result['artifact']['artifact_id'], name=name, actor=actor, scope=scope)
+    if downloaded['content'] != edited['content']:
+        raise ValueError('OFFICE_EDIT_READBACK_MISMATCH')
+    result['office_attachment'] = {'artifact_id': result['artifact']['artifact_id'], 'name': name,
+        'sha256': downloaded['sha256'], 'media_type': package.media_type,
+        'size_bytes': len(downloaded['content'])}
+    return result
 
 
 _CAPTURE_RECEIPT_VERSION = 'admitted-document-receipt/1'

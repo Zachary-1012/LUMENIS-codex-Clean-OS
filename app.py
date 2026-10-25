@@ -267,6 +267,7 @@ def _activate_manual_workspace(argv, environ=None):
     database = str(env.get('ZBC_DB_PATH') or '').strip()
     if not data or not database or not os.path.isabs(data) or not os.path.isabs(database):
         raise ValueError('manual Workspace requires explicit absolute ZBC_DATA_DIR and ZBC_DB_PATH')
+    requested_data, requested_database = Path(data), Path(database)
     data = os.path.realpath(data)
     database = os.path.realpath(database)
     repository = os.path.dirname(os.path.abspath(__file__))
@@ -276,9 +277,54 @@ def _activate_manual_workspace(argv, environ=None):
             or (_is_path_within(data, repository) and not managed_runtime)
             or database == data or not _is_path_within(database, data)):
         raise ValueError('manual Workspace requires a dedicated directory under data/runtime or outside the source checkout, with its DB inside that directory')
+    bundle_mapping = False
+    bundle_root = env.get('LUMENIS_DESKTOP_BUNDLE_ROOT')
+    if bundle_root:
+        try:
+            package = Path(bundle_root)
+            core = Path(repository)
+            marker = requested_data / '.oevira-user-data.json'
+            manifest_file = package / 'bundle-manifest.json'
+            if (os.name != 'nt' or not package.is_absolute()
+                    or core.name != 'core' or package.resolve() != core.resolve().parent
+                    or requested_database.name != 'monitor.db'
+                    or requested_database.parent != requested_data
+                    or Path(data).is_relative_to(package.resolve())):
+                raise ValueError('invalid bundle root')
+            for path in (requested_data, requested_database, marker, manifest_file, core / 'app.py'):
+                if any(part.is_symlink() or part.is_junction() for part in (path, *path.parents)):
+                    raise ValueError('redirected bundle identity')
+                if path.exists() and path.is_file() and path.stat().st_nlink != 1:
+                    raise ValueError('aliased bundle identity')
+            if (not marker.is_file() or marker.stat().st_size > 4096
+                    or not manifest_file.is_file() or manifest_file.stat().st_size > 64 * 1024 * 1024):
+                raise ValueError('missing bundle identity')
+            ownership = json.loads(marker.read_text('utf-8-sig'))
+            manifest = json.loads(manifest_file.read_text('utf-8-sig'))
+            entry_hash = hashlib.sha256((core / 'app.py').read_bytes()).hexdigest()
+            port = _cli_option_value(argv, '--port')
+            records = [record for record in manifest.get('files', [])
+                       if type(record) is dict and record.get('path') == 'core/app.py']
+            if (type(ownership) is not dict or ownership.get('schema') != 'lumenis.desktop-user-data/v1'
+                    or manifest.get('schema') != 'lumenis.windows-portable-bundle/v1'
+                    or manifest.get('source_entry_sha256') != entry_hash
+                    or env.get('LUMENIS_CORE_ENTRY_SHA256') != entry_hash
+                    or len(records) != 1 or records[0].get('sha256') != entry_hash
+                    or str(manifest.get('core_port')) != port
+                    or manifest.get('core_base_url') != 'http://127.0.0.1:' + port
+                    or manifest.get('app_core_base_url') != manifest.get('core_base_url')):
+                raise ValueError('bundle identity differs')
+            for name, expected in (('data', Path(data)), ('logs', Path(data) / 'logs')):
+                link = core / name
+                if (not link.is_junction() or link.resolve() != expected
+                        or expected.is_symlink() or expected.is_junction()):
+                    raise ValueError('bundle data mapping differs')
+            bundle_mapping = True
+        except (OSError, ValueError, TypeError, KeyError, AttributeError):
+            raise ValueError('manual Workspace bundle data mapping is invalid; existing data was preserved') from None
     production_db = os.path.join(repository, 'data', 'monitor.db')
     if (os.path.isfile(database) and os.path.isfile(production_db)
-            and os.path.samefile(database, production_db)):
+            and os.path.samefile(database, production_db) and not bundle_mapping):
         raise ValueError('manual Workspace cannot reuse the production database')
     if os.path.isdir(database):
         raise ValueError('manual Workspace ZBC_DB_PATH must name a file')
@@ -296,7 +342,9 @@ if any(value.startswith('--manual-workspace=') for value in sys.argv):
     raise SystemExit('--manual-workspace is a standalone flag')
 if MANUAL_WORKSPACE:
     try:
-        _activate_manual_workspace(sys.argv[1:])
+        _manual_database, _manual_data = _activate_manual_workspace(sys.argv[1:])
+        from lumenis.shared.evidence.signing_config import activate_workspace_signing
+        activate_workspace_signing(_manual_data, _manual_database)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
 
@@ -1648,6 +1696,8 @@ def _owner_authorized_root_request():
         'api_evidence_delete': ('/api/app_evidence/<int:record_id>', {'DELETE'}),
         'domain_api.api_settings_context': ('/api/settings/context', {'GET', 'PUT', 'DELETE'}),
         'domain_api.api_business_work_prepare': ('/api/experience/business-works', {'POST'}),
+        'domain_api.api_business_work_list': ('/api/experience/business-works', {'GET'}),
+        'domain_api.api_business_work_sources': ('/api/experience/business-works/sources', {'GET'}),
         'domain_api.api_business_work_read': ('/api/experience/business-works/<work_id>', {'GET'}),
         'domain_api.api_business_work_advance': ('/api/experience/business-works/<work_id>/<operation>', {'POST'}),
         'domain_api.api_internal_pitch_prepare': ('/api/experience/creation/internal-pitches', {'POST'}),
@@ -1679,6 +1729,9 @@ def _owner_authorized_root_request():
         'experience_runtime.save_shared_work': ('/api/experience/saved-work', {'POST'}),
         'experience_runtime.search_shared_work': ('/api/experience/saved-work', {'GET'}),
         'experience_runtime.read_shared_work': ('/api/experience/saved-work/<artifact_id>', {'GET'}),
+        'experience_runtime.read_office_document': ('/api/experience/saved-work/<artifact_id>/office', {'GET'}),
+        'experience_runtime.edit_office_document': ('/api/experience/saved-work/<artifact_id>/office/edit', {'POST'}),
+        'experience_runtime.download_work_attachment': ('/api/experience/saved-work/<artifact_id>/attachments/<name>', {'GET'}),
         'experience_runtime.revise_shared_work': ('/api/experience/saved-work/<artifact_id>/revise', {'POST'}),
         'experience_runtime.export_shared_work': ('/api/experience/saved-work/<artifact_id>/export', {'GET'}),
         'experience_runtime.read_reporting_preferences': ('/api/experience/saved-work/preferences', {'GET'}),
@@ -1710,12 +1763,12 @@ def _owner_authorized_root_request():
         'experience_runtime.preview_podcast_topics': ('/api/experience/podcast/topics/preview', {'POST'}),
         'experience_runtime.import_content_source': ('/api/experience/content-sources', {'POST'}),
         'experience_runtime.confirm_content_source_import_request': ('/api/experience/content-source-confirmations/<confirmation_id>', {'POST'}),
-        'experience_runtime.content_source_detail': ('/api/experience/content-sources/<artifact_id>', {'GET'}),
+        'experience_runtime.content_source_detail': ('/api/experience/content-sources/<artifact_id>', {'GET', 'HEAD'}),
         'experience_runtime.export_content_project': ('/api/experience/content-projects/export', {'POST'}),
         'experience_runtime.content_project_list': ('/api/experience/content-projects', {'GET'}),
         'experience_runtime.content_project_detail': ('/api/experience/content-projects/<artifact_id>', {'GET'}),
-        'experience_runtime.content_project_package': ('/api/experience/content-projects/<artifact_id>/package', {'GET'}),
-        'experience_runtime.content_project_media': ('/api/experience/content-projects/<artifact_id>/media', {'GET'}),
+        'experience_runtime.content_project_package': ('/api/experience/content-projects/<artifact_id>/package', {'GET', 'HEAD'}),
+        'experience_runtime.content_project_media': ('/api/experience/content-projects/<artifact_id>/media', {'GET', 'HEAD'}),
         'experience_runtime.prepare_owned_training_review_resource': ('/api/experience/owned-training/review-resources', {'POST'}),
         'experience_runtime.submit_owned_training_review': ('/api/experience/owned-training/review-submissions', {'POST'}),
         'experience_runtime.export_owned_training_reviews': ('/api/experience/owned-training/review-exports', {'POST'}),
@@ -1740,6 +1793,14 @@ def _owner_authorized_root_request():
 def _basic_auth():
     if _owner_authorized_root_request():
         return None
+    if (request.method == 'POST' and request.url_rule is not None
+            and (request.endpoint, request.url_rule.rule) in {
+                ('intelligence_library.comment_page_source_use', '/api/intelligence/library/comments/<int:evidence_id>/source-use'),
+                ('intelligence_library.collected_public_source_use', '/api/intelligence/library/public-sources/<int:evidence_id>/source-use'),
+                ('intelligence_library.comment_research_operation', '/api/intelligence/library/comment-research')}):
+        from intelligence_library_api import local_comment_research_access_allowed
+        if local_comment_research_access_allowed():
+            return None  # Exact SourceUse/Research owner repeats identity, scope and effects.
     if (request.method == 'GET'
             and request.endpoint == 'experience_runtime.runtime_subjects'
             and request.url_rule is not None
@@ -1903,14 +1964,16 @@ def _pg_resolve_operation_type(path, method):
         return OperationType.DATA_EXPORT
     if method == 'POST' and re.fullmatch(r'/api/experience/saved-work/art-[0-9a-f]{16}/revise', p):
         return OperationType.DATA_EXPORT
+    if method == 'POST' and re.fullmatch(r'/api/experience/saved-work/art-[0-9a-f]{16}/office/edit', p):
+        return OperationType.DATA_EXPORT
     if method == 'POST' and re.fullmatch(
-        r'/api/experience/business-works/work-[0-9a-f]{64}/(?:save-request|save)', p,
+        r'/api/experience/business-works/work-[0-9a-f]{64}/(?:save-request|save|save-confirm)', p,
     ):
         # Business work delegates immutable persistence to Shared SavedWork,
         # which independently checks the exact DATA_EXPORT resource approval.
         return OperationType.DATA_EXPORT
     if method == 'POST' and re.fullmatch(
-        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|adopt|cancel|interrupt|resume|restore|review|action|outcome|outcome_unknown))?', p,
+        r'/api/experience/business-works(?:/work-[0-9a-f]{64}/(?:choose|adopt|cancel|interrupt|resume|restore|review|action|manual_action|observation|outcome|outcome_unknown))?', p,
     ):
         # Domain records only; the service separately binds current actor,
         # exact scope, report revision and any actual creation-owner receipt.
@@ -2008,6 +2071,14 @@ def _permission_gate_write_check():
         pass
     if request.method not in _PG_WRITE_METHODS:
         return None
+    if (request.method == 'POST' and request.url_rule is not None
+            and (request.endpoint, request.url_rule.rule) in {
+                ('intelligence_library.comment_page_source_use', '/api/intelligence/library/comments/<int:evidence_id>/source-use'),
+                ('intelligence_library.collected_public_source_use', '/api/intelligence/library/public-sources/<int:evidence_id>/source-use'),
+                ('intelligence_library.comment_research_operation', '/api/intelligence/library/comment-research')}):
+        from intelligence_library_api import local_comment_research_access_allowed
+        if local_comment_research_access_allowed():
+            return None  # Approval and final writes remain fenced inside the original owner.
     if request.blueprint == 'ai_api':
         from ai_api import authorize_local_agent_root_request
         if authorize_local_agent_root_request():
@@ -2152,11 +2223,23 @@ def _permission_gate_write_check():
             return None
         except (ValueError, PermissionError) as exc:
             return jsonify({'ok': False, 'code': str(exc)}), 403
+    if (request.method == 'POST'
+            and request.endpoint == 'domain_api.api_business_work_advance'
+            and request.url_rule is not None
+            and request.url_rule.rule == '/api/experience/business-works/<work_id>/<operation>'
+            and (request.view_args or {}).get('operation') in {'save-request', 'save', 'save-confirm'}):
+        try:
+            from lumenis_app_api import _business_work_binding
+            _business_work_binding('save')
+            return None
+        except (ValueError, LookupError, PermissionError, RuntimeError):
+            return jsonify({'ok': False, 'code': 'BUSINESS_WORK_SAVE_ACCESS_DENIED'}), 403
     if request.headers.getlist('X-Lumenis-Workspace-Scope'):
         shared_saved_work_actions = {
             'experience_runtime.import_shared_document': 'write',
             'experience_runtime.save_shared_work': 'write',
             'experience_runtime.revise_shared_work': 'write',
+            'experience_runtime.edit_office_document': 'write',
         }
         shared_content_actions = {
             'experience_runtime.inspect_content_project_media': 'read',
@@ -7019,7 +7102,7 @@ import subprocess as _ws_sp
 _WS_ROOT = Path(__file__).resolve().parent
 _WS_HIDE_DIRS = {'.git', '.venv', 'node_modules', '__pycache__', '.pytest_cache',
                  '.skills-router', '.trae-cn', '.vscode', '.idea', 'data/cookies'}
-_WS_HIDE_RE = re.compile(r'(^\.env)|cookie|token|secret|credential|passwd|password|\.(db|sqlite|sqlite3|pem|key|pfx)$|profile', re.I)
+_WS_HIDE_RE = re.compile(r'(^\.env)|cookie|token|secret|credential|passwd|password|evidence-signing|\.(db|sqlite|sqlite3|pem|key|pfx|dpapi)$|profile', re.IGNORECASE)
 
 def _ws_hidden(name, is_dir):
     # 名称命中即隐藏，不依赖 is_dir：git linked-worktree 中 .git 是文件而非目录，

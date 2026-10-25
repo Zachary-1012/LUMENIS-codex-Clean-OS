@@ -322,7 +322,7 @@ def build_timeline_transcription_files(timeline, source_item, *, rendered_sha256
                 if b<=source_in or a>=source_out:continue
                 if a<source_in or b>source_out or b<=a:
                     warnings.append({'reason':'cut_or_zero_length_word_omitted','clip_id':clip.clip_id,'source_word_id':word_id});continue
-                out_a=start+a-source_in;out_b=start+b-source_in
+                out_a=start+(a-source_in)/clip.playback_rate;out_b=start+(b-source_in)/clip.playback_rate
                 if out_b>end or round(out_b*1000)<=round(out_a*1000):
                     warnings.append({'reason':'outside_rendered_or_submillisecond_word_omitted','clip_id':clip.clip_id,'source_word_id':word_id});continue
                 words.append({'source_word_id':word_id,'clip_id':clip.clip_id,'text':word['word'],
@@ -334,7 +334,7 @@ def build_timeline_transcription_files(timeline, source_item, *, rendered_sha256
         vtt+=f"{index}\n{_stamp(word['start'],'.')} --> {_stamp(word['end'],'.')}\n{text}\n\n"
         srt+=f"{index}\n{_stamp(word['start'],',')} --> {_stamp(word['end'],',')}\n{text}\n\n"
     derived={'schema':'timeline-transcription:v1','state':'available' if words else 'no_retained_words',
-             'time_basis':'rendered_output_seconds','mapping':'unit_rate_source_words_sample_quantized_clip_delay',
+             'time_basis':'rendered_output_seconds','mapping':'source_words_playback_rate_sample_quantized_clip_delay',
              'source_asset_id':asset.asset_id,'source_sha256':asset.sha256,'selected_audio_stream_index':selected_stream,
              'source_transcription_sha256':hashlib.sha256(original).hexdigest(),
              'source_audio_normalization':normalization,

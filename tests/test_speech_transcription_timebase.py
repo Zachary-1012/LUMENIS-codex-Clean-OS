@@ -11,8 +11,9 @@ import pytest
 
 from tests.test_content_project_storage import media_store  # noqa: F401
 from lumenis.shared.content_creation import speech_transcription as adapter
-from lumenis.shared.content_creation.video_editing import Timeline, VideoEditingError, fingerprint_local_media
+from lumenis.shared.content_creation.video_editing import Timeline, VideoEditingError, fingerprint_local_media, _ffprobe_path
 from lumenis.system.ai_gateway import owned_speech
+from shared_artifacts import _ffmpeg_path
 
 
 def signal_start(path, threshold=100):
@@ -50,10 +51,10 @@ def aligned_decoder(monkeypatch):
 def container(store, *, shift=0, delay=.75, multitrack=False, vfr=False):
     root = store['source'].parent
     resampled = root / 'tone44100.wav'
-    subprocess.run(['ffmpeg', '-v', 'error', '-n', '-i', str(store['source']), '-ar', '44100',
+    subprocess.run([_ffmpeg_path(), '-v', 'error', '-n', '-i', str(store['source']), '-ar', '44100',
                     str(resampled)], check=True, capture_output=True)
     output = root / 'timed.mkv'
-    command = ['ffmpeg', '-v', 'error', '-n', '-f', 'lavfi', '-i', 'color=c=black:s=32x32:r=10:d=2',
+    command = [_ffmpeg_path(), '-v', 'error', '-n', '-f', 'lavfi', '-i', 'color=c=black:s=32x32:r=10:d=2',
                '-itsoffset', str(delay), '-i', str(resampled)]
     if multitrack:
         command += ['-itsoffset', '1.1', '-i', str(resampled)]
@@ -87,7 +88,7 @@ def test_nonzero_stream_origin_preserved_and_matches_actual_render(media_store, 
     target = media_store['source'].parent / 'rendered.wav'
     rendered = render_timeline(timeline, target, output_kind='audio')
     converted = target.with_name('rendered16.wav')
-    subprocess.run(['ffmpeg', '-v', 'error', '-n', '-i', str(target), '-c:a', 'pcm_s16le', str(converted)],
+    subprocess.run([_ffmpeg_path(), '-v', 'error', '-n', '-i', str(target), '-c:a', 'pcm_s16le', str(converted)],
                    check=True, capture_output=True)
     actual_start, _, _ = signal_start(converted)
     assert actual_start == pytest.approx(.45, abs=.002)
@@ -118,7 +119,7 @@ def test_negative_absolute_audio_pts_is_not_blindly_clamped(media_store, aligned
 
 def test_selected_delayed_stream_and_vfr_video_do_not_choose_another_origin(media_store, aligned_decoder):
     asset = container(media_store, multitrack=True, vfr=True)
-    observed = json.loads(subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0',
+    observed = json.loads(subprocess.run([_ffprobe_path(), '-v', 'error', '-select_streams', 'v:0',
         '-show_frames', '-show_entries', 'frame=best_effort_timestamp_time', '-of', 'json', asset.path],
         check=True, capture_output=True, text=True).stdout)
     pts = [float(frame['best_effort_timestamp_time']) for frame in observed['frames']]
@@ -167,7 +168,7 @@ def test_legacy_container_report_and_changed_clock_fail_closed(media_store, alig
 @pytest.mark.parametrize('jump', [.3, -.04])
 def test_actual_discontinuous_audio_pts_rejected_before_decoder(media_store, aligned_decoder, jump):
     output = media_store['source'].parent / 'discontinuous.mkv'
-    subprocess.run(['ffmpeg', '-v', 'error', '-n', '-i', str(media_store['source']),
+    subprocess.run([_ffmpeg_path(), '-v', 'error', '-n', '-i', str(media_store['source']),
                     '-af', f"asetpts=PTS+if(gte(T\\,0.4)\\,{jump}/TB\\,0)",
                     '-c:a', 'pcm_s16le', str(output)], check=True, capture_output=True)
     asset = fingerprint_local_media(str(output))

@@ -17,6 +17,187 @@ pytest_plugins = (
 )
 
 
+def test_report_quantity_analysis_reads_actual_body_and_keeps_signed_snapshot(business, monkeypatch):
+    ws = business
+    body = ("Permitted source preface, not native observations.\n" * 400
+        + "\n**数据规模**：103 篇帖子（官方 11 篇，非官方 92 篇），205 条评论\n"
+        + "### 时间分布\n- 阶段一：12篇\n- 阶段二：41篇\n- 阶段三：20篇\n"
+        + "### 互动Top8\n| 排名 | 点赞 |\n|---|---|\n|1|50|\n|2|40|\n|3|30|\n"
+        + "### 数据局限\n另有范围外记录，分组范围需要回查。\n")
+    report, citation = add_material(ws, "actual-count-body", body)
+    with ws["repo"].connection(read_only=True, wal=False) as connection:
+        retained = ws["service"]._canonical_source(connection, report["source_brief"]["records"][0]["source_id"], ws["domain_scope"])["content"]
+    prepared = _prepare_derived(ws, "prepare-report-count-body", "核对材料数字和评论分母；9999只是问题中的假设。",
+                                source_job_id=report["job_id"])
+    analysis = _assert_analysis(prepared, [report["source_brief"]["records"][0]["source_id"]])
+    business_report = analysis["question_result"]["business_report"]
+    review = business_report["document_reviews"][0]
+    assert review["coverage"]["scanned_characters"] == len(retained)
+    assert {(item["value"], item["unit"]) for item in review["declared_counts"]} == {("103", "帖子"), ("205", "评论")}
+    checks = {item["kind"]: item for item in review["checks"]}
+    assert checks["EXPLICIT_TOTAL_PARTITION"]["calculated_sum"] == "103"
+    assert checks["EXPLICIT_TOTAL_PARTITION"]["state"] == "ARITHMETIC_MATCH"
+    assert checks["TIME_GROUP_TOTAL"]["calculated_sum"] == "73"
+    assert checks["TIME_GROUP_TOTAL"]["difference"] == "30"
+    assert checks["TOP_LIST_COVERAGE"]["listed_items"] == 3
+    assert business_report["answers"][0]["goal"] == "REPORT_QUANTITIES"
+    assert "205" in business_report["answers"][0]["summary"]
+    assert "9999" not in str(review)
+    assert "VENUE_OPERATOR_DISCLOSURE" not in business_report["answers"][1]["summary"]
+    for check in review["checks"]:
+        reference = check["reference"]
+        assert retained[reference["start"]:reference["end"]] == reference["statement"]
+        assert reference["evidence_ref"] == review["binding"]["evidence_ref"]
+    chosen = ws["service"].advance(prepared["work_id"], actor_ref=ws["actor_ref"], scope=ws["domain_scope"],
+        authorize=ws["authorize"], expected_revision=prepared["revision"], submission_id="choose-report-counts",
+        operation="choose", payload=selection("source-review", "100"))
+    ws["current"], ws["citation"] = chosen, citation
+    saved = save(ws, request_id="save-report-number-results")["saved_work"]
+    assert "12 \\+ 41 \\+ 20 = 73" in saved["document"]["markdown"]
+    assert saved["document"]["payload"]["business_work"]["domain_analysis"]["question_result"]["business_report"] == business_report
+    monkeypatch.setattr(ws["service"], "_reported_quantity_review", lambda *a, **k: (_ for _ in ()).throw(AssertionError("old signed analysis recomputed")))
+    reopened = ws["service"].reopen(chosen["work_id"], actor_ref=ws["actor_ref"], scope=ws["domain_scope"], authorize=ws["authorize"])
+    assert reopened["domain_analysis"]["question_result"]["business_report"] == business_report
+    from lumenis.shared.reporting import business_brief
+    monkeypatch.setattr(business_brief, "_source_use_material", lambda *a, **k: (_ for _ in ()).throw(PermissionError("source withdrawn")))
+    with pytest.raises(PermissionError, match="BUSINESS_WORK_ANALYSIS_SOURCE_USE_UNAVAILABLE"):
+        ws["service"].reopen(chosen["work_id"], actor_ref=ws["actor_ref"], scope=ws["domain_scope"], authorize=ws["authorize"])
+
+
+@pytest.mark.parametrize("rows", ["- 一期：12篇\n- 二期：41条评论", "- 一期：约12篇\n- 二期：41篇"])
+def test_report_quantity_review_never_adds_incompatible_or_approximate_groups(rows):
+    import hashlib
+
+    from api_dual_domain import BusinessDecisionWorkflow
+
+    body = "数据规模：103篇帖子，205条评论\n### 时间分布\n" + rows
+    review = BusinessDecisionWorkflow._reported_quantity_review(body, source_id="synthetic-source",
+        evidence_ref="app_evidence_records:7", body_sha256=hashlib.sha256(body.encode()).hexdigest())
+    assert not any(item["kind"] == "TIME_GROUP_TOTAL" for item in review["checks"])
+    assert review["coverage"]["scanned_characters"] == len(body)
+
+
+def test_report_product_language_keeps_source_dimensions_and_signed_metadata(business):
+    from lumenis.shared.reporting.operational_brief import _markdown_text
+
+    ws = business
+    sources = _two_source_report(ws, "report-product-language")
+    _set_canonical_analysis_fields(ws, sources["first_source"], sentiment="negative", risk_level="high",
+                                  engagement_likes=8, engagement_comments=None, engagement_collects=0, engagement_shares=1)
+    _set_canonical_analysis_fields(ws, sources["second_source"], sentiment="negative", risk_level="critical")
+    prepared = _prepare_derived(ws, "prepare-report-product-language",
+        "请核对来源、活动日期、互动字段及消费者反馈", source_job_id=sources["report"]["job_id"])
+    chosen = ws["service"].advance(prepared["work_id"], actor_ref=ws["actor_ref"], scope=ws["domain_scope"],
+        authorize=ws["authorize"], expected_revision=prepared["revision"], submission_id="choose-report-product-language",
+        operation="choose", payload=selection("source-review", "100"))
+    before = copy.deepcopy(chosen)
+    result = ws["service"].render_result(chosen)
+    markdown = result["markdown"]
+    assert chosen == before
+    for option in chosen["options"]:
+        assert "### " + _markdown_text(option["proposal"]) in markdown
+        assert option["option_id"] not in markdown
+    selected = next(option for option in chosen["options"] if option["option_id"] == chosen["decision"]["option_id"])
+    assert "选择：" + _markdown_text(selected["proposal"]) in markdown
+    for internal in ("INSUFFICIENT_MATERIAL", "MISSING_MATERIAL", "RESEARCH_ACTIONS_PROPOSED",
+                     "NOT_ESTABLISHED", "WITHIN_OPERATOR_ESTIMATE", "source_bound_business_question_analysis/1",
+                     "high=", "critical=", "likes/comments/collects/shares"):
+        assert internal not in markdown
+    for display in ("必要业务材料仍不齐全", "缺少对应业务材料", "高风险标签=1", "严重风险标签=1",
+                    "点赞/评论/收藏/分享", "缺值不填零", "不能作为已核实消费者情绪", "完整合计未知"):
+        assert _markdown_text(display) in markdown
+    for source in chosen["material_review"]["sources"]:
+        assert _markdown_text(source["source_id"]) in markdown
+        assert _markdown_text(source["scope_evidence_ref"]) in markdown
+    ws["current"] = chosen
+    saved = save(ws, request_id="save-report-product-language",
+                 citations=[sources["first_citation"], sources["second_citation"]])["saved_work"]
+    document = saved["document"]
+    assert document["markdown"].startswith(markdown)
+    stored = document["payload"]["business_work"]
+    assert stored["domain_analysis"] == chosen["domain_analysis"]
+    assert stored["options"] == chosen["options"] and stored["decision"] == chosen["decision"]
+    assert stored["decision"]["option_id"] == "source-review"
+    assert stored["domain_analysis"]["question_result"]["method"] == "source_bound_business_question_analysis/1"
+    assert {row["risk_level"] for row in stored["domain_analysis"]["question_result"]["business_report"]["canonical_inputs"]} == {"high", "critical"}
+    assert ws["work"].reopen_work(saved["artifact"]["artifact_id"], actor=ws["actor"], scope=ws["scope"])["document"] == document
+
+
+def test_report_formatter_preserves_operator_words_and_exact_source_quotation(business):
+    from lumenis.shared.reporting.operational_brief import _markdown_text
+
+    work = copy.deepcopy(business["current"])
+    work["question"] = "Keep source-review as the user's exact question."
+    work["options"][0]["proposal"] = "High Street: likes and comments are the client's own terms."
+    quote = "Source literally says high, critical, likes/comments/collects/shares."
+    work["outcome"] = {"quote": quote, "limits": "An original statement, not independent verification."}
+    before = copy.deepcopy(work)
+    markdown = business["service"].render_result(work)["markdown"]
+    assert work == before
+    assert _markdown_text(work["question"]) in markdown
+    assert "### " + _markdown_text(work["options"][0]["proposal"]) in markdown
+    assert "选择：" + _markdown_text(work["options"][0]["proposal"]) in markdown
+    assert "来源原文：" + _markdown_text(quote) in markdown
+    assert "### A ·" not in markdown and "选择：A\n" not in markdown
+
+
+@pytest.mark.parametrize("question", [
+    "核对报告统计与服务反馈，并保留每项范围、分母和未核实限制。" * 8,
+    ("Review the report counts and service feedback; retain every scope and unknown. " * 8).strip(),
+    ("보고서 수치와 서비스 의견을 검토하고 범위와 미확인 제한을 모두 보존합니다. " * 8).strip(),
+], ids=["zh", "en", "ko"])
+def test_saved_business_report_uses_short_owner_title_and_keeps_full_question(business, question):
+    from lumenis.shared.reporting.operational_brief import _markdown_text
+
+    ws = business
+    prepared = _prepare_derived(ws, "prepare-short-report-title", question)
+    ws["current"] = ws["service"].advance(prepared["work_id"], actor_ref=ws["actor_ref"],
+        scope=ws["domain_scope"], authorize=ws["authorize"], expected_revision=prepared["revision"],
+        submission_id="choose-short-report-title", operation="choose",
+        payload=selection(prepared["options"][0]["option_id"], "100"))
+    saved = save(ws, request_id="save-short-report-title")["saved_work"]
+    document = saved["document"]
+    assert document["title"] == ws["domain_scope"]["entity_label"] + " · 业务分析与决策报告"
+    assert document["markdown"].startswith("# " + _markdown_text(ws["domain_scope"]["entity_label"]) + " · 业务分析与决策报告\n")
+    assert _markdown_text(question) in document["markdown"]
+    assert document["payload"]["brief"]["goal"] == question
+    assert document["payload"]["business_work"]["question"] == question
+    assert ws["work"].reopen_work(saved["artifact"]["artifact_id"], actor=ws["actor"],
+                                   scope=ws["scope"])["document"] == document
+
+
+def test_saved_business_request_retains_original_title_for_strict_upgrade_replay(business, monkeypatch):
+    from lumenis.shared.reporting.saved_work import SavedWorkError
+
+    ws = business
+    original = ws["service"]._saved_result_args
+    old_title = ws["domain_scope"]["entity_label"][:120] + " · " + ws["current"]["question"][:160]
+    with monkeypatch.context() as old_renderer:
+        def legacy_args(*args, **kwargs):
+            return {**original(*args, **kwargs), "title": old_title}
+        old_renderer.setattr(ws["service"], "_saved_result_args", legacy_args)
+        first = save(ws, request_id="save-before-short-title-upgrade")["saved_work"]
+    original_bytes = (ws["root"] / "artifacts" / (first["artifact"]["artifact_id"] + ".json")).read_bytes()
+    args = {"actor_ref": ws["actor_ref"], "scope": ws["domain_scope"], "authorize": ws["authorize"],
+            "expected_revision": ws["current"]["revision"], "request_id": "save-before-short-title-upgrade",
+            "citations": [ws["citation"]]}
+    replay = ws["service"].save_result(ws["current"]["work_id"], **args)["saved_work"]
+    assert replay["replayed"] and replay["document"] == first["document"]
+    assert replay["artifact"]["artifact_id"] == first["artifact"]["artifact_id"]
+    assert replay["document"]["title"] == old_title
+    assert (ws["root"] / "artifacts" / (first["artifact"]["artifact_id"] + ".json")).read_bytes() == original_bytes
+    with pytest.raises(SavedWorkError, match="WORK_REQUEST_REUSE_CONFLICT"):
+        save(ws, request_id=args["request_id"], parent=first["artifact"]["artifact_id"])
+    changed = {**ws["citation"], "end": ws["citation"]["end"] - 1, "quote": ws["citation"]["quote"][:-1]}
+    with pytest.raises(SavedWorkError, match="WORK_REQUEST_REUSE_CONFLICT"):
+        save(ws, request_id=args["request_id"], citations=[changed])
+    assert ws["repo"].query_one("SELECT count(*) FROM lumenis_shared_artifacts WHERE kind='saved_document'")[0] == 1
+    monkeypatch.setattr(ws["work"], "read_committed_work",
+        lambda *args, **kwargs: (_ for _ in ()).throw(PermissionError("read permission withdrawn")))
+    with pytest.raises(PermissionError, match="read permission withdrawn"):
+        ws["service"].save_result(ws["current"]["work_id"], **args)
+
+
 def _assert_analysis(work, expected_source_ids, expected_version=None):
     analysis = work["domain_analysis"]
     if expected_version is not None:

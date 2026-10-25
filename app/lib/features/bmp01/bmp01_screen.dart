@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/lumenis_core_client.dart';
+import '../../core/lumenis_icon.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import 'bmp01_repository.dart';
@@ -8,10 +9,16 @@ import 'bmp01_snapshot.dart';
 import 'bmp01_view_model.dart';
 
 class Bmp01Screen extends StatefulWidget {
-  const Bmp01Screen({required this.client, this.repository, super.key});
+  const Bmp01Screen({
+    required this.client,
+    this.repository,
+    this.onNavigate,
+    super.key,
+  });
 
   final LumenisCoreClient client;
   final Bmp01Repository? repository;
+  final ValueChanged<String>? onNavigate;
 
   @override
   State<Bmp01Screen> createState() => _Bmp01ScreenState();
@@ -39,23 +46,72 @@ class _Bmp01ScreenState extends State<Bmp01Screen> {
     return ColoredBox(
       color: LumenisTheme.of(context).canvas,
       child: SafeArea(
-        child: AnimatedBuilder(
-          animation: _viewModel,
-          builder: (context, _) => switch (_viewModel.phase) {
-            Bmp01LoadPhase.loading => const _LoadingState(),
-            Bmp01LoadPhase.failed => _FailureState(
-              kind: _viewModel.failureKind!,
-              onRetry: _viewModel.refresh,
+        child: Column(
+          children: [
+            if (widget.onNavigate != null)
+              _BrandWorkEntries(onNavigate: widget.onNavigate!),
+            Expanded(
+              child: AnimatedBuilder(
+                animation: _viewModel,
+                builder: (context, _) => switch (_viewModel.phase) {
+                  Bmp01LoadPhase.loading => const _LoadingState(),
+                  Bmp01LoadPhase.failed => _FailureState(
+                    kind: _viewModel.failureKind!,
+                    onRetry: _viewModel.refresh,
+                  ),
+                  Bmp01LoadPhase.ready => _ScopeWorkspace(
+                    snapshot: _viewModel.snapshot!,
+                    onRefresh: _viewModel.refresh,
+                  ),
+                },
+              ),
             ),
-            Bmp01LoadPhase.ready => _ScopeWorkspace(
-              snapshot: _viewModel.snapshot!,
-              onRefresh: _viewModel.refresh,
-            ),
-          },
+          ],
         ),
       ),
     );
   }
+}
+
+class _BrandWorkEntries extends StatelessWidget {
+  const _BrandWorkEntries({required this.onNavigate});
+  final ValueChanged<String> onNavigate;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('bmp01-work-entries'),
+    padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
+    decoration: LumenisTheme.chassis(LumenisTheme.of(context)).copyWith(
+      border: Border(bottom: BorderSide(color: LumenisTheme.of(context).line)),
+    ),
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final (screen, icon) in const [
+            ('BMP-02', Icons.travel_explore_rounded),
+            ('BMP-06', Icons.edit_note_rounded),
+            ('BMP-08', Icons.campaign_outlined),
+            ('BMP-09', Icons.insights_outlined),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                key: ValueKey('bmp01-open-$screen'),
+                onPressed: () => onNavigate(screen),
+                icon: LumenisIcon(
+                  icon,
+                  color: LumenisTheme.of(context).bmp,
+                  size: 19,
+                ),
+                label: Text(context.lumenisL10n.text('screen.$screen')),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ScopeWorkspace extends StatelessWidget {
@@ -469,11 +525,7 @@ class _Panel extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: padding,
-      decoration: BoxDecoration(
-        color: LumenisTheme.of(context).surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: LumenisTheme.of(context).line),
-      ),
+      decoration: LumenisTheme.paper(LumenisTheme.of(context)),
       child: child,
     );
   }

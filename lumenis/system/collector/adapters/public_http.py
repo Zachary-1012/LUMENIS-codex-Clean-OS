@@ -485,6 +485,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 items=[self.normalize_item(item)],
                 raw_count=1,
                 new_count=1,
+                original_response=response,
                 metadata={
                     "provider": "public_http",
                     "source": response.url,

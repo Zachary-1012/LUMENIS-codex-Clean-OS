@@ -1,0 +1,38 @@
+---
+import { publicCopy, localPath, type PublicFamily } from '../public-content';
+import type { Locale } from '../i18n';
+interface Props { locale: Locale; active?: PublicFamily; collapsible?: boolean }
+const { locale, active, collapsible = false } = Astro.props;
+const c = publicCopy[locale];
+const families: PublicFamily[] = ['products', 'solutions', 'outcomes', 'help', 'trust', 'updates', 'download', 'contact'];
+const menu = { 'zh-CN': '菜单', en: 'Menu', ko: '메뉴' }[locale];
+---
+{collapsible ? (
+  <details class="public-menu" data-public-menu open>
+    <summary><span>{menu}</span><span class="public-menu__glyph" aria-hidden="true"></span></summary>
+    <nav class="public-navigation" aria-label={c.navigation}>
+      {families.map((family) => <a href={localPath(locale, family)} aria-current={active === family ? 'page' : undefined}>{c.labels[family]}</a>)}
+    </nav>
+  </details>
+) : (
+  <nav class="public-navigation" aria-label={c.navigation}>
+    {families.map((family) => <a href={localPath(locale, family)} aria-current={active === family ? 'page' : undefined}>{c.labels[family]}</a>)}
+  </nav>
+)}
+
+<script>
+  const compact = window.matchMedia('(max-width: 760px)');
+  document.querySelectorAll<HTMLDetailsElement>('[data-public-menu]').forEach((menu) => {
+    const summary = menu.querySelector('summary');
+    const align = () => { menu.open = !compact.matches; };
+    align();
+    compact.addEventListener('change', align);
+    menu.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && compact.matches && menu.open) {
+        menu.open = false;
+        summary?.focus();
+        event.preventDefault();
+      }
+    });
+  });
+</script>

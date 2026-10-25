@@ -16,7 +16,10 @@ Future<LumenisTransportResponse> sendLumenisHttpRequest(
     final outgoing = await client.openUrl(request.method, request.uri);
     outgoing.followRedirects = request.followRedirects;
     request.headers.forEach(outgoing.headers.set);
-    if (request.bodyBytes case final bodyBytes?) {
+    if (request.upload case final upload?) {
+      outgoing.contentLength = upload.length;
+      await outgoing.addStream(upload.checkedStream());
+    } else if (request.bodyBytes case final bodyBytes?) {
       outgoing.add(bodyBytes);
     } else if (request.body case final body?) {
       outgoing.write(body);

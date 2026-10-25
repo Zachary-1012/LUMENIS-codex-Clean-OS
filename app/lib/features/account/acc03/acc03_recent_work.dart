@@ -175,12 +175,19 @@ class _Acc03RecentWorkState extends State<Acc03RecentWork> {
                 ),
                 child: Row(
                   children: [
-                    LumenisIcon(
-                      work.kind == 'research'
-                          ? Icons.auto_stories_outlined
-                          : Icons.article_outlined,
-                      size: 25,
-                      color: palette.muted,
+                    Container(
+                      width: 40,
+                      height: 46,
+                      decoration: LumenisTheme.keycap(palette, radius: 5),
+                      child: LumenisIcon(
+                        work.kind == 'research'
+                            ? Icons.auto_stories_outlined
+                            : work.kind == 'material'
+                            ? Icons.attach_file_rounded
+                            : Icons.article_outlined,
+                        size: 21,
+                        color: palette.muted,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -298,8 +305,19 @@ final class _Work {
     final contract = doc['contract'];
     final payload = doc['payload'];
     final material = payload is Map ? payload['source_material'] : null;
+    final officeEdit = payload is Map ? payload['office_edit'] : null;
+    final originalMaterial =
+        material is Map &&
+        (material['origin'] == 'user-upload' ||
+            (material['origin'] == 'user-edited-original-version' &&
+                officeEdit is Map &&
+                officeEdit['original_retained_in_parent_version'] == true &&
+                officeEdit['source_artifact_id'] == doc['parent_artifact_id'] &&
+                officeEdit['source_artifact_sha256'] == doc['parent_sha256'] &&
+                doc['parent_artifact_id'] is String &&
+                doc['parent_sha256'] is String));
     final kind = doc['kind'] == 'research'
-        ? material is Map && material['origin'] == 'user-upload'
+        ? originalMaterial
               ? 'material'
               : payload is Map && payload['source_brief_reference'] is Map
               ? 'research'

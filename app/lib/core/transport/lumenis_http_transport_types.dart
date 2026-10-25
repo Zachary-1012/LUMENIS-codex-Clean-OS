@@ -1,6 +1,31 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+class LumenisUploadBody {
+  const LumenisUploadBody({
+    required this.length,
+    required this.openRead,
+    this.browserBlobUri,
+  });
+  final int length;
+  final Stream<List<int>> Function() openRead;
+  final Uri? browserBlobUri;
+
+  Stream<List<int>> checkedStream() async* {
+    var count = 0;
+    await for (final chunk in openRead()) {
+      count += chunk.length;
+      if (count > length) {
+        throw const LumenisTransportException('File changed during upload.');
+      }
+      yield chunk;
+    }
+    if (count != length) {
+      throw const LumenisTransportException('File changed during upload.');
+    }
+  }
+}
+
 class LumenisTransportRequest {
   const LumenisTransportRequest({
     required this.method,
@@ -9,6 +34,7 @@ class LumenisTransportRequest {
     required this.connectionTimeout,
     this.body,
     this.bodyBytes,
+    this.upload,
     this.followRedirects = true,
   });
 
@@ -18,11 +44,13 @@ class LumenisTransportRequest {
   final Duration connectionTimeout;
   final String? body;
   final Uint8List? bodyBytes;
+  final LumenisUploadBody? upload;
   final bool followRedirects;
 
   void validateBody() {
-    if (body != null && bodyBytes != null) {
-      throw ArgumentError('Specify either body or bodyBytes, not both.');
+    if ([body, bodyBytes, upload].where((value) => value != null).length > 1 ||
+        (upload != null && upload!.length <= 0)) {
+      throw ArgumentError('Specify one valid request body.');
     }
   }
 }

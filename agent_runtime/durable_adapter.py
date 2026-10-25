@@ -112,6 +112,50 @@ def _validated_plan_inference_receipt(value: Any) -> dict[str, Any] | None:
     return {key: value[key] for key in _PLAN_RECEIPT_FIELDS}
 
 
+def _validated_context_budget(value, receipt, model):
+    if type(value) is not dict:
+        return None
+    def sha(item):
+        return type(item) is str and re.fullmatch(r'[0-9a-f]{64}', item) is not None
+    required = value.get('required_context_sha256')
+    if required is not None and not sha(required):
+        return None
+    if set(value) == {'required_context_sha256', 'measurement', 'model_execution'}:
+        return dict(value) if (model == 'none' and receipt is None
+            and value['measurement'] == 'NOT_REQUESTED_NO_MODEL' and value['model_execution'] == 'NOT_RUN') else None
+    fields = {'ok', 'fits', 'prompt_tokens', 'context_window_tokens', 'output_token_limit',
+              'output_tokens_reserved', 'request_sha256', 'runtime_sha256', 'tokenizer_identity',
+              'formatter_sha256', 'count_method', 'generation_performed', 'binding_sha256'}
+    if not fields.issubset(value) or set(value) - fields - {'omitted_sections', 'required_context_sha256'}:
+        return None
+    if (value['ok'] is not True or type(value['fits']) is not bool or value['generation_performed'] is not False
+            or value['count_method'] != 'loaded_runtime_tokenizer'
+            or any(not sha(value[key]) for key in ('request_sha256', 'runtime_sha256', 'tokenizer_identity',
+                                                  'formatter_sha256', 'binding_sha256'))
+            or value['tokenizer_identity'] != value['runtime_sha256']):
+        return None
+    from lumenis.system.ai_gateway.owned_service import _MAX_TOKEN_LIMIT
+    counts = ('prompt_tokens', 'context_window_tokens', 'output_token_limit', 'output_tokens_reserved')
+    if any(type(value[key]) is not int or not (0 if key == 'prompt_tokens' else 1) <= value[key] <= _MAX_TOKEN_LIMIT
+           for key in counts):
+        return None
+    if (not value['output_tokens_reserved'] <= value['output_token_limit'] <= value['context_window_tokens']
+            or value['fits'] != (value['prompt_tokens'] + value['output_tokens_reserved'] <= value['context_window_tokens'])
+            or receipt is None or value['request_sha256'] != receipt['request_digest']
+            or value['prompt_tokens'] != receipt['prompt_tokens']
+            or receipt['completion_tokens'] > value['output_tokens_reserved']):
+        return None
+    omissions = value.get('omitted_sections', [])
+    if type(omissions) is not list or len(omissions) > 2:
+        return None
+    for omission in omissions:
+        if (type(omission) is not dict or set(omission) != {'section', 'sha256', 'reason'}
+                or omission['section'] not in {'derived_memory', 'reviewed_learning_context'}
+                or not sha(omission['sha256']) or omission['reason'] != 'selected_model_context_budget'):
+            return None
+    return {**value, 'omitted_sections': [dict(item) for item in omissions]}
+
+
 def _sanitize_plan_snapshot(value: Any):
     """Sanitize a plan and bind persisted token metrics to an exact Gateway receipt."""
     if type(value) is not dict:
@@ -119,6 +163,7 @@ def _sanitize_plan_snapshot(value: Any):
     raw = dict(value)
     receipt_raw = raw.pop("inference_receipt", None)
     usage_raw = raw.pop("token_usage", None)
+    budget_raw = raw.pop('context_budget', None)
     cleaned, sensitive = _sanitize_checkpoint_value(raw)
     if type(cleaned) is not dict:
         return {}, True
@@ -138,6 +183,12 @@ def _sanitize_plan_snapshot(value: Any):
         if receipt_claimed:
             cleaned.pop("inference_receipt", None)
         cleaned["token_usage"] = {}
+    if budget_raw is not None:
+        budget = _validated_context_budget(budget_raw, receipt, raw.get('model'))
+        if budget is None:
+            sensitive = True
+        else:
+            cleaned['context_budget'] = budget
     return cleaned, sensitive
 
 
@@ -650,6 +701,122 @@ class DurableExecutionAdapter:
             "checkpoint_count": len(checkpoints),
             "source": "memory",
         }
+
+    @staticmethod
+    def _model_request_identity(request):
+        from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest, owned_service_request_digest
+        if type(request) is not OwnedServiceRequest or request.operation != 'agent_plan':
+            raise ValueError('AGENT_MODEL_TYPED_REQUEST_REQUIRED')
+        return {'schema': 'agent-owned-model-attempt/v1', 'task_id': request.job_id,
+                'request_id': request.request_id, 'request_digest': owned_service_request_digest(request),
+                'source_binding_sha256': request.source_binding_sha256,
+                'input_revision_sha256': request.input_revision_sha256,
+                'source_use_policy_sha256': request.source_use_policy_sha256}
+
+    def _model_request_row(self, connection, request):
+        identity = self._model_request_identity(request)
+        rows = connection.execute("SELECT * FROM ai_task_step WHERE task_id=? AND phase='agent_model_request' ORDER BY rowid",
+                                  (request.job_id,)).fetchall()
+        if not rows:
+            return None, None
+        if len(rows) != 1:
+            raise RuntimeError('AGENT_MODEL_ATTEMPT_CONFLICT')
+        row = dict(rows[0])
+        try:
+            content = json.loads(row['detail'])
+        except (ValueError, TypeError) as exc:
+            raise RuntimeError('AGENT_MODEL_RECEIPT_INVALID') from exc
+        if type(content) is not dict or any(content.get(key) != value for key, value in identity.items()):
+            raise RuntimeError('AGENT_MODEL_INPUT_CHANGED_NO_REPLAY')
+        return row, content
+
+    def read_model_response(self, request):
+        """Read an immutable completed response; an uncertain attempt never runs again."""
+        if not self._enabled or self._operational_admission is None:
+            raise PermissionError('AGENT_MODEL_DURABLE_ADMISSION_REQUIRED')
+        from lumenis.shared.database import get_repository
+        with get_repository().connection(read_only=True, wal=False) as con:
+            self._require_write_permission('ai_task_step', connection=con)
+            row, content = self._model_request_row(con, request)
+            if row is None:
+                return None
+            if row['status'] != 'completed' or content.get('state') != 'COMPLETED':
+                raise RuntimeError('AGENT_MODEL_RESULT_UNKNOWN_NO_REPLAY')
+            result, budget = self._checked_model_response(request, content.get('result'), content.get('context_budget'))
+            self._require_write_permission('ai_task_step', connection=con)
+            return {'result': result, 'context_budget': budget}
+
+    def reserve_model_request(self, request):
+        """Reserve in the existing Task step table before the model invocation."""
+        if not self._enabled or self._operational_admission is None or request.job_id != self._operational_admission.task_id:
+            raise PermissionError('AGENT_MODEL_DURABLE_ADMISSION_REQUIRED')
+        from lumenis.shared.database import get_repository
+        engine = self._require_task_engine()
+        identity = self._model_request_identity(request)
+        with self._operational_admission.guard(), get_repository().transaction() as con:
+            con.execute('BEGIN IMMEDIATE')
+            self._require_write_permission('ai_task_step', connection=con)
+            row, _ = self._model_request_row(con, request)
+            if row is not None:
+                raise RuntimeError('AGENT_MODEL_RESULT_UNKNOWN_NO_REPLAY')
+            task = con.execute('SELECT agent_id,status FROM ai_task WHERE task_id=?', (request.job_id,)).fetchone()
+            if not task or task['status'] == 'cancelled':
+                raise PermissionError('USER_CANCELLED')
+            identifier, now = engine._gen_id('step'), engine._now()
+            content = {**identity, 'state': 'RESERVED', 'recovery': 'UNKNOWN_NO_AUTOMATIC_MODEL_REPLAY',
+                       'queue_attempt': {'run_id': self._operational_admission.run_id,
+                                         'worker_id': self._operational_admission.worker_id,
+                                         'lease_owner': self._operational_admission.lease_owner}}
+            con.execute('''INSERT INTO ai_task_step
+                (step_id,task_id,phase,status,detail,agent_id,started_at) VALUES(?,?,'agent_model_request','running',?,?,?)''',
+                (identifier, request.job_id, json.dumps(content, ensure_ascii=False, sort_keys=True,
+                 allow_nan=False), task['agent_id'], now))
+            self._require_write_permission('ai_task_step', connection=con)
+        return identifier
+
+    @staticmethod
+    def _checked_model_response(request, result, budget):
+        """Keep a request-matching receipt and bounded, credential-free plan data."""
+        receipt = _validated_plan_inference_receipt({key: result.get(key) for key in _PLAN_RECEIPT_FIELDS}) if type(result) is dict else None
+        if (receipt is None or result.get('ok') is not True or result.get('real_input_bound') is not True
+                or receipt['request_id'] != request.request_id
+                or receipt['request_digest'] != DurableExecutionAdapter._model_request_identity(request)['request_digest']
+                or any(receipt[key] != getattr(request, key) for key in
+                       ('source_binding_sha256', 'input_revision_sha256', 'source_use_policy_sha256'))
+                or receipt['source_evidence_refs'] != list(request.source_evidence_refs)):
+            raise RuntimeError('AGENT_MODEL_RECEIPT_INVALID')
+        checked_budget = _validated_context_budget(budget, receipt, receipt['model_id'])
+        analysis, sensitive = _sanitize_checkpoint_value(result.get('analysis'))
+        if (checked_budget is None or sensitive or type(analysis) not in (str, dict)
+                or not analysis or len(json.dumps(analysis, ensure_ascii=False).encode()) > 4 * 1024 * 1024):
+            raise RuntimeError('AGENT_MODEL_RESULT_NOT_PERSISTABLE')
+        return {'ok': True, 'real_input_bound': True, **receipt, 'analysis': analysis}, checked_budget
+
+    def record_model_response(self, request, reservation, result, budget):
+        """Commit the verified result before tool formation; no prompt/secret retention."""
+        if self._operational_admission is None or request.job_id != self._operational_admission.task_id:
+            raise PermissionError('AGENT_MODEL_DURABLE_ADMISSION_REQUIRED')
+        # A failed/unavailable response cannot authorize a retry. Preserve only
+        # the reservation in that case, including after an unknown process exit.
+        if type(result) is not dict or result.get('ok') is not True or result.get('status') != 'COMPLETED':
+            return
+        retained, checked_budget = self._checked_model_response(request, result, budget)
+        from lumenis.shared.database import get_repository
+        engine = self._require_task_engine()
+        with self._operational_admission.guard(), get_repository().transaction() as con:
+            con.execute('BEGIN IMMEDIATE')
+            self._require_write_permission('ai_task_step', connection=con)
+            row, content = self._model_request_row(con, request)
+            if row is None or row['step_id'] != reservation or row['status'] != 'running' or content.get('state') != 'RESERVED':
+                raise RuntimeError('AGENT_MODEL_ATTEMPT_CONFLICT')
+            task = con.execute('SELECT status FROM ai_task WHERE task_id=?', (request.job_id,)).fetchone()
+            if not task or task['status'] == 'cancelled':
+                raise PermissionError('USER_CANCELLED')
+            completed = {**content, 'state': 'COMPLETED', 'recovery': 'IMMUTABLE_RESULT_NO_MODEL_REPLAY',
+                         'result': retained, 'context_budget': checked_budget}
+            con.execute("UPDATE ai_task_step SET status='completed',detail=?,finished_at=?,duration_ms=0 WHERE step_id=? AND status='running'",
+                        (json.dumps(completed, ensure_ascii=False, sort_keys=True, allow_nan=False), engine._now(), reservation))
+            self._require_write_permission('ai_task_step', connection=con)
 
     def retry_step(
         self,

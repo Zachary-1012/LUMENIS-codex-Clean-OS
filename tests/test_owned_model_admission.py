@@ -463,3 +463,40 @@ def test_workspace_admission_uses_live_registered_scope_and_revocation(
         scope_revoked = verifier.recheck()
         assert scope_revoked.allowed is False
         assert scope_revoked.code == "ACTOR_SCOPE_DENIED"
+
+
+def test_shared_model_admission_has_independent_scope_exact_approval_and_revocation(scope_db, monkeypatch):
+    scope_name = 'shared_workspace:v1'
+    context = {'scope_descriptors': {scope_name: {'scope_kind': 'shared_workspace', 'version': 1}}}
+    request = _request(domain_id='shared', scopes=(scope_name,), allowed_operations=('professional_creation',))
+    gate = _gate(monkeypatch)
+    # A business-domain grant, including GLOBAL, conveys no Shared model scope.
+    _grant_scope(scope_db)
+    verifier = admission.make_owned_model_admission_verifier(gate, request, actor_id=1,
+        domain_id='shared', context=context, review_validator=_review_true)
+    assert verifier.recheck().code == 'ACTOR_SCOPE_DENIED'
+    with sqlite3.connect(scope_db) as con:
+        con.execute("INSERT INTO v4_member_authorizations(user_id,product_id,module,action) VALUES(1,'SHARED','owned_model_admission','write')")
+    assert verifier.recheck().code == 'EXACT_RUNTIME_APPROVAL_REQUIRED'
+    token = _approve(gate, verifier)
+    allowed = verifier.recheck()
+    assert allowed.allowed and allowed.code == 'EXACT_RUNTIME_APPROVAL_VERIFIED'
+    assert allowed.scope_audit_ids and allowed.approval_token_sha256 == hashlib.sha256(token.encode()).hexdigest()
+    assert verifier.public_identity['domain_id'] == 'shared'
+    assert verifier.public_identity['scope_descriptors'] == [{'scope': scope_name, 'scope_kind': 'shared_workspace', 'version': 1}]
+    with sqlite3.connect(scope_db) as con:
+        con.execute("DELETE FROM v4_member_authorizations WHERE product_id='SHARED'")
+    assert verifier.recheck().code == 'ACTOR_SCOPE_DENIED'
+
+
+@pytest.mark.parametrize('scopes,descriptor', [
+    (('GLOBAL / ALL',), {'scope_kind': 'shared_workspace', 'version': 1}),
+    (('shared_workspace:v1',), {'scope_kind': 'shared_workspace', 'version': True}),
+    (('shared_workspace:v1',), {'scope_kind': 'shared_workspace', 'version': 1, 'subject_id': 'SUBJ-CTH-A'}),
+])
+def test_shared_model_admission_cannot_borrow_business_or_forged_scope(scope_db, monkeypatch, scopes, descriptor):
+    gate = _gate(monkeypatch)
+    request = _request(domain_id='shared', scopes=scopes)
+    with pytest.raises(ValueError):
+        admission.make_owned_model_admission_verifier(gate, request, actor_id=1, domain_id='shared',
+            context={'scope_descriptors': {scopes[0]: descriptor}}, review_validator=_review_true)

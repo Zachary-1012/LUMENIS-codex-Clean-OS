@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:file_selector/file_selector.dart';
 
 import '../../../core/lumenis_core_client.dart';
+import '../../../core/transport/lumenis_http_transport.dart';
 import 'media_project_snapshot.dart';
 
 abstract interface class MediaProjectRepository {
@@ -53,9 +55,33 @@ abstract interface class MediaProjectRepository {
   Future<Map<String, dynamic>> reopen(String? domain, String artifactId);
 }
 
-final class CoreMediaProjectRepository implements MediaProjectRepository {
+abstract interface class MediaProjectStreamRepository {
+  Future<Map<String, dynamic>> importPicked(
+    String? domain,
+    XFile file,
+    int length,
+  );
+}
+
+final class CoreMediaProjectRepository
+    implements MediaProjectRepository, MediaProjectStreamRepository {
   const CoreMediaProjectRepository(this.client);
   final LumenisCoreClient client;
+
+  @override
+  Future<Map<String, dynamic>> importPicked(
+    String? domain,
+    XFile file,
+    int length,
+  ) => client.importContentSourceStream(
+    domainId: domain,
+    filename: file.name,
+    upload: LumenisUploadBody(
+      length: length,
+      openRead: file.openRead,
+      browserBlobUri: kIsWeb ? Uri.parse(file.path) : null,
+    ),
+  );
 
   @override
   String get contextKey => jsonEncode(client.currentContextEnvelope);
@@ -202,6 +228,7 @@ final class MediaProjectVersion {
     required this.sourceRefs,
     required this.title,
     required this.projectRevision,
+    required this.parentArtifactId,
     required this.rendered,
     required this.renderOptions,
     required this.deliveryOptions,
@@ -218,6 +245,7 @@ final class MediaProjectVersion {
   final double? durationSec;
   final String? title;
   final int? projectRevision;
+  final String? parentArtifactId;
   final bool rendered;
   final Map<String, double> renderOptions;
   final Map<String, dynamic> deliveryOptions;
@@ -255,6 +283,7 @@ final class MediaProjectVersion {
     final rendered = render['state'] == 'rendered_verified';
     final title = project['title'];
     final revision = project['project_revision'];
+    final parent = project['parent_artifact_id'];
     if (!const [1, 2].contains(project['schema_version']) ||
         (project['schema_version'] == 2 &&
             (title is! String ||
@@ -262,6 +291,10 @@ final class MediaProjectVersion {
                 title.length > 200 ||
                 revision is! int ||
                 revision < 1)) ||
+        (parent != null &&
+            (parent is! String ||
+                !RegExp(r'^ART-[A-Za-z0-9_-]{1,70}$').hasMatch(parent) ||
+                parent == artifactId)) ||
         !const ['video', 'audio'].contains(kind) ||
         timeline is! Map ||
         timeline['version'] is! int ||
@@ -313,6 +346,7 @@ final class MediaProjectVersion {
       durationSec: rendered ? (duration as num).toDouble() : null,
       title: title as String?,
       projectRevision: revision as int?,
+      parentArtifactId: parent as String?,
       rendered: rendered,
       renderOptions: _readRenderOptions(project['render_options']),
       deliveryOptions: _readDeliveryOptions(project['delivery_options']),
@@ -854,6 +888,46 @@ final class MediaProjectController extends ChangeNotifier {
     Uint8List bytes, {
     Future<bool?> Function(ContentSourceConfirmation confirmation)?
     requestApproval,
+  }) => _importFile(
+    filename,
+    bytes.length,
+    () => repository.importFile(domain, filename, bytes),
+    requestApproval: requestApproval,
+  );
+
+  Future<void> importPickedFile(
+    XFile file, {
+    Future<bool?> Function(ContentSourceConfirmation confirmation)?
+    requestApproval,
+  }) async {
+    final streamRepository = repository;
+    if (streamRepository is! MediaProjectStreamRepository) {
+      _fail('CONTENT_STREAM_UPLOAD_UNAVAILABLE');
+      return;
+    }
+    final length = await file.length();
+    if (length <= 0) {
+      _fail('CONTENT_MEDIA_FILE_EMPTY');
+      return;
+    }
+    return _importFile(
+      file.name,
+      length,
+      () => (streamRepository as MediaProjectStreamRepository).importPicked(
+        domain,
+        file,
+        length,
+      ),
+      requestApproval: requestApproval,
+    );
+  }
+
+  Future<void> _importFile(
+    String filename,
+    int length,
+    Future<Map<String, dynamic>> Function() upload, {
+    Future<bool?> Function(ContentSourceConfirmation confirmation)?
+    requestApproval,
   }) async {
     if (_disposed || busy) return;
     if (!contextMatches) {
@@ -869,14 +943,14 @@ final class MediaProjectController extends ChangeNotifier {
     try {
       Map<String, dynamic> response;
       try {
-        response = await repository.importFile(domain, filename, bytes);
+        response = await upload();
       } on LumenisCoreException catch (error) {
         final confirmation = error.sourceConfirmation;
         if (error.statusCode != 403 ||
             error.errorCode != 'CONTENT_SOURCE_APPROVAL_REQUIRED' ||
             confirmation == null ||
             confirmation.filename != filename ||
-            confirmation.sizeBytes != bytes.length) {
+            confirmation.sizeBytes != length) {
           rethrow;
         }
         if (requestApproval == null) {
@@ -907,7 +981,7 @@ final class MediaProjectController extends ChangeNotifier {
           );
         }
         if (!_acceptContext(context)) return;
-        response = await repository.importFile(domain, filename, bytes);
+        response = await upload();
       }
       final responseCode = response['code'] ?? response['error_code'];
       final approvalStatus = response['approval_status'] ?? response['status'];

@@ -6,6 +6,7 @@ import '../../../core/lumenis_icon.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../core/lumenis_work_object.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import 'sh01_repository.dart';
 import 'sh01_snapshot.dart';
@@ -335,8 +336,8 @@ class _Sh01ScreenState extends State<Sh01Screen> {
       );
     }
     final palette = LumenisTheme.of(context);
-    return ColoredBox(
-      color: palette.canvas,
+    return DecoratedBox(
+      decoration: BoxDecoration(color: palette.canvas),
       child: SafeArea(
         child: Column(
           children: [
@@ -391,10 +392,9 @@ class _Sh01ScreenState extends State<Sh01Screen> {
                     )
                   : LayoutBuilder(
                       builder: (context, constraints) {
-                        final wide =
-                            constraints.maxWidth >= 900 &&
-                            MediaQuery.textScalerOf(context).scale(16) <= 24;
-                        final launch = _launchPanel();
+                        final inset = constraints.maxWidth >= 1000
+                            ? 48.0
+                            : 20.0;
                         final library = AnimatedBuilder(
                           animation: Listenable.merge([
                             _manuscripts,
@@ -402,33 +402,23 @@ class _Sh01ScreenState extends State<Sh01Screen> {
                           ]),
                           builder: (context, _) => _library(),
                         );
-                        if (wide) {
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                SizedBox(
-                                  width: 290,
-                                  child: SingleChildScrollView(child: launch),
-                                ),
-                                const SizedBox(width: 28),
-                                Expanded(child: library),
-                              ],
-                            ),
-                          );
-                        }
-                        return SingleChildScrollView(
+                        return CustomScrollView(
                           key: const PageStorageKey('sh01-creation-scroll'),
-                          padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              launch,
-                              const SizedBox(height: 28),
-                              library,
-                            ],
-                          ),
+                          slivers: [
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(inset, 8, inset, 0),
+                              sliver: SliverToBoxAdapter(child: _launchPanel()),
+                            ),
+                            SliverPadding(
+                              padding: EdgeInsets.fromLTRB(
+                                inset,
+                                24,
+                                inset,
+                                28,
+                              ),
+                              sliver: SliverToBoxAdapter(child: library),
+                            ),
+                          ],
                         );
                       },
                     ),
@@ -441,76 +431,82 @@ class _Sh01ScreenState extends State<Sh01Screen> {
 
   Widget _launchPanel() => LayoutBuilder(
     builder: (context, constraints) {
-      final paired =
-          constraints.maxWidth >= 320 &&
-          MediaQuery.textScalerOf(context).scale(16) <= 24;
-      final actions = <Widget>[
-        _CreationAction(
-          compact: paired,
-          key: const Key('sh01-open-research'),
-          title: _copy('研究资料', 'Research', '자료 연구'),
-          object: _StudioObject.book,
-          color: LumenisTheme.of(context).cth,
-          onPressed: widget.onNavigate == null
-              ? null
-              : () => widget.onNavigate!('SH-02'),
+      final wideText = MediaQuery.textScalerOf(context).scale(16) > 24;
+      final columns = constraints.maxWidth >= 680 && !wideText ? 4 : 2;
+      final actions = <(String, String, LumenisWorkObject, VoidCallback?)>[
+        (
+          'sh01-open-research',
+          _copy('研究资料', 'Research', '자료 연구'),
+          LumenisWorkObject.book,
+          widget.onNavigate == null ? null : () => widget.onNavigate!('SH-02'),
         ),
-        _CreationAction(
-          compact: paired,
-          key: const Key('sh01-create-manuscript'),
-          title: _copy('提案 / 文稿', 'Proposal / document', '제안서 / 문서'),
-          object: _StudioObject.paper,
-          color: LumenisTheme.of(context).shared,
-          onPressed: () => _openManuscript(),
+        (
+          'sh01-create-manuscript',
+          _copy('提案 / 文稿', 'Proposal / document', '제안서 / 문서'),
+          LumenisWorkObject.paper,
+          () => _openManuscript(),
         ),
-        _CreationAction(
-          compact: paired,
-          key: const Key('sh01-open-video-editor'),
-          title: _copy('视频', 'Video', '영상'),
-          object: _StudioObject.film,
-          color: LumenisTheme.of(context).bmp,
-          onPressed: () => _openMedia('video'),
+        (
+          'sh01-open-video-editor',
+          _copy('视频', 'Video', '영상'),
+          LumenisWorkObject.film,
+          () => _openMedia('video'),
         ),
-        _CreationAction(
-          compact: paired,
-          key: const Key('sh01-open-podcast-editor'),
-          title: _copy('播客', 'Podcast', '팟캐스트'),
-          object: _StudioObject.microphone,
-          color: LumenisTheme.of(context).ai,
-          onPressed: () => _openMedia('audio'),
+        (
+          'sh01-open-podcast-editor',
+          _copy('播客', 'Podcast', '팟캐스트'),
+          LumenisWorkObject.microphone,
+          () => _openMedia('audio'),
         ),
       ];
+      final palette = LumenisTheme.of(context);
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Text(
-              _copy('新建', 'Start new', '새로 만들기'),
-              style: Theme.of(context).textTheme.titleSmall,
+              _copy('新建作品', 'New work', '새 작품'),
+              style: TextStyle(fontSize: 14, color: palette.muted),
             ),
           ),
-          if (paired)
-            Wrap(
-              spacing: 12,
-              runSpacing: 4,
-              children: [
-                for (final action in actions)
-                  SizedBox(
-                    width: (constraints.maxWidth - 12) / 2,
-                    child: action,
-                  ),
-              ],
-            )
-          else
-            ...actions,
-          const SizedBox(height: 10),
-          TextButton.icon(
-            key: const Key('sh01-open-linked-media'),
-            onPressed: () => _openMedia('video', independent: false),
-            icon: const LumenisIcon(Icons.folder_open_outlined, size: 18),
-            label: Text(
-              context.lumenisL10n.text('sh01.media.linked_workspace'),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: palette.foreground, width: 2),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Wrap(
+                spacing: 16,
+                runSpacing: 8,
+                children: [
+                  for (final (id, label, object, open) in actions)
+                    SizedBox(
+                      width:
+                          (constraints.maxWidth - (columns - 1) * 16) / columns,
+                      child: LumenisWorkObjectAction(
+                        key: Key(id),
+                        object: object,
+                        label: label,
+                        onPressed: open,
+                        large: true,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              key: const Key('sh01-open-linked-media'),
+              onPressed: () => _openMedia('video', independent: false),
+              icon: const LumenisIcon(Icons.folder_open_outlined, size: 18),
+              label: Text(
+                context.lumenisL10n.text('sh01.media.linked_workspace'),
+              ),
             ),
           ),
         ],
@@ -574,11 +570,33 @@ class _Sh01ScreenState extends State<Sh01Screen> {
               ('video', _copy('视频', 'Videos', '영상')),
               ('audio', _copy('播客', 'Podcasts', '팟캐스트')),
             ])
-              ChoiceChip(
+              TextButton(
                 key: Key('sh01-library-$kind'),
-                label: Text(label),
-                selected: _libraryKind == kind,
-                onSelected: (_) => _selectLibrary(kind),
+                onPressed: () => _selectLibrary(kind),
+                style: TextButton.styleFrom(
+                  foregroundColor: _libraryKind == kind
+                      ? palette.foreground
+                      : palette.muted,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  shape: const RoundedRectangleBorder(),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.only(bottom: 7),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: _libraryKind == kind
+                            ? palette.accentStrong
+                            : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                  ),
+                  child: Text(label),
+                ),
               ),
           ],
         ),
@@ -683,7 +701,7 @@ class _Sh01ScreenState extends State<Sh01Screen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final padded = Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 20),
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
           child: contents,
         );
         return constraints.hasBoundedHeight
@@ -700,257 +718,6 @@ class _Sh01ScreenState extends State<Sh01Screen> {
     }
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
-}
-
-enum _StudioObject { book, paper, film, microphone }
-
-class _CreationAction extends StatefulWidget {
-  const _CreationAction({
-    required this.title,
-    required this.object,
-    this.compact = false,
-    required this.color,
-    required this.onPressed,
-    super.key,
-  });
-  final String title;
-  final _StudioObject object;
-  final bool compact;
-  final Color color;
-  final VoidCallback? onPressed;
-  @override
-  State<_CreationAction> createState() => _CreationActionState();
-}
-
-class _CreationActionState extends State<_CreationAction> {
-  bool _hover = false, _focus = false, _pressed = false;
-  @override
-  Widget build(BuildContext context) {
-    final palette = LumenisTheme.of(context);
-    final active = _hover || _focus;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: AnimatedContainer(
-        duration: MediaQuery.disableAnimationsOf(context)
-            ? Duration.zero
-            : const Duration(milliseconds: 90),
-        transform: Matrix4.translationValues(
-          0,
-          _pressed ? 1 : (active ? -2 : 0),
-          0,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: _focus ? palette.accent : Colors.transparent,
-          ),
-          color: active
-              ? palette.surface.withValues(alpha: .45)
-              : Colors.transparent,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: widget.onPressed,
-            onHover: (v) => setState(() => _hover = v),
-            onFocusChange: (v) => setState(() => _focus = v),
-            onHighlightChanged: (v) => setState(() => _pressed = v),
-            borderRadius: BorderRadius.circular(10),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-              child: widget.compact
-                  ? Column(
-                      children: [
-                        ExcludeSemantics(
-                          child: CustomPaint(
-                            size: const Size(92, 74),
-                            painter: _StudioObjectPainter(
-                              widget.object,
-                              widget.color,
-                              palette,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          widget.title,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        ExcludeSemantics(
-                          child: CustomPaint(
-                            size: const Size(106, 86),
-                            painter: _StudioObjectPainter(
-                              widget.object,
-                              widget.color,
-                              palette,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            widget.title,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        LumenisIcon(Icons.add, size: 18, color: palette.muted),
-                      ],
-                    ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StudioObjectPainter extends CustomPainter {
-  const _StudioObjectPainter(this.object, this.accent, this.palette);
-  final _StudioObject object;
-  final Color accent;
-  final LumenisPalette palette;
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(size.width / 112, size.height / 92);
-    final dark = palette.brightness == Brightness.dark;
-    final paper = dark ? const Color(0xFFC4C6C2) : const Color(0xFFF7F6EF);
-    final metal = const Color(0xFF424B50);
-    final line = Paint()
-      ..color = metal.withValues(alpha: .5)
-      ..strokeWidth = 1;
-    void face(Rect rect, Color color, {double radius = 4}) {
-      final path = Path()
-        ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
-      canvas.drawShadow(path, Colors.black.withValues(alpha: .35), 3, false);
-      canvas.drawPath(
-        path,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color.lerp(color, Colors.white, .25)!,
-              color,
-              Color.lerp(color, Colors.black, .15)!,
-            ],
-          ).createShader(rect),
-      );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = Colors.white.withValues(alpha: .35)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = .7,
-      );
-    }
-
-    canvas.drawOval(
-      const Rect.fromLTWH(17, 78, 78, 7),
-      Paint()
-        ..color = Colors.black.withValues(alpha: .12)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
-    switch (object) {
-      case _StudioObject.book:
-        face(const Rect.fromLTWH(27, 14, 61, 64), accent);
-        face(const Rect.fromLTWH(31, 17, 55, 56), paper, radius: 2);
-        face(const Rect.fromLTWH(23, 10, 61, 60), accent);
-        canvas.drawLine(const Offset(32, 12), const Offset(32, 68), line);
-        for (var y = 0; y < 3; y++) {
-          canvas.drawLine(
-            Offset(45, 30.0 + y * 5),
-            Offset(y == 2 ? 62 : 72, 30.0 + y * 5),
-            Paint()
-              ..color = paper.withValues(alpha: .75)
-              ..strokeWidth = 1.4,
-          );
-        }
-      case _StudioObject.paper:
-        face(const Rect.fromLTWH(24, 17, 55, 62), paper, radius: 2);
-        face(const Rect.fromLTWH(29, 10, 55, 63), paper, radius: 2);
-        for (var y = 0; y < 5; y++) {
-          canvas.drawLine(
-            Offset(39, 25.0 + y * 7),
-            Offset(y == 4 ? 60 : 72, 25.0 + y * 7),
-            line,
-          );
-        }
-        canvas.save();
-        canvas.translate(80, 44);
-        canvas.rotate(.43);
-        face(const Rect.fromLTWH(-3, -26, 6, 49), accent, radius: 2);
-        canvas.drawPath(
-          Path()
-            ..moveTo(-3, 23)
-            ..lineTo(3, 23)
-            ..lineTo(0, 31)
-            ..close(),
-          Paint()..color = metal,
-        );
-        canvas.restore();
-      case _StudioObject.film:
-        face(const Rect.fromLTWH(19, 30, 75, 48), accent);
-        face(const Rect.fromLTWH(19, 18, 75, 16), metal, radius: 2);
-        final stripes = Paint()..color = paper;
-        for (var x = 28; x < 90; x += 20) {
-          canvas.drawPath(
-            Path()
-              ..moveTo(x.toDouble(), 19)
-              ..lineTo(x + 10, 19)
-              ..lineTo(x + 1, 33)
-              ..lineTo(x - 9, 33)
-              ..close(),
-            stripes,
-          );
-        }
-        canvas.drawPath(
-          Path()
-            ..moveTo(49, 44)
-            ..lineTo(49, 65)
-            ..lineTo(66, 54.5)
-            ..close(),
-          Paint()..color = paper.withValues(alpha: .9),
-        );
-      case _StudioObject.microphone:
-        face(const Rect.fromLTWH(35, 72, 43, 7), metal);
-        face(const Rect.fromLTWH(53, 49, 7, 24), metal, radius: 2);
-        final cradle = Path()
-          ..moveTo(36, 36)
-          ..lineTo(36, 47)
-          ..quadraticBezierTo(36, 66, 56, 66)
-          ..quadraticBezierTo(77, 66, 77, 47)
-          ..lineTo(77, 36);
-        canvas.drawPath(
-          cradle,
-          Paint()
-            ..color = accent
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 4,
-        );
-        face(const Rect.fromLTWH(43, 9, 27, 47), accent, radius: 14);
-        for (var y = 17; y <= 47; y += 5) {
-          canvas.drawLine(
-            Offset(49, y.toDouble()),
-            Offset(64, y.toDouble()),
-            line..strokeWidth = 1.5,
-          );
-        }
-    }
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_StudioObjectPainter old) =>
-      old.object != object || old.accent != accent || old.palette != palette;
 }
 
 class _ManuscriptFolio extends StatelessWidget {

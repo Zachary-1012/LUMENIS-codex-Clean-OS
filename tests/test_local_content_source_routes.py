@@ -282,12 +282,14 @@ def test_only_registered_handler_may_use_handler_owned_permission(local_client):
 
 
 def test_observed_size_limit_cleans_up_without_import(local_client, monkeypatch):
-    import experience_runtime
+    import shared_artifacts
 
     client, store, _app = local_client
-    monkeypatch.setattr(experience_runtime, "_CONTENT_SOURCE_IMPORT_MAX_BYTES", 16)
+    monkeypatch.setattr(shared_artifacts, "content_media_resource_budget", lambda: {
+        "available_bytes": 65536 + 32, "storage_capacity_bytes": 65536 + 32,
+        "chunk_bytes": 16, "buffer_bytes": 16, "disk_reserve_bytes": 0, "concurrent_jobs": 2})
     response = upload(client, store)
-    assert response.status_code == 413
+    assert response.status_code == 507
     assert rows(store) == []
 
 
@@ -697,9 +699,9 @@ def test_shared_import_cross_process_artifact_key_conflict_returns_existing(
             "shared_artifacts._register_artifact(**payload); print(main_db_path())"
         )
         child = subprocess.run(
-            [sys.executable, "-c", child_code],
+            [sys.executable, "-X", "utf8", "-c", child_code],
             input=json.dumps({**kwargs, "path": str(kwargs["path"])}),
-            text=True, capture_output=True, cwd=os.getcwd(), check=False,
+            text=True, encoding="utf-8", capture_output=True, cwd=os.getcwd(), check=False, timeout=30,
         )
         assert child.returncode == 0, child.stderr
         assert Path(child.stdout.strip()).resolve() == Path(

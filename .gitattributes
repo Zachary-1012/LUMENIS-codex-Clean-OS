@@ -15,6 +15,7 @@ contracts/experience/lumenis_app_binding_registry.json text eol=lf
 
 # Reviewed source inputs retain their exact original-byte hashes on every OS.
 config/collection-topic-seed-20261004.json -text
+vendor/lumenis-reuse-notices/windows-python/*.txt -text
 tests/fixtures/collector/native_public_captures_20261004.json -text whitespace=cr-at-eol
 
 # Codex project-doc budget (project_doc_max_bytes) is measured on checkout bytes;

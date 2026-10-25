@@ -7,6 +7,27 @@ import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/l10n/lumenis_localizations.dart';
 
 void main() {
+  testWidgets(
+    'commerce work navigation survives an unavailable scope without reading its data',
+    (tester) async {
+      final client = _ContractClient(
+        contextResponse: const {'ok': true, 'context': null},
+      );
+      final opened = <String>[];
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(client, onNavigate: opened.add));
+      await tester.pumpAndSettle();
+      for (final screen in ['CTH-03', 'CTH-04', 'CTH-10']) {
+        await tester.tap(find.byKey(ValueKey('cth01-open-$screen')));
+        await tester.pump();
+      }
+      expect(opened, ['CTH-03', 'CTH-04', 'CTH-10']);
+      expect(client.screenCalls, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('desktop leads with the real signal stream and returned fields', (
     tester,
   ) async {

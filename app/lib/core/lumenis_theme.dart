@@ -1,6 +1,34 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
+abstract final class LumenisSpace {
+  static const unit = 4.0;
+  static const tight = 8.0;
+  static const inset = 12.0;
+  static const control = 16.0;
+  static const section = 24.0;
+  static const gutter = 32.0;
+  static const chapter = 48.0;
+  static const touchTarget = 48.0;
+  static const railWidth = 216.0;
+  static const toolbarHeight = 58.0;
+  static const readingWidth = 940.0;
+}
+
+abstract final class LumenisMotion {
+  static const feedback = Duration(milliseconds: 90);
+  static const selection = Duration(milliseconds: 150);
+  static const panel = Duration(milliseconds: 250);
+  static const exit = Duration(milliseconds: 200);
+  static const transition = Duration(milliseconds: 300);
+  static const page = Duration(milliseconds: 400);
+
+  static Duration of(BuildContext context, Duration duration) =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false
+      ? Duration.zero
+      : duration;
+}
+
 /// Immutable neutral colors resolved from the nearest Material theme.
 @immutable
 class LumenisPalette extends ThemeExtension<LumenisPalette> {
@@ -138,15 +166,15 @@ class LumenisPalette extends ThemeExtension<LumenisPalette> {
 abstract final class LumenisTheme {
   // Compatibility tokens for older callers and semantic-only code. New
   // neutral color consumers should resolve LumenisTheme.of(context).
-  static const canvas = Color(0xFFF0F0EC);
-  static const surface = Color(0xFFFCFCF9);
-  static const surfaceRaised = Color(0xFFE2E5DF);
-  static const line = Color(0xFFC4CBC5);
-  static const foreground = Color(0xFF20292D);
-  static const muted = Color(0xFF505E63);
-  static const quiet = Color(0xFF59666B);
-  static const accent = Color(0xFF286653);
-  static const accentStrong = Color(0xFF214E40);
+  static const canvas = Color(0xFFF0F1E7);
+  static const surface = Color(0xFFFAFBF4);
+  static const surfaceRaised = Color(0xFFE2E7D9);
+  static const line = Color(0xFFB5BEAA);
+  static const foreground = Color(0xFF1D2B24);
+  static const muted = Color(0xFF4F5D52);
+  static const quiet = Color(0xFF566255);
+  static const accent = Color(0xFF355E3B);
+  static const accentStrong = Color(0xFF25492C);
 
   /// The least neutral tint that keeps the current text roles readable over
   /// any image pixel. Using the worst possible region avoids sampling misses
@@ -215,15 +243,15 @@ abstract final class LumenisTheme {
   );
 
   static const darkPalette = LumenisPalette(
-    canvas: Color(0xFF292E30),
-    surface: Color(0xFF202829),
-    surfaceRaised: Color(0xFF363E40),
-    line: Color(0xFF586264),
-    foreground: Color(0xFFEDF1ED),
-    muted: Color(0xFFB7C2BE),
-    quiet: Color(0xFFA5B3AE),
-    accent: Color(0xFF98DABE),
-    accentStrong: Color(0xFFB3E8CC),
+    canvas: Color(0xFF101A16),
+    surface: Color(0xFF17221C),
+    surfaceRaised: Color(0xFF263229),
+    line: Color(0xFF52634D),
+    foreground: Color(0xFFEEF3DB),
+    muted: Color(0xFFC1CAB4),
+    quiet: Color(0xFFAFBDA8),
+    accent: Color(0xFFB5DA91),
+    accentStrong: Color(0xFFC8E8A7),
     brightness: Brightness.dark,
   );
 
@@ -233,100 +261,80 @@ abstract final class LumenisTheme {
   static ThemeData get light => forPalette(lightPalette);
   static ThemeData get dark => forPalette(darkPalette);
 
-  static BoxDecoration chassis(LumenisPalette palette, {double radius = 0}) {
-    final dark = palette.brightness == Brightness.dark;
-    final base = palette.canvas.a < .5
-        ? (dark ? const Color(0xFF252E32) : const Color(0xFFE4E7E8))
-        : palette.canvas;
-    return BoxDecoration(
-      borderRadius: BorderRadius.circular(radius),
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Color.lerp(base, Colors.white, dark ? .06 : .35)!,
-          base,
-          Color.lerp(base, Colors.black, dark ? .10 : .03)!,
-        ],
-      ),
-    );
-  }
+  static BoxDecoration chassis(LumenisPalette palette, {double radius = 0}) =>
+      BoxDecoration(color: palette.canvas);
 
-  static BoxDecoration panel(
+  static ShapeDecoration panel(
     LumenisPalette palette, {
     double radius = 12,
     bool recessed = false,
-  }) {
-    final dark = palette.brightness == Brightness.dark;
-    final base = palette.canvas.a < .5
-        ? (dark ? const Color(0xFF303A3E) : const Color(0xFFE4E7E8))
-        : palette.canvas;
-    final face = recessed ? base : palette.surface;
-    final highlight = Color.lerp(face, Colors.white, dark ? .09 : .6)!;
-    final shadow = Colors.black.withValues(alpha: dark ? .3 : .12);
-    return BoxDecoration(
-      borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: palette.line.withValues(alpha: .65)),
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: recessed
-            ? [Color.lerp(face, palette.line, .22)!, face, face]
-            : [highlight, face, Color.lerp(face, palette.line, .05)!],
-        stops: recessed ? const [0, .025, 1] : const [0, .08, 1],
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: highlight,
-          offset: Offset(0, recessed ? 1 : -1),
-          blurRadius: 0,
-        ),
-        if (!recessed)
-          BoxShadow(color: shadow, offset: const Offset(0, 3), blurRadius: 12),
-      ],
-    );
-  }
+  }) => ShapeDecoration(
+    color: recessed ? palette.canvas : palette.surfaceRaised,
+    shape: LumenisPixelBorder(side: BorderSide(color: palette.line)),
+  );
+
+  static ShapeDecoration paper(LumenisPalette palette, {double radius = 16}) =>
+      ShapeDecoration(
+        color: palette.surface,
+        shape: LumenisPixelBorder(side: BorderSide(color: palette.line)),
+        shadows: [
+          BoxShadow(
+            color: palette.line.withValues(alpha: .32),
+            offset: const Offset(3, 3),
+          ),
+        ],
+      );
+
+  static ShapeDecoration keycap(
+    LumenisPalette palette, {
+    Color? tint,
+    double radius = 10,
+    bool selected = false,
+    bool pressed = false,
+  }) => ShapeDecoration(
+    color: selected
+        ? (tint ?? palette.accent).withValues(alpha: .12)
+        : palette.surface,
+    shape: LumenisPixelBorder(
+      step: 3,
+      side: BorderSide(color: selected ? tint ?? palette.accent : palette.line),
+    ),
+    shadows: [
+      if (!pressed && !selected)
+        BoxShadow(color: palette.line, offset: const Offset(2, 2)),
+    ],
+  );
 
   static Widget _buttonFace(
     BuildContext context,
     Set<WidgetState> states,
-    Widget? child,
-  ) {
+    Widget? child, {
+    bool raised = true,
+  }) {
     final palette = of(context);
     final pressed = states.contains(WidgetState.pressed);
     final disabled = states.contains(WidgetState.disabled);
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     return AnimatedContainer(
-      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 90),
-      transform: Matrix4.translationValues(0, pressed ? 1.5 : 0, 0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(9),
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Colors.white.withValues(
-              alpha: disabled
-                  ? .025
-                  : pressed
-                  ? 0
-                  : .13,
-            ),
-            Colors.black.withValues(alpha: pressed ? .08 : .035),
-          ],
+      duration: reduceMotion ? Duration.zero : LumenisMotion.feedback,
+      transform: Matrix4.translationValues(
+        pressed && !reduceMotion ? 1 : 0,
+        pressed && !reduceMotion ? 1 : 0,
+        0,
+      ),
+      decoration: ShapeDecoration(
+        color: pressed ? palette.foreground.withValues(alpha: .06) : null,
+        shape: LumenisPixelBorder(
+          step: 2,
+          side: raised
+              ? BorderSide(
+                  color: palette.foreground.withValues(
+                    alpha: disabled ? .04 : .12,
+                  ),
+                )
+              : BorderSide.none,
         ),
-        border: Border.all(
-          color: palette.foreground.withValues(alpha: disabled ? .05 : .13),
-        ),
-        boxShadow: [
-          if (!pressed && !disabled)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: .13),
-              offset: const Offset(0, 2),
-              blurRadius: 2,
-            ),
-        ],
       ),
       child: child,
     );
@@ -337,6 +345,41 @@ abstract final class LumenisTheme {
     final onAccent = isLight
         ? const Color(0xFFFFFFFF)
         : const Color(0xFF151619);
+    const controlShape = LumenisPixelBorder(step: 2);
+    final frameShape = LumenisPixelBorder(
+      step: 4,
+      side: BorderSide(color: palette.line),
+    );
+    final focusSide = WidgetStateProperty.resolveWith<BorderSide>((states) {
+      if (states.contains(WidgetState.disabled)) {
+        return BorderSide(color: palette.line.withValues(alpha: .5));
+      }
+      if (states.contains(WidgetState.focused)) {
+        return BorderSide(color: palette.accentStrong, width: 2);
+      }
+      return BorderSide(
+        color: states.contains(WidgetState.hovered)
+            ? palette.muted
+            : palette.line,
+      );
+    });
+    final overlay = WidgetStateProperty.resolveWith<Color?>((states) {
+      if (states.contains(WidgetState.pressed)) {
+        return palette.accent.withValues(alpha: .14);
+      }
+      if (states.contains(WidgetState.focused)) {
+        return palette.accent.withValues(alpha: .10);
+      }
+      if (states.contains(WidgetState.hovered)) {
+        return palette.accent.withValues(alpha: .06);
+      }
+      return null;
+    });
+    OutlineInputBorder inputBorder(Color color, [double width = 1]) =>
+        OutlineInputBorder(
+          borderRadius: BorderRadius.zero,
+          borderSide: BorderSide(color: color, width: width),
+        );
     return ThemeData(
       useMaterial3: true,
       fontFamily: 'LumenisSansSC',
@@ -367,102 +410,460 @@ abstract final class LumenisTheme {
       canvasColor: palette.canvas,
       dividerColor: palette.line,
       visualDensity: VisualDensity.standard,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
+      splashFactory: NoSplash.splashFactory,
+      appBarTheme: AppBarTheme(
+        backgroundColor: palette.canvas,
+        foregroundColor: palette.foreground,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        titleTextStyle: TextStyle(
+          color: palette.foreground,
+          fontFamily: 'LumenisSansSC',
+          fontFamilyFallback: const ['LumenisSansKR'],
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: const WidgetStatePropertyAll(5),
+        radius: Radius.zero,
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => palette.muted.withValues(
+            alpha: states.contains(WidgetState.dragged) ? .65 : .3,
+          ),
+        ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: palette.accentStrong,
+        selectionColor: palette.accent.withValues(alpha: .20),
+        selectionHandleColor: palette.accentStrong,
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style:
+            IconButton.styleFrom(
+              minimumSize: const Size.square(LumenisSpace.touchTarget),
+              foregroundColor: palette.muted,
+              shape: controlShape,
+            ).copyWith(
+              overlayColor: overlay,
+              animationDuration: LumenisMotion.feedback,
+              side: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.focused)
+                    ? BorderSide(color: palette.accentStrong, width: 2)
+                    : BorderSide.none,
+              ),
+            ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: palette.surface,
+        selectedColor: palette.surfaceRaised,
+        secondarySelectedColor: palette.surfaceRaised,
+        side: BorderSide(color: palette.line),
+        shape: controlShape,
+        labelStyle: TextStyle(
+          color: palette.foreground,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        showCheckmark: true,
+        checkmarkColor: palette.accentStrong,
+        disabledColor: palette.surfaceRaised.withValues(alpha: .5),
+      ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: palette.surface.withValues(alpha: .98),
         modalBackgroundColor: palette.surface.withValues(alpha: .98),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: frameShape,
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: palette.surface.withValues(alpha: .98),
         surfaceTintColor: Colors.transparent,
+        shape: frameShape,
+        elevation: 6,
+        shadowColor: palette.foreground.withValues(alpha: .12),
       ),
       cardTheme: CardThemeData(
         color: palette.surface,
-        elevation: 1,
+        elevation: 0,
         shadowColor: Colors.black.withValues(alpha: .12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: palette.line),
-        ),
+        shape: frameShape,
         surfaceTintColor: Colors.transparent,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: palette.surface,
-        contentPadding: const EdgeInsets.all(16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: palette.line),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 15,
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: palette.line),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: palette.accent, width: 1.5),
-        ),
+        border: inputBorder(palette.line),
+        enabledBorder: inputBorder(palette.line),
+        focusedBorder: inputBorder(palette.accentStrong, 2),
+        errorBorder: inputBorder(palette.danger),
+        focusedErrorBorder: inputBorder(palette.danger, 2),
+        disabledBorder: inputBorder(palette.line.withValues(alpha: .5)),
+        hintStyle: TextStyle(color: palette.quiet, fontWeight: FontWeight.w400),
+        labelStyle: TextStyle(color: palette.muted, fontSize: 14),
+        errorStyle: TextStyle(color: palette.danger, fontSize: 13, height: 1.4),
+        errorMaxLines: 3,
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: palette.accentStrong,
-          foregroundColor: onAccent,
-          minimumSize: const Size(48, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        ).copyWith(backgroundBuilder: _buttonFace),
+        style:
+            FilledButton.styleFrom(
+              backgroundColor: palette.accentStrong,
+              foregroundColor: onAccent,
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: controlShape,
+            ).copyWith(
+              backgroundBuilder: _buttonFace,
+              animationDuration: LumenisMotion.feedback,
+              side: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.focused)
+                    ? BorderSide(color: palette.foreground, width: 2)
+                    : BorderSide.none,
+              ),
+            ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: palette.canvas,
-          foregroundColor: palette.foreground,
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          minimumSize: const Size(48, 44),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        ).copyWith(backgroundBuilder: _buttonFace),
+        style:
+            ElevatedButton.styleFrom(
+              backgroundColor: palette.surfaceRaised.withValues(alpha: .45),
+              foregroundColor: palette.foreground,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              minimumSize: const Size(48, 48),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: controlShape,
+            ).copyWith(
+              backgroundBuilder: (context, states, child) =>
+                  _buttonFace(context, states, child, raised: false),
+              side: focusSide,
+              overlayColor: overlay,
+              animationDuration: LumenisMotion.feedback,
+            ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          backgroundColor: palette.surface,
-          foregroundColor: palette.foreground,
-          minimumSize: const Size(48, 44),
-          side: BorderSide(color: palette.line),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
-        ),
+        style:
+            OutlinedButton.styleFrom(
+              backgroundColor: palette.surface,
+              foregroundColor: palette.foreground,
+              minimumSize: const Size(48, 48),
+              side: BorderSide(color: palette.line),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              shape: controlShape,
+            ).copyWith(
+              side: focusSide,
+              overlayColor: overlay,
+              animationDuration: LumenisMotion.feedback,
+            ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style:
+            TextButton.styleFrom(
+              foregroundColor: palette.accentStrong,
+              minimumSize: const Size.square(LumenisSpace.touchTarget),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              shape: controlShape,
+            ).copyWith(
+              overlayColor: overlay,
+              animationDuration: LumenisMotion.feedback,
+            ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: palette.surface,
         surfaceTintColor: Colors.transparent,
-        elevation: 18,
+        elevation: 0,
         shadowColor: Colors.black.withValues(alpha: .22),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: palette.line),
+        shape: frameShape,
+      ),
+      drawerTheme: DrawerThemeData(
+        backgroundColor: palette.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: frameShape,
+        endShape: frameShape,
+        scrimColor: palette.foreground.withValues(alpha: .26),
+      ),
+      navigationDrawerTheme: NavigationDrawerThemeData(
+        backgroundColor: palette.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        indicatorShape: controlShape,
+        indicatorColor: palette.surfaceRaised,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: palette.foreground,
+            fontSize: 14,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w400,
+          ),
         ),
+      ),
+      dataTableTheme: DataTableThemeData(
+        headingRowColor: WidgetStatePropertyAll(palette.surfaceRaised),
+        dataRowColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accent.withValues(alpha: .10)
+              : states.contains(WidgetState.hovered)
+              ? palette.accent.withValues(alpha: .05)
+              : Colors.transparent,
+        ),
+        headingTextStyle: TextStyle(
+          color: palette.foreground,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
+        dataTextStyle: TextStyle(
+          color: palette.foreground,
+          fontSize: 14,
+          height: 1.5,
+        ),
+        dataRowMinHeight: 48,
+        dataRowMaxHeight: double.infinity,
+        horizontalMargin: 16,
+        columnSpacing: 28,
+        dividerThickness: 1,
+      ),
+      searchBarTheme: SearchBarThemeData(
+        backgroundColor: WidgetStatePropertyAll(palette.surface),
+        surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+        elevation: const WidgetStatePropertyAll(0),
+        shape: const WidgetStatePropertyAll(controlShape),
+        side: focusSide,
+        overlayColor: overlay,
+        padding: const WidgetStatePropertyAll(
+          EdgeInsets.symmetric(horizontal: 16),
+        ),
+        textStyle: WidgetStatePropertyAll(
+          TextStyle(color: palette.foreground, fontSize: 14),
+        ),
+        hintStyle: WidgetStatePropertyAll(
+          TextStyle(color: palette.quiet, fontSize: 14),
+        ),
+      ),
+      searchViewTheme: SearchViewThemeData(
+        backgroundColor: palette.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: frameShape,
+        dividerColor: palette.line,
+        headerTextStyle: TextStyle(color: palette.foreground, fontSize: 16),
+        headerHintStyle: TextStyle(color: palette.quiet, fontSize: 16),
+      ),
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: palette.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: frameShape,
+        headerBackgroundColor: palette.surfaceRaised,
+        headerForegroundColor: palette.foreground,
+        dividerColor: palette.line,
+        dayShape: const WidgetStatePropertyAll(controlShape),
+        dayForegroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? palette.quiet
+              : states.contains(WidgetState.selected)
+              ? onAccent
+              : palette.foreground,
+        ),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accentStrong
+              : Colors.transparent,
+        ),
+        dayOverlayColor: overlay,
+        todayBorder: BorderSide(color: palette.accentStrong, width: 2),
+        rangePickerBackgroundColor: palette.surface,
+        rangePickerSurfaceTintColor: Colors.transparent,
+        rangePickerShape: frameShape,
+        rangeSelectionBackgroundColor: palette.accent.withValues(alpha: .12),
+        rangeSelectionOverlayColor: overlay,
+      ),
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: palette.surface,
+        elevation: 0,
+        shape: frameShape,
+        hourMinuteShape: controlShape,
+        hourMinuteColor: palette.surfaceRaised,
+        hourMinuteTextColor: palette.foreground,
+        dayPeriodShape: controlShape,
+        dayPeriodBorderSide: BorderSide(color: palette.line),
+        dayPeriodColor: palette.surfaceRaised,
+        dayPeriodTextColor: palette.foreground,
+        dialBackgroundColor: palette.surfaceRaised,
+        dialHandColor: palette.accentStrong,
+        entryModeIconColor: palette.foreground,
+      ),
+      dividerTheme: DividerThemeData(
+        color: palette.line,
+        thickness: 1,
+        space: 1,
+      ),
+      listTileTheme: ListTileThemeData(
+        minTileHeight: 48,
+        horizontalTitleGap: 12,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        shape: controlShape,
+        selectedColor: palette.accentStrong,
+        selectedTileColor: palette.accent.withValues(alpha: .08),
+        iconColor: palette.muted,
+        textColor: palette.foreground,
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          shape: const WidgetStatePropertyAll(controlShape),
+          side: focusSide,
+          overlayColor: overlay,
+          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+          foregroundColor: WidgetStatePropertyAll(palette.foreground),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? palette.surfaceRaised
+                : palette.surface,
+          ),
+          animationDuration: LumenisMotion.feedback,
+        ),
+      ),
+      menuTheme: MenuThemeData(
+        style: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(palette.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(frameShape),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
+        ),
+      ),
+      dropdownMenuTheme: DropdownMenuThemeData(
+        textStyle: TextStyle(color: palette.foreground, fontSize: 14),
+        menuStyle: MenuStyle(
+          backgroundColor: WidgetStatePropertyAll(palette.surface),
+          surfaceTintColor: const WidgetStatePropertyAll(Colors.transparent),
+          shape: WidgetStatePropertyAll(frameShape),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(6)),
+          elevation: const WidgetStatePropertyAll(0),
+          side: WidgetStatePropertyAll(BorderSide(color: palette.line)),
+        ),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? palette.line
+              : states.contains(WidgetState.selected)
+              ? palette.accentStrong
+              : palette.muted,
+        ),
+        overlayColor: overlay,
+        materialTapTargetSize: MaterialTapTargetSize.padded,
+      ),
+      expansionTileTheme: ExpansionTileThemeData(
+        backgroundColor: palette.surface,
+        collapsedBackgroundColor: Colors.transparent,
+        iconColor: palette.accentStrong,
+        collapsedIconColor: palette.muted,
+        textColor: palette.foreground,
+        collapsedTextColor: palette.foreground,
+        shape: Border(bottom: BorderSide(color: palette.line)),
+        collapsedShape: Border(bottom: BorderSide(color: palette.line)),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      ),
+      menuButtonTheme: MenuButtonThemeData(
+        style: ButtonStyle(
+          shape: const WidgetStatePropertyAll(controlShape),
+          overlayColor: overlay,
+          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+          foregroundColor: WidgetStatePropertyAll(palette.foreground),
+          textStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 14)),
+        ),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        shape: const RoundedRectangleBorder(),
+        side: BorderSide(color: palette.muted, width: 1.5),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? palette.accentStrong
+              : palette.surface,
+        ),
+        checkColor: WidgetStatePropertyAll(onAccent),
+        overlayColor: overlay,
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: palette.foreground,
+        unselectedLabelColor: palette.muted,
+        dividerColor: palette.line,
+        indicatorColor: palette.accentStrong,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        overlayColor: overlay,
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: palette.foreground,
+        contentTextStyle: TextStyle(
+          color: palette.surface.withValues(alpha: 1),
+          fontSize: 14,
+          height: 1.5,
+        ),
+        actionTextColor: palette.surface.withValues(alpha: 1),
+        shape: const LumenisPixelBorder(step: 3),
+        elevation: 0,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: palette.accentStrong,
+        linearTrackColor: palette.surfaceRaised,
+        circularTrackColor: palette.surfaceRaised,
+        linearMinHeight: 3,
       ),
       sliderTheme: SliderThemeData(
         activeTrackColor: palette.accent,
         inactiveTrackColor: palette.line,
         thumbColor: palette.surface,
         overlayColor: palette.accent.withValues(alpha: .12),
-        trackHeight: 4,
-        thumbShape: const RoundSliderThumbShape(
-          enabledThumbRadius: 9,
-          elevation: 3,
-        ),
+        disabledThumbColor: palette.line,
+        disabledActiveTrackColor: palette.line,
+        disabledInactiveTrackColor: palette.line.withValues(alpha: .35),
+        valueIndicatorColor: palette.foreground,
+        valueIndicatorTextStyle: TextStyle(color: palette.surface),
+        trackHeight: 3,
+        trackShape: const RectangularSliderTrackShape(),
+        thumbShape: const _PixelSliderThumb(),
       ),
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStatePropertyAll(palette.surface),
         trackColor: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.selected)
+          (states) => states.contains(WidgetState.disabled)
+              ? palette.line.withValues(alpha: .35)
+              : states.contains(WidgetState.selected)
               ? palette.accent
               : palette.line,
         ),
+        overlayColor: overlay,
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.focused)
+              ? palette.accentStrong
+              : Colors.transparent,
+        ),
+        trackOutlineWidth: const WidgetStatePropertyAll(2),
       ),
       tooltipTheme: TooltipThemeData(
-        textStyle: TextStyle(color: onAccent, fontSize: 12),
-        decoration: BoxDecoration(
+        textStyle: TextStyle(
+          color: palette.surface.withValues(alpha: 1),
+          fontSize: 12,
+          height: 1.4,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        waitDuration: const Duration(milliseconds: 500),
+        decoration: ShapeDecoration(
           color: palette.foreground,
-          borderRadius: const BorderRadius.all(Radius.circular(6)),
+          shape: const LumenisPixelBorder(step: 2),
         ),
       ),
       textTheme: TextTheme(
@@ -570,5 +971,106 @@ abstract final class LumenisTheme {
       splashColor: palette.accent.withValues(alpha: 0.08),
       highlightColor: palette.accent.withValues(alpha: 0.04),
     );
+  }
+}
+
+class _PixelSliderThumb extends SliderComponentShape {
+  const _PixelSliderThumb();
+
+  @override
+  Size getPreferredSize(bool isEnabled, bool isDiscrete) => const Size(18, 22);
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset center, {
+    required Animation<double> activationAnimation,
+    required Animation<double> enableAnimation,
+    required bool isDiscrete,
+    required TextPainter labelPainter,
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required TextDirection textDirection,
+    required double value,
+    required double textScaleFactor,
+    required Size sizeWithOverflow,
+  }) {
+    final color = Color.lerp(
+      sliderTheme.disabledThumbColor,
+      sliderTheme.thumbColor,
+      enableAnimation.value,
+    )!;
+    final ink = Color.lerp(
+      sliderTheme.disabledActiveTrackColor,
+      sliderTheme.activeTrackColor,
+      enableAnimation.value,
+    )!;
+    const shape = LumenisPixelBorder(step: 2);
+    final rect = Rect.fromCenter(center: center, width: 18, height: 22);
+    final canvas = context.canvas;
+    canvas.drawPath(shape.getOuterPath(rect), Paint()..color = color);
+    shape
+        .copyWith(side: BorderSide(color: ink, width: 1.5))
+        .paint(canvas, rect);
+    canvas.drawRect(
+      Rect.fromCenter(center: center, width: 2, height: 8),
+      Paint()..color = ink,
+    );
+  }
+}
+
+class LumenisPixelBorder extends OutlinedBorder {
+  const LumenisPixelBorder({super.side, this.step = 4});
+
+  final double step;
+
+  Path _path(Rect rect) {
+    final s = step.clamp(0.0, rect.shortestSide / 6);
+    return Path()
+      ..moveTo(rect.left + 2 * s, rect.top)
+      ..lineTo(rect.right - 2 * s, rect.top)
+      ..lineTo(rect.right - 2 * s, rect.top + s)
+      ..lineTo(rect.right - s, rect.top + s)
+      ..lineTo(rect.right - s, rect.top + 2 * s)
+      ..lineTo(rect.right, rect.top + 2 * s)
+      ..lineTo(rect.right, rect.bottom - 2 * s)
+      ..lineTo(rect.right - s, rect.bottom - 2 * s)
+      ..lineTo(rect.right - s, rect.bottom - s)
+      ..lineTo(rect.right - 2 * s, rect.bottom - s)
+      ..lineTo(rect.right - 2 * s, rect.bottom)
+      ..lineTo(rect.left + 2 * s, rect.bottom)
+      ..lineTo(rect.left + 2 * s, rect.bottom - s)
+      ..lineTo(rect.left + s, rect.bottom - s)
+      ..lineTo(rect.left + s, rect.bottom - 2 * s)
+      ..lineTo(rect.left, rect.bottom - 2 * s)
+      ..lineTo(rect.left, rect.top + 2 * s)
+      ..lineTo(rect.left + s, rect.top + 2 * s)
+      ..lineTo(rect.left + s, rect.top + s)
+      ..lineTo(rect.left + 2 * s, rect.top + s)
+      ..close();
+  }
+
+  @override
+  EdgeInsetsGeometry get dimensions => EdgeInsets.all(side.width);
+
+  @override
+  LumenisPixelBorder copyWith({BorderSide? side}) =>
+      LumenisPixelBorder(side: side ?? this.side, step: step);
+
+  @override
+  ShapeBorder scale(double t) =>
+      LumenisPixelBorder(side: side.scale(t), step: step * t);
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) => _path(rect);
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
+      _path(rect.deflate(side.width));
+
+  @override
+  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
+    if (side.style == BorderStyle.none) return;
+    canvas.drawPath(_path(rect.deflate(side.width / 2)), side.toPaint());
   }
 }

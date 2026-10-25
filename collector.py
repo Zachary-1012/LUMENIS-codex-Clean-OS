@@ -58,9 +58,9 @@ _XHS_MAX_WORKER_CHUNK_SECONDS = 300.0
 
 def _xhs_raw_checkpoint_root(*, create=False):
     """Resolve the existing private data root used for immutable XHS raw chunks."""
-    from xhs_cookie_bridge import PRIVATE_DATA_DIR
+    from xhs_cookie_bridge import RUNTIME_PRIVATE_DATA_DIR
 
-    private_root = os.path.realpath(os.path.abspath(PRIVATE_DATA_DIR))
+    private_root = os.path.realpath(os.path.abspath(RUNTIME_PRIVATE_DATA_DIR))
     raw_root = os.path.realpath(os.path.join(private_root, _XHS_RAW_CHECKPOINT_SUBDIR))
     try:
         if os.path.normcase(os.path.commonpath((private_root, raw_root))) != os.path.normcase(private_root):
@@ -520,7 +520,8 @@ def _get_xhs_risk_engine():
         if enabled:
             from lumenis.system.collector.guard.risk_engine import RiskEngine
             # T-P0A-1: 熔断/冷却状态跨进程重启持久化（data/collector_* 已 gitignore，不入库）
-            _risk_state = os.path.join('data', 'collector_guard', 'xhs_risk_state.json')
+            from lumenis.shared.database.registry import get_data_dir
+            _risk_state = os.path.join(get_data_dir(), 'collector_guard', 'xhs_risk_state.json')
             _XHS_RISK = RiskEngine(state_file=_risk_state)
         else:
             _XHS_RISK = False
@@ -701,7 +702,7 @@ def _norm_cdp_note(rec):
 
 def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None,
                     resume_path=None, time_budget=None, worker_chunk_seconds=300,
-                    acquisition_fingerprint=None, detail_media_mode='legacy'):
+                    acquisition_fingerprint=None, detail_media_mode='legacy', detail_url=None):
     """Use the configured server browser worker with the existing XHS collector."""
     import math
     if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
@@ -762,6 +763,8 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
         cmd.extend(['--acquisition-fingerprint', acquisition_fingerprint])
     if resume_path:
         cmd.extend(['--resume-from', str(resume_path)])
+    if detail_url is not None:
+        cmd.extend(['--detail-url', detail_url])
     invocation_budget = min(worker_chunk_seconds, time_budget) if time_budget is not None else worker_chunk_seconds
     try:
         p = subprocess.run(cmd, cwd=SCRIPT_DIR, capture_output=True, text=True, encoding='utf-8',
@@ -878,7 +881,7 @@ def _is_noise_keyword(k):
 def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                         region=None, cdp_port=None, kos_only=False, account=None, resume_path=None,
                         time_budget=None, worker_chunk_seconds=300, acquisition_fingerprint=None,
-                        detail_media_mode='legacy'):
+                        detail_media_mode='legacy', detail_url=None):
     """多通道搜索 RedNote：仅走获准的香港/国际身份与注册 SYSTEM 会话。
     返回 dict: {keyword,total,notes,error,channel,region}。风控态显式返回，不当作普通0条。
     region: 当前生产值为 'intl'；'cn' 明确返回策略阻断，不触发任何下游进程。
@@ -886,6 +889,15 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
     if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
         return {'keyword': keyword, 'total': 0, 'notes': [],
                 'error': 'INVALID_DETAIL_MEDIA_MODE', 'channel': 'policy'}
+    if detail_url is not None:
+        try:
+            from lumenis.system.collector.adapters.xhs import xhs_detail_source_reference
+            if xhs_detail_source_reference(detail_url) != keyword:
+                raise ValueError('DETAIL_SOURCE_UNVERIFIED')
+            validate_xhs_detail_target(detail_url)
+        except (ValueError, TypeError):
+            return {'keyword': keyword, 'total': 0, 'notes': [],
+                    'error': 'DETAIL_SOURCE_UNVERIFIED', 'channel': 'policy'}
     policy_gate = _collection_policy_gate(region=region or 'intl', account=account)
     if not policy_gate.get('ok'):
         return {
@@ -928,7 +940,7 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
         # 采集原始产物属于运行数据，不得回写唯一源码目录；沿用账号桥的
         # 受保护数据根目录，保证直接调用与 API/调度器使用同一落盘边界。
         try:
-            from xhs_cookie_bridge import PRIVATE_DATA_DIR as _private_data_dir
+            from xhs_cookie_bridge import RUNTIME_PRIVATE_DATA_DIR as _private_data_dir
         except Exception as exc:
             return {
                 'keyword': keyword, 'total': 0, 'notes': [],
@@ -976,10 +988,32 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                              resume_path=resume_path, time_budget=time_budget,
                              worker_chunk_seconds=worker_chunk_seconds,
                              acquisition_fingerprint=acquisition_fingerprint,
-                             detail_media_mode=detail_media_mode)
+                             detail_media_mode=detail_media_mode,
+                             **({'detail_url': detail_url} if detail_url is not None else {}))
     result['region'] = region
     result['channel'] = 'registered_system_browser_worker'
     return result
+
+
+def validate_xhs_detail_target(value):
+    """Only an exact note identity on the approved HK/international source."""
+    from lumenis.system.collector.adapters.xhs import validate_xhs_detail_target as validate
+    return validate(value)
+
+
+def detail_xiaohongshu(content_id, *, source_url=None, **kwargs):
+    """Independent detail uses the same policy/session/worker/checkpoint owner."""
+    try:
+        from lumenis.system.collector.adapters.xhs import xhs_detail_source_reference
+        url = xhs_detail_source_reference(content_id)
+        source_url = validate_xhs_detail_target(source_url or content_id)
+        if xhs_detail_source_reference(source_url) != url:
+            raise ValueError('DETAIL_SOURCE_UNVERIFIED')
+    except (TypeError, ValueError):
+        return {'keyword': '', 'total': 0, 'notes': [],
+                'error': 'DETAIL_SOURCE_UNVERIFIED', 'channel': 'policy'}
+    kwargs.pop('detail_url', None)
+    return search_xiaohongshu(url, detail_url=source_url, **kwargs)
 
 
 def _collect_one_keyword(guard, kw, kw_scroll, kw_details, account=None):

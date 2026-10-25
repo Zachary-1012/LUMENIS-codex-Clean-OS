@@ -28,13 +28,20 @@ class Acc02Screen extends StatefulWidget {
 }
 
 class _Acc02ScreenState extends State<Acc02Screen> {
+  late final CoreAcc02Repository _coreRepository = CoreAcc02Repository(
+    client: widget.client,
+  );
   late final Acc02ViewModel _viewModel = Acc02ViewModel(
-    repository: widget.repository ?? CoreAcc02Repository(client: widget.client),
+    repository: widget.repository ?? _coreRepository,
   );
   final TextEditingController _searchController = TextEditingController();
-  final ScrollController _pageScrollController = ScrollController();
   String? _selectedId;
   String _query = '';
+  String _directoryDomain = 'CTH';
+  bool _registrationBusy = false;
+  String? _registrationMessage;
+  Map<String, String> _registrationDraft = {};
+  List<Map<String, dynamic>>? _pendingRegistration;
 
   @override
   void initState() {
@@ -49,7 +56,6 @@ class _Acc02ScreenState extends State<Acc02Screen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _pageScrollController.dispose();
     _viewModel.dispose();
     super.dispose();
   }
@@ -61,15 +67,125 @@ class _Acc02ScreenState extends State<Acc02Screen> {
       child: SafeArea(
         child: AnimatedBuilder(
           animation: _viewModel,
-          builder: (context, _) => switch (_viewModel.phase) {
-            Acc02LoadPhase.loading => const _LoadingState(),
-            Acc02LoadPhase.failed => _FailureState(
-              kind: _viewModel.failureKind!,
-              onRetry: _viewModel.refresh,
-            ),
-            Acc02LoadPhase.ready => _buildReady(context, _viewModel.snapshot!),
-          },
+          builder: (context, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _directoryHeader(),
+              const Divider(),
+              Expanded(
+                child: switch (_viewModel.phase) {
+                  Acc02LoadPhase.loading => const _LoadingState(),
+                  Acc02LoadPhase.failed => _FailureState(
+                    kind: _viewModel.failureKind!,
+                    onRetry: _viewModel.refresh,
+                  ),
+                  Acc02LoadPhase.ready => _buildReady(
+                    context,
+                    _viewModel.snapshot!,
+                  ),
+                },
+              ),
+            ],
+          ),
         ),
+      ),
+    );
+  }
+
+  Widget _directoryHeader() {
+    final selectionPending =
+        _viewModel.isCandidateNavigationLocked || _registrationBusy;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.lumenisL10n.text('screen.ACC-02'),
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              DropdownButton<String>(
+                key: const ValueKey('acc02-directory-domain'),
+                value: _directoryDomain,
+                items: [
+                  DropdownMenuItem(
+                    value: 'CTH',
+                    child: Text(
+                      _copy(
+                        context,
+                        zh: '经营主体',
+                        en: 'Operating subjects',
+                        ko: '운영 주체',
+                      ),
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'BMP',
+                    child: Text(
+                      _copy(context, zh: '品牌', en: 'Brands', ko: '브랜드'),
+                    ),
+                  ),
+                ],
+                onChanged: selectionPending
+                    ? null
+                    : (domain) async {
+                        if (domain == null || domain == _directoryDomain) {
+                          return;
+                        }
+                        setState(() {
+                          _directoryDomain = domain;
+                          _selectedId = null;
+                        });
+                        _coreRepository.domainId = domain;
+                        await _viewModel.refresh();
+                      },
+              ),
+              TextButton.icon(
+                key: const ValueKey('acc02-add-subject'),
+                onPressed: selectionPending || _pendingRegistration != null
+                    ? null
+                    : _registerSubject,
+                icon: const Icon(Icons.add),
+                label: Text(
+                  _copy(context, zh: '添加主体', en: 'Add subject', ko: '주체 추가'),
+                ),
+              ),
+              if (_pendingRegistration != null && !_registrationBusy)
+                TextButton(
+                  key: const ValueKey('acc02-retry-registration'),
+                  onPressed: _registerSubject,
+                  child: Text(
+                    _copy(
+                      context,
+                      zh: '重新核对登记',
+                      en: 'Reconcile registration',
+                      ko: '등록 재확인',
+                    ),
+                  ),
+                ),
+              if (_registrationBusy)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          if (_registrationMessage != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(_registrationMessage!),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -88,22 +204,26 @@ class _Acc02ScreenState extends State<Acc02Screen> {
         _firstSubject(snapshot.subjects, _selectedId);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 1000;
+        final wide = constraints.maxWidth >= 900;
         final inset = constraints.maxWidth < 680 ? 18.0 : 34.0;
-        final selectionPending = _viewModel.isCandidateNavigationLocked;
         final retryEnabled =
-            !_viewModel.isSelectionPending && !_viewModel.isRefreshing;
+            !_viewModel.isSelectionPending &&
+            !_viewModel.isRefreshing &&
+            !_registrationBusy;
         final list = _SubjectList(
           subjects: subjects,
           selectedId: _selectedId,
           searchController: _searchController,
           state: snapshot.subjectState,
-          bounded: wide,
+          bounded: true,
           onRetry: _viewModel.refresh,
           retryEnabled: retryEnabled,
-          candidateNavigationEnabled: !selectionPending,
+          candidateNavigationEnabled:
+              !_viewModel.isCandidateNavigationLocked && !_registrationBusy,
           onSelect: (subject) {
-            if (_viewModel.isCandidateNavigationLocked) return;
+            if (_viewModel.isCandidateNavigationLocked || _registrationBusy) {
+              return;
+            }
             final previousIndex = subjects.indexWhere(
               (item) => item.id == _selectedId,
             );
@@ -174,51 +294,33 @@ class _Acc02ScreenState extends State<Acc02Screen> {
           child: detail,
         );
 
-        return SingleChildScrollView(
+        return Padding(
           key: const ValueKey<String>('acc02-page-scroll'),
-          controller: _pageScrollController,
-          padding: EdgeInsets.fromLTRB(inset, 26, inset, 40),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1320),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _Heading(
-                    title: context.lumenisL10n.text('screen.ACC-02'),
-                    subtitle: _copy(
-                      context,
-                      zh: '选择要关注的项目或品牌，再确认查看范围。',
-                      en: 'Choose the project or brand you want to focus on, then confirm the view scope.',
-                      ko: '집중할 프로젝트 또는 브랜드를 선택한 뒤 보기 범위를 확인하세요.',
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _ContextBanner(
-                    snapshot: snapshot,
-                    onRetry: _viewModel.refresh,
-                    retryEnabled: retryEnabled,
-                    selectionPending: _viewModel.isSelectionPending,
-                    readbackPending: _viewModel.needsReadback,
-                  ),
-                  const SizedBox(height: 16),
-                  if (wide)
-                    SizedBox(
-                      height: 540,
-                      child: Row(
+          padding: EdgeInsets.fromLTRB(inset, 16, inset, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ContextBanner(
+                snapshot: snapshot,
+                onRetry: _viewModel.refresh,
+                retryEnabled: retryEnabled,
+                selectionPending: _viewModel.isSelectionPending,
+                readbackPending: _viewModel.needsReadback,
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: wide
+                    ? Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Expanded(flex: 6, child: list),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 24),
                           Expanded(flex: 5, child: inspector),
                         ],
-                      ),
-                    )
-                  else
-                    list,
-                ],
+                      )
+                    : list,
               ),
-            ),
+            ],
           ),
         );
       },
@@ -226,6 +328,279 @@ class _Acc02ScreenState extends State<Acc02Screen> {
   }
 
   int _transitionDirection = 1;
+
+  Future<List<Map<String, dynamic>>?> _registrationForm() async {
+    final fields = {
+      'name_zh': _copy(context, zh: '中文名称', en: 'Chinese name', ko: '중국어 이름'),
+      'name_en': _copy(context, zh: '英文名称', en: 'English name', ko: '영어 이름'),
+      'industry': _copy(
+        context,
+        zh: '行业（可选）',
+        en: 'Industry (optional)',
+        ko: '업종 (선택)',
+      ),
+      'keywords': _copy(
+        context,
+        zh: '相关名称（可选，逗号分隔）',
+        en: 'Related names (optional, comma separated)',
+        ko: '관련 이름 (선택, 쉼표 구분)',
+      ),
+    };
+    final controllers = {
+      for (final key in fields.keys)
+        key: TextEditingController(text: _registrationDraft[key] ?? ''),
+    };
+    DialogRoute<bool>? formRoute;
+    try {
+      formRoute = DialogRoute<bool>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (dialogContext, update) => AlertDialog(
+            title: Text(
+              _copy(context, zh: '添加主体', en: 'Add subject', ko: '주체 추가'),
+            ),
+            content: SizedBox(
+              width: 520,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final field in fields.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: TextField(
+                          key: ValueKey('acc02-register-${field.key}'),
+                          controller: controllers[field.key],
+                          onChanged: (_) => update(() {}),
+                          decoration: InputDecoration(labelText: field.value),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(_copy(context, zh: '取消', en: 'Cancel', ko: '취소')),
+              ),
+              FilledButton(
+                key: const ValueKey('acc02-prepare-registration'),
+                onPressed:
+                    controllers['name_zh']!.text.trim().isEmpty ||
+                        controllers['name_en']!.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.pop(dialogContext, true),
+                child: Text(
+                  _copy(context, zh: '核对信息', en: 'Review details', ko: '정보 검토'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      final accepted = await Navigator.of(
+        context,
+        rootNavigator: true,
+      ).push(formRoute);
+      _registrationDraft = {
+        for (final entry in controllers.entries)
+          entry.key: entry.value.text.trim(),
+      };
+      if (accepted != true) return null;
+      return [
+        {
+          'baseline_id': 'directory_${DateTime.now().microsecondsSinceEpoch}',
+          'identity': {
+            'domain_id': _directoryDomain,
+            'subject_type': _directoryDomain == 'CTH' ? 'company' : 'brand',
+            'name_zh': _registrationDraft['name_zh'],
+            'name_en': _registrationDraft['name_en'],
+            'industry': _registrationDraft['industry'],
+            'keywords': _registrationDraft['keywords']!
+                .split(RegExp('[,，]'))
+                .map((term) => term.trim())
+                .where((term) => term.isNotEmpty)
+                .toList(),
+          },
+        },
+      ];
+    } finally {
+      void disposeControllers() {
+        for (final controller in controllers.values) {
+          controller.dispose();
+        }
+      }
+
+      final completed = formRoute?.completed;
+      if (completed != null) {
+        unawaited(completed.then((_) => disposeControllers()));
+      } else {
+        disposeControllers();
+      }
+    }
+  }
+
+  Future<void> _registerSubject() async {
+    if (_registrationBusy || _viewModel.isCandidateNavigationLocked) return;
+    final entries = _pendingRegistration ?? await _registrationForm();
+    if (entries == null || !mounted) return;
+    setState(() {
+      _registrationBusy = true;
+      _registrationMessage = null;
+      _pendingRegistration = entries;
+    });
+    try {
+      final prepared = await widget.client.subjectBatch(entries: entries);
+      if (!mounted) return;
+      if (prepared['ok'] != true ||
+          prepared['state'] != 'PREPARED' ||
+          prepared['resource'] is! String ||
+          prepared['entries'] is! List) {
+        throw const FormatException('Invalid subject registration preview');
+      }
+      final normalized = (prepared['entries'] as List)
+          .map((entry) => Map<String, dynamic>.from(entry as Map))
+          .toList();
+      _pendingRegistration = normalized;
+      final identity = Map<String, dynamic>.from(
+        normalized.single['identity'] as Map,
+      );
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            _copy(
+              context,
+              zh: '确认登记并选择',
+              en: 'Register and select',
+              ko: '등록 및 선택',
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('${identity['name_zh']}'),
+              Text('${identity['name_en']}'),
+              if ((identity['industry'] as String? ?? '').isNotEmpty)
+                Text('${identity['industry']}'),
+              const SizedBox(height: 16),
+              Text(
+                _copy(
+                  context,
+                  zh: '仅添加目录身份，不采集资料，也不改变已有事实或作品。',
+                  en: 'Adds a directory identity. No collection starts and existing facts and work stay intact.',
+                  ko: '디렉터리 신원만 추가합니다. 수집을 시작하거나 기존 사실 및 작업을 변경하지 않습니다.',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(_copy(context, zh: '取消', en: 'Cancel', ko: '취소')),
+            ),
+            FilledButton(
+              key: const ValueKey('acc02-confirm-registration'),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(
+                _copy(
+                  context,
+                  zh: '登记并选择',
+                  en: 'Register and select',
+                  ko: '등록 및 선택',
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true || !mounted) {
+        if (mounted) _pendingRegistration = null;
+        return;
+      }
+      final applied = await widget.client.subjectBatch(
+        entries: normalized,
+        mode: 'apply',
+        confirmedResource: prepared['resource'] as String,
+      );
+      if (!mounted) return;
+      final results = applied['results'];
+      if (applied['ok'] != true ||
+          applied['state'] != 'COMPLETED' ||
+          results is! List ||
+          results.length != 1) {
+        throw const FormatException(
+          'Subject registration needs reconciliation',
+        );
+      }
+      final row = Map<String, dynamic>.from(results.single as Map);
+      if (!const {'CREATED', 'EXISTING'}.contains(row['status']) ||
+          row['subject'] is! Map) {
+        throw const FormatException('Subject registration not confirmed');
+      }
+      final registered = Acc02Subject.fromJson(
+        Map<String, dynamic>.from(row['subject'] as Map),
+      );
+      _coreRepository.domainId = registered.domainId;
+      _directoryDomain = registered.domainId;
+      await _viewModel.refresh();
+      if (!mounted) return;
+      final verified = _firstSubject(
+        _viewModel.snapshot?.subjects ?? const [],
+        registered.id,
+      );
+      if (verified == null) {
+        throw const FormatException(
+          'Subject registration readback unavailable',
+        );
+      }
+      _selectedId = verified.id;
+      await _viewModel.selectSubject(verified);
+      if (!mounted) return;
+      _pendingRegistration = null;
+      _registrationDraft = {};
+      _registrationMessage = _viewModel.hasMatchingServerContext(verified)
+          ? _copy(
+              context,
+              zh: '已登记并选中。',
+              en: 'Registered and selected.',
+              ko: '등록 및 선택되었습니다.',
+            )
+          : _copy(
+              context,
+              zh: '已登记；选择结果尚待确认，请刷新查看范围。',
+              en: 'Registered. Refresh to confirm the selected scope.',
+              ko: '등록되었습니다. 선택 범위를 새로고침하여 확인하세요.',
+            );
+    } on LumenisCoreException catch (error) {
+      if (!mounted) return;
+      _registrationMessage = error.statusCode == 401 || error.statusCode == 403
+          ? _copy(
+              context,
+              zh: '当前权限不允许登记主体。',
+              en: 'Current permissions do not allow registration.',
+              ko: '현재 권한으로 등록할 수 없습니다.',
+            )
+          : _copy(
+              context,
+              zh: '登记结果尚未确认。请重新核对同一登记，避免重复添加。',
+              en: 'Registration is unconfirmed. Reconcile the same entry before adding it again.',
+              ko: '등록 결과가 확인되지 않았습니다. 같은 항목을 재확인하세요.',
+            );
+    } catch (_) {
+      if (!mounted) return;
+      _registrationMessage = _copy(
+        context,
+        zh: '登记或读回尚未确认。请重新核对，不覆盖已有主体。',
+        en: 'Registration or readback is unconfirmed. Reconcile without replacing an existing subject.',
+        ko: '등록 또는 재확인이 완료되지 않았습니다. 기존 주체를 덮어쓰지 말고 재확인하세요.',
+      );
+    } finally {
+      if (mounted) setState(() => _registrationBusy = false);
+    }
+  }
 
   Future<void> _openCandidateSheet(
     BuildContext context,
@@ -269,6 +644,7 @@ class _Acc02ScreenState extends State<Acc02Screen> {
         !_viewModel.isSelectionPending &&
         !_viewModel.isRefreshing &&
         !_viewModel.needsReadback &&
+        !_registrationBusy &&
         _viewModel.actionErrorFor(subject) == null &&
         switch (_viewModel.confirmationStatusFor(subject)) {
           Acc02ConfirmationStatus.idle ||
@@ -288,32 +664,6 @@ Acc02Subject? _firstSubject(Iterable<Acc02Subject> subjects, String? id) {
     if (subject.id == id) return subject;
   }
   return null;
-}
-
-class _Heading extends StatelessWidget {
-  const _Heading({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        title,
-        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.6,
-        ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        subtitle,
-        style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
-      ),
-    ],
-  );
 }
 
 class _ContextBanner extends StatelessWidget {
@@ -514,9 +864,9 @@ class _SubjectList extends StatelessWidget {
         ),
         detail: _copy(
           context,
-          zh: '这是已确认的空列表，不等同于访问失败。',
-          en: 'This is a confirmed empty list, not an access failure.',
-          ko: '확인된 빈 목록이며 접근 실패가 아닙니다.',
+          zh: '添加主体后可在这里管理。',
+          en: 'Add a subject to manage it here.',
+          ko: '주체를 추가하면 여기에서 관리할 수 있습니다.',
         ),
       ),
       Acc02SubjectState.unknown => _ListState(
@@ -695,9 +1045,9 @@ class _SubjectDetail extends StatelessWidget {
                       child: Text(
                         _copy(
                           context,
-                          zh: '从列表选择主体。选中仅表示候选；服务器确认后才能继续。',
-                          en: 'Choose a Subject from the list. A highlighted row is only a candidate; continue after server confirmation.',
-                          ko: '목록에서 주체를 선택하세요. 강조된 항목은 후보일 뿐이며 서버 확인 후 계속할 수 있습니다.',
+                          zh: '选择一个主体',
+                          en: 'Select a subject',
+                          ko: '주체를 선택하세요',
                         ),
                         style: TextStyle(
                           color: LumenisTheme.of(context).muted,
@@ -1170,10 +1520,12 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: double.infinity,
     padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
+    decoration: ShapeDecoration(
       color: LumenisTheme.of(context).surface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: LumenisTheme.of(context).line),
+      shape: LumenisPixelBorder(
+        step: 3,
+        side: BorderSide(color: LumenisTheme.of(context).line),
+      ),
     ),
     child: child,
   );

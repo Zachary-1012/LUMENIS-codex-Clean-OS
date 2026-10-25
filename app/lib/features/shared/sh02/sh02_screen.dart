@@ -8,7 +8,12 @@ import '../../../core/lumenis_icon.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../core/lumenis_split_handle.dart';
 import '../../../l10n/lumenis_localizations.dart';
+import '../../../navigation/lumenis_leave_guard.dart';
+import '../sh01/media_project_files.dart';
+import 'sh02_office_controller.dart';
+import 'office_property_editor.dart';
 import 'sh02_repository.dart';
 import 'sh02_snapshot.dart';
 import 'sh02_view_model.dart';
@@ -23,6 +28,8 @@ class Sh02Screen extends StatefulWidget {
     this.initialArtifactId,
     this.initialWorkKind,
     this.onBack,
+    this.officeRepository,
+    this.officeFiles,
     super.key,
   });
 
@@ -32,6 +39,8 @@ class Sh02Screen extends StatefulWidget {
   final String? initialArtifactId;
   final String? initialWorkKind;
   final VoidCallback? onBack;
+  final Sh02OfficeRepository? officeRepository;
+  final MediaProjectFiles? officeFiles;
 
   @override
   State<Sh02Screen> createState() => _Sh02ScreenState();
@@ -64,16 +73,24 @@ class _Sh02ScreenState extends State<Sh02Screen> {
     super.dispose();
   }
 
-  void _research() => unawaited(
-    openSharedResearch(
+  void _research() => unawaited(_openResearch());
+
+  Future<void> _openResearch() async {
+    if (!await (LumenisLeaveScope.maybeOf(context)?.requestLeave() ??
+            Future.value(true)) ||
+        !mounted) {
+      return;
+    }
+    _viewModel.closeImport();
+    await openSharedResearch(
       context,
       repository: CoreSharedResearchRepository(widget.client),
       sources: {
         for (final item in _viewModel.recentImports)
           item.artifactId: item.filename,
       },
-    ),
-  );
+    );
+  }
 
   @override
   Widget build(BuildContext context) =>
@@ -92,6 +109,10 @@ class _Sh02ScreenState extends State<Sh02Screen> {
               builder: (context, _) => _LibraryWorkspace(
                 viewModel: _viewModel,
                 onResearch: _research,
+                officeRepository:
+                    widget.officeRepository ??
+                    CoreSh02OfficeRepository(widget.client),
+                officeFiles: widget.officeFiles ?? MediaProjectFiles(),
               ),
             ),
           ),
@@ -101,9 +122,16 @@ class _Sh02ScreenState extends State<Sh02Screen> {
 enum _BrowseMode { list, space }
 
 class _LibraryWorkspace extends StatefulWidget {
-  const _LibraryWorkspace({required this.viewModel, required this.onResearch});
+  const _LibraryWorkspace({
+    required this.viewModel,
+    required this.onResearch,
+    required this.officeRepository,
+    required this.officeFiles,
+  });
   final Sh02ViewModel viewModel;
   final VoidCallback onResearch;
+  final Sh02OfficeRepository officeRepository;
+  final MediaProjectFiles officeFiles;
 
   @override
   State<_LibraryWorkspace> createState() => _LibraryWorkspaceState();
@@ -120,65 +148,112 @@ class _LibraryWorkspaceState extends State<_LibraryWorkspace> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(22, 14, 22, 12),
-          child: Wrap(
-            spacing: 18,
-            runSpacing: 10,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Text(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+          child: LayoutBuilder(
+            builder: (context, box) {
+              final title = Text(
                 context.lumenisL10n.text('screen.SH-02'),
                 style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.8,
                   color: palette.foreground,
                 ),
-              ),
-              SegmentedButton<bool>(
-                showSelectedIcon: false,
-                segments: [
-                  ButtonSegment(
-                    value: false,
-                    label: Text(_copy(context, '我的资料', 'My materials', '내 자료')),
-                  ),
-                  ButtonSegment(
-                    value: true,
-                    label: Text(
-                      _copy(context, '来源资料', 'Sources', '출처 자료'),
-                      key: const Key('sh02-sources-tab'),
-                    ),
-                  ),
-                ],
-                selected: {_sources},
-                onSelectionChanged: (values) =>
-                    setState(() => _sources = values.single),
-              ),
-              _ImportActions(viewModel: model, onResearch: widget.onResearch),
+              );
+              final actions = _ImportActions(
+                viewModel: model,
+                onResearch: widget.onResearch,
+              );
+              if (box.maxWidth >= 760 &&
+                  MediaQuery.textScalerOf(context).scale(16) <= 24) {
+                return Row(
+                  children: [
+                    Expanded(child: title),
+                    actions,
+                  ],
+                );
+              }
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [title, const SizedBox(height: 14), actions],
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            children: [
+              _tab(false, _copy(context, '我的资料', 'My materials', '내 자료')),
+              const SizedBox(width: 24),
+              _tab(true, _copy(context, '来源资料', 'Sources', '출처 자료')),
             ],
           ),
         ),
-        Divider(height: 1, color: palette.line),
         Expanded(
-          child: IndexedStack(
-            index: _sources ? 1 : 0,
-            children: [
-              _ImportPanel(viewModel: model),
-              switch (model.phase) {
-                Sh02LoadPhase.loading => _LoadingState(),
-                Sh02LoadPhase.blocked => _BlockedState(
-                  error: model.scopeError,
-                  onRetry: model.refresh,
-                ),
-                Sh02LoadPhase.failed => _FailureState(
-                  kind: model.failureKind!,
-                  onRetry: model.refresh,
-                ),
-                Sh02LoadPhase.ready => _Workspace(viewModel: model),
-              },
-            ],
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: palette.surface,
+              border: Border(top: BorderSide(color: palette.line)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 1),
+              child: IndexedStack(
+                index: _sources ? 1 : 0,
+                children: [
+                  _ImportPanel(
+                    viewModel: model,
+                    officeRepository: widget.officeRepository,
+                    officeFiles: widget.officeFiles,
+                  ),
+                  switch (model.phase) {
+                    Sh02LoadPhase.loading => _LoadingState(),
+                    Sh02LoadPhase.blocked => _BlockedState(
+                      error: model.scopeError,
+                      onRetry: model.refresh,
+                    ),
+                    Sh02LoadPhase.failed => _FailureState(
+                      kind: model.failureKind!,
+                      onRetry: model.refresh,
+                    ),
+                    Sh02LoadPhase.ready => _Workspace(viewModel: model),
+                  },
+                ],
+              ),
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _tab(bool sources, String label) {
+    final palette = LumenisTheme.of(context);
+    final selected = _sources == sources;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              width: 3,
+              color: selected ? palette.accent : Colors.transparent,
+            ),
+          ),
+        ),
+        child: TextButton(
+          key: Key(sources ? 'sh02-sources-tab' : 'sh02-materials-tab'),
+          style: TextButton.styleFrom(
+            foregroundColor: selected ? palette.foreground : palette.muted,
+            minimumSize: const Size(48, 48),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+            shape: const RoundedRectangleBorder(),
+          ),
+          onPressed: () => setState(() => _sources = sources),
+          child: Text(label),
+        ),
+      ),
     );
   }
 }
@@ -495,7 +570,14 @@ class _ImportActions extends StatelessWidget {
               ? null
               : status == Sh02ImportStatus.uncertain
               ? viewModel.checkImportStatus
-              : viewModel.importDocument,
+              : () async {
+                  if (await (LumenisLeaveScope.maybeOf(
+                        context,
+                      )?.requestLeave() ??
+                      Future.value(true))) {
+                    await viewModel.importDocument();
+                  }
+                },
           icon: Icon(
             status == Sh02ImportStatus.uncertain
                 ? Icons.sync_rounded
@@ -529,8 +611,14 @@ class _ImportActions extends StatelessWidget {
 }
 
 class _ImportPanel extends StatefulWidget {
-  const _ImportPanel({required this.viewModel});
+  const _ImportPanel({
+    required this.viewModel,
+    required this.officeRepository,
+    required this.officeFiles,
+  });
   final Sh02ViewModel viewModel;
+  final Sh02OfficeRepository officeRepository;
+  final MediaProjectFiles officeFiles;
 
   @override
   State<_ImportPanel> createState() => _ImportPanelState();
@@ -543,7 +631,13 @@ class _ImportPanelState extends State<_ImportPanel> {
   double? _returnOffset;
   String? _returnArtifact;
 
-  void _open(Sh02ImportedMaterial item) {
+  Future<void> _open(Sh02ImportedMaterial item) async {
+    if (widget.viewModel.openedImport?.artifactId == item.artifactId) return;
+    if (!await (LumenisLeaveScope.maybeOf(context)?.requestLeave() ??
+            Future.value(true)) ||
+        !mounted) {
+      return;
+    }
     if (widget.viewModel.openedImport == null && _timeline.hasClients) {
       _returnOffset = _timeline.offset;
     }
@@ -551,7 +645,12 @@ class _ImportPanelState extends State<_ImportPanel> {
     unawaited(widget.viewModel.openImport(item));
   }
 
-  void _close() {
+  Future<void> _close() async {
+    if (!await (LumenisLeaveScope.maybeOf(context)?.requestLeave() ??
+            Future.value(true)) ||
+        !mounted) {
+      return;
+    }
     widget.viewModel.closeImport();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -866,12 +965,16 @@ class _ImportPanelState extends State<_ImportPanel> {
               final reading = opened != null;
               final reader = reading
                   ? SingleChildScrollView(
-                      key: ValueKey('reader-${opened.artifactId}'),
+                      key: ValueKey(
+                        'reader-${opened.workId ?? opened.artifactId}',
+                      ),
                       padding: const EdgeInsets.fromLTRB(28, 22, 28, 36),
                       child: _ImportedMaterialReader(
                         item: opened,
                         onClose: _close,
                         viewModel: model,
+                        officeRepository: widget.officeRepository,
+                        officeFiles: widget.officeFiles,
                       ),
                     )
                   : Center(
@@ -899,7 +1002,15 @@ class _ImportPanelState extends State<_ImportPanel> {
                     width: 1,
                     color: LumenisTheme.of(context).line,
                   ),
-                  Expanded(child: reader),
+                  Expanded(
+                    child: DecoratedBox(
+                      decoration: LumenisTheme.paper(
+                        LumenisTheme.of(context),
+                        radius: 0,
+                      ),
+                      child: reader,
+                    ),
+                  ),
                 ],
               );
             },
@@ -1069,15 +1180,16 @@ class _ImportedMaterialCardState extends State<_ImportedMaterialCard>
                 curve: Curves.easeOutCubic,
                 transform: physical,
                 transformAlignment: Alignment.center,
-                decoration: BoxDecoration(
+                decoration: ShapeDecoration(
                   color: palette.surfaceRaised,
-                  border: Border.all(
-                    color: _hovered
-                        ? palette.foreground.withValues(alpha: 0.35)
-                        : palette.line,
+                  shape: LumenisPixelBorder(
+                    side: BorderSide(
+                      color: _hovered
+                          ? palette.foreground.withValues(alpha: 0.5)
+                          : palette.line,
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(6),
-                  boxShadow: [
+                  shadows: [
                     BoxShadow(
                       color: palette.foreground.withValues(
                         alpha: _hovered ? 0.10 : 0.04,
@@ -1090,7 +1202,8 @@ class _ImportedMaterialCardState extends State<_ImportedMaterialCard>
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    focusNode: widget.focusNode,
+                    canRequestFocus: false,
+                    excludeFromSemantics: true,
                     key: Key(
                       'sh02-import-${item.sourceSha256.substring(0, 12)}',
                     ),
@@ -1201,9 +1314,18 @@ class _ImportedMaterialCardState extends State<_ImportedMaterialCard>
                           const SizedBox(height: 24),
                           Row(
                             children: [
-                              Text(
-                                _copy(context, '阅读', 'Read', '읽기'),
-                                style: TextStyle(color: palette.foreground),
+                              TextButton(
+                                focusNode: widget.focusNode,
+                                onPressed: widget.onOpen,
+                                child: Text(
+                                  _copy(context, '阅读', 'Read', '읽기'),
+                                  semanticsLabel: _copy(
+                                    context,
+                                    '阅读 ${item.filename}',
+                                    'Read ${item.filename}',
+                                    '${item.filename} 읽기',
+                                  ),
+                                ),
                               ),
                               const Spacer(),
                               Icon(
@@ -1232,10 +1354,14 @@ class _ImportedMaterialReader extends StatefulWidget {
     required this.item,
     required this.onClose,
     required this.viewModel,
+    required this.officeRepository,
+    required this.officeFiles,
   });
   final Sh02ImportedMaterial item;
   final VoidCallback onClose;
   final Sh02ViewModel viewModel;
+  final Sh02OfficeRepository officeRepository;
+  final MediaProjectFiles officeFiles;
   @override
   State<_ImportedMaterialReader> createState() =>
       _ImportedMaterialReaderState();
@@ -1243,9 +1369,111 @@ class _ImportedMaterialReader extends StatefulWidget {
 
 class _ImportedMaterialReaderState extends State<_ImportedMaterialReader> {
   bool _details = false;
+  bool _officeMode = false;
+  Sh02OfficeController? _office;
+  LumenisLeaveGuard? _guard;
+  String _officeText(String key, [Map<String, Object?> values = const {}]) =>
+      context.lumenisL10n.text('sh02.office.$key', values: values);
+
+  @override
+  void didUpdateWidget(covariant _ImportedMaterialReader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_office case final office?) {
+      if (widget.item.artifactId != office.source.artifactId) {
+        office.dispose();
+        _office = null;
+        _officeMode = false;
+        _guard?.refresh();
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = LumenisLeaveScope.maybeOf(context);
+    if (!identical(next, _guard)) {
+      _guard?.unregister(this);
+      _guard = next;
+      next?.register(
+        this,
+        needsProtection: () => _officeMode && _office?.protected == true,
+        requestLeave: _requestLeave,
+      );
+    }
+  }
+
+  Future<bool> _requestLeave() async {
+    final office = _office;
+    if (!_officeMode || office == null || !office.protected) return true;
+    if (office.busy) return false;
+    final leave =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(_officeText('leaveTitle')),
+            content: Text(_officeText('leaveDetail')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(_officeText('stay')),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(_officeText('leave')),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (leave) office.undo(null);
+    return leave;
+  }
+
+  void _beginOffice() {
+    final office = _office ??= Sh02OfficeController(
+      repository: widget.officeRepository,
+      source: widget.item,
+    )..addListener(_officeChanged);
+    setState(() => _officeMode = true);
+    if (office.page == null && !office.busy) unawaited(office.load());
+  }
+
+  void _officeChanged() {
+    _guard?.refresh();
+    final office = _office;
+    if (office?.notice == 'saved' &&
+        office!.source.artifactId != widget.item.artifactId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && identical(office, _office)) {
+          widget.viewModel.presentOfficeVersion(office.source);
+          unawaited(widget.viewModel.loadRecentImports());
+        }
+      });
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _readOriginal() async {
+    if (!await _requestLeave() || !mounted) return;
+    final source = _office?.source;
+    if (source != null) widget.viewModel.presentOfficeVersion(source);
+    setState(() => _officeMode = false);
+    if (widget.viewModel.sourcePage == null) {
+      unawaited(widget.viewModel.loadSourcePage(0));
+    }
+  }
+
+  @override
+  void dispose() {
+    _guard?.unregister(this);
+    _office?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final item = widget.item;
+    final item = _officeMode ? _office!.source : widget.item;
     final palette = LumenisTheme.of(context);
     final imported = DateTime.tryParse(item.createdAt)?.toLocal();
     final stamp = imported == null
@@ -1293,100 +1521,882 @@ class _ImportedMaterialReaderState extends State<_ImportedMaterialReader> {
           ),
         ),
         const SizedBox(height: 22),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: SegmentedButton<bool>(
-            showSelectedIcon: false,
-            segments: [
-              ButtonSegment(
-                value: false,
-                label: Text(_copy(context, '原文', 'Original', '원문')),
+        if ({
+          'docx',
+          'pptx',
+          'xlsx',
+        }.contains(item.filename.split('.').last.toLowerCase())) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              key: const Key('sh02-office-mode'),
+              onPressed: _office?.busy == true
+                  ? null
+                  : _officeMode
+                  ? _readOriginal
+                  : _beginOffice,
+              icon: Icon(
+                _officeMode ? Icons.description_outlined : Icons.edit_outlined,
+                size: 18,
               ),
-              ButtonSegment(
-                value: true,
-                label: Text(_copy(context, '概况', 'Overview', '개요')),
+              label: Text(
+                _officeText(_officeMode ? 'readOriginal' : 'editOriginal'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+        if (_officeMode && _office != null)
+          _OfficeObjectsWorkspace(
+            controller: _office!,
+            files: widget.officeFiles,
+          )
+        else ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SegmentedButton<bool>(
+              showSelectedIcon: false,
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(_copy(context, '原文', 'Original', '원문')),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(_copy(context, '概况', 'Overview', '개요')),
+                ),
+              ],
+              selected: {_details},
+              onSelectionChanged: (value) =>
+                  setState(() => _details = value.single),
+            ),
+          ),
+          const SizedBox(height: 24),
+          if (_details) ...[
+            Wrap(
+              spacing: 28,
+              runSpacing: 12,
+              children: [
+                Text(
+                  _copy(
+                    context,
+                    '${item.characterCount} 字',
+                    '${item.characterCount} characters',
+                    '${item.characterCount}자',
+                  ),
+                ),
+                Text(
+                  _copy(
+                    context,
+                    '${item.tableCount} 个表格',
+                    '${item.tableCount} tables',
+                    '표 ${item.tableCount}개',
+                  ),
+                ),
+                Text('${(item.sizeBytes / 1024).toStringAsFixed(1)} KB'),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _DetailLine(
+              label: _copy(context, '入库时间', 'Imported', '등록 시간'),
+              value: stamp,
+            ),
+            _DetailLine(
+              label: _copy(
+                context,
+                '原发布时间',
+                'Original publication',
+                '원래 게시 시간',
+              ),
+              value: _copy(context, '未提供', 'Not provided', '제공되지 않음'),
+            ),
+            if (item.excerpts.isNotEmpty) ...[
+              const SizedBox(height: 26),
+              Text(
+                _copy(context, '资料摘录', 'Excerpts', '자료 발췌'),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              for (final excerpt in item.excerpts)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: SelectableText(
+                    excerpt,
+                    style: const TextStyle(height: 1.7),
+                  ),
+                ),
+            ],
+            if (item.limitations.isNotEmpty) ...[
+              const SizedBox(height: 26),
+              for (final limitation in item.limitations)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    _materialLimitation(context, limitation),
+                    style: TextStyle(color: palette.muted, height: 1.6),
+                  ),
+                ),
+            ],
+          ] else if (structured)
+            _OriginalRows(viewModel: widget.viewModel)
+          else
+            SelectableText(
+              item.text.isEmpty
+                  ? _copy(
+                      context,
+                      '没有可显示的文本。',
+                      'No readable text was returned.',
+                      '표시할 텍스트가 없습니다.',
+                    )
+                  : item.text,
+              style: const TextStyle(fontSize: 16, height: 1.8),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+String _officeCopy(
+  BuildContext context,
+  String key, [
+  Map<String, Object?> values = const {},
+]) => context.lumenisL10n.text('sh02.office.$key', values: values);
+
+String _officeObjectLabel(
+  BuildContext context,
+  Sh02OfficeObject object,
+  int number,
+) {
+  final locator = object.locator;
+  final pieces = <String>[];
+  if (locator['sheet_name'] is String &&
+      (locator['sheet_name'] as String).isNotEmpty) {
+    pieces.add(locator['sheet_name'] as String);
+  } else if (locator['cell'] is String) {
+    pieces.add(_officeCopy(context, 'sheetUnknown'));
+  }
+  if (locator['slide_number'] is int) {
+    pieces.add(
+      _officeCopy(context, 'slide', {'number': locator['slide_number']}),
+    );
+  }
+  if (locator['notes'] == true) pieces.add(_officeCopy(context, 'notes'));
+  if (locator['cell'] is String) {
+    pieces.add(_officeCopy(context, 'cell', {'cell': locator['cell']}));
+    if (object.kind == 'cell_style') {
+      pieces.add(_copy(context, '样式', 'Style', '스타일'));
+    }
+  } else if (object.structured) {
+    final type = switch (object.kind) {
+      'word_run_format' ||
+      'drawing_run_format' => _copy(context, '文字样式', 'Text style', '문자 스타일'),
+      'word_paragraph_format' => _copy(
+        context,
+        '段落排版',
+        'Paragraph layout',
+        '문단 레이아웃',
+      ),
+      'shape_geometry' => _copy(context, '图形位置', 'Shape position', '도형 위치'),
+      _ => _copy(context, '样式', 'Style', '스타일'),
+    };
+    pieces.add('$type ${locator['paragraph_index'] ?? number}');
+  } else {
+    pieces.add(
+      _officeCopy(context, 'objectText', {
+        'number': locator['paragraph_index'] ?? number,
+      }),
+    );
+  }
+  return pieces.join(' · ');
+}
+
+class _OfficeObjectsWorkspace extends StatefulWidget {
+  const _OfficeObjectsWorkspace({
+    required this.controller,
+    required this.files,
+  });
+  final Sh02OfficeController controller;
+  final MediaProjectFiles files;
+  @override
+  State<_OfficeObjectsWorkspace> createState() =>
+      _OfficeObjectsWorkspaceState();
+}
+
+class _OfficeObjectsWorkspaceState extends State<_OfficeObjectsWorkspace> {
+  double _indexWidth = 240;
+  final _search = TextEditingController();
+  final _reason = TextEditingController();
+  final _listScroll = ScrollController();
+  String? _selected;
+  String? _sourceId;
+  bool _signatureConsent = false;
+  String? _fileNotice;
+  final _adopted = <String>{};
+  List<Sh02OfficeComparison>? _lastComparisons;
+  Sh02OfficeController get model => widget.controller;
+  @override
+  void dispose() {
+    _search.dispose();
+    _reason.dispose();
+    _listScroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _download() async {
+    setState(() => _fileNotice = null);
+    final file = await model.download();
+    if (file == null || !mounted) return;
+    try {
+      final saved = await widget.files.save(
+        ContentProjectFile(
+          bytes: file.bytes,
+          filename: file.filename,
+          mediaType: file.mediaType,
+        ),
+      );
+      if (saved && mounted) setState(() => _fileNotice = 'downloaded');
+    } catch (_) {
+      if (mounted) setState(() => _fileNotice = 'downloadFailed');
+    }
+  }
+
+  Future<void> _adopt() async {
+    if (_adopted.length != model.edits.length) {
+      final confirmed =
+          await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(_officeCopy(context, 'adopt')),
+              content: Text(_officeCopy(context, 'adoptDetail')),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(context.lumenisL10n.text('common.cancel')),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: Text(_officeCopy(context, 'adopt')),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!confirmed || !mounted) return;
+    }
+    model.adoptComparison(_adopted);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final page = model.page;
+    final palette = LumenisTheme.of(context);
+    if (_sourceId != model.source.artifactId) {
+      _sourceId = model.source.artifactId;
+      _signatureConsent = false;
+      _fileNotice = null;
+      if (model.notice == 'saved') _reason.clear();
+    }
+    if (!identical(_lastComparisons, model.comparisons)) {
+      _lastComparisons = model.comparisons;
+      _adopted
+        ..clear()
+        ..addAll(
+          model.comparisons
+              .where(
+                (row) =>
+                    row.latest != null && row.latest!.accepts(row.proposed),
+              )
+              .map((row) => row.previous.id),
+        );
+    }
+    return Material(
+      color: Colors.transparent,
+      child: Column(
+        key: const Key('sh02-office-workspace'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (model.busy) const LinearProgressIndicator(minHeight: 2),
+          if (model.problem != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  _officeCopy(context, model.problem!),
+                  style: TextStyle(color: palette.caution),
+                ),
+              ),
+            ),
+          if (_fileNotice != null)
+            Semantics(
+              liveRegion: true,
+              child: Text(_officeCopy(context, _fileNotice!)),
+            ),
+          if (model.notice == 'saved' && page != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  _officeCopy(context, 'saved', {'version': page.version}),
+                ),
+              ),
+            ),
+          if (page == null)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const Key('sh02-office-load'),
+                onPressed: model.busy ? null : () => model.load(),
+                icon: const LumenisIcon(Icons.refresh_rounded, size: 18),
+                label: Text(
+                  _officeCopy(context, model.busy ? 'loading' : 'load'),
+                ),
+              ),
+            )
+          else ...[
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text(
+                  _officeCopy(context, 'version', {'version': page.version}),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                if (model.dirty)
+                  Text(
+                    _officeCopy(context, 'modified', {
+                      'count': model.edits.length,
+                    }),
+                    style: TextStyle(color: palette.caution),
+                  ),
+                TextButton.icon(
+                  key: const Key('sh02-office-download'),
+                  onPressed: model.busy || !widget.files.canSave
+                      ? null
+                      : _download,
+                  icon: const LumenisIcon(Icons.download_outlined, size: 18),
+                  label: Text(_officeCopy(context, 'download')),
+                ),
+                if (model.source.parentArtifactId != null)
+                  TextButton(
+                    key: const Key('sh02-office-parent'),
+                    onPressed: model.protected
+                        ? null
+                        : () =>
+                              model.openVersion(model.source.parentArtifactId!),
+                    child: Text(_officeCopy(context, 'parent')),
+                  ),
+                if (model.canOpenNewer)
+                  TextButton(
+                    key: const Key('sh02-office-newer'),
+                    onPressed: model.protected ? null : model.openNewer,
+                    child: Text(_officeCopy(context, 'newer')),
+                  ),
+                if (model.dirty)
+                  TextButton(
+                    key: const Key('sh02-office-undo-all'),
+                    onPressed: model.busy || model.saveUnknown
+                        ? null
+                        : () => model.undo(null),
+                    child: Text(_officeCopy(context, 'undoAll')),
+                  ),
+              ],
+            ),
+            if (!page.current)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  _officeCopy(context, 'historical'),
+                  style: TextStyle(color: palette.muted),
+                ),
+              ),
+            if (page.activeContent)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  _officeCopy(context, 'activeContent'),
+                  style: TextStyle(color: palette.caution),
+                ),
+              ),
+            if (page.formulaRecalculationNeeded)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  _officeCopy(context, 'formulaNotice'),
+                  style: TextStyle(color: palette.muted),
+                ),
+              ),
+            if (page.unsupported > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  _officeCopy(context, 'unsupported', {
+                    'count': page.unsupported,
+                  }),
+                  style: TextStyle(color: palette.muted),
+                ),
+              ),
+            if (model.conflict || !page.current)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton(
+                  key: const Key('sh02-office-compare'),
+                  onPressed: model.busy ? null : model.compareLatest,
+                  child: Text(_officeCopy(context, 'compare')),
+                ),
+              ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: (MediaQuery.sizeOf(context).height - 320).clamp(
+                420.0,
+                760.0,
+              ),
+              child:
+                  model.comparisons.isNotEmpty || model.comparisonPage != null
+                  ? _comparison()
+                  : LayoutBuilder(
+                      builder: (context, box) {
+                        final wide =
+                            box.maxWidth >= 680 &&
+                            MediaQuery.textScalerOf(context).scale(16) <= 24;
+                        final selected = model.objects
+                            .where((object) => object.id == _selected)
+                            .firstOrNull;
+                        final index = _index();
+                        final editor = selected == null
+                            ? Center(
+                                child: Text(
+                                  _officeCopy(context, 'selectObject'),
+                                ),
+                              )
+                            : _editor(selected, wide);
+                        return DecoratedBox(
+                          decoration: LumenisTheme.paper(palette, radius: 10),
+                          child: ClipPath(
+                            clipper: ShapeBorderClipper(
+                              shape: const LumenisPixelBorder(),
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: wide
+                                  ? Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        SizedBox(
+                                          width: _indexWidth.clamp(
+                                            180.0,
+                                            box.maxWidth * .4,
+                                          ),
+                                          child: index,
+                                        ),
+                                        LumenisSplitHandle(
+                                          key: const Key(
+                                            'sh02-office-index-resize',
+                                          ),
+                                          label: switch (Localizations.localeOf(
+                                            context,
+                                          ).languageCode) {
+                                            'zh' => '调整目录宽度',
+                                            'ko' => '목차 너비 조절',
+                                            _ => 'Resize outline',
+                                          },
+                                          onDelta: (delta) => setState(
+                                            () => _indexWidth =
+                                                (_indexWidth + delta).clamp(
+                                                  180.0,
+                                                  box.maxWidth * .4,
+                                                ),
+                                          ),
+                                          onReset: () =>
+                                              setState(() => _indexWidth = 240),
+                                        ),
+                                        Expanded(child: editor),
+                                      ],
+                                    )
+                                  : selected == null
+                                  ? index
+                                  : editor,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            if (model.dirty || model.saveUnknown) ...[
+              const SizedBox(height: 18),
+              if (page.signed) ...[
+                Text(
+                  _officeCopy(context, 'signatureWarning'),
+                  style: TextStyle(color: palette.caution),
+                ),
+                CheckboxListTile(
+                  key: const Key('sh02-office-signature-consent'),
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: _signatureConsent,
+                  onChanged: model.busy || model.saveUnknown
+                      ? null
+                      : (value) =>
+                            setState(() => _signatureConsent = value == true),
+                  title: Text(_officeCopy(context, 'signatureConsent')),
+                ),
+              ],
+              TextField(
+                key: const Key('sh02-office-reason'),
+                controller: _reason,
+                minLines: 1,
+                maxLines: 3,
+                maxLength: 2000,
+                enabled: !model.busy && !model.saveUnknown,
+                decoration: InputDecoration(
+                  labelText: _officeCopy(context, 'reason'),
+                  counterText: '',
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    key: const Key('sh02-office-save'),
+                    onPressed:
+                        model.canSave &&
+                            _reason.text.trim().isNotEmpty &&
+                            (!page.signed || _signatureConsent)
+                        ? () => model.save(
+                            _reason.text,
+                            invalidateSignature: _signatureConsent,
+                          )
+                        : null,
+                    icon: const LumenisIcon(Icons.save_outlined, size: 18),
+                    label: Text(_officeCopy(context, 'save')),
+                  ),
+                  if (model.saveUnknown)
+                    OutlinedButton(
+                      key: const Key('sh02-office-check'),
+                      onPressed: model.busy ? null : model.checkSave,
+                      child: Text(
+                        _officeCopy(
+                          context,
+                          model.notice == 'checkMore' ? 'checkMore' : 'check',
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
-            selected: {_details},
-            onSelectionChanged: (value) =>
-                setState(() => _details = value.single),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _index() {
+    final query = _search.text.trim().toLowerCase();
+    final visible = model.objects.indexed
+        .where(
+          (entry) =>
+              query.isEmpty ||
+              officeValueSummary(
+                context,
+                entry.$2.value,
+              ).toLowerCase().contains(query) ||
+              _officeObjectLabel(
+                context,
+                entry.$2,
+                entry.$1 + 1,
+              ).toLowerCase().contains(query),
+        )
+        .toList(growable: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            key: const Key('sh02-office-search'),
+            controller: _search,
+            decoration: InputDecoration(
+              hintText: _officeCopy(context, 'search'),
+              prefixIcon: const LumenisIcon(Icons.search_rounded, size: 18),
+            ),
+            onChanged: (_) => setState(() {}),
           ),
         ),
-        const SizedBox(height: 24),
-        if (_details) ...[
-          Wrap(
-            spacing: 28,
-            runSpacing: 12,
-            children: [
-              Text(
-                _copy(
-                  context,
-                  '${item.characterCount} 字',
-                  '${item.characterCount} characters',
-                  '${item.characterCount}자',
+        Expanded(
+          child: visible.isEmpty
+              ? Center(child: Text(_officeCopy(context, 'empty')))
+              : ListView.builder(
+                  key: const Key('sh02-office-objects'),
+                  controller: _listScroll,
+                  itemCount: visible.length,
+                  itemBuilder: (context, index) {
+                    final (ordinal, object) = visible[index];
+                    return ListTile(
+                      key: ValueKey('sh02-office-object-${object.id}'),
+                      selected: _selected == object.id,
+                      title: Text(
+                        _officeObjectLabel(
+                          context,
+                          object,
+                          model.objects.indexOf(object) + 1,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        officeValueSummary(context, model.value(object)),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: model.edits.containsKey(object.id)
+                          ? Tooltip(
+                              message: _officeCopy(context, 'edited'),
+                              child: const LumenisIcon(
+                                Icons.edit_outlined,
+                                size: 16,
+                              ),
+                            )
+                          : null,
+                      onTap: () => setState(() => _selected = object.id),
+                    );
+                  },
                 ),
-              ),
-              Text(
-                _copy(
-                  context,
-                  '${item.tableCount} 个表格',
-                  '${item.tableCount} tables',
-                  '표 ${item.tableCount}개',
-                ),
-              ),
-              Text('${(item.sizeBytes / 1024).toStringAsFixed(1)} KB'),
-            ],
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+          child: Text(
+            _officeCopy(context, 'page', {
+              'loaded': model.objects.length,
+              'total': model.page!.total,
+            }),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-          const SizedBox(height: 20),
-          _DetailLine(
-            label: _copy(context, '入库时间', 'Imported', '등록 시간'),
-            value: stamp,
-          ),
-          _DetailLine(
-            label: _copy(context, '原发布时间', 'Original publication', '원래 게시 시간'),
-            value: _copy(context, '未提供', 'Not provided', '제공되지 않음'),
-          ),
-          if (item.excerpts.isNotEmpty) ...[
-            const SizedBox(height: 26),
-            Text(
-              _copy(context, '资料摘录', 'Excerpts', '자료 발췌'),
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            for (final excerpt in item.excerpts)
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: SelectableText(
-                  excerpt,
-                  style: const TextStyle(height: 1.7),
-                ),
-              ),
-          ],
-          if (item.limitations.isNotEmpty) ...[
-            const SizedBox(height: 26),
-            for (final limitation in item.limitations)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  _materialLimitation(context, limitation),
-                  style: TextStyle(color: palette.muted, height: 1.6),
-                ),
-              ),
-          ],
-        ] else if (structured)
-          _OriginalRows(viewModel: widget.viewModel)
-        else
-          SelectableText(
-            item.text.isEmpty
-                ? _copy(
-                    context,
-                    '没有可显示的文本。',
-                    'No readable text was returned.',
-                    '표시할 텍스트가 없습니다.',
-                  )
-                : item.text,
-            style: const TextStyle(fontSize: 16, height: 1.8),
+        ),
+        if (model.nextOffset != null)
+          TextButton(
+            key: const Key('sh02-office-more'),
+            onPressed: model.busy ? null : () => model.load(more: true),
+            child: Text(_officeCopy(context, 'loadMore')),
           ),
       ],
+    );
+  }
+
+  Widget _editor(Sh02OfficeObject object, bool wide) => ListView(
+    key: ValueKey('sh02-office-editor-${model.source.artifactId}-${object.id}'),
+    padding: const EdgeInsets.all(22),
+    children: [
+      if (!wide)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => setState(() => _selected = null),
+            icon: const LumenisIcon(Icons.arrow_back_rounded, size: 18),
+            label: Text(_officeCopy(context, 'objects')),
+          ),
+        ),
+      Text(
+        _officeObjectLabel(context, object, model.objects.indexOf(object) + 1),
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      const SizedBox(height: 18),
+      _OfficeValueEditor(
+        key: ValueKey('${model.source.artifactId}:${object.id}'),
+        object: object,
+        value: model.value(object),
+        enabled: model.canEdit,
+        styleOptions: model.page?.styleOptions ?? const [],
+        onChanged: (value) => model.change(object, value),
+      ),
+      if (model.edits.containsKey(object.id)) ...[
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const Key('sh02-office-undo-object'),
+            onPressed: model.busy || model.saveUnknown
+                ? null
+                : () => model.undo(object.id),
+            icon: const LumenisIcon(Icons.undo, size: 18),
+            label: Text(_officeCopy(context, 'undo')),
+          ),
+        ),
+        ExpansionTile(
+          title: Text(_officeCopy(context, 'previousValue')),
+          tilePadding: EdgeInsets.zero,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SelectableText(officeValueSummary(context, object.value)),
+            ),
+          ],
+        ),
+      ],
+    ],
+  );
+
+  Widget _comparison() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Expanded(
+        child: ListView.separated(
+          itemCount: model.comparisons.length,
+          separatorBuilder: (_, _) => const Divider(height: 28),
+          itemBuilder: (context, index) {
+            final row = model.comparisons[index];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CheckboxListTile(
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: _adopted.contains(row.previous.id),
+                  onChanged:
+                      row.latest == null || !row.latest!.accepts(row.proposed)
+                      ? null
+                      : (value) => setState(() {
+                          value == true
+                              ? _adopted.add(row.previous.id)
+                              : _adopted.remove(row.previous.id);
+                        }),
+                  title: Text(
+                    _officeObjectLabel(context, row.previous, index + 1),
+                  ),
+                ),
+                for (final (label, value) in [
+                  ('previousValue', row.previous.value),
+                  (
+                    'currentValue',
+                    row.latest?.value ?? _officeCopy(context, 'missingObject'),
+                  ),
+                  ('yourValue', row.proposed),
+                ])
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _officeCopy(context, label),
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        SelectableText(officeValueSummary(context, value)),
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: FilledButton(
+          key: const Key('sh02-office-adopt'),
+          onPressed: model.busy ? null : _adopt,
+          child: Text(_officeCopy(context, 'adopt')),
+        ),
+      ),
+    ],
+  );
+}
+
+class _OfficeValueEditor extends StatefulWidget {
+  const _OfficeValueEditor({
+    required this.object,
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+    this.styleOptions = const [],
+    super.key,
+  });
+  final Sh02OfficeObject object;
+  final Object value;
+  final bool enabled;
+  final ValueChanged<Object> onChanged;
+  final List<Map<String, dynamic>> styleOptions;
+  @override
+  State<_OfficeValueEditor> createState() => _OfficeValueEditorState();
+}
+
+class _OfficeValueEditorState extends State<_OfficeValueEditor> {
+  late final TextEditingController _value = TextEditingController(
+    text: '${widget.value}',
+  );
+  @override
+  void didUpdateWidget(covariant _OfficeValueEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value is String && _value.text != widget.value) {
+      _value.value = TextEditingValue(
+        text: widget.value as String,
+        selection: TextSelection.collapsed(
+          offset: _value.selection.extentOffset.clamp(
+            0,
+            (widget.value as String).length,
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _value.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final kind = widget.object.kind;
+    if (widget.object.structured) {
+      return OfficePropertyEditor(
+        kind: kind,
+        value: Map<String, dynamic>.from(widget.value as Map),
+        enabled: widget.enabled,
+        styleOptions: widget.styleOptions,
+        onChanged: widget.onChanged,
+      );
+    }
+    if (kind == 'cell_boolean') {
+      return SwitchListTile(
+        key: const Key('sh02-office-value-boolean'),
+        contentPadding: EdgeInsets.zero,
+        value: widget.value as bool,
+        onChanged: widget.enabled ? widget.onChanged : null,
+        title: Text(
+          _officeCopy(context, (widget.value as bool) ? 'true' : 'false'),
+        ),
+      );
+    }
+    return TextField(
+      key: const Key('sh02-office-value'),
+      controller: _value,
+      enabled: widget.enabled,
+      minLines: kind == 'cell_number' ? 1 : 3,
+      maxLines: kind == 'cell_number' ? 2 : 12,
+      keyboardType: kind == 'cell_number'
+          ? const TextInputType.numberWithOptions(signed: true, decimal: true)
+          : TextInputType.multiline,
+      decoration: InputDecoration(
+        labelText: _officeCopy(
+          context,
+          kind == 'cell_number'
+              ? 'number'
+              : kind == 'cell_formula'
+              ? 'formula'
+              : 'text',
+        ),
+        errorText: widget.object.accepts(widget.value)
+            ? null
+            : _officeCopy(context, 'invalid'),
+      ),
+      onChanged: widget.onChanged,
     );
   }
 }

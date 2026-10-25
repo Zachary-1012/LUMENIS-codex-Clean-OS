@@ -168,13 +168,13 @@ def readonly_worker_spec(platform: str, private_data_dir=None) -> dict:
     """Resolve isolated worker parameters from the existing platform catalog."""
     from lumenis.system.collector.adapters.config import get_platform_capabilities
 
-    from .cookie_vault import _current_data_dir
+    from .cookie_vault import registered_session_data_dir
 
     binding = get_platform_capabilities(platform).get("readonly_worker")
     if not isinstance(binding, dict):
         raise RuntimeError("READONLY_WORKER_NOT_REGISTERED")
     root = (Path(private_data_dir) if private_data_dir is not None
-            else Path(_current_data_dir()) / "private")
+            else registered_session_data_dir() / "private")
     profiles = (root / "profiles").resolve()
     profile = (profiles / binding["profile"]).resolve()
     if profile.parent != profiles or binding["port"] in {9222, 9223, 9224}:

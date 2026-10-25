@@ -77,7 +77,6 @@ class ContentSourceConfirmation {
         RegExp(r'[\\/:\x00-\x1f]').hasMatch(filename) ||
         size is! int ||
         size <= 0 ||
-        size > MediaSourceLimits.maxBytes ||
         sha256 is! String ||
         !RegExp(r'^[a-f0-9]{64}$').hasMatch(sha256)) {
       return null;
@@ -247,7 +246,20 @@ class InternalPitchManuscript {
         summary.trim().isEmpty ||
         sections.isEmpty ||
         sections.length > 64 ||
-        !const {'zh', 'en', 'ko'}.contains(language) ||
+        !const {
+          'zh',
+          'en',
+          'ko',
+          'ja',
+          'fr',
+          'de',
+          'es',
+          'pt',
+          'ru',
+          'ar',
+          'hi',
+          'id',
+        }.contains(language) ||
         !const {'user_supplied', 'assisted'}.contains(authorship)) {
       throw const FormatException('Internal pitch manuscript is invalid.');
     }
@@ -704,6 +716,36 @@ class LumenisCoreClient {
   Future<Map<String, dynamic>> sharedSkillsCatalog() =>
       _get('/api/experience/shared-skills');
 
+  Future<Map<String, dynamic>> subjectBatch({
+    required List<Map<String, dynamic>> entries,
+    String mode = 'prepare',
+    String? confirmedResource,
+    int resumeIndex = 0,
+  }) {
+    if (!const {'prepare', 'apply'}.contains(mode) ||
+        entries.isEmpty ||
+        resumeIndex < 0 ||
+        (mode == 'apply' &&
+            (confirmedResource == null || confirmedResource.isEmpty))) {
+      throw ArgumentError('Invalid subject registration request.');
+    }
+    return _request(
+      'POST',
+      '/api/settings/subjects/batch',
+      withContext: false,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'entries': entries,
+        'mode': mode,
+        'resume_index': resumeIndex,
+        if (mode == 'apply') ...{
+          'confirm': true,
+          'confirmed_resource': confirmedResource,
+        },
+      },
+    );
+  }
+
   Future<Map<String, dynamic>> contentEvidence(String evidenceId) => _get(
     '/api/experience/content/evidence/${Uri.encodeComponent(evidenceId)}',
   );
@@ -773,6 +815,42 @@ class LumenisCoreClient {
       '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}?$query',
       operationContext: _sharedWorkspaceScopeHeaders,
       requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> readAiConversationContext(
+    String conversationId, {
+    Map<String, String> query = const {},
+  }) {
+    _validateAiConversationId(conversationId);
+    final suffix = query.isEmpty ? '' : '?${Uri(queryParameters: query).query}';
+    return _request(
+      'GET',
+      '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}/context$suffix',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> updateAiConversationContext({
+    required String conversationId,
+    required Map<String, dynamic> value,
+    required String idempotencyKey,
+    required int expectedRevision,
+    List<Map<String, dynamic>>? sourceReferences,
+  }) {
+    _validateAiConversationId(conversationId);
+    return _request(
+      'PUT',
+      '/v4/ai/conversations/${Uri.encodeComponent(conversationId)}/context',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'value': value,
+        'idempotency_key': idempotencyKey,
+        'expected_revision': expectedRevision,
+        'source_references': ?sourceReferences,
+      },
     );
   }
 
@@ -982,6 +1060,142 @@ class LumenisCoreClient {
       requestHeaders: const {'Cache-Control': 'no-store'},
       connectionTimeout: const Duration(seconds: 30),
     );
+  }
+
+  Future<Map<String, dynamic>> listBusinessWork(String domainId) => _request(
+    'GET',
+    '/api/experience/business-works',
+    operationContext: _contentContext(domainId),
+    requestHeaders: const {'Cache-Control': 'no-store'},
+  );
+
+  Future<Map<String, dynamic>> businessWorkSources(
+    String domainId, {
+    String? cursor,
+  }) => _request(
+    'GET',
+    '/api/experience/business-works/sources${cursor == null ? '' : '?${Uri(queryParameters: {'cursor': cursor}).query}'}',
+    operationContext: _contentContext(domainId),
+    requestHeaders: const {'Cache-Control': 'no-store'},
+  );
+
+  Future<Map<String, dynamic>> prepareBusinessWork({
+    required String domainId,
+    required String jobId,
+    required String submissionId,
+    required String question,
+    List<Map<String, dynamic>>? options,
+  }) {
+    _validateSourceBriefJobId(jobId);
+    return _request(
+      'POST',
+      '/api/experience/business-works',
+      operationContext: _contentContext(domainId),
+      payload: {
+        'source_job_id': jobId,
+        'submission_id': submissionId,
+        'question': question,
+        'kind': domainId == 'CTH' ? 'venue_operations' : 'brand_market',
+        'options': ?options,
+      },
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
+  Future<Map<String, dynamic>> readBusinessWork({
+    required String domainId,
+    required String workId,
+    String? revision,
+  }) {
+    _validateBusinessWorkId(workId);
+    final query = revision == null
+        ? ''
+        : '?${Uri(queryParameters: {'revision': revision}).query}';
+    return _request(
+      'GET',
+      '/api/experience/business-works/$workId$query',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
+  Future<Map<String, dynamic>> advanceBusinessWork({
+    required String domainId,
+    required String workId,
+    required String operation,
+    required String revision,
+    required String submissionId,
+    required Map<String, dynamic> payload,
+  }) {
+    _validateBusinessWorkId(workId);
+    if (!const {
+      'choose',
+      'adopt',
+      'interrupt',
+      'resume',
+      'cancel',
+      'restore',
+      'action',
+      'manual_action',
+      'observation',
+      'outcome',
+      'outcome_unknown',
+      'review',
+    }.contains(operation)) {
+      throw ArgumentError.value(operation, 'operation');
+    }
+    return _request(
+      'POST',
+      '/api/experience/business-works/$workId/$operation',
+      operationContext: _contentContext(domainId),
+      payload: {
+        'submission_id': submissionId,
+        'expected_revision': revision,
+        'payload': payload,
+      },
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
+  Future<Map<String, dynamic>> saveBusinessWork({
+    required String domainId,
+    required String workId,
+    required String revision,
+    required String requestId,
+    required List<Map<String, dynamic>> citations,
+    String? confirmedResource,
+    String? previousArtifactId,
+    String? expectedDraftDigest,
+  }) {
+    _validateBusinessWorkId(workId);
+    _validateSavedWorkRequestId(requestId);
+    if ((previousArtifactId == null) != (expectedDraftDigest == null)) {
+      throw const FormatException('Business result version pair required.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/business-works/$workId/${confirmedResource == null ? 'save-request' : 'save-confirm'}',
+      operationContext: _contentContext(domainId),
+      payload: {
+        'request_id': requestId,
+        'expected_revision': revision,
+        'citations': citations,
+        'previous_artifact_id': ?previousArtifactId,
+        'expected_draft_digest': ?expectedDraftDigest,
+        if (confirmedResource != null) ...{
+          'confirm': true,
+          'confirmed_resource': confirmedResource,
+        },
+      },
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
+  static void _validateBusinessWorkId(String value) {
+    if (!RegExp(r'^work-[a-f0-9]{64}$').hasMatch(value)) {
+      throw const FormatException('Invalid business work identifier.');
+    }
   }
 
   /// Prepares or explicitly saves a SourceBrief into the independent Shared
@@ -1418,6 +1632,27 @@ class LumenisCoreClient {
     );
   }
 
+  Future<Map<String, dynamic>> importContentSourceStream({
+    required String? domainId,
+    required String filename,
+    required LumenisUploadBody upload,
+  }) {
+    if (filename.isEmpty ||
+        filename.length > 240 ||
+        RegExp(r'[\\/:\x00-\x1f]').hasMatch(filename) ||
+        upload.length <= 0) {
+      throw const FormatException('Invalid media file input.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/content-sources?filename=${Uri.encodeQueryComponent(filename)}',
+      operationContext: _mediaContentContext(domainId),
+      connectionTimeout: const Duration(minutes: 30),
+      upload: upload,
+      requestHeaders: const {'X-Lumenis-Action': 'WRITE'},
+    );
+  }
+
   Future<Map<String, dynamic>> confirmContentSource({
     required String? domainId,
     required String confirmationId,
@@ -1515,13 +1750,19 @@ class LumenisCoreClient {
   }) async {
     _validateContentArtifactId(artifactId);
     final context = _mediaContentContext(domainId);
-    final uri = _uri(
-      '/api/experience/content-projects/$artifactId/${package ? 'package' : 'media'}',
-    );
+    final uri =
+        _uri(
+          '/api/experience/content-projects/$artifactId/${package ? 'package' : 'media'}',
+        ).replace(
+          queryParameters: {
+            'context': jsonEncode(context),
+            'format': package ? 'package' : 'media',
+          },
+        );
     try {
       final response = await sendLumenisBinaryRequest(
         LumenisTransportRequest(
-          method: 'GET',
+          method: 'HEAD',
           uri: uri,
           headers: {
             ...context,
@@ -1530,7 +1771,7 @@ class LumenisCoreClient {
           connectionTimeout: const Duration(minutes: 2),
           followRedirects: false,
         ),
-        maxBytes: 512 * 1024 * 1024,
+        maxBytes: 4096,
       );
       if (response.statusCode != 200) {
         throw LumenisCoreException(
@@ -1545,13 +1786,15 @@ class LumenisCoreClient {
         'audio/wav' when !package => 'wav',
         _ => null,
       };
-      if (extension == null || response.bytes.isEmpty) {
+      if (extension == null ||
+          (int.tryParse(response.headers['content-length'] ?? '') ?? 0) <= 0 ||
+          response.headers['accept-ranges'] != 'bytes') {
         throw const FormatException(
           'Content file type does not match the requested artifact.',
         );
       }
-      return ContentProjectFile(
-        bytes: response.bytes,
+      return ContentProjectFile.stream(
+        uri: uri,
         filename: '$artifactId.$extension',
         mediaType: type!,
       );
@@ -1579,6 +1822,92 @@ class LumenisCoreClient {
       'confirm_read_only': true,
     },
   );
+
+  Future<Map<String, dynamic>> collectionSources() => _request(
+    'GET',
+    '/api/experience/cth/platform-collection',
+    requestHeaders: const {'Cache-Control': 'no-store'},
+  );
+
+  Future<Map<String, dynamic>> collectSource({
+    required String domainId,
+    required String platform,
+    required String query,
+    bool detail = false,
+    int limit = 20,
+  }) {
+    if (platform.isEmpty || query.trim().isEmpty || limit < 1 || limit > 100) {
+      throw const FormatException('Invalid collection request.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/cth/platform-collection/search',
+      operationContext: _contentContext(domainId),
+      payload: {
+        'operator': 'human_ui',
+        'confirm_read_only': true,
+        'platform': platform,
+        'capability': detail ? 'detail' : 'search',
+        if (detail) 'content_id': query.trim() else 'keyword': query.trim(),
+        if (!detail) 'max_results': limit,
+      },
+      connectionTimeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<Map<String, dynamic>> collectSourceComments({
+    required String domainId,
+    required String sourceId,
+    required String requestId,
+    bool includeReplies = false,
+    Map<String, dynamic>? continuation,
+  }) {
+    _validateSourceBriefJobId(requestId);
+    if (sourceId.trim().isEmpty) {
+      throw const FormatException('Source required.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/cth/platform-collection/search',
+      operationContext: _contentContext(domainId),
+      payload: {
+        'operator': 'human_ui',
+        'confirm_read_only': true,
+        'capability': 'comments',
+        'source_id': sourceId,
+        'request_id': requestId,
+        'include_replies': includeReplies,
+        'max_results': 20,
+        'continuation': ?continuation,
+      },
+      connectionTimeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<Map<String, dynamic>> sourceComments({
+    required String domainId,
+    required String sourceId,
+    String? before,
+    String? pageRef,
+  }) {
+    if (sourceId.trim().isEmpty) {
+      throw const FormatException('Source required.');
+    }
+    final query = Uri(
+      queryParameters: {
+        'source_id': sourceId,
+        'limit': '20',
+        'before': ?before,
+        'page_ref': ?pageRef,
+      },
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/cth/platform-collection/comments?$query',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
 
   Future<Map<String, dynamic>> openBrowserSession() {
     _requireLocalBrowserEndpoint();
@@ -1776,6 +2105,7 @@ class LumenisCoreClient {
     required InternalPitchManuscript manuscript,
     required String requestId,
     InternalPitchRevision? revision,
+    List<Map<String, dynamic>> citations = const [],
   }) async {
     _validateSavedWorkRequestId(requestId);
     final response = await _request(
@@ -1788,6 +2118,39 @@ class LumenisCoreClient {
         'manuscript': manuscript.toJson(),
         'request_id': requestId,
         'profile': 'authored-manuscript/v4',
+        if (citations.isNotEmpty) 'citations': citations,
+        ...(revision?.toJson() ?? const <String, Object?>{}),
+      },
+    );
+    return _internalPitchResult(response);
+  }
+
+  Future<Map<String, dynamic>> prepareGeneratedPitch({
+    required LumenisWorkspaceScope scope,
+    required Map<String, dynamic> generation,
+    required String requestId,
+    InternalPitchRevision? revision,
+  }) async {
+    _validateSavedWorkRequestId(requestId);
+    final brief = generation['brief'];
+    if (brief is! Map ||
+        brief['title'] is! String ||
+        brief['question'] is! String ||
+        (brief['title'] as String).trim().isEmpty ||
+        (brief['question'] as String).trim().isEmpty) {
+      throw const FormatException('A creation brief is required.');
+    }
+    final response = await _request(
+      'POST',
+      '/api/experience/creation/internal-pitches',
+      withContext: false,
+      requestHeaders: scope.requestHeaders,
+      payload: {
+        'scope': scope.toJson(),
+        'manuscript': null,
+        'request_id': requestId,
+        'profile': 'owned-creation/v6',
+        'generation': generation,
         ...(revision?.toJson() ?? const <String, Object?>{}),
       },
     );
@@ -2276,6 +2639,67 @@ class LumenisCoreClient {
     'xls',
   };
 
+  Future<Map<String, dynamic>> importDomainDocument({
+    required String domainId,
+    required String filename,
+    required Uint8List bytes,
+    required Map<String, dynamic> provenance,
+    String mode = 'prepare',
+    String? confirmedResource,
+  }) {
+    _validateSharedImportFile(filename, bytes);
+    if (!const {'prepare', 'import'}.contains(mode) ||
+        (mode == 'import' &&
+            (confirmedResource == null || confirmedResource.isEmpty))) {
+      throw const FormatException('Invalid document admission.');
+    }
+    final boundary = _multipartBoundary();
+    return _request(
+      'POST',
+      '/api/experience/materials/documents',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      binaryBody: _sharedImportMultipartBody(
+        filename: filename,
+        bytes: bytes,
+        boundary: boundary,
+        fields: {
+          'provenance': jsonEncode(provenance),
+          'mode': mode,
+          if (mode == 'import') 'confirm': 'true',
+          if (mode == 'import') 'confirmed_resource': confirmedResource!,
+        },
+      ),
+      binaryContentType: 'multipart/form-data; boundary=$boundary',
+      connectionTimeout: const Duration(seconds: 60),
+    );
+  }
+
+  Future<Map<String, dynamic>> startDomainSourceBriefTask({
+    required String domainId,
+    required List<String> sourceIds,
+    required String requestId,
+    String? businessQuestion,
+  }) {
+    _validateSavedWorkRequestId(requestId);
+    if (sourceIds.isEmpty || sourceIds.any((id) => id.trim().isEmpty)) {
+      throw const FormatException('Research sources are required.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/reports/source-brief/start',
+      operationContext: _contentContext(domainId),
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'source_ids': sourceIds,
+        'limit': sourceIds.length,
+        'request_id': requestId,
+        if (businessQuestion != null && businessQuestion.trim().isNotEmpty)
+          'business_question': businessQuestion.trim(),
+      },
+    );
+  }
+
   static void _validateSharedImportFile(String filename, Uint8List bytes) {
     final extension = filename.contains('.')
         ? filename.split('.').last.toLowerCase()
@@ -2332,7 +2756,8 @@ class LumenisCoreClient {
   static Uint8List _sharedImportMultipartBody({
     required String filename,
     required Uint8List bytes,
-    required String requestId,
+    String? requestId,
+    Map<String, String> fields = const {},
     required String boundary,
   }) {
     final builder = BytesBuilder(copy: false);
@@ -2345,9 +2770,13 @@ class LumenisCoreClient {
     );
     text('Content-Type: application/octet-stream\r\n\r\n');
     builder.add(bytes);
-    text('\r\n--$boundary\r\n');
-    text('Content-Disposition: form-data; name="request_id"\r\n\r\n');
-    text('$requestId\r\n--$boundary--\r\n');
+    text('\r\n');
+    for (final entry in {'request_id': ?requestId, ...fields}.entries) {
+      text('--$boundary\r\n');
+      text('Content-Disposition: form-data; name="${entry.key}"\r\n\r\n');
+      text('${entry.value}\r\n');
+    }
+    text('--$boundary--\r\n');
     return builder.takeBytes();
   }
 
@@ -2386,6 +2815,108 @@ class LumenisCoreClient {
       operationContext: _sharedWorkspaceScopeHeaders,
       requestHeaders: const {'Cache-Control': 'no-store'},
     );
+  }
+
+  Future<Map<String, dynamic>> readSharedOfficeDocument(
+    String artifactId, {
+    int offset = 0,
+    int limit = 100,
+  }) {
+    _validateSavedWorkArtifactId(artifactId);
+    if (offset < 0 || limit < 1 || limit > 500) {
+      throw const FormatException('Invalid Office page.');
+    }
+    return _request(
+      'GET',
+      '/api/experience/saved-work/$artifactId/office?offset=$offset&limit=$limit',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> editSharedOfficeDocument({
+    required String artifactId,
+    required String requestId,
+    required String expectedSha256,
+    required String expectedPackageSha256,
+    required String reason,
+    required List<Map<String, dynamic>> commands,
+    bool acknowledgeSignatureInvalidation = false,
+  }) {
+    _validateSavedWorkArtifactId(artifactId);
+    _validateSavedWorkRequestId(requestId);
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(expectedSha256) ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(expectedPackageSha256) ||
+        reason.trim().isEmpty ||
+        commands.isEmpty) {
+      throw const FormatException('Invalid Office edit.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/saved-work/$artifactId/office/edit',
+      operationContext: _sharedWorkspaceScopeHeaders,
+      requestHeaders: const {'Cache-Control': 'no-store'},
+      payload: {
+        'request_id': requestId,
+        'expected_sha256': expectedSha256,
+        'expected_package_sha256': expectedPackageSha256,
+        'reason': reason,
+        'commands': commands,
+        'acknowledge_signature_invalidation': acknowledgeSignatureInvalidation,
+      },
+    );
+  }
+
+  Future<SavedWorkExportFile> downloadSharedSavedWorkAttachment({
+    required String artifactId,
+    required String name,
+  }) async {
+    _validateSavedWorkArtifactId(artifactId);
+    if (name.isEmpty ||
+        name == '.' ||
+        name == '..' ||
+        name.contains(RegExp(r'[/\\\x00-\x1f]'))) {
+      throw const FormatException('Invalid attachment name.');
+    }
+    try {
+      final response = await sendLumenisBinaryRequest(
+        LumenisTransportRequest(
+          method: 'GET',
+          uri: _uri(
+            '/api/experience/saved-work/$artifactId/attachments/${Uri.encodeComponent(name)}',
+          ),
+          headers: {
+            ..._sharedWorkspaceScopeHeaders,
+            'Accept': 'application/octet-stream',
+            'Cache-Control': 'no-store',
+          },
+          connectionTimeout: const Duration(seconds: 45),
+          followRedirects: false,
+        ),
+        maxBytes: 64 * 1024 * 1024,
+      );
+      if (response.statusCode != 200) {
+        throw LumenisCoreException(
+          'Attachment was not returned.',
+          statusCode: response.statusCode,
+        );
+      }
+      if (response.bytes.isEmpty ||
+          response.contentType?.split(';').first.trim().toLowerCase() !=
+              'application/octet-stream') {
+        throw const FormatException('Invalid attachment response.');
+      }
+      return SavedWorkExportFile(
+        bytes: response.bytes,
+        filename: name,
+        mediaType: 'application/octet-stream',
+      );
+    } on LumenisTransportException {
+      throw const LumenisCoreException(
+        'Attachment is unavailable.',
+        errorCode: 'SAVED_WORK_ATTACHMENT_UNAVAILABLE',
+      );
+    }
   }
 
   Future<Map<String, dynamic>> sharedDocumentRows({
@@ -2460,6 +2991,32 @@ class LumenisCoreClient {
     required String artifactId,
     required String format,
     String purpose = 'delivery',
+  }) => _exportSavedWork(
+    artifactId: artifactId,
+    format: format,
+    purpose: purpose,
+    operationContext: _sharedWorkspaceScopeHeaders,
+  );
+
+  /// Exports one saved domain report in the same current CTH/BMP context used
+  /// to reopen it. This never substitutes the independent Shared scope.
+  Future<SavedWorkExportFile> exportSourceBriefSavedWork({
+    required String domainId,
+    required String artifactId,
+    required String format,
+    String purpose = 'delivery',
+  }) => _exportSavedWork(
+    artifactId: artifactId,
+    format: format,
+    purpose: purpose,
+    operationContext: _contentContext(domainId),
+  );
+
+  Future<SavedWorkExportFile> _exportSavedWork({
+    required String artifactId,
+    required String format,
+    required String purpose,
+    required Map<String, String> operationContext,
   }) async {
     _validateSavedWorkArtifactId(artifactId);
     if (!const {'md', 'txt', 'docx', 'pdf', 'xlsx', 'pptx'}.contains(format)) {
@@ -2490,7 +3047,7 @@ class LumenisCoreClient {
           method: 'GET',
           uri: uri,
           headers: {
-            ..._sharedWorkspaceScopeHeaders,
+            ...operationContext,
             'Accept': expectedMediaType,
             'Cache-Control': 'no-store',
           },
@@ -3036,10 +3593,12 @@ class LumenisCoreClient {
     Map<String, String>? operationContext,
     Duration connectionTimeout = const Duration(seconds: 8),
     Uint8List? binaryBody,
+    LumenisUploadBody? upload,
     String? binaryContentType,
     Map<String, String> requestHeaders = const {},
   }) async {
-    if (payload != null && binaryBody != null) {
+    if ([payload, binaryBody, upload].where((value) => value != null).length >
+        1) {
       throw const FormatException('Only one request body is allowed.');
     }
     final uri = _uri(path);
@@ -3057,7 +3616,7 @@ class LumenisCoreClient {
         headers['Content-Type'] = 'application/json; charset=utf-8';
         requestBody = jsonEncode(payload);
       }
-      if (binaryBody != null) {
+      if (binaryBody != null || upload != null) {
         headers['Content-Type'] =
             binaryContentType ?? 'application/octet-stream';
       }
@@ -3068,6 +3627,7 @@ class LumenisCoreClient {
           headers: headers,
           body: requestBody,
           bodyBytes: binaryBody,
+          upload: upload,
           connectionTimeout: connectionTimeout,
           // Core redirects are a deployment/configuration error. Following
           // them could forward the current Subject/BrandFocus headers to a

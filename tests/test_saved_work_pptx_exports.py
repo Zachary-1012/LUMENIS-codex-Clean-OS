@@ -259,6 +259,43 @@ def test_delivery_retains_user_content_without_internal_snapshot(format):
     assert "Complete saved snapshot" not in text
 
 
+@pytest.mark.parametrize("opening", ["报告 / Review / 검토", "Different report title", "## 报告 / Review / 검토"])
+def test_delivery_docx_removes_only_exact_first_h1_duplicate(opening):
+    from docx import Document
+
+    title = "报告 / Review / 검토"
+    heading = opening if opening.startswith("##") else "# " + opening
+    question = "完整问题 / Full original question / 전체 질문 " * 12
+    document = {"title": title, "markdown": heading + "\n" + question + "\n# " + title,
+                "payload": {"audit_marker": "PRIVATE-AUDIT-ONLY"}}
+    raw = ReportExporter.export_saved_document(document, sources=[], format="docx", purpose="delivery")
+    result = Document(io.BytesIO(raw))
+    headings = [(paragraph.style.name, paragraph.text) for paragraph in result.paragraphs
+                if paragraph.style.name.startswith("Heading")]
+    expected = [("Heading 1", title)]
+    if opening != title:
+        expected.insert(0, ("Heading 2", title) if opening.startswith("##") else ("Heading 1", opening))
+    assert headings == expected
+    assert [(paragraph.style.name, paragraph.text) for paragraph in result.paragraphs[:1]] == [("Title", title)]
+    assert question in [paragraph.text for paragraph in result.paragraphs]
+    assert "PRIVATE-AUDIT-ONLY" not in "\n".join(paragraph.text for paragraph in result.paragraphs)
+
+
+@pytest.mark.parametrize("title", ["A-B · 报告 / 검토", "H&M · Research / 자료"])
+def test_delivery_docx_recognizes_only_owner_escaped_duplicate_title(title):
+    from docx import Document
+
+    from lumenis.shared.reporting.operational_brief import _markdown_text
+
+    escaped = _markdown_text(title)
+    document = {"title": title, "markdown": "# " + escaped + "\nFull question remains.\n# " + escaped}
+    raw = ReportExporter.export_saved_document(document, sources=[], format="docx", purpose="delivery")
+    result = Document(io.BytesIO(raw))
+    assert [p.text for p in result.paragraphs if p.style.name == "Title"] == [title]
+    assert [p.text for p in result.paragraphs if p.style.name == "Heading 1"] == [escaped]
+    assert "Full question remains." in [p.text for p in result.paragraphs]
+
+
 def test_delivery_purpose_is_part_of_effect_identity_and_rechecked(monkeypatch):
     from lumenis.shared.reporting import saved_work
 

@@ -5,7 +5,7 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
+from .base import BasePlatformAdapter, CollectionResult, CollectionStatus, map_v4_comments
 from .registry import register_adapter
 
 logger = logging.getLogger(__name__)
@@ -560,9 +560,12 @@ class XAdapter(BasePlatformAdapter):
             safe_error = self._safe_failure_code(result.error, phase="page") if result.error else ""
             status = self._v4_status_to_main(result.success, result.notes, safe_error)
             items = self._v4_notes_to_items(result.notes)
-            return CollectionResult(status=status, platform=self.platform, items=items,
+            comments = map_v4_comments(result.notes) if method == 'comments' else []
+            return CollectionResult(status=status, platform=self.platform, items=[] if method == 'comments' else items,
+                                    comments=comments,
                                     raw_count=result.raw_count, message=safe_error,
-                                    metadata={"failure_code": safe_error} if safe_error else {})
+                                    metadata={**(getattr(result, 'metadata', None) or {}),
+                                              **({"failure_code": safe_error} if safe_error else {})})
         except Exception as exc:
             safe_error = self._safe_failure_code(exc, phase=failure_phase)
             return CollectionResult(status=self._v4_status_to_main(False, [], safe_error), platform=self.platform,

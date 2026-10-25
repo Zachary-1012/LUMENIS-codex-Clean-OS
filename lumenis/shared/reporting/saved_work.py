@@ -16,7 +16,7 @@ import tempfile
 import uuid
 import zipfile
 import xml.etree.ElementTree as ET
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, nullcontext
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Mapping
@@ -472,6 +472,11 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
     if row is None:
         raise SavedWorkError("WORK_EVIDENCE_MISSING")
     item = dict(zip((c[0] for c in cur.description), row))
+    public_source = (item.get('feature_id') == 'COLLECTED_SOURCE'
+                     and item.get('version') == 'collected-public-source:live-v1')
+    if item.get('feature_id') == 'COLLECTOR_NATIVE_COMMENTS':
+        from intelligence_library_api import _verified_comment_page_evidence
+        return _verified_comment_page_evidence(con, item, actor=actor, context=context, purpose=purpose)
     integrity = evidence_store.classify_evidence_integrity(item)
     try:
         inputs = json.loads(item["inputs_json"])
@@ -499,7 +504,7 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
                                 and source_provenance.get("intended_use", "research_reference") == "research_reference")
         if not method_reference:
             raise SavedWorkError("WORK_METHOD_REFERENCE_INVALID")
-    elif purpose != "quote_reference":
+    elif purpose != "quote_reference" and not (public_source and purpose == 'research_reference'):
         raise SavedWorkError("WORK_CITATION_PURPOSE_INVALID")
     shared_container = _shared_context(context)
     owner = _context_owner(context)
@@ -536,7 +541,7 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
     if not isinstance(text, str) or hashlib.sha256(text.encode()).hexdigest() != item.get("content_hash"):
         raise SavedWorkError("WORK_EVIDENCE_INTEGRITY_FAILED")
     rights = source_provenance.get("rights") if isinstance(source_provenance, dict) else None
-    if not isinstance(rights, str) or rights not in {"public-reference-only", "owner-approved"}:
+    if not public_source and (not isinstance(rights, str) or rights not in {"public-reference-only", "owner-approved"}):
         raise SavedWorkError("WORK_SOURCE_RIGHTS_UNVERIFIED")
     # The original approved input is retained by the same Artifact registry,
     # not just a claimed hash. Every citation/read/export verifies its bytes.
@@ -546,6 +551,23 @@ def _verified_evidence(con, evidence_id: int, context: dict, actor: Any = None,
     source_boundaries(source_provenance)
     source_evidence = {**item, "provenance": provenance}
     _, source_artifact = _source_bytes(con, source_evidence)
+    if public_source:
+        if actor is None:
+            raise SavedWorkError('PUBLIC_SOURCE_CURRENT_ACTOR_REQUIRED')
+        binding = provenance.get('native_source_binding') or {}
+        decision = permission.get_permission_gate().check_collected_public_source_use(actor,
+            scope=source_scope, source_evidence_ref='app_evidence_records:' + str(evidence_id),
+            source_fingerprint=provenance.get('source_fingerprint'),
+            body_sha256=binding.get('body_sha256'), source_version=item['version'],
+            purpose=purpose, connection=con)
+        if decision.allowed is not True or not decision.audit_id:
+            raise SavedWorkError('PUBLIC_SOURCE_USE_APPROVAL_REQUIRED')
+        # Only the current result projection records admitted purpose. Original
+        # publisher rights and Evidence remain UNREVIEWED and immutable.
+        provenance = {**provenance, 'provenance': {**source_provenance, 'rights':'UNKNOWN',
+            'intended_use':'research_reference' if purpose == 'research_reference' else 'report_quote',
+            'source_use_state':'EXACT_PUBLIC_SOURCE_PURPOSE_APPROVED', 'source_use_purpose':purpose,
+            'copyright_license':'NOT_ESTABLISHED_BY_PURPOSE_APPROVAL'}}
     if source_artifact["kind"] == "imported_document_source":
         # A valid generic writer signature is not an Importer receipt. Select
         # this contract by the original Artifact owner, never a payload claim.
@@ -864,6 +886,8 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
         raise SavedWorkError('WORK_REPORT_ADOPTION_OWNER_REQUIRED')
     if 'research_hypothesis_review' in payload and not callable(before_commit):
         raise SavedWorkError('WORK_HYPOTHESIS_REVIEW_OWNER_REQUIRED')
+    if 'comment_research' in payload and not callable(before_commit):
+        raise SavedWorkError('WORK_COMMENT_RESEARCH_OWNER_REQUIRED')
     # These are server-owned execution outputs, never client file paths or
     # credentials. A binding may commit its existing Task row on this same
     # connection, serializing cancellation against the Artifact commit.
@@ -887,6 +911,11 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     contract = json.loads(_json(_validate_contract(contract, payload)))
     if kind == "note":
         markdown = _note_markdown(payload)
+    if 'visual_document' in payload:
+        from lumenis.shared.content_creation.audio_visuals import visual_document_markdown
+        if kind != 'report':
+            raise SavedWorkError('WORK_VISUAL_KIND_INVALID')
+        markdown = visual_document_markdown(payload['visual_document'])
     if kind == "podcast_episode" and not contract["required_payload_paths"]:
         raise SavedWorkError("WORK_EPISODE_CONTRACT_REQUIRED")
     if kind == "podcast_episode" and "podcast_plan" in payload:
@@ -946,6 +975,10 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                 raise SavedWorkError("WORK_KIND_CHANGE_FORBIDDEN")
             if versions and versions[-1]["document"]["contract"] != contract:
                 raise SavedWorkError("WORK_CONTRACT_CHANGE_FORBIDDEN")
+            if versions and 'visual_document' in versions[-1]['document']['payload']:
+                from lumenis.shared.content_creation.audio_visuals import validate_visual_document
+                validate_visual_document(payload.get('visual_document'),
+                    previous=versions[-1]['document']['payload']['visual_document'])
             effects.enter_context(staging_write(resource))
             document = {"schema": SCHEMA, "context": context, "work_id": assigned_work,
                         "version": len(versions) + 1, "parent_artifact_id": parent,
@@ -1001,7 +1034,13 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                 if not versions and not permission.get_permission_gate().get_valid_approval_token(
                         permission.OperationType.DATA_EXPORT.value, resource=resource, exact=True):
                     raise SavedWorkError('WORK_REPORT_ADOPTION_APPROVAL_REVOKED')
-            con.commit()
+            comment_guard = nullcontext()
+            if checked_citations or 'comment_research' in payload or type(payload.get('creation')) is dict:
+                from intelligence_library_api import comment_source_commit_guard
+                comment_guard = comment_source_commit_guard(con,actor=actor,scope=scope,
+                    citations=checked_citations,payload=payload)
+            with comment_guard:
+                con.commit()
             committed = True
             # A receipt is issued only after an independent connection has
             # reopened the committed registry row and actual immutable bytes.
@@ -1054,7 +1093,7 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
             evidence = _verified_evidence(con, evidence_id, context, actor, purpose=purposes[0])
             provenance = evidence["provenance"]
             sources.append({"evidence_id": evidence_id,
-                            "source_id": evidence["asset_id"], "evidence_version": evidence["version"],
+                            "source_id": evidence.get('source_identity', evidence["asset_id"]), "evidence_version": evidence["version"],
                             "source_artifact_ref": provenance["source_artifact_ref"],
                             "scope": {k: provenance["context"][k] for k in _SCOPE_KEYS},
                             "source_url": provenance["source_url"],
@@ -1066,6 +1105,8 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
                             "published_at": provenance["provenance"]["published_at"],
                             "captured_at": provenance["provenance"]["captured_at"],
                             "purposes": purposes,
+                            **({'source_kind':'native_comment_page','parent_source_id':evidence['asset_id']}
+                               if evidence.get('source_kind') == 'native_comment_page' else {}),
                             **source_boundaries(provenance["provenance"]),
                             **({"claim_links": [link for citation in result["document"]["citations"]
                                                 if citation["evidence_id"] == evidence_id
@@ -1088,6 +1129,14 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
     authorize_saved_work(actor, scope, action="read", connection=connection)
     for source in sources:
         authorize(actor, source["scope"], action="read", connection=connection)
+    if 'comment_research' in result['document']['payload']:
+        from intelligence_library_api import validate_comment_research_result
+        validate_comment_research_result(result, actor=actor, scope=scope, connection=connection)
+    if 'visual_document' in result['document']['payload']:
+        from lumenis.shared.content_creation.audio_visuals import visual_document_markdown
+        if (result['document']['kind'] != 'report' or result['document']['markdown'] !=
+                visual_document_markdown(result['document']['payload']['visual_document'])):
+            raise SavedWorkError('WORK_VISUAL_DOCUMENT_CHANGED')
     reference = result["document"]["payload"].get("source_brief_reference")
     if reference is not None:
         from .source_brief_job import get_source_brief_job
@@ -1139,6 +1188,9 @@ def read_committed_work(artifact_id: str, *, actor: Any, scope: Mapping, connect
     reader = get_repository().connection(read_only=True, wal=False) if connection is None else nullcontext(connection)
     with reader as con:
         _validate_citations(con, result["document"]["citations"], context, actor, markdown=result["document"]["markdown"])
+        if type(result['document']['payload'].get('creation')) is dict:
+            from intelligence_library_api import _comment_source_uses
+            _comment_source_uses(con,actor=actor,scope=scope,citations=[],payload=result['document']['payload'])
     authorize_saved_work(actor, scope, action="read", connection=connection)
     return {**result, "content": raw, "receipt": receipt}
 
@@ -1147,6 +1199,9 @@ def reopen_work(artifact_id: str, *, actor: Any, scope: Mapping, connection=None
     options = {} if connection is None else {"connection": connection}
     result = read_committed_work(artifact_id, actor=actor, scope=scope, **options)
     result.pop("content")
+    if isinstance(result['document'].get('task_id'), str) and result['document']['task_id'].startswith('task-pitch-'):
+        from lumenis.shared.content_creation.internal_pitch import inspect_saved_pitch
+        result.update(inspect_saved_pitch(result, actor=actor, scope=scope, connection=connection))
     return result
 
 
@@ -1462,7 +1517,7 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
 
 def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "json",
                 purpose: str = "audit_snapshot") -> dict:
-    if not isinstance(format, str) or format not in {"json", "md", "txt", "docx", "pdf", "xlsx", "pptx"}:
+    if not isinstance(format, str) or format not in {"json", "md", "txt", "docx", "pdf", "xlsx", "pptx", "png", "svg"}:
         raise SavedWorkError("WORK_EXPORT_FORMAT_INVALID")
     if (not isinstance(purpose, str) or purpose not in {"delivery", "audit_snapshot"}
             or (purpose == "delivery" and format == "json")):
@@ -1473,7 +1528,16 @@ def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "
         binding["purpose"] = purpose
     resource = "saved-work-export:v1:" + _digest(binding)
     _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
-    if format == "json":
+    visual = item['document']['payload'].get('visual_document')
+    if format in {'png','svg'} and visual is None:
+        raise SavedWorkError('WORK_VISUAL_DOCUMENT_REQUIRED')
+    if visual is not None and format in {'png','svg','pdf','pptx'}:
+        from lumenis.shared.content_creation.audio_visuals import export_visual_document
+        def check_visual_source():
+            read_committed_work(artifact_id,actor=actor,scope=scope)
+            _check_effect(actor,scope,permission.OperationType.DATA_EXPORT,resource)
+        raw = export_visual_document(visual,format=format,check_cancel=check_visual_source)
+    elif format == "json":
         raw = item["content"]
     elif format in {"md", "txt"}:
         if purpose == "delivery":
@@ -1495,7 +1559,8 @@ def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "
     _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
     types = {"json": "application/json", "md": "text/markdown; charset=utf-8", "txt": "text/plain; charset=utf-8",
              "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-             "pdf": "application/pdf", "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+             "pdf": "application/pdf", "png":"image/png", "svg":"image/svg+xml",
+             "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
              "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation"}
     return {"content": raw, "filename": artifact_id + "." + format,
             "media_type": types[format],

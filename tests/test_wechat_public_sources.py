@@ -245,3 +245,12 @@ def test_media_hints_ignore_fallback_markup_and_strip_fragments():
     hints = item['raw']['media_hints']
     assert len(hints) == 1
     assert hints[0]['url'] == 'https://media.example.test/actual.mp3'
+
+
+def test_public_literal_navigation_fragments_are_not_confused_with_executable_redirects():
+    parse = WechatPublicAdapter._literal_article_navigation
+    source = "var url = ''; url += 'http://mp.weixin.qq.com/s/'; url += 'native-fixture'; window.location.replace(url);"
+    assert parse(source) == 'https://mp.weixin.qq.com/s/native-fixture'
+    assert parse("var url='https://mp.weixin.qq.com/s/fixture'; url=computeToken(); window.location.replace(url);") is None
+    assert parse("var url='https://mp.weixin.qq.com/s/fixture'; url += readSecret(); window.location.replace(url);") is None
+    assert parse("var url='https://mp.weixin.qq.com/s/fixture';") is None

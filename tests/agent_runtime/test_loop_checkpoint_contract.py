@@ -61,6 +61,59 @@ def _owned_plan_receipt():
     }
 
 
+def _context_budget_receipt():
+    return {'ok': True, 'fits': True, 'prompt_tokens': 120, 'context_window_tokens': 4096,
+        'output_token_limit': 512, 'output_tokens_reserved': 128,
+        'request_sha256': '1' * 64, 'runtime_sha256': '5' * 64, 'tokenizer_identity': '5' * 64,
+        'formatter_sha256': '6' * 64, 'binding_sha256': '7' * 64,
+        'count_method': 'loaded_runtime_tokenizer', 'generation_performed': False,
+        'required_context_sha256': '8' * 64, 'omitted_sections': [
+            {'section': 'derived_memory', 'sha256': '9' * 64, 'reason': 'selected_model_context_budget'}]}
+
+
+def test_typed_model_budget_receipt_survives_actual_checkpoint_reopen_and_completed_resume(durable, monkeypatch):
+    _engine, gate, adapter = durable
+    context = {'actor_id': 1, 'actor': {'id': 1}, 'domain_id': 'cth', 'module': 'agent_runtime',
+               'scope': {'global_scope': True, 'subject_id': None, 'brand_focus_id': None}}
+    budget = _context_budget_receipt()
+    # Synthetic exact receipts verify storage/recovery, never actual model counting.
+    plan = Plan(goal='read report', model='owned-model', context_budget=budget,
+        inference_receipt=_owned_plan_receipt(), steps=[PlanStep(index=0, action='read', tool='reader')])
+    result = _run(plan, adapter, monkeypatch, context)
+    restored = DurableExecutionAdapter(task_engine=TaskEngine(), permission_gate=gate).recover(result.task_id)
+    assert restored['last_checkpoint']['metadata']['resumable'] is True
+    assert restored['last_checkpoint']['plan_snapshot']['context_budget'] == budget
+    loop = AgentLoop(config=AgentConfig(enable_evaluation=False), durable_adapter=adapter,
+        tool_binding=trusted_test_executor(lambda *_: pytest.fail('completed effect replayed')))
+    monkeypatch.setattr(loop, '_check_security', lambda *a, **k: {'allowed': True})
+    resumed = loop.resume(result.task_id, context=context)
+    assert resumed.status == 'already_completed'
+    assert resumed.plan['context_budget'] == budget
+
+
+@pytest.mark.parametrize('mutation', ['secret', 'bool_count', 'nested', 'wrong_request', 'unbounded'])
+def test_budget_receipt_rejects_credentials_arbitrary_fields_and_invalid_counts(durable, monkeypatch, mutation):
+    engine, gate, adapter = durable
+    budget = _context_budget_receipt()
+    if mutation == 'secret':
+        budget['access_token'] = 'private-budget-secret'
+    elif mutation == 'bool_count':
+        budget['prompt_tokens'] = True
+    elif mutation == 'nested':
+        budget['omitted_sections'][0]['payload'] = {'authorization': 'private-budget-secret'}
+    elif mutation == 'wrong_request':
+        budget['request_sha256'] = '0' * 64
+    else:
+        budget['context_window_tokens'] = 10 ** 30
+    plan = Plan(goal='read report', model='owned-model', context_budget=budget,
+        inference_receipt=_owned_plan_receipt(), steps=[PlanStep(index=0, action='read', tool='reader')])
+    result = _run(plan, adapter, monkeypatch, {'actor_id': 1, 'domain_id': 'cth'})
+    checkpoint = DurableExecutionAdapter(task_engine=TaskEngine(), permission_gate=gate).recover(result.task_id)['last_checkpoint']
+    assert checkpoint['metadata']['resumable'] is False
+    assert 'context_budget' not in checkpoint['plan_snapshot']
+    assert 'private-budget-secret' not in json.dumps(engine.get_steps(result.task_id))
+
+
 def test_completed_plan_and_cumulative_budget_survive_engine_reopen(durable, monkeypatch):
     _engine, gate, adapter = durable
     step = PlanStep(step_id="step-stable-1", index=0, action="read report", tool="reader")

@@ -606,8 +606,8 @@ _RESOURCE_SCOPE_ACTIONS = frozenset({"read", "write"})
 # discriminator; identity and grants are always resolved on the server.
 _SHARED_WORKSPACE_SCOPE_KIND = "shared_workspace"
 _SHARED_WORKSPACE_VERSION = 1
-_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports", "conversation", "learning"})
-_SHARED_WORKSPACE_OPERATIONS = frozenset({OperationType.DATA_EXPORT, OperationType.DB_WRITE, OperationType.AI_CALL, OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT})
+_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports", "conversation", "learning", "owned_model_admission"})
+_SHARED_WORKSPACE_OPERATIONS = frozenset({OperationType.DATA_EXPORT, OperationType.DB_WRITE, OperationType.AI_CALL, OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT, OperationType.RUNTIME_OPERATION})
 _SHARED_WORKSPACE_ADMISSION_SEAL = object()
 
 
@@ -1373,7 +1373,12 @@ def _shared_workspace_admission_valid(
                 or admission.module not in _SHARED_WORKSPACE_MODULES
                 or admission.action not in _RESOURCE_SCOPE_ACTIONS):
             return False
-        if operation_type in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}:
+        if operation_type is OperationType.RUNTIME_OPERATION:
+            if (admission.module != 'owned_model_admission' or admission.action != 'write'
+                    or type(resource) is not str
+                    or re.fullmatch(r'owned_model_admission:v1:[0-9a-f]{64}', resource) is None):
+                return False
+        elif operation_type in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}:
             if (admission.module != "learning" or admission.action != "write"
                     or type(resource) is not str
                     or re.fullmatch(r"learning-exchange:[0-9a-f]{64}", resource) is None):
@@ -1385,11 +1390,24 @@ def _shared_workspace_admission_valid(
                     operation=operation_type, connection=admission.connection):
                 return False
         elif operation_type is OperationType.AI_CALL:
-            # Source-free user conversation only. The Gateway hashes the exact
-            # destination, model and redacted request body, then rechecks here.
-            if (admission.module != "conversation" or admission.action != "write"
-                    or type(resource) is not str
-                    or re.fullmatch(r"user-api-conversation:v1:[0-9a-f]{64}", resource) is None):
+            if (admission.module == 'conversation' and admission.action == 'write'
+                    and type(resource) is str and resource.startswith('conversation-owned-ai:v1:')):
+                from lumenis.ai_hub.conversations import validate_conversation_ai_resource
+                actor = admission.principal if admission.principal is not None else {'id': admission.actor_id}
+                if not validate_conversation_ai_resource(resource, actor=actor,
+                        scope={'scope_kind': _SHARED_WORKSPACE_SCOPE_KIND, 'version': _SHARED_WORKSPACE_VERSION}):
+                    return False
+            elif (admission.module == 'reports' and admission.action == 'write'
+                    and type(resource) is str
+                    and re.fullmatch(r'content-creation-ai:v1:task-pitch-[0-9a-f]{24}:[0-9a-f]{64}', resource)):
+                from content_generation import validate_creation_ai_resource
+                actor = admission.principal if admission.principal is not None else {'id': admission.actor_id}
+                if not validate_creation_ai_resource(resource, actor=actor,
+                        scope={'scope_kind': _SHARED_WORKSPACE_SCOPE_KIND, 'version': _SHARED_WORKSPACE_VERSION}):
+                    return False
+            elif (admission.module != "conversation" or admission.action != "write"
+                  or type(resource) is not str
+                  or re.fullmatch(r"user-api-conversation:v1:[0-9a-f]{64}", resource) is None):
                 return False
         elif operation_type is OperationType.DATA_EXPORT:
             if admission.module == "reports":
@@ -1504,6 +1522,27 @@ def check_shared_workspace_effect(
         and operation is OperationType.AI_CALL and type(resource) is str
         and re.fullmatch(r"user-api-conversation:v1:[0-9a-f]{64}", resource) is not None
     )
+    owned_conversation_valid = (module == 'conversation' and action == 'write'
+        and operation is OperationType.AI_CALL and type(resource) is str
+        and resource.startswith('conversation-owned-ai:v1:'))
+    if owned_conversation_valid:
+        try:
+            from lumenis.ai_hub.conversations import validate_conversation_ai_resource
+            owned_conversation_valid = validate_conversation_ai_resource(resource, actor=actor, scope=scope) is True
+        except Exception:
+            owned_conversation_valid = False
+    creation_valid = (module == 'reports' and action == 'write'
+        and operation is OperationType.AI_CALL and type(resource) is str
+        and re.fullmatch(r'content-creation-ai:v1:task-pitch-[0-9a-f]{24}:[0-9a-f]{64}', resource) is not None)
+    if creation_valid:
+        try:
+            from content_generation import validate_creation_ai_resource
+            creation_valid = validate_creation_ai_resource(resource, actor=actor, scope=scope) is True
+        except Exception:
+            creation_valid = False
+    model_admission_valid = (module == 'owned_model_admission' and action == 'write'
+        and operation is OperationType.RUNTIME_OPERATION and type(resource) is str
+        and re.fullmatch(r'owned_model_admission:v1:[0-9a-f]{64}', resource) is not None)
     learning_valid = (module == "learning" and action == "write"
         and operation in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}
         and type(resource) is str and re.fullmatch(r"learning-exchange:[0-9a-f]{64}", resource) is not None)
@@ -1516,7 +1555,7 @@ def check_shared_workspace_effect(
             learning_valid = False
     if (type(operation) is not OperationType or not (
             (operation is OperationType.DATA_EXPORT and resource_valid)
-            or conversation_valid or learning_valid)):
+            or conversation_valid or owned_conversation_valid or learning_valid or creation_valid or model_admission_valid)):
         return _shared_workspace_denial(
             permission_gate, operation, resource, caller, "SHARED_WORKSPACE_OPERATION_INVALID",
         )
@@ -1527,7 +1566,7 @@ def check_shared_workspace_effect(
         )
         result = permission_gate.check(
             operation, resource=resource, caller=caller,
-            exact_approval_required=learning_valid,
+            exact_approval_required=learning_valid or model_admission_valid,
             _shared_workspace_admission=admission,
         )
         if learning_valid and result.allowed:
@@ -2338,7 +2377,10 @@ def content_source_import_resource(
         or type(upload.global_scope) is not bool
         or not (legacy_scope_receipt or shared_workspace)
         or type(upload.size_bytes) is not int
-        or not 0 < upload.size_bytes <= 128 * 1024 * 1024
+        # The signed receipt binds an exact byte count. Storage admission and
+        # streaming/copy budgets belong to the Artifact owner, not a historical
+        # upload-size policy. Retain the signed JSON integer safety boundary.
+        or not 0 < upload.size_bytes <= (1 << 53) - 1
         or not isinstance(upload.body_sha256, str) or len(upload.body_sha256) != 64
         or any(character not in "0123456789abcdef" for character in upload.body_sha256)
         or (upload.license_metadata_sha256 is not None and (
@@ -3402,6 +3444,382 @@ class PermissionGate:
     # 核心：权限检查
     # ──────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _comment_page_resource_prefix(identity, scope, source_evidence_ref, source_fingerprint,
+                                      body_sha256, source_version, purpose):
+        return PermissionGate._collected_source_resource_prefix(identity, scope, source_evidence_ref,
+            source_fingerprint, body_sha256, source_version, purpose, source_kind='comment_page')
+
+    @staticmethod
+    def _collected_source_resource_prefix(identity, scope, source_evidence_ref, source_fingerprint,
+                                          body_sha256, source_version, purpose, *, source_kind):
+        source_id = ('comment-page:' if source_kind == 'comment_page' else 'public-source:') + source_evidence_ref.split(':')[1]
+        payload = {'identity': identity, 'scope': scope, 'source_id': source_id,
+            'source_evidence_ref': source_evidence_ref, 'source_fingerprint': source_fingerprint,
+            'body_sha256': body_sha256, 'source_version': source_version, 'purpose': purpose}
+        digest = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
+        return ('comment-page-use:v1:' if source_kind == 'comment_page' else 'public-source-use:v1:') + source_id + ':' + digest + ':'
+
+    def _read_collected_public_source_for_use(self, con, reference, container_scope):
+        """Read the original Importer/Collector producer and its current Canonical source."""
+        from canonical_data import list_scoped_canonical
+        from lumenis.importer.documents import _source_bytes
+        from lumenis.shared.evidence import store
+        row = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(reference.split(':')[1]),)).fetchone()
+        if row is None:
+            raise ValueError('PUBLIC_SOURCE_UNAVAILABLE')
+        evidence = dict(row)
+        metadata = json.loads(evidence.get('collection_metadata') or '{}')
+        if (evidence.get('source') != 'collector' or evidence.get('feature_id') != 'COLLECTED_SOURCE'
+                or evidence.get('version') != 'collected-public-source:live-v1'
+                or evidence.get('status') != 'verified' or evidence.get('result') != 'PASS'
+                or store.classify_evidence_integrity(evidence).get('assurance') != 'writer-authenticated'):
+            raise ValueError('PUBLIC_SOURCE_PRODUCER_INVALID')
+        raw, artifact = _source_bytes(con, {**evidence, 'provenance': metadata})
+        document = json.loads(raw)
+        context = metadata['context']
+        source_scope = {key: context.get(key) for key in ('domain_id', 'subject_id', 'brand_focus_id', 'global_scope')}
+        if (source_scope['domain_id'] != container_scope['domain_id']
+                or any(container_scope.get(key) and container_scope[key] != source_scope[key]
+                       for key in ('subject_id', 'brand_focus_id'))):
+            raise ValueError('PUBLIC_SOURCE_SCOPE_DENIED')
+        current = list_scoped_canonical(con,
+            product_id='CTH' if source_scope['domain_id'] == 'cth' else 'ZBMP',
+            subject_id=source_scope['subject_id'], brand_focus_id=source_scope['brand_focus_id'],
+            source_ids=[str(evidence['asset_id'])], source_level=True, limit=2)['records']
+        if (len(current) != 1 or current[0].get('source_table') != 'notes'
+                or current[0].get('source_platform') != 'public_http'
+                or current[0].get('url') != document.get('source_url')
+                or any((current[0].get(key) or None) != source_scope[key]
+                       for key in ('subject_id', 'brand_focus_id'))
+                or str(current[0].get('verification_status', '')).upper() in {
+                    'REJECTED', 'DENIED', 'REVOKED', 'WITHDRAWN', 'DELETED', 'INVALID'}):
+            raise ValueError('PUBLIC_SOURCE_CURRENT_CANONICAL_UNAVAILABLE')
+        return {'document': document, 'evidence': evidence, 'sha256': artifact['sha256'],
+                'scope': source_scope, 'current_source': current[0]}
+
+    def revoke_comment_page_use(self, actor, *, scope, source_evidence_ref, source_fingerprint,
+            body_sha256, source_version, purpose, connection, rights_declaration=None,
+            _source_kind='comment_page') -> PermissionResult:
+        """Withdraw all matching current declarations; this grants no read use."""
+        operation, resource, caller, domain = OperationType.COLLECTOR_SOURCE_READ.value, 'comment-page-use:invalid', 'anonymous', None
+        allowed, reason = False, 'COMMENT_PAGE_REVOKE_DENIED'
+        safe_purpose = purpose if type(purpose) is str and purpose in {'research_reference', 'quote_reference'} else 'invalid'
+        try:
+            from domain_isolation import resolve_domain_identity
+            from lumenis.shared.evidence import store
+            if (type(self) is not PermissionGate or self is not get_permission_gate()
+                    or not self.fail_closed or is_testing_bypass_enabled() or safe_purpose == 'invalid'
+                    or type(scope) is not dict or _source_kind not in {'comment_page', 'public_source'}
+                    or source_version != ('collector-native-comments/2' if _source_kind == 'comment_page' else 'collected-public-source:live-v1')
+                    or type(source_evidence_ref) is not str
+                    or re.fullmatch(r'app_evidence_records:[1-9][0-9]*', source_evidence_ref) is None
+                    or any(type(value) is not str or re.fullmatch(r'[0-9a-f]{64}', value) is None
+                           for value in (source_fingerprint, body_sha256))):
+                raise ValueError('COMMENT_PAGE_REVOKE_REQUEST_INVALID')
+            actor_id, principal, caller = _shared_workspace_actor_identity(actor)
+            if principal is None:
+                from lumenis.auth.service import get_current_user
+                current = get_current_user(read_only=True)
+                if not current or current.get('id') != actor_id:
+                    raise ValueError('COMMENT_PAGE_REVOKE_IDENTITY_REQUIRED')
+            identity = ({'actor_id': actor_id} if principal is None else {
+                'actor_id': None, 'principal_kind': principal.principal_kind, 'principal_ref': principal.principal_ref})
+            con = _require_canonical_scope_connection(connection)
+            row = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(source_evidence_ref.split(':')[1]),)).fetchone()
+            if row is None or store.classify_evidence_integrity(dict(row)).get('assurance') != 'writer-authenticated':
+                raise ValueError('COMMENT_PAGE_REVOKE_SOURCE_INVALID')
+            row = dict(row)
+            metadata = json.loads(row.get('collection_metadata') or '{}')
+            if _source_kind == 'comment_page':
+                original = json.loads(row['outputs_json'])['result']['original_source']
+                source_scope = json.loads(row['inputs_json'])['parent']['scope']
+                expected_feature = 'COLLECTOR_NATIVE_COMMENTS'
+                expected_body = original.get('body_sha256')
+            else:
+                context = metadata['context']
+                source_scope = {key: context.get(key) for key in ('domain_id', 'subject_id', 'brand_focus_id', 'global_scope')}
+                expected_feature = 'COLLECTED_SOURCE'
+                expected_body = metadata['native_source_binding'].get('body_sha256')
+            domain, _ = resolve_domain_identity(domain_id=source_scope['domain_id'])
+            exact_scope = {**source_scope, 'domain_id': domain}
+            requested_domain, _ = resolve_domain_identity(domain_id=scope.get('domain_id'))
+            if (row.get('source') != 'collector' or row.get('feature_id') != expected_feature
+                    or row.get('version') != source_version or metadata.get('source_fingerprint') != source_fingerprint
+                    or expected_body != body_sha256 or requested_domain != domain
+                    or any(scope.get(key) and scope.get(key) != exact_scope.get(key) for key in ('subject_id', 'brand_focus_id'))):
+                raise ValueError('COMMENT_PAGE_REVOKE_BINDING_INVALID')
+            prefix = self._collected_source_resource_prefix(identity, exact_scope, source_evidence_ref,
+                source_fingerprint, body_sha256, source_version, purpose, source_kind=_source_kind)
+            suffix = None
+            if rights_declaration is not None:
+                if (type(rights_declaration) is not dict or set(rights_declaration) != {'rights', 'statement'}
+                        or rights_declaration['rights'] not in {'public-reference-only', 'owner-approved'}
+                        or type(rights_declaration['statement']) is not str or not 1 <= len(rights_declaration['statement'].strip()) <= 2000):
+                    raise ValueError('COMMENT_PAGE_RIGHTS_DECLARATION_REQUIRED')
+                suffix = rights_declaration['rights'] + ':' + hashlib.sha256(json.dumps(rights_declaration,
+                    sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
+            resource = prefix + (suffix or '*')
+            with self._approval_lock:
+                for item in self._approvals.values():
+                    if (item.operation == operation and item.resource and item.resource.startswith(prefix)
+                            and re.fullmatch(r'(?:public-reference-only|owner-approved):[0-9a-f]{64}', item.resource[len(prefix):])
+                            and (suffix is None or item.resource == resource)):
+                        item.revoked = True
+            allowed, reason = True, 'COMMENT_PAGE_USE_REVOKED_NO_READ_GRANTED'
+        except Exception as exc:
+            if isinstance(exc, ValueError) and re.fullmatch(r'COMMENT_PAGE_[A-Z_]+', str(exc)):
+                reason = str(exc)
+        if _source_kind == 'public_source':
+            reason, resource = reason.replace('COMMENT_PAGE_', 'PUBLIC_SOURCE_'), resource.replace('comment-page-use:invalid', 'public-source-use:invalid')
+        label = 'public_source' if _source_kind == 'public_source' else 'comment_page'
+        try:
+            audit_id = self._write_audit(operation_type=operation, resource=resource, risk_level=RiskLevel.LOW.value,
+                permission_required=label + '_revoke_' + safe_purpose, caller=caller,
+                result='revoked' if allowed else 'denied', reason=reason, operation_id=None, approval_token=None)
+        except Exception:
+            allowed, reason, audit_id = False, label.upper() + '_REVOKE_AUDIT_UNAVAILABLE', None
+        return PermissionResult(allowed=allowed, reason=reason, audit_id=audit_id, resource=resource,
+            operation_type=operation, caller=caller, domain_id=domain, permission_required=label + '_revoke_' + safe_purpose,
+            risk_level=RiskLevel.LOW.value)
+
+    def prepare_comment_page_use(
+        self, actor, *, scope, source_evidence_ref, source_fingerprint,
+        body_sha256, source_version, purpose, rights_declaration, connection,
+    ) -> PermissionResult:
+        """Prepare an exact comment-page grant; allowed remains false."""
+        return self._comment_page_use(actor, scope=scope, source_evidence_ref=source_evidence_ref,
+            source_fingerprint=source_fingerprint, body_sha256=body_sha256, source_version=source_version,
+            purpose=purpose, rights_declaration=rights_declaration, connection=connection, prepare_only=True)
+
+    def check_comment_page_use(
+        self, actor, *, scope, source_evidence_ref, source_fingerprint,
+        body_sha256, source_version, purpose, connection, rights_declaration=None,
+    ) -> PermissionResult:
+        """Reopen the producer and current exact approval; no retained token grants use."""
+        return self._comment_page_use(actor, scope=scope, source_evidence_ref=source_evidence_ref,
+            source_fingerprint=source_fingerprint, body_sha256=body_sha256, source_version=source_version,
+            purpose=purpose, rights_declaration=rights_declaration, connection=connection, prepare_only=False)
+
+    def prepare_collected_public_source_use(self, actor, *, scope, source_evidence_ref, source_fingerprint,
+            body_sha256, source_version, purpose, rights_declaration, connection) -> PermissionResult:
+        return self._comment_page_use(actor, scope=scope, source_evidence_ref=source_evidence_ref,
+            source_fingerprint=source_fingerprint, body_sha256=body_sha256, source_version=source_version,
+            purpose=purpose, rights_declaration=rights_declaration, connection=connection,
+            prepare_only=True, source_kind='public_source')
+
+    def check_collected_public_source_use(self, actor, *, scope, source_evidence_ref, source_fingerprint,
+            body_sha256, source_version, purpose, connection, rights_declaration=None) -> PermissionResult:
+        return self._comment_page_use(actor, scope=scope, source_evidence_ref=source_evidence_ref,
+            source_fingerprint=source_fingerprint, body_sha256=body_sha256, source_version=source_version,
+            purpose=purpose, rights_declaration=rights_declaration, connection=connection,
+            prepare_only=False, source_kind='public_source')
+
+    def revoke_collected_public_source_use(self, actor, *, scope, source_evidence_ref, source_fingerprint,
+            body_sha256, source_version, purpose, connection, rights_declaration=None) -> PermissionResult:
+        return self.revoke_comment_page_use(actor, scope=scope, source_evidence_ref=source_evidence_ref,
+            source_fingerprint=source_fingerprint, body_sha256=body_sha256, source_version=source_version,
+            purpose=purpose, rights_declaration=rights_declaration, connection=connection,
+            _source_kind='public_source')
+
+    @contextmanager
+    def comment_page_use_commit_lease(self, actor, *, scope, source_evidence_ref, source_fingerprint,
+            body_sha256, source_version, purpose, connection, timeout_seconds=1.0):
+        use = {'scope': scope, 'source_evidence_ref': source_evidence_ref, 'source_fingerprint': source_fingerprint,
+               'body_sha256': body_sha256, 'source_version': source_version, 'purpose': purpose}
+        with self.comment_page_uses_commit_lease(actor, uses=[use], connection=connection,
+                                                timeout_seconds=timeout_seconds) as decisions:
+            yield decisions[0]
+
+    @contextmanager
+    def comment_page_uses_commit_lease(self, actor, *, uses, connection, timeout_seconds=1.0):
+        if type(uses) is not list or any(type(use) is not dict or use.get('source_version') != 'collector-native-comments/2' for use in uses):
+            raise ValueError('COMMENT_PAGE_COMMIT_USES_INVALID')
+        with self.collected_source_uses_commit_lease(actor, uses=uses, connection=connection,
+                timeout_seconds=timeout_seconds, _error_prefix='COMMENT_PAGE') as decisions:
+            yield decisions
+
+    @contextmanager
+    def collected_public_source_uses_commit_lease(self, actor, *, uses, connection, timeout_seconds=1.0):
+        if type(uses) is not list or any(type(use) is not dict or use.get('source_version') != 'collected-public-source:live-v1' for use in uses):
+            raise ValueError('PUBLIC_SOURCE_COMMIT_USES_INVALID')
+        with self.collected_source_uses_commit_lease(actor, uses=uses, connection=connection,
+                timeout_seconds=timeout_seconds, _error_prefix='PUBLIC_SOURCE') as decisions:
+            yield decisions
+
+    @contextmanager
+    def collected_source_uses_commit_lease(self, actor, *, uses, connection, timeout_seconds=1.0,
+                                          _error_prefix='COLLECTED_SOURCE'):
+        """Fresh exact use under the original approval lock, only through commit.
+
+        The consumer owns its canonical transaction. Hold this bounded lease
+        after all other validation, around commit only. Batch uses share the
+        one original non-reentrant lock; no Gate check runs while it is held.
+        """
+        if type(timeout_seconds) not in {int, float} or not 0 < timeout_seconds <= 2:
+            raise ValueError(_error_prefix + '_COMMIT_LEASE_TIMEOUT_INVALID')
+        fields = {'scope', 'source_evidence_ref', 'source_fingerprint', 'body_sha256', 'source_version', 'purpose'}
+        if (type(uses) is not list or not 1 <= len(uses) <= 256
+                or any(type(use) is not dict or set(use) != fields for use in uses)):
+            raise ValueError(_error_prefix + '_COMMIT_USES_INVALID')
+        con = _require_canonical_scope_connection(connection)
+        if not con.in_transaction:
+            raise PermissionError(_error_prefix + '_COMMIT_TRANSACTION_REQUIRED')
+        checkers = {'collector-native-comments/2': self.check_comment_page_use,
+                    'collected-public-source:live-v1': self.check_collected_public_source_use}
+        if any(use['source_version'] not in checkers for use in uses):
+            raise ValueError(_error_prefix + '_COMMIT_USES_INVALID')
+        decisions = [checkers[use['source_version']](actor, **use, connection=con) for use in uses]
+        if any(decision.allowed is not True or not decision.audit_id for decision in decisions):
+            raise PermissionError(_error_prefix + '_COMMIT_USE_DENIED')
+        if not self._approval_lock.acquire(timeout=float(timeout_seconds)):
+            raise PermissionError(_error_prefix + '_COMMIT_LEASE_TIMEOUT')
+        try:
+            if (self is not get_permission_gate() or is_testing_bypass_enabled() or not self.fail_closed
+                    or any(not any(item.operation == decision.operation_type and item.resource == decision.resource
+                        and item.issuance_audit_id and item.is_valid(decision.operation_type, decision.resource)
+                        for item in self._approvals.values()) for decision in decisions)):
+                raise PermissionError(_error_prefix + '_COMMIT_USE_DENIED')
+            yield decisions
+        finally:
+            self._approval_lock.release()
+
+    def _comment_page_use(self, actor, *, scope, source_evidence_ref, source_fingerprint,
+                          body_sha256, source_version, purpose, rights_declaration, connection, prepare_only,
+                          source_kind='comment_page'):
+        operation = OperationType.COLLECTOR_SOURCE_READ.value
+        allowed, reason, resource, caller, domain = False, 'COMMENT_PAGE_USE_DENIED', 'comment-page-use:invalid', 'anonymous', None
+        token = None
+        safe_purpose = purpose if type(purpose) is str and purpose in {'research_reference', 'quote_reference'} else 'invalid'
+        try:
+            from lumenis.system.collector.adapters.secondary_collection import read_comment_page_original
+            from domain_isolation import resolve_domain_identity
+            if (type(self) is not PermissionGate or self is not get_permission_gate()
+                    or is_testing_bypass_enabled() or not self.fail_closed
+                    or type(scope) is not dict
+                    or set(scope) - {'domain_id', 'subject_id', 'brand_focus_id', 'global_scope'}
+                    or not {'domain_id', 'subject_id', 'brand_focus_id'}.issubset(scope)
+                    or type(scope.get('global_scope', False)) is not bool
+                    or purpose not in {'research_reference', 'quote_reference'}
+                    or source_kind not in {'comment_page', 'public_source'}
+                    or source_version != ('collector-native-comments/2' if source_kind == 'comment_page' else 'collected-public-source:live-v1')
+                    or type(source_evidence_ref) is not str
+                    or re.fullmatch(r'app_evidence_records:[1-9][0-9]*', source_evidence_ref) is None
+                    or any(type(value) is not str or re.fullmatch(r'[0-9a-f]{64}', value) is None
+                           for value in (source_fingerprint, body_sha256))):
+                raise ValueError('COMMENT_PAGE_REQUEST_INVALID')
+            if rights_declaration is not None:
+                if (type(rights_declaration) is not dict or set(rights_declaration) != {'rights', 'statement'}
+                        or rights_declaration['rights'] not in {'public-reference-only', 'owner-approved'}
+                        or type(rights_declaration['statement']) is not str
+                        or not 1 <= len(rights_declaration['statement'].strip()) <= 2000):
+                    raise ValueError('COMMENT_PAGE_RIGHTS_DECLARATION_REQUIRED')
+            elif prepare_only:
+                raise ValueError('COMMENT_PAGE_RIGHTS_DECLARATION_REQUIRED')
+            con = _require_canonical_scope_connection(connection)
+            domain, _ = resolve_domain_identity(domain_id=scope['domain_id'])
+            container_scope = {**scope, 'domain_id': domain, 'global_scope': scope.get('global_scope', False)}
+            actor_id, principal, caller = _shared_workspace_actor_identity(actor)
+            checker = check_local_workspace_scope_permission if principal else check_actor_scope_permission
+            identity = ({'actor_id': actor_id} if principal is None else {
+                'actor_id': None, 'principal_kind': principal.principal_kind, 'principal_ref': principal.principal_ref})
+
+            def current_original():
+                original = (read_comment_page_original(source_evidence_ref, actor=actor, scope=container_scope, connection=con)
+                    if source_kind == 'comment_page' else self._read_collected_public_source_for_use(con, source_evidence_ref, container_scope))
+                document = original['document']
+                source_scope = document['parent']['scope'] if source_kind == 'comment_page' else original['scope']
+                exact_domain, _ = resolve_domain_identity(domain_id=source_scope['domain_id'])
+                exact_scope = {**source_scope, 'domain_id': exact_domain}
+                if (exact_domain != domain or original['sha256'] != source_fingerprint
+                        or document.get('body_sha256') != body_sha256
+                        or original['evidence'].get('version') != source_version
+                        or original['evidence'].get('status') != 'verified'
+                        or original['evidence'].get('result') != 'PASS'):
+                    raise ValueError('COMMENT_PAGE_SOURCE_BINDING_INVALID')
+                for requested_scope in (container_scope, exact_scope):
+                    permission = checker(actor, **requested_scope, module='reports', action='read', gate=self, connection=con)
+                    if permission.allowed is not True or permission.verification_state != 'verified':
+                        raise ValueError('COMMENT_PAGE_SCOPE_DENIED')
+                # Explicit restrictions on the page or any observed comment win.
+                # UNREVIEWED remains unchanged; the human grant is purpose-only.
+                pending = [document, json.loads(original['evidence'].get('collection_metadata') or '{}'),
+                           original.get('current_source', {})]
+                inspected = 0
+                while pending:
+                    value = pending.pop(); inspected += 1
+                    if inspected > 100000:
+                        raise ValueError('COMMENT_PAGE_RESTRICTIONS_UNVERIFIABLE')
+                    if isinstance(value, dict):
+                        if (any(value.get(key) is True for key in (
+                                'revoked', 'withdrawn', 'deleted', 'private', 'restricted', 'confidential', 'use_prohibited'))
+                                or str(value.get('privacy_status', '')).upper() in {'PRIVATE', 'RESTRICTED', 'CONFIDENTIAL'}
+                                or str(value.get('use_status', '')).upper() in {'DENIED', 'REVOKED', 'WITHDRAWN'}
+                                or str(value.get('status', '')).upper() in {'DENIED', 'REVOKED', 'WITHDRAWN', 'DELETED', 'PRIVATE'}):
+                            raise ValueError('COMMENT_PAGE_SOURCE_RESTRICTED')
+                        pending.extend(value.values())
+                    elif isinstance(value, list):
+                        pending.extend(value)
+                return original, exact_scope
+
+            original, exact_scope = current_original()
+            prefix = self._collected_source_resource_prefix(identity, exact_scope, source_evidence_ref,
+                source_fingerprint, body_sha256, source_version, purpose, source_kind=source_kind)
+            if rights_declaration is not None:
+                declaration_hash = hashlib.sha256(json.dumps(rights_declaration, sort_keys=True,
+                    separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
+                resource = prefix + rights_declaration['rights'] + ':' + declaration_hash
+            else:
+                resource = prefix + 'approval-required'
+            if prepare_only:
+                reason = 'COMMENT_PAGE_PREPARED_NOT_AUTHORIZED'
+            else:
+                with self._approval_lock:
+                    for candidate in self._approvals.values():
+                        if (candidate.operation != operation or not candidate.resource
+                                or not candidate.resource.startswith(prefix)
+                                or re.fullmatch(r'(?:public-reference-only|owner-approved):[0-9a-f]{64}', candidate.resource[len(prefix):]) is None
+                                or (rights_declaration is not None and candidate.resource != resource)
+                                or not candidate.issuance_audit_id
+                                or not candidate.is_valid(operation, candidate.resource)):
+                            continue
+                        resource, token = candidate.resource, candidate.token
+                        break
+                allowed = token is not None
+                reason = 'COMMENT_PAGE_EXACT_USE_APPROVED_OBSERVED_STATEMENTS_ONLY' if allowed else 'COMMENT_PAGE_EXACT_APPROVAL_REQUIRED'
+        except Exception as exc:
+            if isinstance(exc, ValueError) and re.fullmatch(r'(?:COMMENT_PAGE|PUBLIC_SOURCE)_[A-Z_]+', str(exc)):
+                reason = str(exc)
+        if source_kind == 'public_source':
+            reason, resource = reason.replace('COMMENT_PAGE_', 'PUBLIC_SOURCE_'), resource.replace('comment-page-use:invalid', 'public-source-use:invalid')
+        label = 'public_source' if source_kind == 'public_source' else 'comment_page'
+        try:
+            audit_id = self._write_audit(operation_type=operation, resource=resource,
+                risk_level=RiskLevel.LOW.value, permission_required=label + '_exact_' + safe_purpose,
+                caller=caller, result='prepared' if reason == label.upper() + '_PREPARED_NOT_AUTHORIZED' else 'allowed' if allowed else 'denied',
+                reason=reason, operation_id=None, approval_token=None)
+        except Exception:
+            allowed, reason, audit_id = False, label.upper() + '_AUDIT_UNAVAILABLE', None
+        if allowed:
+            try:
+                reread, current_scope = current_original()
+                if (current_scope != exact_scope or reread['sha256'] != source_fingerprint
+                        or self is not get_permission_gate() or is_testing_bypass_enabled()
+                        or not self._approval_token_is_valid(token, operation, resource)):
+                    raise ValueError('COMMENT_PAGE_APPROVAL_OR_SOURCE_CHANGED')
+            except Exception:
+                allowed, reason = False, label.upper() + '_APPROVAL_OR_SOURCE_CHANGED'
+                try:
+                    audit_id = self._write_audit(operation_type=operation, resource=resource,
+                        risk_level=RiskLevel.LOW.value, permission_required=label + '_exact_' + safe_purpose,
+                        caller=caller, result='denied', reason=reason, operation_id=None, approval_token=None)
+                except Exception:
+                    audit_id = None
+        return PermissionResult(allowed=allowed, reason=reason, requires_approval=not allowed,
+            audit_id=audit_id, operation_type=operation, resource=resource, caller=caller,
+            domain_id=domain, risk_level=RiskLevel.LOW.value,
+            permission_required=label + '_exact_' + safe_purpose)
+
     def prepare_browser_snapshot_use(
         self, actor, *, scope, source_evidence_ref, source_fingerprint,
         body_sha256, source_version, purpose, connection,
@@ -4127,7 +4545,9 @@ class PermissionGate:
         final_risk = risk_level or spec.risk
         # External conversation export is a different effect from owned analysis.
         # Its exact actor/request/destination approval cannot inherit LOW AI_CALL.
-        if shared_workspace and operation_type is OperationType.AI_CALL:
+        if (shared_workspace and operation_type is OperationType.AI_CALL
+                and _shared_workspace_admission.module == 'conversation'
+                and type(resource) is str and resource.startswith('user-api-conversation:v1:')):
             final_risk = RiskLevel.HIGH
             exact_approval_required = True
 

@@ -2,6 +2,8 @@
 import { creationCopy } from "../creation-copy";
 import type { Locale } from "../i18n";
 import PaintedIcon from "./PaintedIcon.astro";
+import { publicCopy, localPath } from "../public-content";
+import { workspaceHref } from "../site-config.mjs";
 
 const { locale } = Astro.props as { locale: Locale };
 const c = creationCopy[locale];
@@ -30,6 +32,10 @@ const c = creationCopy[locale];
           {item.stages.map((stage, stageIndex) => <li><span>0{stageIndex + 1}</span>{stage}</li>)}
         </ol>
         <p class="creation-card__detail">{item.detail}</p>
+        <div class="public-actions">
+          <a class="public-text-link" href={`${localPath(locale, 'help')}#${item.id === 'document' ? 'writing' : item.id === 'audio' ? 'podcast' : 'video'}`}>{publicCopy[locale].guide} <span aria-hidden="true">↗</span></a>
+          {workspaceHref('SH-01', item.id === 'document' ? 'manuscript' : item.id) && <a class="action-link action-link--primary" href={workspaceHref('SH-01', item.id === 'document' ? 'manuscript' : item.id)}>{publicCopy[locale].start}<span aria-hidden="true">→</span></a>}
+        </div>
       </article>)}
     </div>
     <p class="creation-note">{c.note}</p>

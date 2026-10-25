@@ -61,7 +61,9 @@ def status():
         return {**user_api_adapter.status(), "enabled": user_api_adapter.is_configured(),
                 "rule_fallback": False, "ok": True}
     try:
-        runtime = intelligence.owned_inference_status()
+        # Conversation consumes the independently admitted Shared service, not
+        # the legacy offline-evaluation handle or a business-domain slot.
+        runtime = intelligence.owned_inference_status('shared')
     except Exception:
         runtime = None
     if not isinstance(runtime, dict):
@@ -70,10 +72,19 @@ def status():
             "service_binding": "NOT_BOUND", "state": "UNAVAILABLE",
             "reason": "OWNED_RUNTIME_STATUS_UNAVAILABLE",
         }
+    from .conversations import conversation_source_use_policy
+    policy = conversation_source_use_policy()
+    service_available = runtime.get('available') is True and runtime.get('service_binding') == 'BOUND'
+    conversation_available = (service_available and policy['operation'] in runtime.get('allowed_operations', [])
+        and runtime.get('source_use_policy_version') == policy['version']
+        and runtime.get('source_use_policy_sha256') == policy['sha256'])
+    if service_available and not conversation_available:
+        runtime = {**runtime, 'state': 'UNAVAILABLE', 'reason': 'OWNED_CONVERSATION_POLICY_NOT_ADMITTED'}
     return {
         **runtime,
         "provider": "owned",
-        "enabled": runtime.get("available") is True and runtime.get("service_binding") == "BOUND",
+        "available": conversation_available, "enabled": conversation_available,
+        "service_available": service_available, "conversation_available": conversation_available,
         "rule_fallback": False,
         "fallback_allowed": False,
         "ok": True,
@@ -113,6 +124,10 @@ def _owned_result_text(result):
             value = analysis.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
+    if isinstance(result, dict) and result.get('real_input_bound') is True:
+        text = result.get('text')
+        if isinstance(text, str) and text.strip():
+            return text.strip()
     return None
 
 
@@ -152,11 +167,18 @@ def invalid_chat_input(code, *, external_approval=None):
     return result
 
 
-def chat(question: str, history=None, scope: str = "all", *, source_scope=None, external_approval=None) -> dict:
+def chat(question: str, history=None, scope: str = "all", *, source_scope=None, external_approval=None,
+         _owned_request=None, is_cancelled=None) -> dict:
     """Chat through the explicitly selected Gateway, without business data export."""
     t0 = time.time()
-    if not isinstance(question, str) or len(question) > 4000 or not isinstance(scope, str):
+    if (not isinstance(question, str) or (len(question) > 4000 and _owned_request is None)
+            or not isinstance(scope, str)):
         return invalid_chat_input("MESSAGE_INVALID", external_approval=external_approval)
+    if _owned_request is not None:
+        from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+        if (type(_owned_request) is not OwnedServiceRequest
+                or _owned_request.operation != 'source_free_conversation'):
+            return invalid_chat_input('CONVERSATION_TYPED_REQUEST_REQUIRED', external_approval=external_approval)
     question = question.strip()
     if not question:
         return invalid_chat_input("MESSAGE_REQUIRED", external_approval=external_approval)
@@ -186,22 +208,36 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None, 
     conversation = question
     if isinstance(history, list):
         turns = []
-        for item in history[-6:]:
+        for item in history:
             if not isinstance(item, dict) or item.get("role") not in {"user", "human", "assistant"}:
-                continue
+                return invalid_chat_input("CONVERSATION_HISTORY_INVALID", external_approval=external_approval)
             content = item.get("content")
             if isinstance(content, str) and content.strip():
                 role = "用户" if item["role"] in {"user", "human"} else "LUMENIS"
-                turns.append(f"{role}：{content[:800]}")
+                turns.append(f"{role}：{content}")
+            else:
+                return invalid_chat_input("CONVERSATION_HISTORY_INVALID", external_approval=external_approval)
         if turns:
-            conversation = "最近对话（用户提供，非核验事实）：\n" + "\n".join(turns) + "\n当前问题：" + question
+            conversation = "完整选定对话与人工任务状态（用户提供，非核验事实、授权或效果回执）：\n" + "\n".join(turns) + "\n当前问题：" + question
     # Both routes must receive the same bounded, caller-supplied conversation.
     # Passing only the last question makes follow-up turns lose their context.
     prompt = sys_prompt + "\n\n用户对话：" + conversation
+    # The selected external transport has a hard 32k-character envelope. This
+    # is a transport limit, not a token estimate. Never silently cut constraints
+    # or writing to fit a model whose tokenizer has not been admitted here.
     from lumenis.system.ai_gateway import user_api_adapter
+    external_selected = user_api_adapter.is_selected()
+    if (external_selected or _owned_request is None) and len(sys_prompt) + len(conversation) > 32000:
+        return {"ok": False, "status": "BLOCKED", "code": "CONVERSATION_CONTEXT_EXCEEDS_TRANSPORT_LIMIT",
+                "reply": None, "generation_performed": False,
+                "context_accounting": {"transport_characters": len(sys_prompt) + len(conversation),
+                    "transport_character_limit": 32000, "token_budget_verified": False,
+                    "recovery": "EXPLICIT_CONTEXT_CORRECTION_OR_FORGET_REQUIRED"}}
     usage = None
     approval_request = None
-    if user_api_adapter.is_selected():
+    model_budget = None
+    owned_provenance = None
+    if external_selected:
         # Only user-entered conversation and static routing metadata go out.
         # Configuring an API does not grant export of stored business sources.
         content, transport, _meta = intelligence.chat(
@@ -230,9 +266,34 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None, 
         completed = False
         provider = "user_api"
     else:
-        result = _run_owned(prompt, "conversation")
+        if _owned_request is not None:
+            from lumenis.ai_hub.context_pack import run_budgeted_owned_request
+            from lumenis.system.ai_gateway.owned_service import owned_service_request_digest
+            result = run_budgeted_owned_request(_owned_request, is_cancelled=is_cancelled)
+            if result.get('ok') is True and (
+                    result.get('request_digest') != owned_service_request_digest(_owned_request)
+                    or result.get('operation') != _owned_request.operation
+                    or result.get('domain_id') != _owned_request.domain_id
+                    or result.get('scope') != _owned_request.scope
+                    or result.get('input_revision_sha256') != _owned_request.input_revision_sha256
+                    or result.get('source_binding_sha256') != _owned_request.source_binding_sha256):
+                result = {'ok': False, 'status': 'ERROR', 'code': 'OWNED_CONVERSATION_RESULT_INVALID'}
+            model_budget = result.get('context_accounting')
+        else:
+            result = _run_owned(prompt, "conversation")
         completed = _completed(result)
         provider = "owned"
+        if completed and _owned_request is not None:
+            owned_provenance = {key: value for key, value in result.items() if key in {
+                'operation', 'request_id', 'request_digest', 'run_id', 'model_id', 'model_revision',
+                'recipe', 'domain_id', 'scope', 'candidate_identity_sha256', 'runtime_sha256',
+                'executor_sha256', 'manifest_sha256', 'adapter_sha256', 'adapter_config_sha256',
+                'input_revision_sha256', 'source_binding_sha256', 'source_evidence_refs',
+                'source_use_policy_version', 'source_use_policy_sha256', 'source_audit_ids',
+                'admission_request_sha256', 'evaluation_ref', 'quality_review_ref', 'evaluation_state',
+                'quality_state', 'product_acceptance', 'context_window_tokens', 'output_token_limit'}}
+            usage = {key: result[key] for key in ('prompt_tokens', 'completion_tokens', 'total_tokens')
+                     if type(result.get(key)) is int and result[key] >= 0} or None
     record_learning("chat", {
         # An inference request grants neither corpus admission nor retention
         # of raw conversation. Keep operational counts, never input/output.
@@ -247,7 +308,8 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None, 
         ) or "ERROR",
         "code": None if completed else (result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED"),
         "reply": _owned_result_text(result) if completed else None,
-        "provider": provider, "model": st.get("model_id"), "runtime": st.get("state"),
+        "provider": provider, "model": result.get('model_id') or st.get("model_id"), "runtime": st.get("state"),
+        "model_budget": model_budget, "owned_provenance": owned_provenance,
         "usage": usage, "approval_request": approval_request, "audit_id": result.get("audit_id"),
         "used_rule_fallback": False, "fallback_allowed": False, "targets": targets,
         "context": context,

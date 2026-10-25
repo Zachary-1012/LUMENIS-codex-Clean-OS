@@ -195,6 +195,10 @@ def parse_sogou_discovery(response: PublicResponse) -> tuple[list[dict[str, Any]
         if link is None or not link.get('href'):
             continue
         url = urljoin(response.url, str(link['href']))
+        parts = urlsplit(url)
+        if (parts.scheme != 'https' or parts.hostname not in {'weixin.sogou.com','mp.weixin.qq.com'}
+                or parts.username or parts.password):
+            continue
         if url in seen:
             continue
         seen.add(url)
@@ -244,6 +248,48 @@ class WechatPublicAdapter(BasePlatformAdapter):
             message='Public original-article route requires an actual source observation',
             metadata={'can_attempt': True, 'requires_auth': False, 'cookies_used': False})
 
+    @staticmethod
+    def _literal_article_navigation(scripts):
+        """Read literal URL assignments/appends without executing page code."""
+        import ast
+        import html
+        if re.search(r'(?:window\.)?location(?:\.(?:replace|assign)\s*\(\s*url\s*\)|(?:\.href)?\s*=\s*url\b)',scripts) is None:
+            return None
+        literal = r'''(?:"(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*')'''
+        assignment = r'\b(?:var\s+|let\s+|const\s+)?url\s*(\+=|=)(?!=)\s*'
+        starts = list(re.finditer(assignment,scripts))
+        statements = []
+        for start in starts:
+            match = re.match(assignment+'('+literal+r')\s*;',scripts[start.start():])
+            if match is None:
+                return None
+            statements.append(match.groups())
+        value = None
+        for operation, quoted in statements:
+            try:
+                fragment = ast.literal_eval(quoted)
+            except (SyntaxError,ValueError):
+                return None
+            if not isinstance(fragment,str):
+                return None
+            if operation == '=':
+                if value is not None:
+                    return None
+                value = fragment
+            elif value is not None:
+                value += fragment
+            if value is not None and len(value) > 16384:
+                return None
+        if value is None:
+            return None
+        value = html.unescape(value.replace('\\/','/'))
+        parts = urlsplit(value)
+        # Source pages may still publish an HTTP link to their own article.
+        # Request its TLS equivalent; retain the observed discovery separately.
+        if parts.scheme=='http' and parts.hostname=='mp.weixin.qq.com' and not parts.username and not parts.password:
+            value = 'https:'+value[5:]
+        return value if resolve_capability_route('wechat','detail',request_value=value) else None
+
     def _discovery_original(self, source_url: str):
         """Resolve an observed public index link before parsing the article.
 
@@ -277,8 +323,21 @@ class WechatPublicAdapter(BasePlatformAdapter):
                                  for node in soup.select('a[href]')]
                 article_url = next((url for url in article_links
                     if resolve_capability_route('wechat', 'detail', request_value=url)), None)
+                if article_url is None:
+                    # Literal official-article navigation is a public link.
+                    # Do not evaluate scripts, token arithmetic or challenges.
+                    import html
+                    scripts = '\n'.join(node.get_text() for node in soup.select('script'))
+                    article_url = self._literal_article_navigation(scripts)
+                    if article_url is None:
+                        literals = re.findall(r'''(?:window\.)?location(?:\.href)?\s*=\s*['"](https://mp\.weixin\.qq\.com/[^'"\r\n]+)['"]\s*;''', scripts)
+                        article_url = next((html.unescape(value.replace('\\u0026','&').replace('\\x26','&'))
+                            for value in literals if resolve_capability_route('wechat','detail',request_value=
+                                html.unescape(value.replace('\\u0026','&').replace('\\x26','&')))), None)
                 if article_url:
-                    return self.detail(article_url)
+                    resolved = self.detail(article_url)
+                    resolved.metadata['discovery_parent_url'] = source_url
+                    return resolved
             return CollectionResult(CollectionStatus.SUCCESS if item else CollectionStatus.PROVIDER_UNAVAILABLE,
                 self.platform, items=[item] if item else [], raw_count=1 if item else 0,
                 metadata={**public_source_provenance(response, source_url),
@@ -311,12 +370,19 @@ class WechatPublicAdapter(BasePlatformAdapter):
                 self.platform, items=[item] if item else [], raw_count=1 if item else 0,
                 metadata={**public_source_provenance(response, content_id),
                           'provider': route.backend,
-                          'original_body_available': item is not None, 'index_only': False})
+                          'original_body_available': item is not None, 'index_only': False},
+                original_response=response if item is not None else None)
         except Exception as exc:
             return CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, self.platform,
                 metadata={'error_type': type(exc).__name__, 'original_body_available': False})
 
     def search(self, keyword: str, *, max_results=20, page=1, **kwargs):
+        cursor = kwargs.get('cursor')
+        if cursor is not None:
+            if (not isinstance(cursor, dict) or set(cursor) != {'page'}
+                    or type(cursor['page']) is not int or not 1 <= cursor['page'] <= 100000):
+                raise ValueError('WECHAT_SEARCH_CURSOR_INVALID')
+            page = cursor['page']
         route = resolve_capability_route("wechat", "search", request_value=keyword)
         if route is None:
             return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
@@ -339,17 +405,33 @@ class WechatPublicAdapter(BasePlatformAdapter):
                     metadata={**self._verification_diagnostic(route.backend, response, 0),
                               'index_only': True})
             candidates, next_url = parse_sogou_discovery(response)
+            next_page = None
+            if next_url:
+                next_parts = urlsplit(next_url)
+                query = parse_qs(next_parts.query)
+                if (next_parts.scheme == 'https' and next_parts.hostname == 'weixin.sogou.com'
+                        and query.get('query') == [keyword] and query.get('type') == ['2']
+                        and len(query.get('page') or []) == 1 and query['page'][0].isdigit()
+                        and int(query['page'][0]) > page):
+                    next_page = int(query['page'][0])
+            pagination = {'request_cursor':cursor, 'next_cursor':{'page':next_page} if next_page else None,
+                          'exhausted':False if next_page else None, 'page_complete':True,
+                          'coverage_scope':'OBSERVED_PUBLIC_INDEX_PAGE_NOT_ORIGINAL_ARTICLE_COVERAGE'}
             items = []
             original_outcomes = []
             for candidate in candidates[:max_results]:
                 result = self._discovery_original(candidate['source_url'])
-                original_outcomes.append({'source_url': candidate['source_url'], 'status': result.status.value})
+                original_outcomes.append({'source_url': candidate['source_url'], 'status': result.status.value,
+                    'reason':result.metadata.get('reason') or result.metadata.get('error_type')})
+                for item in result.items:
+                    item.setdefault('raw',{})['public_discovery'] = candidate
                 items.extend(result.items)
                 if result.status in {CollectionStatus.NEED_VERIFY, CollectionStatus.BLOCKED}:
                     return CollectionResult(result.status, self.platform, items=items, raw_count=len(candidates),
                 metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,
                           'provider': route.backend,
-                          'next_search_url': next_url, 'partial': True, 'original_body_available': bool(items),
+                          'next_search_url': next_url, 'pagination':pagination,
+                          'partial': True, 'original_body_available': bool(items),
                           **({"request_final_status": CollectionStatus.NEED_VERIFY.value,
                               "http_status": (result.metadata.get("http_status")
                                               if type(result.metadata.get("http_status")) is int
@@ -362,6 +444,7 @@ class WechatPublicAdapter(BasePlatformAdapter):
                 metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,
                           'provider': route.backend,
                           'next_search_url': next_url, 'index_only': not bool(items),
+                           'pagination':pagination,
                           'original_body_available': bool(items), 'search_page': page,
                           'per_request_deferred_source_count': max(0, len(candidates)-max_results)})
         except Exception as exc:

@@ -28,7 +28,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Mapping
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from .base import CollectionResult, CollectionStatus
+from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .config import PLATFORM_CAPABILITIES
 from .registry import get_adapter
 from .routing import RouteIdentityMismatch, bind_collection_route
@@ -302,6 +302,24 @@ def _adapter_health(platform: str, **source_kwargs: Any) -> Dict[str, Any]:
         }
 
 
+def _platform_capability_states(platform, capability):
+    names = ('search','detail','comments','author','author_posts')
+    try:
+        implementation = type(_get_runtime_adapter(platform))
+    except Exception:
+        return {name:'PROVIDER_UNAVAILABLE' if capability.get('creator' if name=='author' else name)
+                else 'NOT_IMPLEMENTED' for name in names}
+    states = {}
+    for name in names:
+        method = 'creator' if name == 'author' else name
+        states[name] = ('IMPLEMENTED' if capability.get(method) is True
+            and capability.get('implementation_state') != 'PLANNED'
+            and callable(getattr(implementation,method,None))
+            and getattr(implementation,method,None) is not getattr(BasePlatformAdapter,method,None)
+            else 'NOT_IMPLEMENTED')
+    return states
+
+
 def get_collection_surface() -> Dict[str, Any]:
     """Return the product-facing CTH collection capability map.
 
@@ -334,6 +352,7 @@ def get_collection_surface() -> Dict[str, Any]:
             "manual_collection_enabled": bool(cap.get("manual_collection_enabled")),
             "scheduled_collection_enabled": bool(cap.get("enabled")),
             "collection_mode": "human_triggered_read_only",
+            'capabilities':_platform_capability_states(platform,cap),
             # Local readiness and the last real run are separate facts.  A
             # readable cookie file must not overwrite a verified session
             # failure or collection error in the product surface.
@@ -346,7 +365,9 @@ def get_collection_surface() -> Dict[str, Any]:
         })
 
     primary_runtime = _xhs_primary_runtime_status()
-    primary_status = str(primary_runtime.get("status") or "UNVERIFIED").upper()
+    primary_health = next((row['health'] for row in platforms if row['platform'] == 'xiaohongshu'),
+                          {'status': 'UNVERIFIED', 'ready': False, 'can_attempt': False})
+    primary_status = str(primary_health.get('status') or 'UNVERIFIED').upper()
     primary_collection = {
         "platform": "xiaohongshu",
         "name": "小红书（香港账号）",
@@ -356,23 +377,18 @@ def get_collection_surface() -> Dict[str, Any]:
         "implementation": "existing_primary_collector",
         "parallel_collector_added": False,
         "manual_collection_enabled": True,
-        # The Experience V2 secondary form is intentionally not a second XHS
-        # action surface. The existing primary route remains its sole owner.
-        "form_selectable": False,
-        "entry_label": "既有主采集链路 · 此表只读展示",
+        "form_selectable": True,
+        "entry_label": "搜索、读取原帖与已取得的评论",
+        "capabilities": {'search': 'IMPLEMENTED', 'detail': 'IMPLEMENTED',
+                         'comments': 'LOADED_OBSERVATIONS', 'native_comment_pagination': 'NOT_VERIFIED'},
         "status": primary_status,
-        "status_source": "existing_xhs_orchestrator_snapshot",
-        "health": {
-            "status": primary_status,
-            "ready": primary_status == "READY",
-            "can_attempt": primary_status == "READY",
-            "healthcheck_scope": "in_process_status_snapshot",
-        },
+        "status_source": "registered_adapter_health",
+        "health": primary_health,
         "runtime": primary_runtime,
         "last_run": _xhs_primary_last_run(),
         "external_write": False,
         "publish_authority": "human_manual_only",
-        "truth_path": "existing_xhs_primary_pipeline",
+        "truth_path": "external_data -> evidence -> canonical_data -> CTH/BMP",
     }
 
     return {
@@ -396,14 +412,14 @@ def get_collection_surface() -> Dict[str, Any]:
     }
 
 
-def _validate_request(platform: str, keyword: str, max_results: int) -> tuple[str, str, int]:
+def _validate_request(platform: str, keyword: str, max_results: int, *, capability='search') -> tuple[str, str, int]:
     canonical = str(platform or "").strip().lower()
     if canonical not in SECONDARY_COLLECTION_PLATFORMS:
         raise ValueError("当前采集入口不支持该平台；大陆小红书仍按现有区域门禁暂停")
     query = str(keyword or "").strip()
     # Public adapters receive a source URL, not a social search keyword. Keep
     # that URL intact so path/query identity, authorization and provenance agree.
-    max_length = 4096 if canonical in {"public_http", "web_rss", "web_atom", "sitemap"} else 256
+    max_length = 4096 if capability == 'detail' or canonical in {"public_http", "web_rss", "web_atom", "sitemap"} else 256
     if not query or len(query) > max_length:
         raise ValueError(f"keyword/source URL 必须为 1-{max_length} 个字符")
     try:
@@ -463,6 +479,8 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
         "source_keyword": keyword,
         "matched_keywords": keyword,
     })
+    if item.get('cover') is not None:
+        record['cover'] = item['cover']
     def fill_native(field, value):
         if record.get(field) in (None, "") and value is not None and value != "":
             record[field] = value
@@ -531,8 +549,11 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
             value = item.get(item_field)
             fill_native(native_field, value)
     elif platform == "zhihu":
-        if raw.get("object_type") == "answer":
-            fill_native("answer_id", content_id)
+        kind = raw.get('object_type')
+        if kind in {'answer','article','question'}:
+            fill_native(kind+'_id', raw.get('id') or content_id)
+            if kind != 'answer' and content_id:
+                record['content_id'] = f'zhihu:{kind}:{record[kind+"_id"]}'
         fill_native("created_time", publish_date)
         for native_field, item_field in (("voteup_count", "likes"),
                                          ("comment_count", "comments"),
@@ -953,6 +974,10 @@ def _write_prelaunch_evidence(platform: str, keyword: str, result: Dict[str, Any
         inputs = {"platform": platform, "source_url": _credential_free_observations(keyword),
                   "source_ids": source_ids, "keywords": [_credential_free_observations(keyword)],
                   "unassigned_review_candidates": _credential_free_observations(review_candidates or [])}
+        if result.get('discovery_observations'):
+            inputs['discovery_observation_records'] = result['discovery_observations']
+        if result.get('native_pagination') is not None:
+            inputs['native_pagination'] = result['native_pagination']
         if observations:
             from lumenis.shared.database.platform_content import _stable_observation
             # Preserve the observed native material even when a later access
@@ -1031,6 +1056,175 @@ def _credential_free_observations(value):
         netloc = parts.netloc.rsplit("@", 1)[-1]
         return urlunsplit((parts.scheme, netloc, parts.path, urlencode(query), ""))
     return value
+
+
+def _source_item_views(connection, records, source_ids, platform, evidence_id, scope):
+    """Product source selection uses persisted native identities, never typed IDs."""
+    from .platform_naming import to_canonical_record, map_raw_to_normalized
+    stored = {str(row['source_id']): dict(row) for row in connection.execute(
+        "SELECT canonical_id,source_id,scope_status FROM canonical_data WHERE source_table='notes' "
+        'AND product_id=? AND source_id IN (' + ','.join('?' for _ in source_ids) + ')',
+        ['CTH' if scope['domain_id'] == 'cth' else 'ZBMP', *source_ids])} if source_ids else {}
+    values = []
+    for record in records:
+        native = to_canonical_record(record, platform)
+        normalized = map_raw_to_normalized(record,platform)
+        source_id = str(native.get('content_id') or '')
+        if source_id not in source_ids:
+            continue
+        row = stored.get(source_id)
+        body = record.get('content') if isinstance(record.get('content'), str) else None
+        metrics = {name: normalized.get(key) for name, key in [('likes','like_count'),('comments','comment_count'),
+            ('collects','collect_count'),('shares','share_count'),('views','view_count')]}
+        media = []
+        for value in normalized.get('media_list') or []:
+            clue = {'url':value} if isinstance(value,str) else value if isinstance(value,dict) else {}
+            url = clue.get('url')
+            if isinstance(url,str) and url.startswith('//'):
+                url = 'https:'+url
+            observed_url = (url if isinstance(url,str) and urlsplit(url).scheme=='https'
+                            and _credential_free_observations(url)==url else None)
+            if clue:
+                media.append({'kind':clue.get('media_type') or clue.get('type'),'url':observed_url,
+                    'platform_media_id':str(clue.get('media_id',clue.get('id')))
+                        if type(clue.get('media_id',clue.get('id'))) in (str,int) else None,
+                    'url_state':'OBSERVED' if observed_url else 'NATIVE_MEDIA_HINT_WITHOUT_USABLE_URL',
+                    'original_bytes_state':'NOT_ACQUIRED'})
+        for key in ('cover', 'pic', 'thumbnail', 'cover_url'):
+            url = record.get(key) or (record.get('source_raw') or {}).get(key)
+            if isinstance(url, str) and url:
+                if url.startswith('//'):
+                    url = 'https:' + url
+                safe = _credential_free_observations(url)
+                if safe == url and urlsplit(url).scheme == 'https' and url not in [m['url'] for m in media]:
+                    media.append({'kind':'cover', 'url':url, 'original_bytes_state':'NOT_ACQUIRED'})
+        body_state = ('FEED_OR_INDEX_EXCERPT' if platform in {'web_rss','web_atom','sitemap'} else
+                      record.get('body_state') or 'SOURCE_OBSERVED_TEXT')
+        values.append({'source_id':source_id, 'platform':platform,
+            'canonical_ref':row['canonical_id'] if row else None,
+            'state':'CANONICAL_SAVED' if row else 'SOURCE_SAVED_CANONICAL_PENDING',
+            'scope_status':row['scope_status'] if row else None,
+            'title':record.get('title') or None, 'body_preview':body[:1000] if body else None,
+            'body_character_count':len(body) if body is not None else None,
+            'url':_credential_free_observations(record.get('url')),
+            'author_id':native.get('author_id') or None,
+            'author_name':native.get('author_nickname') or record.get('author_nickname') or native.get('author_name') or None,
+            'published_at':native.get('published_at') or None, 'captured_at':record.get('captured_at') or None,
+            'body_state':body_state,
+            'original_body_available':False if body_state in {'FEED_OR_INDEX_EXCERPT','SEARCH_EXCERPT','TRUNCATED_PLATFORM_TEXT'}
+                else True if body_state in {'PLATFORM_BODY','NATIVE_LONG_TEXT'} else None,
+            'metrics':metrics, 'metric_states':{name:'OBSERVED' if value is not None else 'NOT_REPORTED'
+                for name,value in metrics.items()}, 'media':media,
+            'evidence_ref':f'app_evidence_records:{evidence_id}', 'rights_state':'CHECK_SOURCE_USE_PER_ACTION'})
+    return values
+
+
+def _current_inspectable_source_rows(connection, source_ids, *, actor, scope):
+    """Inspect admitted GLOBAL sources without promoting unassigned business scope."""
+    from canonical_data import CanonicalRecord, _validate_canonical_scope
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    from .platform_naming import to_canonical_record
+    domain = 'bmp' if scope.get('domain_id') == 'zbmp' else scope.get('domain_id')
+    stored_domain, product = ('cth','CTH') if domain=='cth' else ('zbmp','ZBMP')
+    rows = connection.execute('SELECT * FROM canonical_data WHERE product_id=? AND domain_id=? '
+        'AND source_id IN (' + ','.join('?' for _ in source_ids) + ')',
+        (product,stored_domain,*source_ids)).fetchall() if source_ids else []
+    visible = []
+    for raw in rows:
+        row = dict(raw)
+        actual = {'domain_id':domain,'subject_id':row.get('subject_id') or None,
+                  'brand_focus_id':row.get('brand_focus_id') or None,
+                  'global_scope':not bool(row.get('subject_id') or row.get('brand_focus_id'))}
+        if not scope.get('global_scope') and (actual['subject_id'] != scope.get('subject_id')
+                or actual['brand_focus_id'] != scope.get('brand_focus_id')):
+            continue
+        _business_batch_binding(actor,{domain:actual},'human',None)
+        if row['scope_status'] == 'VERIFIED':
+            record = CanonicalRecord()
+            for key in ('product_id','domain_id','subject_id','brand_focus_id','scope_status','scope_evidence_ref','source_id'):
+                setattr(record,key,row.get(key))
+            try:
+                _validate_canonical_scope(connection,record)
+            except (ValueError, RuntimeError):
+                continue
+        elif row['scope_status'] != 'UNASSIGNED' or not actual['global_scope']:
+            continue
+        # GLOBAL admission deliberately has no asserted Subject/BrandFocus
+        # scope proof. Its signed source observation remains evidence_ref.
+        # A focused source still passes its independent scope proof above.
+        observation_ref = row.get('evidence_ref') or row.get('scope_evidence_ref')
+        parent = connection.execute('SELECT * FROM app_evidence_records WHERE id=?',(observation_ref,)).fetchone()
+        evidence = dict(parent) if parent else {}
+        inputs = json.loads(evidence.get('inputs_json') or '{}')
+        expected = {'domain_id':stored_domain,'product_id':product,'global':actual['global_scope']}
+        if actual['subject_id']:
+            expected['subject_id'] = actual['subject_id']
+        if actual['brand_focus_id']:
+            expected['brand_focus_id'] = actual['brand_focus_id']
+        if (classify_evidence_integrity(evidence).get('assurance') != 'writer-authenticated'
+                or evidence.get('source') != 'collector' or evidence.get('result') != 'PASS'
+                or evidence.get('product_id') != product or evidence.get('domain_id') != stored_domain
+                or inputs.get('_lumenis_scope') != expected
+                or row['source_id'] not in inputs.get('source_ids',[])):
+            continue
+        if row['source_table'] == 'platform_accounts':
+            matching = [item for item in inputs.get('author_observation_records') or []
+                if 'platform-author:'+item['platform']+':'+item['platform_author_id'] == row['source_id']]
+            correct = len(matching)==1 and (row['title'],row['content'],row['url']) == (
+                matching[0].get('display_name') or matching[0].get('username') or '',
+                matching[0].get('bio') or '',matching[0].get('profile_url') or '')
+        elif row['source_table'] == 'notes':
+            matching = [item for item in inputs.get('source_observation_records') or []
+                if str(to_canonical_record(item,row['source_platform']).get('content_id') or '') == row['source_id']]
+            correct = len(matching)==1 and (row['title'],row['content'],row['url']) == (
+                matching[0].get('title') or '',matching[0].get('content') or '',matching[0].get('url') or '')
+            source = connection.execute('SELECT title,content,url FROM notes WHERE note_id=?',
+                                        (row['source_id'],)).fetchone()
+            correct = correct and source is not None and tuple(source) == (row['title'],row['content'],row['url'])
+        else:
+            correct = False
+        if correct:
+            visible.append(row)
+    return visible
+
+
+def read_collected_items(evidence_ref, *, actor, scope):
+    """Reopen saved native results through current scope and Canonical proofs."""
+    import database as db
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    domain = 'bmp' if scope.get('domain_id') == 'zbmp' else scope.get('domain_id')
+    _business_batch_binding(actor, {domain: scope}, 'human', None)
+    if not isinstance(evidence_ref, str) or re.fullmatch(r'app_evidence_records:[1-9]\d*', evidence_ref) is None:
+        raise ValueError('COLLECTION_RESULT_REFERENCE_INVALID')
+    with db.get_db() as connection:
+        row = connection.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(evidence_ref.split(':')[1]),)).fetchone()
+        evidence = dict(row) if row else None
+        if (evidence is None or evidence.get('source') != 'collector'
+                or classify_evidence_integrity(evidence).get('assurance') != 'writer-authenticated'):
+            raise PermissionError('COLLECTION_RESULT_NOT_VERIFIED')
+        if evidence.get('feature_id') == 'COLLECTOR_NATIVE_AUTHORS':
+            return read_collected_authors(evidence_ref,actor=actor,scope=scope)
+        inputs = json.loads(evidence['inputs_json'])
+        signed_scope = inputs.get('_lumenis_scope') or {}
+        source_domain = 'bmp' if signed_scope.get('domain_id') == 'zbmp' else signed_scope.get('domain_id')
+        source_scope = {'domain_id':source_domain, 'global_scope':signed_scope.get('global'),
+                        'subject_id':signed_scope.get('subject_id'), 'brand_focus_id':signed_scope.get('brand_focus_id')}
+        if (source_domain != domain or type(source_scope['global_scope']) is not bool
+                or not scope.get('global_scope') and (
+                    source_scope['subject_id'] != scope.get('subject_id')
+                    or source_scope['brand_focus_id'] != scope.get('brand_focus_id'))):
+            raise PermissionError('COLLECTION_RESULT_SCOPE_CHANGED')
+        _business_batch_binding(actor, {domain: source_scope}, 'human', None)
+        ids = inputs.get('source_ids') or []
+        visible = {str(item['source_id']) for item in _current_inspectable_source_rows(connection,ids,actor=actor,scope=scope)}
+        if set(map(str, ids)) != visible:
+            raise PermissionError('COLLECTION_RESULT_SCOPE_CHANGED')
+        return {'ok':evidence.get('result') == 'PASS', 'status':evidence.get('actual'),
+            'evidence_ref':evidence_ref, 'network_attempted':False,
+            'items':_source_item_views(connection, inputs.get('source_observation_records') or [], ids,
+                                      inputs['platform'], evidence['id'], {'domain_id':domain}),
+            'discovery_observations':inputs.get('discovery_observation_records') or [],
+            'native_pagination':inputs.get('native_pagination'), 'result_freshness':'SAVED_SOURCE_RESULT'}
 
 
 def _sync_unassigned_collection(note_ids, scope, evidence_id, *, connection=None,
@@ -1521,12 +1715,12 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
 
 
 def _manual_collection_approval_resource(
-    scope, platform, keyword, max_results, receipt, *, max_scroll=None,
+    scope, platform, keyword, max_results, receipt, *, max_scroll=None, capability="search",
 ):
     """Bind approval to the server identity and the exact bounded source request."""
     binding = {
         "module": "collector", "action": "write", "platform": platform,
-        "keyword": keyword, "max_results": max_results,
+        "capability": capability, "keyword": keyword, "max_results": max_results,
         "domain_id": scope["domain_id"], "global_scope": scope["global_scope"],
         "subject_id": scope["subject_id"], "brand_focus_id": scope["brand_focus_id"],
         "actor_id": receipt.actor_id, "principal_kind": receipt.principal_kind,
@@ -1535,13 +1729,14 @@ def _manual_collection_approval_resource(
     if max_scroll is not None:
         binding["max_scroll"] = max_scroll
     encoded = json.dumps(binding, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
-    return "collector-source-import:v1:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+    return "collector-source-import:v2:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-def _manual_collection_guard(actor, scope, platform, keyword, max_results, *, max_scroll=None):
-    """Check live Collector admission and separate import approval; never grant it."""
+def _manual_collection_admission(actor, scope, platform, keyword, max_results, *,
+                                 max_scroll=None, capability="search"):
+    """Resolve current source admission without authorizing an acquisition."""
     from lumenis.system.security import (
-        LocalWorkspacePrincipal, OperationType, check_actor_scope_permission,
+        LocalWorkspacePrincipal, check_actor_scope_permission,
         check_local_workspace_scope_permission, get_permission_gate,
         is_testing_bypass_enabled,
     )
@@ -1552,6 +1747,8 @@ def _manual_collection_guard(actor, scope, platform, keyword, max_results, *, ma
             "read_only": True, "external_write": False, **extra,
         }
 
+    if capability not in {"search", "detail", "comments", "author", "author_posts"}:
+        return denied("NOT_SUPPORTED", network_attempted=False, persistence_attempted=False)
     if max_scroll is not None:
         canonical_platform = str(platform or "").strip().lower()
         if canonical_platform == "xhs":
@@ -1584,6 +1781,8 @@ def _manual_collection_guard(actor, scope, platform, keyword, max_results, *, ma
         if is_testing_bypass_enabled():
             return denied("PERMISSION_UNAVAILABLE")
         gate = get_permission_gate()
+        if not gate.fail_closed:
+            return denied("PERMISSION_UNAVAILABLE")
         check = (check_local_workspace_scope_permission
                  if type(actor) is LocalWorkspacePrincipal else check_actor_scope_permission)
         receipt = check(actor, module="collector", action="write", gate=gate, **exact)
@@ -1593,23 +1792,328 @@ def _manual_collection_guard(actor, scope, platform, keyword, max_results, *, ma
             return denied("SCOPE_UNAUTHORIZED")
         resource = _manual_collection_approval_resource(
             exact, platform, keyword, max_results, receipt,
-            max_scroll=max_scroll,
+            max_scroll=max_scroll, capability=capability,
         )
-        approval = gate.check(
-            OperationType.DATA_IMPORT, resource,
-            caller=(f"account:{receipt.actor_id}" if receipt.actor_id is not None
-                    else receipt.principal_ref),
-            domain_id="zbmp" if domain == "bmp" else "cth",
-            exact_approval_required=True,
-        )
-        if approval.allowed is not True:
-            return denied(
-                "APPROVAL_REQUIRED" if approval.requires_approval else "SCOPE_UNAUTHORIZED",
-                approval_resource=resource,
-            )
-        return exact, None
+        return {"scope": exact, "approval_resource": resource,
+                "permission_keyword": keyword,
+                "caller": (f"account:{receipt.actor_id}" if receipt.actor_id is not None
+                           else receipt.principal_ref)}, None
     except Exception:
         return denied("PERMISSION_UNAVAILABLE")
+
+
+def _manual_collection_guard(actor, scope, platform, keyword, max_results, *,
+                             max_scroll=None, capability="search"):
+    """Check live Collector admission and separate import approval; never grant it."""
+    from lumenis.system.security import OperationType, get_permission_gate
+    admission, denial = _manual_collection_admission(actor, scope, platform, keyword, max_results,
+        max_scroll=max_scroll, capability=capability)
+    if denial is not None:
+        return None, denial
+    try:
+        exact = admission["scope"]
+        approval = get_permission_gate().check(
+            OperationType.DATA_IMPORT, admission["approval_resource"], caller=admission["caller"],
+            domain_id="zbmp" if exact["domain_id"] == "bmp" else "cth", exact_approval_required=True,
+        )
+        if approval.allowed is not True:
+            return None, {"ok": False,
+                "status": "APPROVAL_REQUIRED" if approval.requires_approval else "SCOPE_UNAUTHORIZED",
+                "platform": platform, "keyword": keyword, "read_only": True, "external_write": False,
+                "approval_resource": admission["approval_resource"]}
+        return exact, None
+    except Exception:
+        return None, {"ok": False, "status": "PERMISSION_UNAVAILABLE", "platform": platform,
+                      "keyword": keyword, "read_only": True, "external_write": False}
+
+
+def _manual_collection_request(*, actor, scope, capability="search", platform=None, keyword=None,
+                               content_id=None, source_id=None, max_results=MAX_RESULTS,
+                               include_replies=False, author_id=None):
+    """Use the same source normalization for the preview, confirmation and run."""
+    if capability in {'author','author_posts'}:
+        if keyword is not None or content_id is not None or source_id is not None or include_replies is not False:
+            raise ValueError('AUTHOR_REQUEST_REQUIRES_AN_EXACT_PROFILE')
+        platform = 'xiaohongshu' if platform == 'xhs' else platform
+        platform, _, max_results = _validate_request(platform, str(author_id or ''), max_results)
+        keyword = _normalize_author_target(platform, author_id)
+        if capability == 'author':
+            max_results = 1
+        request = {'capability':capability,'platform':platform,'author_id':keyword,'max_results':max_results}
+    elif capability == "comments":
+        if author_id is not None:
+            raise ValueError('AUTHOR_FIELDS_REQUIRE_AUTHOR_CAPABILITY')
+        import database as db
+        if platform is not None or keyword is not None or content_id is not None:
+            raise ValueError("Comments require an admitted source")
+        if type(include_replies) is not bool or type(max_results) is not int or not 1 <= max_results <= MAX_RESULTS:
+            raise ValueError("COMMENT_REQUEST_INVALID")
+        with db.get_db() as connection:
+            parent = _comment_parent(connection, source_id, actor, scope)
+        platform = parent["platform"]
+        scope = parent["scope"]
+        keyword = json.dumps({"capability": "comments", "source_id": source_id,
+            "source_url": parent["source_url"], "include_replies": include_replies},
+            sort_keys=True, ensure_ascii=False)
+        request = {"capability": capability, "source_id": source_id, "platform": platform,
+                   "source_url": parent["source_url"], "max_results": max_results,
+                   "include_replies": include_replies}
+    else:
+        if source_id is not None or include_replies is not False or author_id is not None:
+            raise ValueError("Comment fields require comments capability")
+        if capability == "detail":
+            if keyword is not None:
+                raise ValueError("Detail accepts a content_id")
+            if platform in {"xhs", "xiaohongshu"}:
+                from .xhs import validate_xhs_detail_target
+                content_id = validate_xhs_detail_target(content_id)
+            keyword, max_results = _credential_free_observations(content_id), 1
+        elif capability != "search" or content_id is not None:
+            raise ValueError("Invalid collection capability")
+        if platform == "xhs":
+            platform = "xiaohongshu"
+        platform, keyword, max_results = _validate_request(platform, keyword, max_results, capability=capability)
+        request = {"capability": capability, "platform": platform,
+                   "content_id" if capability == "detail" else "keyword": keyword,
+                   "max_results": max_results}
+    admission, denial = _manual_collection_admission(actor, scope, platform, keyword, max_results,
+                                                     capability=capability)
+    return admission, denial, request
+
+
+def prepare_collection_request(*, actor, scope, **request):
+    """Prepare an inert read-only review; this never grants or acquires anything."""
+    admission, denial, normalized = _manual_collection_request(actor=actor, scope=scope, **request)
+    if denial is not None:
+        return {**denial, "network_attempted": False, "persistence_attempted": False}
+    return {"ok": True, "status": "CONFIRMATION_REQUIRED", "request": normalized,
+            "scope": admission["scope"], "approval_resource": admission["approval_resource"],
+            "read_only": True, "external_write": False, "network_attempted": False,
+            "persistence_attempted": False}
+
+
+def confirm_collection_request(*, actor, scope, confirmed_resource, confirmed, **request):
+    """Confirm the freshly resolved exact request in the canonical approval store."""
+    from lumenis.system.security import OperationType, PermissionLevel, get_permission_gate, is_testing_bypass_enabled
+    admission, denial, normalized = _manual_collection_request(actor=actor, scope=scope, **request)
+    if denial is not None:
+        return {**denial, "network_attempted": False, "persistence_attempted": False}
+    if (confirmed is not True or not isinstance(confirmed_resource, str)
+            or confirmed_resource != admission["approval_resource"]):
+        raise PermissionError("COLLECTION_CONFIRMATION_CHANGED")
+    gate = get_permission_gate()
+    if (is_testing_bypass_enabled() or not gate.fail_closed
+            or not gate.has_permission(PermissionLevel.HUMAN_APPROVAL)
+            or not gate.has_permission(PermissionLevel.COMMIT)):
+        raise PermissionError("COLLECTION_CONFIRMATION_NOT_ALLOWED")
+    # The resource includes current server-issued actor, exact scope and source.
+    # No client token, claimed actor or approval flag is admitted as authority.
+    gate.grant_approval(OperationType.DATA_IMPORT.value, duration_minutes=5,
+                        resource=admission["approval_resource"], granted_by=admission["caller"])
+    exact, denial = _manual_collection_guard(actor, admission["scope"], normalized["platform"],
+        admission['permission_keyword'], normalized["max_results"],
+        capability=normalized["capability"])
+    if denial is not None:
+        return {**denial, "network_attempted": False, "persistence_attempted": False}
+    return {"ok": True, "status": "READY", "request": normalized, "scope": exact,
+            "approval_resource": admission["approval_resource"], "approved": True,
+            "expires_in_seconds": 300, "read_only": True, "external_write": False,
+            "network_attempted": False, "persistence_attempted": False}
+
+
+def operate_collection_request(action, *, actor, scope, request_id=None, task_id=None, **source_request):
+    """Manual request consumer of the original queue, live scope and source writer.
+
+    A step executes in the real user's current request. The queue retains only
+    execution state and source references, never source bodies or approval.
+    """
+    import uuid
+    from ..guard.task_queue import TaskQueue
+    if action not in {'start', 'status', 'step', 'cancel', 'resume','recover'}:
+        raise ValueError('COLLECTION_TASK_ACTION_INVALID')
+    if not isinstance(scope, Mapping):
+        raise PermissionError('SCOPE_UNAUTHORIZED')
+    domain = 'bmp' if scope.get('domain_id') == 'zbmp' else scope.get('domain_id')
+    _business_batch_binding(actor, {domain: scope}, 'human', None)
+    queue = TaskQueue()
+    try:
+        if action == 'start':
+            if (task_id is not None or not isinstance(request_id, str)
+                    or re.fullmatch(r'[A-Za-z0-9_-]{8,128}', request_id) is None):
+                raise ValueError('COLLECTION_REQUEST_ID_REQUIRED')
+            admission, denial, normalized = _manual_collection_request(actor=actor, scope=scope, **source_request)
+            if denial is not None:
+                return denial
+            _, denial = _manual_collection_guard(actor, admission['scope'], normalized['platform'],
+                admission['permission_keyword'], normalized['max_results'], capability=normalized['capability'])
+            if denial is not None:
+                return denial
+            identity = _task_commit_binding('manual-request', actor, admission['scope'], 'human', None,
+                normalized['platform'], admission['permission_keyword'], normalized['max_results'], None)['identity']
+            requested_scope = {key: scope.get(key) for key in ('domain_id', 'global_scope', 'subject_id', 'brand_focus_id')}
+            requested_scope['domain_id'] = 'bmp' if requested_scope['domain_id'] == 'zbmp' else requested_scope['domain_id']
+            binding = {'identity': identity, 'scope': requested_scope, 'source_scope': admission['scope'],
+                       'request': normalized, 'request_id': request_id}
+            request_key = hashlib.sha256(json.dumps(binding, ensure_ascii=False, sort_keys=True,
+                separators=(',', ':')).encode()).hexdigest()
+            task_id = queue.enqueue_once('collector_manual_request', {'binding': binding,
+                'operation_id': uuid.uuid4().hex, 'progress': {'round': 0}}, request_key)
+        else:
+            if source_request or request_id is not None or type(task_id) is not int or task_id <= 0:
+                raise ValueError('COLLECTION_TASK_REFERENCE_REQUIRED')
+        row = queue.get(task_id)
+        if row is None or row['task_type'] != 'collector_manual_request':
+            raise LookupError('COLLECTION_TASK_NOT_FOUND')
+        payload, binding = row['payload'], row['payload']['binding']
+        normalized = binding['request']
+        request_fields = {key: normalized[key] for key in
+            ('capability', 'platform', 'keyword', 'content_id', 'source_id', 'max_results', 'include_replies', 'author_id')
+            if key in normalized}
+        if normalized['capability'] == 'comments':
+            request_fields.pop('platform', None)
+        admission, denial, current_request = _manual_collection_request(actor=actor, scope=scope, **request_fields)
+        if denial is not None:
+            return denial
+        identity = _task_commit_binding('manual-request', actor, admission['scope'], 'human', None,
+            normalized['platform'], admission['permission_keyword'], normalized['max_results'], None)['identity']
+        current_scope = {key: scope.get(key) for key in ('domain_id', 'global_scope', 'subject_id', 'brand_focus_id')}
+        current_scope['domain_id'] = 'bmp' if current_scope['domain_id'] == 'zbmp' else current_scope['domain_id']
+        if (binding['identity'] != identity or binding['scope'] != current_scope
+                or binding['source_scope'] != admission['scope'] or current_request != normalized):
+            raise PermissionError('COLLECTION_TASK_CONTEXT_CHANGED')
+
+        def read_task():
+            current = queue.get(task_id)
+            progress = current['payload'].get('progress') or {}
+            cancelled = current['payload'].get('cancel_requested') is True
+            result = dict(progress.get('result') or {})
+            if result.get('page_ref'):
+                result['saved_page'] = read_collected_comments(normalized['source_id'], actor=actor,
+                    scope=scope, page_ref=result['page_ref'])
+            elif result.get('author_evidence_ref'):
+                result['saved_authors'] = read_collected_authors(result['author_evidence_ref'], actor=actor, scope=scope)
+            elif result.get('evidence_ref'):
+                result['saved_sources'] = read_collected_items('app_evidence_records:' + str(result['evidence_ref']),
+                                                              actor=actor, scope=scope)
+            return {'ok': True, 'status': 'CANCELLED' if cancelled else
+                    'COMPLETED' if current['status'] == 'done' else
+                    'WAITING_USER' if progress.get('waiting_user') else current['status'].upper(),
+                'task_id': task_id, 'request': normalized, 'queue_status': current['status'],
+                'result': result, 'continuation_required': progress.get('continuation_required', False),
+                'cancel_requested': cancelled, 'read_only': True, 'external_write': False,
+                'network_attempted': False, 'result_freshness': 'SAVED_TASK_RESULT',
+                'retry_after_seconds': max(0, current['scheduled_at'] - time.time())
+                    if current['status'] == 'pending' else None}
+
+        if action in {'start', 'status'}:
+            return read_task()
+        if action == 'cancel':
+            queue.set_manual_request_cancelled(task_id, payload['request_key'], cancelled=True)
+            return read_task()
+        _, denial = _manual_collection_guard(actor, admission['scope'], normalized['platform'],
+            admission['permission_keyword'], normalized['max_results'], capability=normalized['capability'])
+        if denial is not None:
+            return {**denial, 'task_id': task_id, 'network_attempted': False}
+        if action == 'resume':
+            queue.set_manual_request_cancelled(task_id, payload['request_key'], cancelled=False)
+            return read_task()
+        if action == 'recover':
+            if row['status']=='done' or payload.get('cancel_requested') is True:
+                return read_task()
+            from lumenis.adapters.auth_recovery import check_recovery
+            recovery = check_recovery(normalized['platform'],resume_pending=False)
+            return {**read_task(),'session_recovery':recovery,'source_acquisition_attempted':False,
+                    'next_action':'step' if recovery.get('recovered') is True else 'recover'}
+        if row['status'] == 'done' or payload.get('cancel_requested') is True:
+            return read_task()
+        queue.reap_stale(120, task_id=task_id)
+        worker = 'manual-source-' + uuid.uuid4().hex
+        claimed = queue.dequeue(worker_id=worker, lease_owner=worker, task_id=task_id)
+        if claimed is None:
+            return read_task()
+        receipt = {key: claimed[key] for key in ('run_id', 'worker_id', 'lease_owner')}
+        progress = dict(claimed['payload'].get('progress') or {'round': 0})
+        stop = threading.Event()
+        def renew():
+            owner = TaskQueue()
+            try:
+                while not stop.wait(15):
+                    if not owner.heartbeat(task_id, worker, run_id=receipt['run_id'], lease_owner=worker):
+                        return
+            finally:
+                owner.close()
+        heartbeat = threading.Thread(target=renew, daemon=True, name='collector-manual-lease')
+        heartbeat.start()
+        try:
+            guard = lambda: queue.attempt_guard(task_id, **receipt)
+            operation = 'manual:' + payload['operation_id']
+            round_key = operation + ':' + str(progress.get('round', 0))
+            if normalized['capability'] == 'author':
+                result = collect_author(normalized['platform'], normalized['author_id'], actor=actor, scope=scope,
+                                        attempt_guard=guard, operation_key=round_key)
+            elif normalized['capability'] == 'author_posts':
+                result = collect_author_posts(normalized['platform'], normalized['author_id'], actor=actor, scope=scope,
+                    max_results=normalized['max_results'], attempt_guard=guard, operation_key=round_key,
+                    native_task_key=operation, _native_cursor=progress.get('native_cursor'))
+            elif normalized['capability'] == 'comments':
+                result = collect_comments(normalized['source_id'], actor=actor, scope=scope,
+                    request_id=payload['operation_id'], max_results=normalized['max_results'],
+                    include_replies=normalized['include_replies'], continuation=progress.get('continuation'),
+                    attempt_guard=guard)
+            elif normalized['capability'] == 'detail':
+                result = collect_detail(normalized['platform'], normalized['content_id'], actor=actor,
+                    scope=scope, attempt_guard=guard, operation_key=round_key, native_task_key=operation)
+            else:
+                result = collect_search(normalized['platform'], normalized['keyword'], actor=actor,
+                    scope=scope, max_results=normalized['max_results'], attempt_guard=guard,
+                    operation_key=round_key, native_task_key=operation, _native_cursor=progress.get('native_cursor'))
+            keys = {'ok', 'status', 'error_type', 'platform', 'source_id', 'evidence_ref', 'page_ref',
+                'task_commit_evidence_ref', 'commit_reconciled', 'network_attempted', 'raw_count',
+                'returned_count', 'observed_count', 'imported', 'updated', 'canonical_synced',
+                'native_fields_synced', 'coverage_state', 'partial_reason', 'source_use', 'public_original_refs',
+                'original_source', 'refresh_verified', 'scope_status', 'new_collection_required', 'recovery_required',
+                'native_pagination'}
+            keys |= {'author_evidence_ref','author_count','canonical_refs'}
+            progress['result'] = {key: result[key] for key in keys if key in result}
+            comment_next = result.get('continuation') if normalized['capability'] == 'comments' else None
+            native_next = result.get('native_continuation_verified') is True and not result.get('new_collection_required')
+            source_page = result.get('native_pagination') or {}
+            page_next = (normalized['capability'] in {'search','author_posts'} and source_page.get('request_cursor') == progress.get('native_cursor')
+                         and source_page.get('next_cursor') is not None and source_page.get('exhausted') is not True)
+            waiting = result.get('status') in {'SESSION_EXPIRED', 'NEED_VERIFY', 'BLOCKED', 'COOLING_DOWN',
+                'RATE_LIMITED', 'BUSY', 'APPROVAL_REQUIRED', 'PROVIDER_UNAVAILABLE'}
+            progress.update(continuation=comment_next, continuation_required=bool(comment_next or native_next or page_next or waiting),
+                waiting_user=waiting, round=progress.get('round', 0) + (1 if native_next or page_next else 0))
+            if page_next:
+                progress['native_cursor'] = source_page['next_cursor']
+            if not queue.save_progress(task_id, progress, **receipt):
+                return read_task()
+            if progress['continuation_required']:
+                queue.yield_pending(task_id, **receipt, delay=result.get('wait_seconds') or 0)
+            elif result.get('ok') is True or result.get('page_ref') or result.get('task_commit_evidence_ref'):
+                queue.ack(task_id, **receipt)
+            else:
+                queue.fail(task_id, str(result.get('status') or 'COLLECTION_FAILED'), **receipt, retryable=False)
+            answer = read_task()
+            answer.update(network_attempted=result.get('network_attempted') is not False,
+                          result_freshness='HISTORICAL_COMMIT_RECONCILED' if result.get('commit_reconciled')
+                              else 'CURRENT_TASK_EXECUTION')
+            return answer
+        except PermissionError as exc:
+            if queue.get(task_id)['payload'].get('cancel_requested') is True:
+                return read_task()
+            queue.fail(task_id, str(exc), **receipt, retryable=False)
+            raise
+        except Exception as exc:
+            # The stable round replays a committed Source receipt after an
+            # operational-checkpoint failure; no blind external refetch.
+            queue.fail(task_id, type(exc).__name__, **receipt, retryable=True)
+            raise
+        finally:
+            stop.set()
+            heartbeat.join(timeout=2)
+    finally:
+        queue.close()
 
 
 class _CollectionWriteRejected(Exception):
@@ -1618,6 +2122,29 @@ class _CollectionWriteRejected(Exception):
     def __init__(self, result):
         self.result = result
         super().__init__(str(result.get("status") or "COLLECTION_WRITE_FAILED"))
+
+
+def _verified_native_resume(platform, keyword, fingerprint, metadata):
+    """A resumable native pointer is progress, never an acquisition permission."""
+    if platform != "xiaohongshu" or not isinstance(fingerprint, str):
+        return False
+    continuation = metadata.get("continuation")
+    if (metadata.get("continuation_persisted") is not True
+            or metadata.get("checkpoint_identity_verified") is not True
+            or not isinstance(continuation, dict)
+            or continuation.get("identity_verified") is not True
+            or continuation.get("continuation_required") is not True
+            or continuation.get("keyword") != keyword
+            or continuation.get("source_host") != "www.rednote.com"):
+        return False
+    from ..guard.checkpoint import Checkpoint
+    saved = Checkpoint("xhs").get_operational_resume(keyword, fingerprint)
+    return bool(isinstance(saved, dict) and saved.get("task_binding") == fingerprint
+        and saved.get("keyword") == keyword and saved.get("source_host") == "www.rednote.com"
+        and saved.get("continuation_required") is True and saved.get("complete") is False
+        and saved.get("terminal_error") is False
+        and isinstance(saved.get("run_id"), str) and bool(saved["run_id"])
+        and saved["run_id"] == continuation.get("checkpoint_run_id"))
 
 
 def _task_commit_binding(operation_key, actor, scope, operator, authorization,
@@ -1679,9 +2206,12 @@ def _task_commit_receipt(connection, binding, result=None):
     if result is None:
         return None
     if result.get("ok") is not True:
+        resumable = (result.get("status") == "PARTIAL_ACQUISITION_PENDING"
+                     and result.get("native_continuation_verified") is True)
         result.update(source_status=result.get("status"), status="PARTIAL_COMMITTED",
-                      retry_safe=False, new_collection_required=True,
-                      recovery_action="REVIEW_COMMITTED_SOURCES_THEN_CREATE_NEW_REQUEST")
+                      retry_safe=resumable, new_collection_required=not resumable,
+                      recovery_action="RESUME_VERIFIED_NATIVE_CHECKPOINT" if resumable else
+                      "REVIEW_COMMITTED_SOURCES_THEN_CREATE_NEW_REQUEST")
     scope = binding["scope"]
     evidence_id = record_evidence(source="collector", feature_id="COLLECTOR_TASK_COMMIT",
         asset_id=key, version="collector-task-commit:v1", capture_mode="derived_task_commit",
@@ -1708,8 +2238,20 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                    raw_capture: PublicRawCapture | None = None,
                    business_query: Any = None,
                    native_capture: NativePublicCapture | None = None,
-                   attempt_guard=None, operation_key=None) -> Dict[str, Any]:
+                   attempt_guard=None, operation_key=None,
+                    capability: str = 'search', _source_url=None, native_task_key=None,
+                    _native_cursor=None) -> Dict[str, Any]:
     """Run one explicit, read-only platform search and persist its evidence."""
+    if capability not in {'search', 'detail', 'author_posts'}:
+        raise ValueError('unsupported collection capability')
+    if _native_cursor is not None and (capability not in {'search','author_posts'} or not native_task_key
+            or _credential_free_observations(_native_cursor) != _native_cursor):
+        raise ValueError('server-authored search continuation required')
+    if _source_url is not None and (capability != 'detail' or _credential_free_observations(_source_url) != keyword):
+        raise ValueError('detail source locator does not match its source identity')
+    if capability == 'detail' and (prelaunch_local_import or raw_capture is not None
+            or native_capture is not None or business_query is not None or max_scroll is not None):
+        raise ValueError('independent detail requires the exact manual source request')
     operator = str(operator or "").strip().lower()
     maintenance_operator = operator == "prelaunch_maintenance"
     if operator not in {"human", "human_ui", "prelaunch_maintenance"}:
@@ -1737,7 +2279,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "network_attempted": False, "persistence_attempted": False}
     if platform == "xhs":
         platform = "xiaohongshu"
-    platform, keyword, max_results = _validate_request(platform, keyword, max_results)
+    platform, keyword, max_results = _validate_request(platform, keyword, max_results, capability=capability)
     permission_keyword = keyword
     if native_capture is not None:
         try:
@@ -1780,7 +2322,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if not prelaunch_local_import:
         manual_scope, denial = _manual_collection_guard(
             actor, scope, platform, permission_keyword, max_results,
-            max_scroll=max_scroll,
+            max_scroll=max_scroll, capability=capability,
         )
         if denial is not None:
             return denial
@@ -1835,6 +2377,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if operation_key is not None:
         task_binding = _task_commit_binding(operation_key, actor, manual_scope or prelaunch_scope,
             operator, prelaunch_authorization, platform, keyword, max_results, business_query)
+        if capability != 'search':
+            task_binding['capability'] = capability
         import database as db
         try:
             with db.get_db() as receipt_conn:
@@ -1972,6 +2516,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         acquisition_fingerprint = None
         try:
             search_kwargs = {"max_results": max_results}
+            if _native_cursor is not None:
+                search_kwargs['cursor'] = _native_cursor
             if max_scroll is not None:
                 search_kwargs["max_scroll"] = max_scroll
             if platform == "instagram" and business_query is not None:
@@ -1993,14 +2539,21 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     json.dumps(binding, ensure_ascii=False, sort_keys=True,
                                 separators=(",", ":")).encode("utf-8")).hexdigest()
                 search_kwargs["acquisition_fingerprint"] = acquisition_fingerprint
+            elif platform == 'xiaohongshu' and (capability == 'detail' or native_task_key is not None):
+                binding = _task_commit_binding(native_task_key or operation_key or 'manual-independent-detail',
+                    actor, manual_scope, operator, None, platform, keyword, max_results, None)
+                binding['capability'] = capability
+                acquisition_fingerprint = hashlib.sha256(json.dumps(binding,
+                    ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+                search_kwargs['acquisition_fingerprint'] = acquisition_fingerprint
             collection = (_native_capture_collection(native_capture) if native_capture is not None else
                           _public_raw_collection(raw_capture) if raw_capture is not None
-                          else _get_runtime_adapter(platform).search(keyword, **search_kwargs))
+                          else getattr(_get_runtime_adapter(platform), capability)(_source_url or keyword, **search_kwargs))
             if not isinstance(collection, CollectionResult):
                 raise TypeError("adapter returned a non-CollectionResult value")
             if native_capture is None and raw_capture is None:
                 bind_collection_route(
-                    collection, platform=platform, capability="search", request_value=keyword,
+                    collection, platform=platform, capability=capability, request_value=keyword,
                 )
         except RouteIdentityMismatch as exc:
             source_result = collection if isinstance(collection, CollectionResult) else None
@@ -2056,7 +2609,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         if manual_scope is not None:
             _, denial = _manual_collection_guard(
                 actor, manual_scope, platform, permission_keyword, max_results,
-                max_scroll=max_scroll,
+                max_scroll=max_scroll, capability=capability,
             )
             if denial is not None:
                 return denial
@@ -2122,6 +2675,11 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             provenance["native_publication_state"] = native_value.get("publication_since_2026")
         if metadata.get("error_type"):
             provenance["error_type"] = str(metadata["error_type"])[:80]
+        observed_failure = {key:metadata.get(key) for key in
+            ('failure_class','http_status','provider_code','retry_after_seconds','identity_failure_stage')
+            if metadata.get(key) is not None}
+        if observed_failure:
+            provenance['provider_observation'] = _credential_free_observations(observed_failure)
         if isinstance(metadata.get("detail"), dict):
             # Preserve the adapter's observed per-post work separately from
             # source-scope admission and the query's final result.
@@ -2294,6 +2852,24 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "entity_mentions": entity_mentions,
                     "review_pending_count": len(review_pending),
                 }
+                discovered = metadata.get('discovery_candidates')
+                if isinstance(discovered, list):
+                    result['discovery_observations'] = [_credential_free_observations({key: candidate.get(key)
+                        for key in ('source_url','source_title','index_excerpt','index_date_literal',
+                                    'index_date_not_article_publication','native_publication')})
+                        for candidate in discovered if isinstance(candidate, dict)]
+                    result['discovery_state'] = 'INDEX_ONLY_ORIGINAL_BODY_REQUIRED'
+                    result['original_outcomes'] = _credential_free_observations(metadata.get('original_outcomes') or [])
+                native_page = metadata.get('pagination')
+                if isinstance(native_page, dict):
+                    native_page = _credential_free_observations(native_page)
+                    if native_page.get('request_cursor') != _native_cursor:
+                        result.update(ok=False, status='NATIVE_CURSOR_NOT_CONSUMED',
+                                      error_type='NATIVE_CURSOR_NOT_CONSUMED', refresh_verified=False)
+                    if native_page.get('next_cursor') is not None and native_page.get('next_cursor') == _native_cursor:
+                        native_page = {**native_page, 'next_cursor':None, 'exhausted':False,
+                                       'partial_reason':'NATIVE_CURSOR_NON_PROGRESSING'}
+                    result['native_pagination'] = native_page
                 if final_status == "SCOPE_REVIEW_REQUIRED":
                     result["ok"] = False
                     result["error_type"] = "SOURCE_ENTITY_IDENTITY_UNCONFIRMED"
@@ -2441,6 +3017,32 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         "domain_adapter": {"prelaunch": prelaunch_scope["domain_id"],
                                            "consumer": "cth" if prelaunch_scope["domain_id"] == "cth" else "zbmp"},
                     }
+                if (platform == 'public_http' and manual_scope is not None and raw_capture is None
+                        and native_capture is None and note_ids and result.get('ok')):
+                    conn.execute('SAVEPOINT collected_public_original')
+                    source_path_start = len(staged_source_paths)
+                    try:
+                        from lumenis.shared.reporting.saved_work import authorize
+                        source_context = authorize(actor, manual_scope, action='write', connection=conn)
+                        if len(note_ids) != 1 or len(records) != 1:
+                            raise ValueError('PUBLIC_SOURCE_OBSERVATION_AMBIGUOUS')
+                        original = _persist_public_http_original(conn, response=collection.original_response,
+                            record=records[0], source_id=note_ids[0], collection_evidence_id=evidence_id,
+                            context=source_context, staged_paths=staged_source_paths, actor=actor,
+                            scope=manual_scope, keyword=permission_keyword, max_results=max_results,
+                            capability=capability)
+                        _bind_native_source_original(conn, note_ids[0], source_context, original)
+                        conn.execute('RELEASE SAVEPOINT collected_public_original')
+                        result['public_original_refs'] = {'source_id': note_ids[0], **original}
+                    except Exception as exc:
+                        conn.execute('ROLLBACK TO SAVEPOINT collected_public_original')
+                        conn.execute('RELEASE SAVEPOINT collected_public_original')
+                        cleanup_ok = _cleanup_collected_source_paths(staged_source_paths[source_path_start:])
+                        del staged_source_paths[source_path_start:]
+                        result['public_original_refs'] = {'source_id': note_ids[0], 'status': 'UNAVAILABLE',
+                            'source_artifact_ref': None, 'reason': str(exc) if isinstance(exc, ValueError)
+                                else 'PUBLIC_SOURCE_ORIGINAL_PRESERVATION_UNAVAILABLE',
+                            'cleanup_status': 'COMPLETE' if cleanup_ok else 'FAILED', 'source_use': 'NOT_GRANTED'}
                 if native_capture is not None and note_ids and result.get("ok"):
                     rows = conn.execute("SELECT canonical_id,source_id,version,product_id,domain_id,subject_id,brand_focus_id,scope_status,scope_evidence_ref,publish_datetime,captured_at FROM canonical_data WHERE source_table='notes' AND source_id=?", (note_ids[0],)).fetchall()
                     evidence = conn.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone()
@@ -2486,7 +3088,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 if manual_scope is not None:
                     _, denial = _manual_collection_guard(
                         actor, manual_scope, platform, permission_keyword, max_results,
-                        max_scroll=max_scroll,
+                        max_scroll=max_scroll, capability=capability,
                     )
                     if denial is not None:
                         raise _CollectionWriteRejected(denial)
@@ -2719,6 +3321,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         result.update(ok=False, status="PARTIAL_ACQUISITION_PENDING",
                                       error_type="NATIVE_ACQUISITION_CONTINUATION_REQUIRED",
                                       refresh_verified=False)
+                        result["native_continuation_verified"] = _verified_native_resume(
+                            platform, keyword, acquisition_fingerprint, metadata)
                 # The signed success above covers only admitted source_ids. Keep the
                 # overall request partial when other returned items still need review.
                 if review_pending and result["ok"]:
@@ -2728,13 +3332,17 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         "error": _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED"),
                         "scope_status": "PARTIAL", "refresh_verified": False,
                     })
+                if note_ids:
+                    result['items'] = _source_item_views(conn, records, note_ids, platform, evidence_id,
+                                                       manual_scope or prelaunch_scope)
                 has_source_effect = any(int(result.get(field, 0) or 0) > 0 for field in
                     ("imported", "updated", "canonical_synced", "native_fields_synced")) or any(
                     item.get("status") == "SAVED" for item in
                     result.get("live_original_refs", []) + result.get("pending_original_refs", []))
                 # A transient error's diagnostic Evidence is not a completed
                 # source effect. Permit retry; committed partial sources remain fenced.
-                if task_binding is not None and (result.get("ok") is True or has_source_effect):
+                discovery_saved = bool(result.get('discovery_observations') and result.get('evidence_recorded'))
+                if task_binding is not None and (result.get("ok") is True or has_source_effect or discovery_saved):
                     _task_commit_receipt(conn, task_binding, result)
             source_files_committed = True
             # The operational checkpoint follows the actual Source transaction.
@@ -2837,6 +3445,810 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         return result
     finally:
         lock.release()
+
+
+def _normalize_author_target(platform, value):
+    if not isinstance(value,str) or not value.strip() or value != value.strip():
+        raise ValueError('AUTHOR_PROFILE_REQUIRED')
+    text = value
+    if text.startswith(('http://','https://')):
+        parts = urlsplit(text)
+        hosts = {'bilibili':{'space.bilibili.com'}, 'xiaohongshu':{'www.rednote.com','rednote.com'},
+            'douyin':{'www.douyin.com','douyin.com'}, 'instagram':{'www.instagram.com','instagram.com'},
+            'facebook':{'www.facebook.com','facebook.com'}, 'x':{'x.com','www.x.com','twitter.com','www.twitter.com'},
+            'weibo':{'weibo.com','www.weibo.com','m.weibo.cn'}, 'zhihu':{'www.zhihu.com','zhihu.com'},
+            'kuaishou':{'www.kuaishou.com','kuaishou.com'}, 'youtube':{'www.youtube.com','youtube.com'},
+            'reddit':{'www.reddit.com','reddit.com'}, 'linkedin':{'www.linkedin.com','linkedin.com'},
+            'github':{'github.com','www.github.com'}}
+        if (parts.scheme != 'https' or parts.hostname not in hosts.get(platform,set())
+                or parts.username or parts.password or parts.port not in (None,443)):
+            raise ValueError('AUTHOR_PROFILE_PLATFORM_MISMATCH')
+        segments = parts.path.strip('/').split('/')
+        prefixes = {'xiaohongshu':['user','profile'], 'douyin':['user'], 'zhihu':['people'],
+                    'kuaishou':['profile'], 'youtube':['channel'], 'reddit':['user'], 'linkedin':['in']}
+        prefix = prefixes.get(platform,[])
+        if platform == 'weibo' and segments[:1] == ['u']:
+            prefix = ['u']
+        if segments[:len(prefix)] != prefix or len(segments) != len(prefix)+1:
+            raise ValueError('AUTHOR_PROFILE_FORMAT_INVALID')
+        text = segments[-1]
+    if re.fullmatch(r'[A-Za-z0-9_.@:-]{1,160}',text) is None:
+        raise ValueError('AUTHOR_ID_INVALID')
+    if platform == 'bilibili' and re.fullmatch(r'[1-9]\d{0,19}',text) is None:
+        raise ValueError('AUTHOR_ID_INVALID')
+    if platform == 'xiaohongshu' and re.fullmatch(r'[0-9a-fA-F]{24}',text) is None:
+        raise ValueError('AUTHOR_ID_INVALID')
+    return text
+
+
+def _author_observation(platform, item, requested, captured_at):
+    from .platform_naming import get_platform_fields
+    raw = item.get('raw') or {}
+    spec = get_platform_fields(platform)
+    identity = next((raw.get(key) for key in (spec.author_id if spec else '', 'username','uid','mid')
+                     if raw.get(key) is not None and raw.get(key) != ''), item.get('author_id'))
+    if identity is None or identity == '':
+        raise ValueError('AUTHOR_NATIVE_ID_NOT_OBSERVED')
+    identity = str(identity)
+    compare = str.lower if platform in {'x','instagram','facebook'} else str
+    if compare(identity.lstrip('@')) != compare(requested.lstrip('@')):
+        raise ValueError('AUTHOR_NATIVE_ID_MISMATCH')
+    def count(names, display_name):
+        value = next((raw[key] for key in names if raw.get(key) is not None), None)
+        display = raw.get(display_name)
+        if display and re.fullmatch(r'[0-9,\s]+',str(display)) is None:
+            return None
+        if type(value) is int and value >= 0:
+            return value
+        if isinstance(value,str) and value.isascii() and value.isdigit():
+            return int(value)
+        return None
+    value = {'platform':platform, 'platform_author_id':identity,
+        'username':raw.get('username') or None,
+        'display_name':raw.get('display_name') or item.get('author_nickname') or item.get('title') or None,
+        'bio':raw.get('bio') or item.get('content') or None,
+        'avatar_url':raw.get('avatar_url') or raw.get('face') or item.get('cover') or None,
+        'profile_url':raw.get('profile_url') or item.get('url') or None,
+        'verified':raw.get('verified') if type(raw.get('verified')) is bool else None,
+        'verification_type':raw.get('verification_type'), 'account_type':raw.get('creator_type'),
+        'follower_count':count(('follower_count','followers','followers_count'),'followers_str'),
+        'following_count':count(('following_count','following','follow_count'),'following_str'),
+        'content_count':count(('content_count','posts','statuses_count'),'posts_str'),
+        'count_displays':{key:raw.get(key) or None for key in ('followers_str','following_str','posts_str')},
+        'location':raw.get('location'), 'country':raw.get('country'), 'language':raw.get('language'),
+        'website':raw.get('website'), 'captured_at':captured_at, 'published_at':None,
+        'raw':raw, 'claim_type':'PLATFORM_REPORTED_PROFILE',
+        'entity_relationship_established':False}
+    return _credential_free_observations(value)
+
+
+def collect_author(platform, author_id, *, actor, scope, attempt_guard=None, operation_key=None):
+    """Read a native author through the same session, approval and data owners."""
+    import database as db
+    from lumenis.shared.evidence.store import record_evidence
+    from lumenis.shared.database.platform_content import persist_platform_author_records
+    platform = 'xiaohongshu' if platform == 'xhs' else platform
+    platform, _, _ = _validate_request(platform, str(author_id or ''), 1)
+    target = _normalize_author_target(platform, author_id)
+    exact, denial = _manual_collection_guard(actor, scope, platform, target, 1, capability='author')
+    if denial is not None:
+        return denial
+    binding = _task_commit_binding(operation_key, actor, exact, 'human', None, platform,target,1,None) if operation_key else None
+    if binding:
+        with db.get_db() as connection:
+            saved = _task_commit_receipt(connection,binding)
+            if saved:
+                return saved
+    lock = _locks[platform]
+    if not lock.acquire(blocking=False):
+        return {'ok':False,'status':'BUSY','platform':platform,'network_attempted':False}
+    try:
+        with _last_action_lock:
+            elapsed = time.monotonic() - _last_action[platform]
+            if elapsed < MIN_INTERVAL_SECONDS:
+                return {'ok':False,'status':'RATE_LIMITED','platform':platform,
+                        'wait_seconds':MIN_INTERVAL_SECONDS-elapsed,'network_attempted':False}
+            _last_action[platform] = time.monotonic()
+        try:
+            result = _get_runtime_adapter(platform).author(target)
+            if not isinstance(result, CollectionResult):
+                raise TypeError('AUTHOR_PROVIDER_RESULT_INVALID')
+            bind_collection_route(result,platform=platform,capability='creator',request_value=target)
+        except Exception as exc:
+            result = CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE,platform,
+                metadata={'error_type':type(exc).__name__},message='AUTHOR_PROVIDER_UNAVAILABLE')
+        captured = datetime.now().astimezone().isoformat(timespec='seconds')
+        native_items = [item for item in result.items or [] if isinstance(item,dict)]
+        observations, rejected = [], []
+        if result.ok:
+            try:
+                observations = [_author_observation(platform,item,target,captured) for item in native_items]
+                if len(observations) > 1:
+                    raise ValueError('AUTHOR_PROFILE_AMBIGUOUS')
+            except ValueError as exc:
+                rejected = _credential_free_observations(native_items)
+                observations = []
+                result.status = CollectionStatus.PROVIDER_UNAVAILABLE
+                result.metadata['error_type'] = str(exc)
+        elif native_items:
+            rejected = _credential_free_observations(native_items)
+        status = _canonical_status(result)
+        if result.ok and not observations:
+            status = 'NO_NEW_DATA'
+        response = {'ok':result.ok,'status':status, 'platform':platform,
+            'author_count':len(observations) if result.ok else None, 'authors':observations,
+            'raw_count':_observed_raw_count(result,len(native_items)),
+            'error_type':(result.metadata or {}).get('error_type'),
+            'provenance':_credential_free_observations(result.provenance or {}),
+            'read_only':True,'external_write':False,'network_attempted':True,
+            'source_use':'INSPECTION_ONLY_CHECK_EACH_RESEARCH_QUOTE_EXPORT_TRAIN_USE'}
+        with (attempt_guard() if attempt_guard else nullcontext(True)) as active, db.get_db() as connection:
+            if active is not True:
+                raise PermissionError('COLLECTION_ATTEMPT_SUPERSEDED')
+            connection.execute('BEGIN IMMEDIATE')
+            _, denial = _manual_collection_guard(actor,exact,platform,target,1,capability='author')
+            if denial is not None:
+                raise PermissionError('AUTHOR_APPROVAL_REVOKED')
+            source_ids = ['platform-author:'+platform+':'+item['platform_author_id'] for item in observations]
+            evidence_id = record_evidence(connection=connection, source='collector',feature_id='COLLECTOR_NATIVE_AUTHORS',
+                version='collector-native-author/1',asset_id=target,capture_mode='native_author_read',
+                inputs={'platform':platform,'source_ids':source_ids,'author_observation_records':observations,
+                    'unverified_author_observation_records':rejected},
+                outputs={'status':response['status'],'author_count':response['author_count'],
+                    'raw_count':response['raw_count'],'error_type':response['error_type']},
+                result='PASS' if response['ok'] else 'FAIL',provider=(result.metadata or {}).get('provider') or platform,
+                collection_metadata=response['provenance'],
+                product='CTH' if exact['domain_id']=='cth' else 'ZBMP',
+                domain_id='cth' if exact['domain_id']=='cth' else 'zbmp',subject_id=exact['subject_id'],
+                brand_focus_id=exact['brand_focus_id'],global_scope=exact['global_scope'],captured_at=captured)
+            response.update(evidence_ref=str(evidence_id),author_evidence_ref=f'app_evidence_records:{evidence_id}')
+            if observations:
+                response['canonical_refs'] = persist_platform_author_records(observations,platform=platform,
+                    evidence_id=evidence_id,scope=exact,connection=connection)
+            if binding:
+                _task_commit_receipt(connection,binding,response)
+        try:
+            _write_run_log(platform,target,started=captured,finished=_now(),fetched=response['raw_count'],
+                accepted=len(observations) if response['ok'] else None,
+                rejected=len(rejected) if response['raw_count'] is not None else None,error=response['error_type'])
+            response['run_log_recorded'] = True
+        except Exception:
+            response['run_log_recorded'] = False
+        return response
+    finally:
+        lock.release()
+
+
+def read_collected_authors(evidence_ref, *, actor, scope):
+    import database as db
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    domain = 'bmp' if scope.get('domain_id') == 'zbmp' else scope.get('domain_id')
+    _business_batch_binding(actor,{domain:scope},'human',None)
+    if not isinstance(evidence_ref,str) or re.fullmatch(r'app_evidence_records:[1-9]\d*',evidence_ref) is None:
+        raise ValueError('AUTHOR_EVIDENCE_REFERENCE_REQUIRED')
+    with db.get_db() as connection:
+        row = connection.execute('SELECT * FROM app_evidence_records WHERE id=?',(int(evidence_ref.split(':')[1]),)).fetchone()
+        evidence = dict(row) if row else {}
+        inputs = json.loads(evidence.get('inputs_json') or '{}')
+        signed = inputs.get('_lumenis_scope') or {}
+        expected = {'domain_id':'cth' if domain=='cth' else 'zbmp','product_id':'CTH' if domain=='cth' else 'ZBMP',
+                    'global':scope.get('global_scope') is True}
+        if scope.get('subject_id'):
+            expected['subject_id'] = scope['subject_id']
+        if scope.get('brand_focus_id'):
+            expected['brand_focus_id'] = scope['brand_focus_id']
+        if (evidence.get('feature_id')!='COLLECTOR_NATIVE_AUTHORS' or signed != expected
+                or classify_evidence_integrity(evidence).get('assurance')!='writer-authenticated'):
+            raise PermissionError('AUTHOR_SOURCE_NOT_AUTHORIZED')
+        ids = inputs.get('source_ids') or []
+        if ids:
+            visible = _current_inspectable_source_rows(connection,ids,actor=actor,scope=scope)
+            if {row['source_id'] for row in visible} != set(ids):
+                raise PermissionError('AUTHOR_SOURCE_REMOVED_OR_SCOPE_CHANGED')
+            for item in inputs.get('author_observation_records') or []:
+                if connection.execute('SELECT 1 FROM platform_accounts WHERE platform=? AND platform_account_id=?',
+                        (item['platform'],item['platform_author_id'])).fetchone() is None:
+                    raise PermissionError('AUTHOR_SOURCE_REMOVED_OR_SCOPE_CHANGED')
+        outputs = json.loads(evidence.get('outputs_json') or '{}')
+        return {'ok':evidence.get('result')=='PASS','status':outputs.get('status'),
+                'evidence_ref':evidence_ref,'authors':inputs.get('author_observation_records') or [],
+                'author_count':outputs.get('author_count'), 'raw_count':outputs.get('raw_count'),
+                'error_type':outputs.get('error_type'), 'network_attempted':False,
+                'result_freshness':'SAVED_SOURCE_OBSERVATION'}
+
+
+def collect_author_posts(platform, author_id, *, actor, scope, **kwargs):
+    platform = 'xiaohongshu' if platform == 'xhs' else platform
+    target = _normalize_author_target(platform,author_id)
+    return collect_search(platform,target,actor=actor,scope=scope,capability='author_posts',**kwargs)
+
+
+def collect_detail(platform: str, content_id: str, *, operator='human', scope=None,
+                   actor=None, attempt_guard=None, operation_key=None, native_task_key=None):
+    """Exact source read through the existing Permission/Evidence transaction.
+
+    The caller must supply the same actor and Source scope as search. This is
+    manual by default; a URL or a resume pointer never supplies permission.
+    """
+    if platform in {'xhs', 'xiaohongshu'}:
+        # This validator reads no configuration or session material.
+        from .xhs import validate_xhs_detail_target
+        content_id = validate_xhs_detail_target(content_id)
+    reference = _credential_free_observations(content_id)
+    return collect_search(platform, reference, max_results=1, operator=operator,
+        scope=scope, actor=actor, attempt_guard=attempt_guard, operation_key=operation_key,
+        capability='detail', _source_url=content_id, native_task_key=native_task_key)
+
+
+def _comment_parent(connection, source_id, actor, scope):
+    """Resolve the existing Canonical post after fresh server scope checks."""
+    from canonical_data import list_scoped_canonical
+    from lumenis.system.security import (LocalWorkspacePrincipal, get_permission_gate,
+        check_actor_scope_permission, check_local_workspace_scope_permission)
+    from .platform_naming import normalize_platform
+    if not isinstance(source_id, str) or not source_id or not isinstance(scope, Mapping):
+        raise ValueError('COMMENT_SOURCE_REQUIRED')
+    domain = str(scope.get('domain_id') or '').lower()
+    if domain == 'zbmp':
+        domain = 'bmp'
+    exact = {'domain_id': domain, 'subject_id': scope.get('subject_id'),
+             'brand_focus_id': scope.get('brand_focus_id'), 'global_scope': scope.get('global_scope')}
+    check = check_local_workspace_scope_permission if type(actor) is LocalWorkspacePrincipal else check_actor_scope_permission
+    def authorize(value):
+        permission = check(actor, module='collector', action='read', gate=get_permission_gate(),
+                           connection=connection, **value)
+        if permission.allowed is not True or permission.verification_state != 'verified':
+            raise PermissionError('COMMENT_SOURCE_NOT_AUTHORIZED')
+    authorize(exact)
+    rows = list_scoped_canonical(connection,product_id='CTH' if domain=='cth' else 'ZBMP',
+        subject_id=exact['subject_id'],brand_focus_id=exact['brand_focus_id'],source_ids=[source_id],limit=1)['records']
+    if not rows and exact['global_scope'] is True:
+        rows = [item for item in _current_inspectable_source_rows(connection,[source_id],actor=actor,scope=exact)
+                if item['scope_status']=='UNASSIGNED']
+    if len(rows) != 1 or rows[0].get('source_table') != 'notes':
+        raise LookupError('COMMENT_PARENT_NOT_FOUND')
+    row = rows[0]
+    actual_scope = {'domain_id': domain, 'subject_id': row.get('subject_id') or None,
+                    'brand_focus_id': row.get('brand_focus_id') or None,
+                    'global_scope': not bool(row.get('subject_id') or row.get('brand_focus_id'))}
+    # A GLOBAL view does not erase the source's own focused permission.
+    authorize(actual_scope)
+    platform = normalize_platform(row.get('source_platform'))
+    if platform not in SECONDARY_COLLECTION_PLATFORMS:
+        raise ValueError('COMMENT_PLATFORM_NOT_SUPPORTED')
+    parent = {'source_id': source_id, 'canonical_id': row['canonical_id'], 'platform': platform,
+              'source_url': _credential_free_observations(row.get('url') or ''),
+              'scope_evidence_ref': str(row.get('scope_evidence_ref') or ''), 'scope': actual_scope,
+              'body_sha256': hashlib.sha256((row.get('content') or '').encode()).hexdigest()}
+    if actual_scope['global_scope']:
+        parent['source_observation_evidence_ref'] = str(row.get('evidence_ref') or '')
+    parent['fingerprint'] = hashlib.sha256(json.dumps(parent, sort_keys=True,
+        separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
+    return parent
+
+
+def _comment_page_record(connection, reference, parent, binding):
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    if not isinstance(reference, str) or re.fullmatch(r'app_evidence_records:[1-9]\d*', reference) is None:
+        raise ValueError('COMMENT_PAGE_RECEIPT_INVALID')
+    row = connection.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(reference.split(':')[1]),)).fetchone()
+    if row is None or classify_evidence_integrity(dict(row)).get('assurance') != 'writer-authenticated':
+        raise PermissionError('COMMENT_PAGE_RECEIPT_UNVERIFIED')
+    row = dict(row)
+    inputs, outputs = json.loads(row['inputs_json']), json.loads(row['outputs_json'])
+    if (row['feature_id'] != 'COLLECTOR_NATIVE_COMMENTS' or inputs.get('parent') != parent
+            or inputs.get('binding') != binding):
+        raise PermissionError('COMMENT_PAGE_CONTEXT_CHANGED')
+    return outputs
+
+
+def _comment_parent_version(recorded, current):
+    """Historical bodies remain readable only under the same current source scope."""
+    identity = ('source_id', 'canonical_id', 'platform', 'scope')
+    if not isinstance(recorded, dict) or any(recorded.get(key) != current.get(key) for key in identity):
+        raise PermissionError('COMMENT_PAGE_CONTEXT_CHANGED')
+    return 'CURRENT_SOURCE_VERSION' if recorded == current else 'RECORDED_SOURCE_VERSION'
+
+
+def _normalized_comment_observations(values, parent, *, include_replies):
+    """Keep native IDs/relations; unidentified observations remain explicit."""
+    observed, by_id = [], {}
+    captured_at = datetime.now().astimezone().isoformat()
+    def identity(value):
+        return str(value).strip() if type(value) in (str, int) and str(value).strip() else None
+    for source in values:
+        if not isinstance(source, dict):
+            raise ValueError('COMMENT_PROVIDER_SHAPE_INVALID')
+        native_parent = identity(source.get('parent_content_id'))
+        if native_parent and native_parent != parent['source_id']:
+            raise ValueError('COMMENT_PARENT_IDENTITY_MISMATCH')
+        native_id = identity(source.get('platform_comment_id', source.get('comment_id', source.get('id'))))
+        parent_id = identity(source.get('parent_comment_id', source.get('parent_id')))
+        if parent_id in ('0', ''):
+            parent_id = None
+        likes = source.get('likes')
+        likes = likes if type(likes) is int and likes >= 0 else None
+        record = {'platform_comment_id': native_id, 'parent_comment_id': parent_id,
+            'reply_to_comment_id': identity(source.get('reply_to_comment_id')),
+            'parent_content_id': parent['source_id'], 'platform': parent['platform'],
+            'content': source.get('content') if isinstance(source.get('content'), str) else '',
+            'author_id': identity(source.get('author_id')),
+            'author_nickname': source.get('author_nickname', source.get('author', source.get('user'))),
+            'publish_datetime': source.get('publish_datetime', source.get('publish_time')),
+            'likes': likes, 'url': _credential_free_observations(source.get('url') or ''),
+            'captured_at': captured_at,
+            'identity_state': 'NATIVE_ID_OBSERVED' if native_id else 'NATIVE_ID_NOT_OBSERVED',
+            'raw': _credential_free_observations(source.get('raw', source))}
+        if native_id and native_id in by_id:
+            if by_id[native_id] != record:
+                raise ValueError('COMMENT_PAGE_NATIVE_ID_CONFLICT')
+            continue
+        if native_id:
+            by_id[native_id] = record
+        observed.append(record)
+    return observed
+
+
+def _comment_page_body(observations):
+    parts, segments, offset = [], [], 0
+    for index, observation in enumerate(observations):
+        content = observation['content']
+        if index:
+            parts.append('\n\n')
+            offset += 2
+        segments.append({'comment_index': index, 'start': offset, 'end': offset + len(content),
+            'platform_comment_id': observation['platform_comment_id'],
+            'parent_comment_id': observation['parent_comment_id'],
+            'author_id': observation['author_id']})
+        parts.append(content)
+        offset += len(content)
+    return ''.join(parts), segments
+
+
+def _comment_page_original_document(parent, observations, pagination, context, binding):
+    body, segments = _comment_page_body(observations)
+    return {'schema': 'collector-native-comment-page/1', 'parent': parent,
+        'parent_source_id': parent['source_id'], 'platform': parent['platform'],
+        'observations': observations, 'body': body,
+        'body_sha256': hashlib.sha256(body.encode('utf-8')).hexdigest(), 'body_segments': segments,
+        'representation': 'COLLECTOR_PARSED_OBSERVATIONS_NOT_FULL_PROVIDER_RESPONSE',
+        'pagination': _credential_free_observations(pagination),
+        'rights': {'status': 'UNREVIEWED', 'allowed_uses': [], 'third_party_rights_granted': False},
+        'claim_type': 'PLATFORM_USER_STATEMENTS_NOT_INDEPENDENTLY_VERIFIED',
+        'context': context, 'request_binding': binding}
+
+
+def _preserve_comment_page_original(connection, *, actor, parent, observations, pagination, binding, staged_paths):
+    """Preserve this exact observed page in the existing Artifact owner.
+
+    It is the Collector's parsed observation, not a complete provider response.
+    Source preservation does not grant any use of another author's expression.
+    A non-critical original-file failure remains explicit beside primary intake.
+    """
+    from lumenis.shared.reporting.saved_work import authorize, _stage_bytes, staging_write
+    start = len(staged_paths)
+    prepared = {}
+    connection.execute('SAVEPOINT comment_original_source')
+    try:
+        context = authorize(actor, parent['scope'], action='write', connection=connection)
+        document = _comment_page_original_document(parent, observations, pagination, context, binding)
+        raw = json.dumps(document, sort_keys=True, ensure_ascii=False,
+                         separators=(',', ':'), allow_nan=False).encode('utf-8')
+        digest = hashlib.sha256(raw).hexdigest()
+        prepared = {'source_fingerprint': digest, 'body_sha256': document['body_sha256'],
+            'size_bytes': len(raw), 'context': context, 'source_kind': 'collected_comment_page',
+            'representation': document['representation'], 'rights': document['rights'],
+            'pagination': document['pagination']}
+        with staging_write('collector-comment-page:' + digest):
+            artifact, path = _stage_bytes(connection, raw=raw, context=context, kind='collected_source',
+                source_execution_id='comment-page-pending:' + digest, extension='.json', media_type='application/json')
+        staged_paths.append(path)
+        connection.execute('RELEASE SAVEPOINT comment_original_source')
+        return {**prepared, 'status': 'PRESERVED', 'source_artifact_ref': artifact['artifact_id']}
+    except Exception:
+        connection.execute('ROLLBACK TO SAVEPOINT comment_original_source')
+        connection.execute('RELEASE SAVEPOINT comment_original_source')
+        cleaned = _cleanup_collected_source_paths(staged_paths[start:])
+        del staged_paths[start:]
+        return {**prepared, 'status': 'UNAVAILABLE', 'source_artifact_ref': None,
+                'reason': 'COMMENT_ORIGINAL_ARTIFACT_PRESERVATION_UNAVAILABLE',
+                'cleanup_status': 'COMPLETE' if cleaned else 'FAILED',
+                'source_use': 'NOT_GRANTED'}
+
+
+def validate_comment_page_original(evidence, raw, artifact):
+    """Pure Producer validation for the original Shared SourceUse reader."""
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    if (not isinstance(evidence, Mapping) or not isinstance(artifact, Mapping) or not isinstance(raw, bytes)
+            or not 0 < len(raw) <= 8 * 1024 * 1024
+            or classify_evidence_integrity(dict(evidence)).get('assurance') != 'writer-authenticated'
+            or evidence.get('source') != 'collector' or evidence.get('feature_id') != 'COLLECTOR_NATIVE_COMMENTS'
+            or evidence.get('version') != 'collector-native-comments/2'):
+        raise ValueError('COMMENT_ORIGINAL_PRODUCER_INVALID')
+    try:
+        inputs = json.loads(evidence['inputs_json'])
+        outputs = json.loads(evidence['outputs_json'])
+        metadata = json.loads(evidence['collection_metadata'])
+        document = json.loads(raw)
+    except (KeyError, ValueError, TypeError, UnicodeError) as exc:
+        raise ValueError('COMMENT_ORIGINAL_PRODUCER_INVALID') from exc
+    if (not all(isinstance(value, dict) for value in (inputs, outputs, metadata, document))
+            or not isinstance(outputs.get('result'), dict) or not isinstance(inputs.get('parent'), dict)
+            or not isinstance(document.get('observations'), list)):
+        raise ValueError('COMMENT_ORIGINAL_PRODUCER_INVALID')
+    original = outputs['result'].get('original_source') or {}
+    identity = 'comment-page:' + str(evidence['id'])
+    digest = hashlib.sha256(raw).hexdigest()
+    preserved = (original.get('status') == 'PRESERVED'
+        and metadata.get('source_artifact_ref') == original.get('source_artifact_ref') == artifact.get('artifact_id'))
+    recovered = (original.get('status') == 'UNAVAILABLE'
+        and original.get('reason') == 'COMMENT_ORIGINAL_ARTIFACT_PRESERVATION_UNAVAILABLE'
+        and original.get('source_artifact_ref') is None and metadata.get('source_artifact_ref') is None)
+    if (metadata.get('source_kind') != 'collected_comment_page' or not (preserved or recovered)
+            or artifact.get('kind') != 'collected_source' or artifact.get('source_execution_id') != identity
+            or artifact.get('evidence_id') != str(evidence['id']) or artifact.get('note_id') != evidence['asset_id']
+            or artifact.get('sha256') != digest or metadata.get('source_fingerprint') != digest
+            or original.get('source_fingerprint') != digest or artifact.get('size_bytes') != len(raw)
+            or artifact.get('product_id') != evidence.get('product_id') or artifact.get('domain_id') != evidence.get('domain_id')
+            or document.get('schema') != 'collector-native-comment-page/1'
+            or document.get('parent') != inputs.get('parent')
+            or document.get('parent_source_id') != evidence.get('asset_id')
+            or document.get('platform') != inputs['parent']['platform']
+            or document.get('request_binding') != inputs.get('binding')
+            or document.get('observations') != outputs['result'].get('comments')
+            or document.get('context') != metadata.get('context')
+            or document.get('rights') != {'status': 'UNREVIEWED', 'allowed_uses': [], 'third_party_rights_granted': False}
+            or document.get('representation') != 'COLLECTOR_PARSED_OBSERVATIONS_NOT_FULL_PROVIDER_RESPONSE'):
+        raise ValueError('COMMENT_ORIGINAL_BINDING_INVALID')
+    body, segments = _comment_page_body(document['observations'])
+    if (document.get('body') != body or document.get('body_segments') != segments
+            or document.get('body_sha256') != hashlib.sha256(body.encode('utf-8')).hexdigest()
+            or original.get('body_sha256') != document['body_sha256']):
+        raise ValueError('COMMENT_ORIGINAL_BODY_CHANGED')
+    return document
+
+
+def read_comment_page_original(page_ref, *, actor, scope, connection=None):
+    """Reopen exact bytes after current parent-scope checks; grants no SourceUse."""
+    import database as db
+    import shared_artifacts
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    if not isinstance(page_ref, str) or re.fullmatch(r'app_evidence_records:[1-9]\d*', page_ref) is None:
+        raise ValueError('COMMENT_PAGE_RECEIPT_INVALID')
+    with (nullcontext(connection) if connection is not None else db.get_db()) as con:
+        row = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(page_ref.split(':')[1]),)).fetchone()
+        if row is None or classify_evidence_integrity(dict(row)).get('assurance') != 'writer-authenticated':
+            raise PermissionError('COMMENT_PAGE_RECEIPT_UNVERIFIED')
+        evidence = dict(row)
+        if (evidence.get('source') != 'collector' or evidence.get('feature_id') != 'COLLECTOR_NATIVE_COMMENTS'
+                or evidence.get('version') != 'collector-native-comments/2'):
+            raise ValueError('COMMENT_ORIGINAL_PRODUCER_INVALID')
+        inputs = json.loads(evidence['inputs_json'])
+        parent = _comment_parent(con, evidence['asset_id'], actor, scope)
+        version_state = _comment_parent_version(inputs.get('parent'), parent)
+        metadata = json.loads(evidence['collection_metadata'])
+        if metadata.get('source_artifact_ref'):
+            artifact_rows = con.execute('SELECT * FROM lumenis_shared_artifacts WHERE artifact_id=?',
+                                       (metadata['source_artifact_ref'],)).fetchall()
+        else:
+            artifact_rows = con.execute('SELECT * FROM lumenis_shared_artifacts WHERE kind=? AND evidence_id=? '
+                'AND source_execution_id=? AND note_id=? AND sha256=?', ('collected_source', str(evidence['id']),
+                'comment-page:' + str(evidence['id']), evidence['asset_id'], metadata.get('source_fingerprint'))).fetchall()
+        if not artifact_rows:
+            raise LookupError('COMMENT_ORIGINAL_ARTIFACT_UNAVAILABLE')
+        if len(artifact_rows) != 1:
+            raise ValueError('COMMENT_ORIGINAL_ARTIFACT_AMBIGUOUS')
+        artifact = dict(artifact_rows[0])
+        root = shared_artifacts.artifact_root().resolve()
+        path = (root / artifact['relative_path']).resolve()
+        if not path.is_relative_to(root) or not path.is_file() or not 0 < artifact['size_bytes'] <= 8 * 1024 * 1024:
+            raise ValueError('COMMENT_ORIGINAL_ARTIFACT_INVALID')
+        with path.open('rb') as handle:
+            raw = handle.read(8 * 1024 * 1024 + 1)
+        document = validate_comment_page_original(evidence, raw, artifact)
+        return {'source_id': 'comment-page:' + str(evidence['id']), 'parent_source_id': evidence['asset_id'],
+                'evidence_ref': page_ref, 'evidence': evidence, 'source_artifact': artifact,
+                'raw': raw, 'sha256': artifact['sha256'], 'document': document,
+                'source_fingerprint': artifact['sha256'], 'body_sha256': document['body_sha256'],
+                'source_version': evidence['version'], 'rights': document['rights'],
+                'source_version_state': version_state, 'source_use': 'CHECK_CURRENT_COMMENT_PAGE_USE'}
+
+
+def recover_comment_page_original(page_ref, *, actor, scope):
+    """Explicit storage-only recovery from signed observations, without refetch.
+
+    A committed failed original-file write keeps its historical Evidence. Only
+    the exact already-signed fingerprint can be registered in the Artifact owner.
+    Current Collector import approval, source scope and staging fences still apply.
+    """
+    import database as db
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    from lumenis.shared.reporting.saved_work import authorize, _stage_bytes, staging_write
+    paths = []
+    try:
+        with db.get_db() as con:
+            con.execute('BEGIN IMMEDIATE')
+            try:
+                current = read_comment_page_original(page_ref, actor=actor, scope=scope, connection=con)
+            except LookupError:
+                current = None
+            if current is not None:
+                return {**current, 'replayed': True, 'network_attempted': False, 'evidence_rewritten': False}
+            row = con.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(page_ref.split(':')[1]),)).fetchone()
+            if row is None or classify_evidence_integrity(dict(row)).get('assurance') != 'writer-authenticated':
+                raise PermissionError('COMMENT_PAGE_RECEIPT_UNVERIFIED')
+            evidence = dict(row)
+            inputs, outputs = json.loads(row['inputs_json']), json.loads(row['outputs_json'])
+            original = outputs['result'].get('original_source') or {}
+            if (evidence['version'] != 'collector-native-comments/2' or evidence['feature_id'] != 'COLLECTOR_NATIVE_COMMENTS'
+                    or original.get('status') != 'UNAVAILABLE' or not original.get('source_fingerprint')
+                    or not isinstance(original.get('context'), dict) or not isinstance(original.get('pagination'), dict)):
+                raise ValueError('COMMENT_ORIGINAL_NOT_RECOVERABLE')
+            parent = _comment_parent(con, evidence['asset_id'], actor, scope)
+            _comment_parent_version(inputs.get('parent'), parent)
+            binding = inputs['binding']
+            exact, denial = _manual_collection_guard(actor, parent['scope'], parent['platform'],
+                binding['keyword'], binding['max_results'], capability='comments')
+            if denial is not None:
+                raise PermissionError('COMMENT_ORIGINAL_RECOVERY_APPROVAL_REQUIRED')
+            authorized = _task_commit_binding(binding['operation_key'], actor, exact, 'human', None,
+                parent['platform'], binding['keyword'], binding['max_results'], None)
+            if authorized['identity'] != binding['identity']:
+                raise PermissionError('COMMENT_ORIGINAL_RECOVERY_ACTOR_CHANGED')
+            authorize(actor, parent['scope'], action='write', connection=con)
+            document = _comment_page_original_document(inputs['parent'], outputs['result']['comments'],
+                original['pagination'], original['context'], binding)
+            raw = json.dumps(document, sort_keys=True, ensure_ascii=False,
+                             separators=(',', ':'), allow_nan=False).encode('utf-8')
+            if hashlib.sha256(raw).hexdigest() != original['source_fingerprint']:
+                raise ValueError('COMMENT_ORIGINAL_RECOVERY_BYTES_CHANGED')
+            identity = 'comment-page:' + str(evidence['id'])
+            with staging_write('collector-comment-original-recovery:' + original['source_fingerprint']):
+                artifact, path = _stage_bytes(con, raw=raw, context=original['context'], kind='collected_source',
+                    source_execution_id=identity, evidence_id=str(evidence['id']), extension='.json', media_type='application/json')
+            paths.append(path)
+            con.execute('UPDATE lumenis_shared_artifacts SET note_id=? WHERE artifact_id=?',
+                        (evidence['asset_id'], artifact['artifact_id']))
+            result = read_comment_page_original(page_ref, actor=actor, scope=scope, connection=con)
+        return {**result, 'replayed': False, 'network_attempted': False, 'evidence_rewritten': False}
+    except BaseException:
+        _cleanup_collected_source_paths(paths)
+        raise
+
+
+def collect_comments(source_id: str, *, actor, scope, request_id: str, max_results=20,
+                     include_replies=False, continuation=None, attempt_guard=None):
+    """One explicit page through existing adapters, Evidence and note_comments.
+
+    Clients echo a signed page reference, never a platform cursor or actor/scope
+    grant. Each next page rechecks the source and exact import approval. The
+    signed transaction receipt recovers a committed page without refetching.
+    """
+    import database as db
+    from lumenis.shared.evidence.store import record_evidence
+    if (type(max_results) is not int or not 1 <= max_results <= MAX_RESULTS
+            or type(include_replies) is not bool or not isinstance(request_id, str)
+            or re.fullmatch(r'[A-Za-z0-9_-]{8,128}', request_id) is None):
+        raise ValueError('COMMENT_REQUEST_INVALID')
+    if continuation is not None and (not isinstance(continuation, dict) or set(continuation) != {'page_ref'}):
+        raise ValueError('COMMENT_PAGE_RECEIPT_REQUIRED')
+    with db.get_db() as connection:
+        parent = _comment_parent(connection, source_id, actor, scope)
+    platform = parent['platform']
+    keyword = json.dumps({'capability': 'comments', 'source_id': source_id,
+        'source_url': parent['source_url'], 'include_replies': include_replies}, sort_keys=True, ensure_ascii=False)
+    exact, denial = _manual_collection_guard(actor, parent['scope'], platform, keyword, max_results, capability='comments')
+    if denial is not None:
+        return denial
+    binding = _task_commit_binding('comments:' + request_id, actor, exact, 'human', None,
+                                   platform, keyword, max_results, None)
+    binding.update(capability='comments', parent_fingerprint=parent['fingerprint'], include_replies=include_replies)
+    previous = continuation['page_ref'] if continuation else None
+    cursor, chain = None, []
+    with db.get_db() as connection:
+        if previous:
+            prior = _comment_page_record(connection, previous, parent, binding)
+            if not prior.get('retry_current_cursor') and (prior.get('exhausted') is True or prior.get('next_cursor') is None):
+                return {**prior['result'], 'cached': True, 'network_attempted': False,
+                        'page_ref': previous, 'evidence_ref': int(previous.split(':')[1]),
+                        'continuation': None, 'coverage_state': prior['result']['coverage_state']}
+            cursor, chain = prior['next_cursor'], list(prior.get('cursor_chain') or [])
+        page_binding = {**binding, 'previous_page_ref': previous, 'request_cursor': cursor}
+        cached = _task_commit_receipt(connection, page_binding)
+        if cached is not None:
+            return cached
+    cursor_hash = hashlib.sha256(json.dumps(cursor, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+    if cursor_hash in chain:
+        return {'ok': False, 'status': 'NATIVE_CURSOR_LOOP', 'network_attempted': False,
+                'source_id': source_id, 'continuation': None, 'coverage_state': 'PARTIAL'}
+    if not _locks[platform].acquire(blocking=False):
+        return {'ok': False, 'status': 'BUSY', 'network_attempted': False, 'source_id': source_id}
+    staged_paths = []
+    try:
+        with _last_action_lock:
+            elapsed = time.monotonic() - _last_action[platform]
+            if _last_action[platform] and elapsed < MIN_INTERVAL_SECONDS:
+                return {'ok': False, 'status': 'RATE_LIMITED', 'network_attempted': False,
+                        'retry_after_seconds': MIN_INTERVAL_SECONDS - elapsed, 'source_id': source_id}
+            _last_action[platform] = time.monotonic()
+        health = _adapter_health(platform)
+        if health.get('can_attempt', health.get('ready')) is not True:
+            return {'ok': False, 'status': health.get('status', 'UNAVAILABLE'),
+                    'network_attempted': False, 'source_id': source_id}
+        options = {'max_comments': max_results, 'include_replies': include_replies}
+        if cursor is not None:
+            options['cursor'] = cursor
+        target = parent['source_url'] if platform == 'xiaohongshu' else source_id
+        try:
+            collection = _get_runtime_adapter(platform).comments(target, **options)
+        except Exception as exc:
+            collection = CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, platform,
+                message='comment provider request failed', metadata={'error_type': type(exc).__name__})
+        if not isinstance(collection, CollectionResult):
+            raise ValueError('COMMENT_PROVIDER_SHAPE_INVALID')
+        bind_collection_route(collection, platform=platform, capability='comments', request_value=target)
+        observations = _normalized_comment_observations(collection.comments, parent, include_replies=include_replies)
+        metadata = collection.metadata if isinstance(collection.metadata, dict) else {}
+        pagination = metadata.get('pagination') if isinstance(metadata.get('pagination'), dict) else {}
+        observed_cursor = pagination.get('request_cursor')
+        if cursor is not None and observed_cursor != cursor:
+            raise ValueError('COMMENT_PROVIDER_CURSOR_NOT_CONSUMED')
+        exhausted = pagination.get('exhausted') if type(pagination.get('exhausted')) is bool else None
+        next_cursor = pagination.get('next_cursor')
+        if next_cursor is not None and type(next_cursor) not in (str, int, dict):
+            raise ValueError('COMMENT_PROVIDER_CURSOR_INVALID')
+        if len(json.dumps(next_cursor, allow_nan=False).encode()) > 16384:
+            raise ValueError('COMMENT_PROVIDER_CURSOR_INVALID')
+        retry_current = not collection.ok or pagination.get('page_complete') is False
+        chain = chain if retry_current else [*chain, cursor_hash]
+        if retry_current:
+            next_cursor = cursor
+        if not retry_current and next_cursor is not None and hashlib.sha256(json.dumps(next_cursor, sort_keys=True,
+                separators=(',', ':')).encode()).hexdigest() in chain:
+            next_cursor, exhausted = None, False
+            pagination = {**pagination, 'partial_reason': 'NATIVE_CURSOR_LOOP'}
+        status = _canonical_status(collection)
+        complete = collection.ok and exhausted is True and pagination.get('replies_complete') is True
+        result = {'ok': bool(collection.ok), 'status': 'SUCCESS' if complete else
+                    'COMMENTS_PARTIAL' if collection.ok else status,
+            'provider_status': status, 'source_id': source_id, 'platform': platform,
+            'comments': observations, 'observed_count': len(observations) if collection.ok or observations else None,
+            'native_identity_count': (sum(bool(item['platform_comment_id']) for item in observations)
+                                      if collection.ok or observations else None),
+            'coverage_state': 'COMPLETE_FOR_DECLARED_SCOPE' if complete else 'PARTIAL',
+            'coverage_scope': pagination.get('coverage_scope', 'PROVIDER_RETURNED_OBSERVATIONS_ONLY'),
+            'partial_reason': pagination.get('partial_reason') or (None if complete else 'COVERAGE_NOT_ESTABLISHED'),
+            'read_only': True, 'external_write': False, 'network_attempted': True,
+            'continuation': None, 'pagination_exhausted': exhausted,
+            'recovery_required': retry_current,
+            'refresh_verified': bool(collection.ok), 'cached': False}
+        result['source_use'] = {'purpose': 'COLLECTION_INSPECTION', 'source_scope_checked': True,
+            'source_rights_promoted': False, 'analysis_export_training': 'CHECK_EXISTING_SOURCE_USE_PER_ACTION'}
+        # Observed bodies are retained even on an interrupted provider page;
+        # only a successful page receives the terminal replay receipt.
+        with (attempt_guard() if attempt_guard is not None else nullcontext(True)) as active, db.get_db() as connection:
+            if active is not True:
+                raise PermissionError('COMMENT_ATTEMPT_SUPERSEDED')
+            connection.execute('BEGIN IMMEDIATE')
+            if _comment_parent(connection, source_id, actor, scope) != parent:
+                raise PermissionError('COMMENT_PARENT_CHANGED')
+            _, denial = _manual_collection_guard(actor, exact, platform, keyword, max_results, capability='comments')
+            if denial is not None:
+                raise PermissionError('COMMENT_APPROVAL_REVOKED')
+            repeated = _task_commit_receipt(connection, page_binding)
+            if repeated is not None:
+                return repeated
+            original = (_preserve_comment_page_original(connection, actor=actor, parent=parent,
+                observations=observations, pagination=pagination, binding=binding, staged_paths=staged_paths)
+                if collection.ok or observations else {'status': 'UNAVAILABLE', 'source_artifact_ref': None,
+                    'reason': 'NO_SOURCE_OBSERVATIONS', 'source_use': 'NOT_GRANTED'})
+            result['original_source'] = original
+            page_ref = record_evidence(connection=connection, source='collector', feature_id='COLLECTOR_NATIVE_COMMENTS',
+                version='collector-native-comments/2', asset_id=source_id, status='verified' if collection.ok else 'failed',
+                result='PASS' if collection.ok else 'FAIL', capture_mode='native_comments',
+                product='CTH' if exact['domain_id'] == 'cth' else 'ZBMP',
+                domain_id='cth' if exact['domain_id'] == 'cth' else 'zbmp', subject_id=exact['subject_id'],
+                brand_focus_id=exact['brand_focus_id'], global_scope=exact['global_scope'],
+                inputs={'binding': binding, 'parent': parent, 'previous_page_ref': previous, 'request_cursor': cursor},
+                outputs={'result': result, 'next_cursor': next_cursor, 'exhausted': exhausted,
+                         'retry_current_cursor': retry_current, 'cursor_chain': chain},
+                collection_metadata={'capability': 'comments', 'source_platform': platform,
+                                     'source_url': parent['source_url'], 'includes_replies': include_replies,
+                                     **{key: original[key] for key in ('source_artifact_ref', 'source_fingerprint',
+                                        'body_sha256', 'context', 'source_kind') if key in original}})
+            if original.get('status') == 'PRESERVED':
+                connection.execute('UPDATE lumenis_shared_artifacts SET evidence_id=?,source_execution_id=?,note_id=? WHERE artifact_id=?',
+                    (str(page_ref), 'comment-page:' + str(page_ref), source_id, original['source_artifact_ref']))
+            stored = []
+            for observation in observations:
+                native_id = observation['platform_comment_id']
+                if not native_id:
+                    continue
+                key = 'comment:' + hashlib.sha256(json.dumps([platform, source_id, native_id],
+                    separators=(',', ':')).encode()).hexdigest()
+                legacy = connection.execute('SELECT note_id FROM note_comments WHERE comment_id=?', (native_id,)).fetchone()
+                if legacy is not None and legacy[0] == source_id:
+                    key = native_id
+                stored.append({**observation, 'comment_id': key, 'raw_data': {**observation,
+                    'collection_evidence_ref': 'app_evidence_records:' + str(page_ref)}})
+            result['persistence'] = db.upsert_note_comments(source_id, stored, connection=connection)
+            result['persistence']['unidentified'] = len(observations) - len(stored)
+            result['evidence_ref'] = page_ref
+            result['page_ref'] = 'app_evidence_records:' + str(page_ref)
+            if retry_current or (next_cursor is not None and not exhausted):
+                result['continuation'] = {'page_ref': result['page_ref']}
+            if collection.ok:
+                _task_commit_receipt(connection, page_binding, result)
+            return result
+    except BaseException:
+        _cleanup_collected_source_paths(staged_paths)
+        raise
+    finally:
+        _locks[platform].release()
+
+
+def read_collected_comments(source_id: str, *, actor, scope, limit=20, before=None, page_ref=None):
+    """Read the existing latest projection or one immutable native page."""
+    import database as db
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError('COMMENT_READ_LIMIT_INVALID')
+    if page_ref is not None and before is not None:
+        raise ValueError('COMMENT_READ_CURSOR_INVALID')
+    with db.get_db() as connection:
+        parent = _comment_parent(connection, source_id, actor, scope)
+        if page_ref is not None:
+            if not isinstance(page_ref, str) or re.fullmatch(r'app_evidence_records:[1-9]\d*', page_ref) is None:
+                raise ValueError('COMMENT_PAGE_RECEIPT_INVALID')
+            row = connection.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(page_ref.split(':')[1]),)).fetchone()
+            if row is None or classify_evidence_integrity(dict(row)).get('assurance') != 'writer-authenticated':
+                raise PermissionError('COMMENT_PAGE_RECEIPT_UNVERIFIED')
+            inputs, outputs = json.loads(row['inputs_json']), json.loads(row['outputs_json'])
+            if row['feature_id'] != 'COLLECTOR_NATIVE_COMMENTS' or row['asset_id'] != source_id:
+                raise PermissionError('COMMENT_PAGE_CONTEXT_CHANGED')
+            version_state = _comment_parent_version(inputs.get('parent'), parent)
+            return {'source_id': source_id, 'comments': outputs['result']['comments'], 'page_ref': page_ref,
+                    'coverage_state': outputs['result']['coverage_state'], 'immutable': True,
+                    'source_version_state': version_state, 'source_use': outputs['result'].get('source_use')}
+        params = [source_id]
+        predicate = 'note_id=?'
+        if before is not None:
+            if not isinstance(before, str) or not connection.execute('SELECT 1 FROM note_comments WHERE note_id=? AND comment_id=?',
+                    (source_id, before)).fetchone():
+                raise ValueError('COMMENT_READ_CURSOR_INVALID')
+            predicate += ' AND comment_id<?'
+            params.append(before)
+        rows = connection.execute('SELECT comment_id,raw_json FROM note_comments WHERE ' + predicate
+                                  + ' ORDER BY comment_id DESC LIMIT ?', (*params, limit + 1)).fetchall()
+        comments = []
+        for row in rows[:limit]:
+            try:
+                observation = json.loads(row['raw_json'])
+            except (ValueError, TypeError):
+                observation = {}
+            if not isinstance(observation, dict):
+                observation = {}
+            reference = observation.get('collection_evidence_ref')
+            if not reference:
+                comments.append({'comment_ref': row['comment_id'], 'state': 'LEGACY_COMMENT_NOT_VERIFIED'})
+                continue
+            if not isinstance(reference, str) or re.fullmatch(r'app_evidence_records:[1-9]\d*', reference) is None:
+                raise PermissionError('COMMENT_OBSERVATION_UNVERIFIED')
+            evidence = connection.execute('SELECT * FROM app_evidence_records WHERE id=?', (int(reference.split(':')[1]),)).fetchone()
+            if (evidence is None or evidence['feature_id'] != 'COLLECTOR_NATIVE_COMMENTS'
+                    or evidence['asset_id'] != source_id
+                    or classify_evidence_integrity(dict(evidence)).get('assurance') != 'writer-authenticated'):
+                raise PermissionError('COMMENT_OBSERVATION_UNVERIFIED')
+            original = json.loads(evidence['outputs_json'])['result']['comments']
+            public = {key: value for key, value in observation.items() if key != 'collection_evidence_ref'}
+            version_state = _comment_parent_version(json.loads(evidence['inputs_json']).get('parent'), parent)
+            if public not in original:
+                raise PermissionError('COMMENT_OBSERVATION_CHANGED')
+            comments.append({**public, 'comment_ref': row['comment_id'], 'evidence_ref': reference,
+                             'source_version_state': version_state})
+        return {'source_id': source_id, 'platform': parent['platform'], 'comments': comments,
+                'next_cursor': rows[limit - 1]['comment_id'] if len(rows) > limit else None,
+                'coverage_state': 'SAVED_OBSERVATIONS_NOT_PLATFORM_TOTAL', 'immutable': False}
 
 
 def _business_source_reviews(records, query, observed_at):
@@ -2958,8 +4370,11 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
                     or checkpoint['input_fingerprint'] != plan.input_fingerprint
                     or page_key not in {issued['page_key'], json.dumps(issued['next_cursor'], sort_keys=True, separators=(',', ':'))}):
                 raise AcquisitionPlanError('collection checkpoint was not issued for this continuation')
-            cached = (progress.get('pages') or {}).get(page_key)
-            if cached is not None:
+            pages = progress.get('pages') or {}
+            cached = pages.get('receipt:' + checkpoint['receipt']) or pages.get(page_key)
+            resumable = bool(cached and cached.get('native_continuation_required') is True
+                and cached.get('checkpoint', {}).get('receipt') == checkpoint['receipt'])
+            if cached is not None and not resumable:
                 return _historical_business_result(cached)
             # A saved receipt is never a live permission/import grant.
             for query in plan.queries:
@@ -2988,6 +4403,10 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
             if cached is not None:
                 return _historical_business_result(cached)
             queue.reap_stale(120, task_id=task_id)
+        if task['payload'].get('cancel_requested') is True:
+            return {'ok': False, 'status': 'CANCELLED', 'runs': [], 'task_id': task_id,
+                    'network_attempted': False, 'resume_required': True,
+                    'checkpoint': checkpoint, 'continuation_required': True}
         if not task['payload'].get('operation_id'):
             return {'ok': False, 'status': 'LEGACY_COLLECTION_COMMIT_UNKNOWN', 'runs': [],
                     'task_id': task_id, 'network_attempted': False,
@@ -3020,6 +4439,10 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
             progress['completed_query_keys'] = completed
             if not queue.save_progress(task_id, progress, **receipt):
                 raise RuntimeError('COLLECTION_ATTEMPT_SUPERSEDED')
+        def save_native_round(key, native_round):
+            progress.setdefault('native_rounds', {})[key] = native_round
+            if not queue.save_progress(task_id, progress, **receipt):
+                raise RuntimeError('COLLECTION_ATTEMPT_SUPERSEDED')
         try:
             result = _execute_business_queries(business_requests, actor=actor, scopes=scopes,
                 operator=operator, continuation=continuation,
@@ -3028,6 +4451,8 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
                 max_queries=max_queries, max_results=max_results,
                 prelaunch_authorization=prelaunch_authorization,
                 progress_callback=save_completed,
+                native_rounds=dict(progress.get('native_rounds') or {}),
+                native_progress_callback=save_native_round,
                 operation_prefix=claimed['payload'].get('operation_id'),
                 attempt_guard=lambda: queue.attempt_guard(task_id, **receipt))
             result = json.loads(json.dumps(result, ensure_ascii=False))
@@ -3040,7 +4465,7 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
             if any(outcome.get('new_collection_required') is True for outcome in outcomes):
                 result.update(new_collection_required=True, continuation_required=False,
                     recovery_action='REVIEW_COMMITTED_SOURCES_THEN_CREATE_NEW_REQUEST')
-            result['new_collection_requires_new_request_id'] = True
+            result['new_collection_requires_new_request_id'] = result.get('native_continuation_required') is not True
             result['task_created_at'] = claimed['created_at']
             result['request_identity_mode'] = 'explicit' if request_id is not None else 'default_idempotent'
             # Store terminal operation receipts, not a second Source/Evidence store.
@@ -3051,8 +4476,10 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
             progress.setdefault('receipts', {})[token] = {
                 'completed_query_keys': completed, 'page_key': page_key,
                 'next_cursor': result.get('next_cursor')}
-            if result.get('ok') is True:
+            if result.get('ok') is True or result.get('native_continuation_required') is True:
                 progress.setdefault('pages', {})[page_key] = result
+                if checkpoint is not None:
+                    progress['pages']['receipt:' + checkpoint['receipt']] = result
             progress['completed_query_keys'] = completed
             if not queue.save_progress(task_id, progress, **receipt):
                 raise RuntimeError('COLLECTION_ATTEMPT_SUPERSEDED')
@@ -3075,7 +4502,8 @@ def _execute_business_queries(business_requests, *, actor=None, scopes=None,
                              operator='human', continuation=None, checkpoint=None,
                              max_queries=32, max_results=MAX_RESULTS,
                              prelaunch_authorization=None, progress_callback=None,
-                             attempt_guard=None, operation_prefix=None):
+                             attempt_guard=None, operation_prefix=None,
+                             native_rounds=None, native_progress_callback=None):
     """Execute a task-selected batch through the existing guarded collection entry.
 
     Existing task owners persist the returned checkpoint. Source scopes come
@@ -3102,6 +4530,10 @@ def _execute_business_queries(business_requests, *, actor=None, scopes=None,
                    for key in checkpoint['completed_query_keys'])):
         raise AcquisitionPlanError('checkpoint does not match this task-selected query plan')
     completed = set((checkpoint or {}).get('completed_query_keys', []))
+    native_rounds = dict(native_rounds or {})
+    if any(not isinstance(key, str) or type(value) is not int or value < 0
+           for key, value in native_rounds.items()):
+        raise AcquisitionPlanError('invalid server native continuation progress')
     groups = {}
     keys = {}
     for query in plan.queries:
@@ -3143,11 +4575,20 @@ def _execute_business_queries(business_requests, *, actor=None, scopes=None,
                         prelaunch_local_import=operator == 'prelaunch_maintenance',
                         prelaunch_authorization=prelaunch_authorization,
                         attempt_guard=attempt_guard,
-                        operation_key=(operation_prefix + ":" + key) if operation_prefix else None)
+                        operation_key=((operation_prefix + ":" + key
+                            + (":native:" + str(native_rounds[key]) if native_rounds.get(key) else ""))
+                            if operation_prefix else None))
                 except (ValueError, PermissionError) as exc:
                     result = {'ok': False, 'status': 'COLLECTION_REQUEST_REJECTED',
                               'platform': platform, 'error_type': type(exc).__name__}
             runs.append({'query_key': key, 'planned_query': query.to_dict(), 'result': result})
+            if (result.get('native_continuation_verified') is True
+                    and result.get('task_commit_evidence_ref')
+                    and result.get('source_status') == 'PARTIAL_ACQUISITION_PENDING'
+                    and result.get('new_collection_required') is False):
+                native_rounds[key] = native_rounds.get(key, 0) + 1
+                if native_progress_callback is not None:
+                    native_progress_callback(key, native_rounds[key])
             if result.get('ok') is True and result.get('status') in {'SUCCESS', 'NO_NEW_DATA'}:
                 completed.add(key)
                 if progress_callback is not None:
@@ -3155,11 +4596,15 @@ def _execute_business_queries(business_requests, *, actor=None, scopes=None,
             else:
                 blocked[platform] = result.get('status') or 'UNAVAILABLE'
                 deferred.append({'query_key': key, 'query': query.to_dict(), 'reason': blocked[platform]})
+    native_pending = any(run['result'].get('native_continuation_verified') is True
+        and run['result'].get('new_collection_required') is False for run in runs)
     return {'ok': not deferred, 'status': 'PARTIAL' if deferred else 'BATCH_COMPLETED',
             'query_plan': plan.to_dict(), 'runs': runs, 'deferred_queries': deferred,
             'checkpoint': {'input_fingerprint': plan.input_fingerprint,
                            'completed_query_keys': sorted(completed)},
-            'next_cursor': plan.next_cursor, 'continuation_required': bool(deferred or plan.next_cursor),
+            'next_cursor': continuation if native_pending else plan.next_cursor,
+            'continuation_required': bool(deferred or plan.next_cursor),
+            'native_continuation_required': native_pending,
             'coverage_complete': False, 'source_scopes_promoted_from_plan': False,
             'product_schedule_operation_proven': False}
 
@@ -3329,6 +4774,134 @@ class NativePublicCapture:
     platform: str
     content: bytes
     sha256: str
+
+def validate_public_source_original(content, sha256):
+    """Pure public Source producer check; no fetch, DNS or session read."""
+    import base64
+    from .public_source import PublicResponse
+    from .public_http import PublicHttpAdapter
+    if (type(content) is not bytes or not 0 < len(content) <= 4 * 1024 * 1024
+            or hashlib.sha256(content).hexdigest() != sha256):
+        raise ValueError('PUBLIC_SOURCE_ORIGINAL_BYTES_CHANGED')
+    value = json.loads(content)
+    if not isinstance(value, dict) or value.get('platform') != 'public_http':
+        raise ValueError('PUBLIC_SOURCE_ORIGINAL_INVALID')
+    response = value.get('source_response')
+    if (not isinstance(response, dict) or set(response) != {
+            'body_base64', 'sha256', 'url', 'requested_url', 'content_type', 'status_code'}
+            or type(response['status_code']) is not int or not 200 <= response['status_code'] < 300):
+        raise ValueError('PUBLIC_SOURCE_RESPONSE_INVALID')
+    raw = base64.b64decode(response['body_base64'], validate=True)
+    if (not 0 < len(raw) <= 2 * 1024 * 1024
+            or hashlib.sha256(raw).hexdigest() != response['sha256']):
+        raise ValueError('PUBLIC_SOURCE_RESPONSE_BYTES_CHANGED')
+    for target in (response['url'], response['requested_url']):
+        parts = urlsplit(target)
+        host = (parts.hostname or '').lower()
+        if (parts.scheme not in {'http', 'https'} or not host or parts.username or parts.password
+                or host == 'localhost' or host.endswith(('.localhost', '.local'))
+                or _credential_free_observations(target) != target):
+            raise ValueError('PUBLIC_SOURCE_URL_INVALID')
+        try:
+            address = ipaddress.ip_address(host)
+        except ValueError:
+            address = None
+        if address is not None and not address.is_global:
+            raise ValueError('PUBLIC_SOURCE_URL_INVALID')
+    item = PublicHttpAdapter._item(PublicResponse(url=response['url'], content=raw,
+        content_type=response['content_type'], status_code=response['status_code'],
+        requested_url=response['requested_url']))
+    observed = value.get('native_record')
+    observation = (observed.get('source_raw') or {}).get('content_observation') if isinstance(observed, dict) else None
+    if (not isinstance(observed, dict) or not isinstance(observation, dict)
+            or value.get('native_id') != item['platform_content_id']
+            or value.get('stable_source_key') != 'public_http:' + item['platform_content_id']
+            or observed.get('content_id') != item['platform_content_id']
+            or value.get('source_url') != response['url'] or observed.get('url') != item['url']
+            or value.get('body') != item['content'] or observed.get('content') != item['content']
+            or observed.get('title') != item['title']
+            or value.get('body_sha256') != hashlib.sha256(item['content'].encode()).hexdigest()
+            or observation.get('document_sha256') != response['sha256']
+            or observation.get('document_byte_length') != len(raw)
+            or observation != item['raw']['content_observation']):
+        raise ValueError('PUBLIC_SOURCE_BODY_BINDING_CHANGED')
+    datetime.fromisoformat(value['capture_observation_native'].replace('Z', '+00:00'))
+    if value['capture_observation_native'] != observed.get('captured_at'):
+        raise ValueError('PUBLIC_SOURCE_CAPTURE_TIME_CHANGED')
+    publication = value.get('publication') or {}
+    if publication.get('native_time') != (item['publish_datetime'] or None):
+        raise ValueError('PUBLIC_SOURCE_PUBLICATION_CHANGED')
+    lineage = value.get('source_lineage')
+    if (not isinstance(lineage, list) or len(lineage) != 2
+            or lineage[0].get('sha256') != response['sha256']
+            or lineage[0].get('kind') != 'ORIGINAL_HTTP_RESPONSE_BODY'
+            or lineage[0].get('locator') != response['url']
+            or lineage[0].get('transport_original') is not True
+            or lineage[1].get('sha256') != hashlib.sha256(json.dumps(observed, ensure_ascii=False,
+                sort_keys=True, separators=(',', ':')).encode()).hexdigest()):
+        raise ValueError('PUBLIC_SOURCE_LINEAGE_CHANGED')
+    return value
+
+
+def _persist_public_http_original(connection, *, response, record, source_id, collection_evidence_id,
+                                  context, staged_paths, actor, scope, keyword, max_results, capability):
+    import base64
+    from .public_source import PublicResponse
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    exact, denial = _manual_collection_guard(actor, scope, 'public_http', keyword, max_results,
+                                             capability=capability)
+    if denial is not None:
+        raise ValueError('PUBLIC_SOURCE_IMPORT_NOT_AUTHORIZED')
+    if type(response) is not PublicResponse:
+        raise ValueError('PUBLIC_SOURCE_ORIGINAL_RESPONSE_UNAVAILABLE')
+    parent = connection.execute('SELECT * FROM app_evidence_records WHERE id=?', (collection_evidence_id,)).fetchone()
+    parent = dict(parent) if parent else {}
+    integrity = classify_evidence_integrity(parent)
+    observations = json.loads(parent.get('inputs_json') or '{}').get('source_observation_records')
+    if (integrity.get('assurance') != 'writer-authenticated' or parent.get('result') != 'PASS'
+            or not isinstance(observations, list) or observations.count(record) != 1):
+        raise ValueError('PUBLIC_SOURCE_PARENT_UNVERIFIED')
+    position = observations.index(record)
+    source_id = str(source_id)
+    if source_id != record.get('content_id'):
+        raise ValueError('PUBLIC_SOURCE_ID_CHANGED')
+    canonical = connection.execute('SELECT content,publish_datetime FROM canonical_data WHERE source_table=\'notes\' '
+        'AND source_id=? AND product_id=? AND domain_id=? AND NULLIF(subject_id,\'\') IS ? '
+        'AND NULLIF(brand_focus_id,\'\') IS ?', (source_id, 'CTH' if exact['domain_id'] == 'cth' else 'ZBMP',
+        context['domain_id'], exact['subject_id'], exact['brand_focus_id'])).fetchall()
+    if len(canonical) != 1 or canonical[0]['content'] != record.get('content'):
+        raise ValueError('PUBLIC_SOURCE_CANONICAL_BODY_CHANGED')
+    value = {'platform': 'public_http', 'native_id': source_id, 'stable_source_key': 'public_http:' + source_id,
+        'source_url': response.url, 'body': record['content'],
+        'body_sha256': hashlib.sha256(record['content'].encode()).hexdigest(),
+        'body_state': record['source_raw']['content_observation']['completeness'], 'native_record': record,
+        'capture_observation_native': record['captured_at'],
+        'publication': {'published_at_utc': canonical[0]['publish_datetime'] or None,
+                        'native_time': record.get('publish_datetime') or None,
+                        'normalization_owner': 'Canonical publication owner', 'timezone_inferred': None},
+        'claim_type': 'PUBLIC_WEB_SOURCE_STATEMENT',
+        'rights': {'status': 'UNREVIEWED', 'allowed_uses': [], 'third_party_rights_granted': False,
+                   'intake_purpose': 'SOURCE_PRESERVATION'},
+        'source_response': {'body_base64': base64.b64encode(response.content).decode('ascii'),
+                            'sha256': hashlib.sha256(response.content).hexdigest(), 'url': response.url,
+                            'requested_url': response.requested_url or keyword,
+                            'content_type': response.content_type, 'status_code': response.status_code},
+        'source_lineage': [{'sha256': hashlib.sha256(response.content).hexdigest(), 'locator': response.url,
+                            'kind': 'ORIGINAL_HTTP_RESPONSE_BODY', 'transport_original': True},
+                           {'sha256': hashlib.sha256(json.dumps(record, ensure_ascii=False, sort_keys=True,
+                                separators=(',', ':')).encode()).hexdigest(),
+                            'locator': f'app_evidence_records:{collection_evidence_id}:inputs.source_observation_records[{position}]',
+                            'kind': 'SIGNED_SOURCE_OBSERVATION_JSON', 'transport_original': False}]}
+    raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
+    fingerprint = hashlib.sha256(raw).hexdigest()
+    validate_public_source_original(raw, fingerprint)
+    return _persist_collected_source_original(connection, value=value, source_bytes=raw,
+        source_fingerprint=fingerprint, source_id=source_id, collection_evidence_id=collection_evidence_id,
+        context=context, staged_paths=staged_paths, capture_mode='live_public_response_intake',
+        source_version='collected-public-source:live-v1',
+        authorization_resource='collector-public-source-preservation:' + fingerprint,
+        source_locator_unit='public-document-body')
+
 
 def _native_capture_record(capture):
     if type(capture) is not NativePublicCapture or capture.platform not in {
@@ -3671,7 +5244,8 @@ def _persist_pending_live_source_original(connection, *, platform, record, sourc
 def _persist_collected_source_original(connection, *, value, source_bytes,
                                        source_fingerprint, source_id,
                                        collection_evidence_id, context, staged_paths,
-                                      capture_mode, source_version, authorization_resource):
+                                      capture_mode, source_version, authorization_resource,
+                                      source_locator_unit='native-post-body'):
     """Shared immutable Source writer; callers provide their actual admission."""
     from lumenis.shared.evidence import store
     from lumenis.shared.reporting.saved_work import _stage_bytes, staging_write
@@ -3687,7 +5261,7 @@ def _persist_collected_source_original(connection, *, value, source_bytes,
     binding = {"platform": value["platform"], "native_id": value["native_id"],
                "stable_source_key": value["stable_source_key"], "source_id": source_id,
                "body_sha256": value["body_sha256"], "collection_evidence_ref": parent_ref}
-    locator = {"unit": "native-post-body", "json_path": "$.body", "start": 0,
+    locator = {"unit": source_locator_unit, "json_path": "$.body", "start": 0,
                "end": len(value["body"]), "offset_unit": "unicode-codepoint"}
     entity_assignment = value.get("entity_assignment")
     if entity_assignment is not None and not isinstance(entity_assignment, dict):

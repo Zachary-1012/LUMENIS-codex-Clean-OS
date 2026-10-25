@@ -55,7 +55,7 @@ def test_wal_nondefault_database_independent_readback(engine, wal_database):
         assert restored.execute('SELECT value FROM synthetic_evidence').fetchall() == [('committed',)]
         assert restored.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
     info = json.loads((Path(path) / 'backup_info.json').read_text())
-    assert info['source_db'].endswith('nondefault/truth.sqlite')
+    assert Path(info['source_db']).parts[-2:] == ('nondefault', 'truth.sqlite')
     assert info['operation_type'] == 'restart'
     assert info['restore_readback'] == 'verified'
     assert len(info['database_sha256']) == 64

@@ -178,7 +178,8 @@ def test_xhs_detail_and_worker_health_are_explicitly_degraded():
             return self.reachable
 
     adapter = XiaohongshuAdapter(backend=Worker("", "COLLECTOR_ENDPOINT_NOT_CONFIGURED"))
-    assert adapter.detail("note-1").status == CollectionStatus.NOT_SUPPORTED
+    assert adapter.detail("note-1").status == CollectionStatus.COLLECT_ERROR
+    assert adapter.detail("note-1").metadata['error_type'] == 'DETAIL_SOURCE_UNVERIFIED'
     assert adapter.health_check().status == CollectionStatus.NOT_CONFIGURED
 
     adapter = XiaohongshuAdapter(backend=Worker("https://worker.example", "", reachable=False))

@@ -297,6 +297,34 @@ void main() {
 
 
   test(
+    'project versions accept only explicit valid non-self parents',
+    () async {
+      await create();
+      await controller.export(outputKind: 'video');
+      final project = repository.savedProject!;
+      MediaProjectVersion read(Object? parent, {bool includeParent = true}) =>
+          MediaProjectVersion.read('ART-current', {
+            ...project,
+            if (includeParent) 'parent_artifact_id': parent,
+          }, repository.render);
+
+      expect(read(null, includeParent: false).parentArtifactId, isNull);
+      expect(read(null).parentArtifactId, isNull);
+      expect(read('ART-parent').parentArtifactId, 'ART-parent');
+      for (final invalid in [
+        'ART-current',
+        '',
+        'wrong-parent',
+        7,
+        <String>[],
+      ]) {
+        expect(() => read(invalid), throwsFormatException);
+      }
+    },
+  );
+
+
+  test(
     'audio comparison changes only explicit adoption and rejects stale options',
     () async {
       await controller.createFromLocalFiles(['chosen.mp4']);

@@ -20,7 +20,7 @@ from typing import Callable
 _HASH = re.compile(r"^[0-9a-f]{64}$")
 _CODE = re.compile(r"^[A-Z][A-Z0-9_]{0,95}$")
 _OPERATION = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
-_DOMAINS = frozenset({"cth", "bmp"})
+_DOMAINS = frozenset({"cth", "bmp", "shared"})
 _MAX_SOURCE_REFS = 256
 _MAX_USER_PAYLOAD_CHARS = 1_000_000
 _MAX_SYSTEM_PROMPT_CHARS = 64_000
@@ -194,6 +194,8 @@ def validate_owned_service_request(request: object) -> dict | None:
             or not _safe_text(request.user_payload, limit=_MAX_USER_PAYLOAD_CHARS, multiline=True)
             or not _safe_text(request.response_schema_json, limit=_MAX_SCHEMA_CHARS, required=False)):
         raise OwnedServiceBlocked("OWNED_SERVICE_REQUEST_INVALID", status="INVALID_INPUT")
+    if request.domain_id == 'shared' and request.scope != 'shared_workspace:v1':
+        raise OwnedServiceBlocked('OWNED_SERVICE_SCOPE_INVALID', status='INVALID_INPUT')
     if any(type(getattr(request, field)) is not str or not _HASH.fullmatch(getattr(request, field))
            for field in _REQUEST_HASH_FIELDS):
         raise OwnedServiceBlocked("OWNED_SERVICE_HASH_INVALID", status="INVALID_INPUT")
@@ -354,6 +356,8 @@ def _validate_admission_request(request: object, expected_type: type) -> None:
             or any(not _safe_text(scope, limit=_MAX_ID_CHARS) for scope in request.scopes)
             or len(set(request.scopes)) != len(request.scopes)):
         raise OwnedServiceBlocked("OWNED_MODEL_ADMISSION_SCOPES_INVALID", status="BLOCKED")
+    if request.domain_id == 'shared' and request.scopes != ('shared_workspace:v1',):
+        raise OwnedServiceBlocked('OWNED_MODEL_ADMISSION_SCOPES_INVALID', status='BLOCKED')
     if (type(request.allowed_operations) is not tuple or not request.allowed_operations
             or any(type(item) is not str or not _OPERATION.fullmatch(item) for item in request.allowed_operations)
             or len(set(request.allowed_operations)) != len(request.allowed_operations)):
@@ -806,7 +810,9 @@ def run_owned_request(request: object, *, is_cancelled: Callable[[], bool] | Non
             raise OwnedServiceBlocked("OWNED_SERVICE_CANCELLED", status="CANCELLED")
         result = {
             "ok": True, "status": "COMPLETED", "code": "OWNED_INFERENCE_COMPLETED",
-            "provider": "owned", "request_id": request.request_id,
+            "provider": "owned", "operation": request.operation,
+            "domain_id": request.domain_id, "scope": request.scope,
+            "request_id": request.request_id,
             "request_digest": digest, "run_id": raw["run_id"],
             "model_id": after["runtime_identity"]["model_id"],
             "model_revision": after["runtime_identity"]["model_revision"],
@@ -959,6 +965,9 @@ def owned_service_status(domain_id: str | None = None) -> dict:
             "candidate_identity_sha256": checked["runtime_identity"]["candidate_identity_sha256"],
             "binding_sha256": slot.binding_sha256,
             "admission_request_sha256": checked["admission_result"]["request_sha256"],
+            "allowed_operations": list(slot.binding.admission_verifier.request.allowed_operations),
+            "source_use_policy_version": slot.binding.admission_verifier.request.source_use_version,
+            "source_use_policy_sha256": slot.binding.admission_verifier.request.source_use_sha256,
             "generation_probe_performed": False, "fallback_allowed": False,
         }
     except OwnedServiceBlocked as exc:

@@ -2,11 +2,14 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/lumenis_core_client.dart';
+import 'media_file_save_stub.dart'
+    if (dart.library.io) 'media_file_save_io.dart'
+    if (dart.library.js_interop) 'media_file_save_web.dart'
+    as streaming;
 
 /// User-picked files and explicit downloads. No automatic filesystem scan,
 /// source deletion, or claim that a browser completed its final disk write.
 class MediaProjectFiles {
-  static const maxImportBytes = 128 * 1024 * 1024;
   static const _media = XTypeGroup(
     label: 'Video / audio',
     extensions: [
@@ -41,6 +44,7 @@ class MediaProjectFiles {
     if (!canSave) {
       throw UnsupportedError('File saving is not connected on this surface.');
     }
+    if (content.streamUri != null) return streaming.save(content);
     final file = XFile.fromData(
       content.bytes,
       mimeType: content.mediaType,

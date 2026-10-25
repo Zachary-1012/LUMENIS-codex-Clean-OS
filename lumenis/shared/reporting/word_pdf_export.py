@@ -168,6 +168,12 @@ def _export_delivery(document: dict, *, sources: list, format: str) -> bytes:
     output = io.BytesIO()
     markdown = delivery_markdown(document, sources)
     blocks = list(_delivery_blocks(markdown))
+    from .operational_brief import _markdown_text
+    if (blocks and blocks[0][0] == "heading" and blocks[0][1][0] == 1
+            and blocks[0][1][1] in {document["title"], _markdown_text(document["title"])}):
+        # Binary deliverables already render a cover title. Keep every other
+        # heading, including later repetitions and a different opening title.
+        blocks = blocks[1:]
     if format == "docx":
         from docx import Document
         from docx.oxml import OxmlElement

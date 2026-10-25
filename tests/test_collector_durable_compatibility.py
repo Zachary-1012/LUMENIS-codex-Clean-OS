@@ -66,6 +66,122 @@ def assert_committed_once(case):
         assert conn.execute("SELECT COUNT(*) FROM app_evidence_records WHERE feature_id!='COLLECTOR_TASK_COMMIT'").fetchone()[0] == 1
 
 
+@pytest.mark.parametrize('interruption', ['none', 'cancel_before_resume', 'progress_crash'])
+def test_native_partial_source_commit_and_same_task_resume_keep_original_receipts(request, monkeypatch, tmp_path, interruption):
+    """Real isolated persistence with admitted fixture bytes; no platform/session is called."""
+    import socket
+
+    from lumenis.system.collector import acquisition_plan
+    from lumenis.system.collector.adapters.base import (
+        CollectionResult,
+        CollectionStatus,
+    )
+    from lumenis.system.collector.guard import checkpoint, task_queue
+    from tests.test_collector_transaction_truth import REGISTERED_NAME
+
+    case = request.getfixturevalue('collector_case')
+    entry = case['surface']
+    monkeypatch.setattr(task_queue, 'DEFAULT_PATH', str(tmp_path / 'native-tasks.db'))
+    monkeypatch.setattr(checkpoint, 'get_data_dir', lambda: str(tmp_path / 'native-progress'))
+    def no_network(*args, **kwargs):
+        pytest.fail('isolated continuation attempted live acquisition')
+    monkeypatch.setattr(socket.socket, 'connect', no_network)
+    monkeypatch.setattr(socket.socket, 'connect_ex', no_network)
+    monkeypatch.setattr(socket, 'create_connection', no_network)
+    monkeypatch.setattr(entry, '_adapter_health', lambda *a, **k: {'status': 'SUCCESS', 'can_attempt': True})
+    calls = []
+    class AllowedInputAdapter:
+        def search(self, keyword, **kwargs):
+            calls.append(kwargs['acquisition_fingerprint'])
+            index = len(calls)
+            partial = index == 1
+            descriptor = {'task_binding': calls[-1], 'keyword': keyword, 'source_host': 'www.rednote.com',
+                'raw_path': str(tmp_path / 'synthetic-native-checkpoint.json'), 'raw_sha256': 'a' * 64,
+                'identity_fingerprint': 'b' * 64, 'run_id': 'allowed-input-' + str(index),
+                'complete': not partial, 'terminal_error': False, 'continuation_required': partial,
+                'pending_note_ids': ['d' * 24] if partial else [], 'pagination_exhausted': False}
+            assert checkpoint.Checkpoint('xhs').save_operational_resume(keyword, calls[-1], descriptor)
+            note_id = ('c' if partial else 'd') * 24
+            return CollectionResult(status=CollectionStatus.SUCCESS, platform='xiaohongshu', raw_count=1,
+                items=[{'note_id': note_id, 'title': REGISTERED_NAME + ' fixture page ' + str(index),
+                    'content': keyword + ' permitted synthetic native detail',
+                    'url': 'https://www.rednote.com/explore/' + note_id,
+                    'publish_datetime': '2026-10-01T08:00:00Z', 'liked_count': 0,
+                    'comment_count': None, 'collected_count': 1, 'source_platform': 'xhs'}],
+                metadata={'provider': 'isolated_allowed_input', 'source_platform': 'xhs',
+                    'source': 'www.rednote.com', 'continuation_persisted': True,
+                    'checkpoint_identity_verified': True, 'continuation': {
+                        'keyword': keyword, 'source_host': 'www.rednote.com', 'identity_verified': True,
+                        'continuation_required': partial, 'checkpoint_run_id': descriptor['run_id']}})
+    adapter = AllowedInputAdapter()
+    monkeypatch.setattr(entry, '_get_runtime_adapter', lambda *a: adapter)
+    reqs = [{'domain_id': 'CTH', 'scope_key': case['scope']['subject_id'], 'aliases': [REGISTERED_NAME],
+             'purpose': 'Review permitted fixture input', 'dimension': 'market_activity',
+             'platforms': ['xiaohongshu'], 'topic_terms': ['fixture']}]
+    with case['client'].application.test_request_context('/', headers=case['focus_headers'],
+            environ_overrides={'REMOTE_ADDR': '127.0.0.1'}):
+        actor = case['permission'].resolve_local_workspace_principal(module='collector', action='write')
+        plan = acquisition_plan.build_acquisition_plan(business_requests=reqs)
+        assert len(plan.queries) == 1
+        for query in plan.queries:
+            _scope, denial = entry._manual_collection_guard(actor, case['scope'], 'xiaohongshu', query.keyword, 1)
+            assert denial['status'] == 'APPROVAL_REQUIRED'
+            case['gate'].grant_approval('data_import', resource=denial['approval_resource'], granted_by='isolated allowed input')
+        def execute(**extra):
+            monkeypatch.setitem(entry._last_action, 'xiaohongshu', 0.0)
+            return entry.collect_business_queries(reqs, actor=actor, scopes={'cth': case['scope']},
+                max_results=1, request_id='native-isolated-001', **extra)
+        if interruption == 'progress_crash':
+            save_progress = task_queue.TaskQueue.save_progress
+            lost = []
+            def crash_after_source_commit(self, task_id, progress, **receipt):
+                if progress.get('native_rounds') and not lost:
+                    lost.append(True)
+                    raise RuntimeError('isolated interruption after durable source commit')
+                return save_progress(self, task_id, progress, **receipt)
+            monkeypatch.setattr(task_queue.TaskQueue, 'save_progress', crash_after_source_commit)
+            with pytest.raises(RuntimeError, match='interruption after durable source commit'):
+                execute()
+            assert len(calls) == 1
+            queue = task_queue.TaskQueue()
+            with queue._conn:
+                queue._conn.execute('UPDATE tasks SET scheduled_at=0')
+            queue.close()
+        first = execute()
+        assert first['native_continuation_required'] is True, first
+        assert not first['ok'] and first['continuation_required']
+        first_ref = first['runs'][0]['result']['task_commit_evidence_ref']
+        with sqlite3.connect(case['db_path']) as con:
+            assert con.execute('SELECT count(*) FROM canonical_data').fetchone()[0] == 1
+        assert execute()['cached'] and len(calls) == 1
+        if interruption == 'cancel_before_resume':
+            # This owner test injects the existing server cancel control; there
+            # is no claim that a new UI cancellation endpoint has been added.
+            queue = task_queue.TaskQueue()
+            task = queue.get(first['checkpoint']['task_id'])
+            task['payload']['cancel_requested'] = True
+            with queue._conn:
+                queue._conn.execute('UPDATE tasks SET payload=? WHERE id=?',
+                    (json.dumps(task['payload']), task['id']))
+            cancelled = execute(checkpoint=first['checkpoint'])
+            assert cancelled['status'] == 'CANCELLED' and not cancelled['network_attempted']
+            assert len(calls) == 1
+            task['payload']['cancel_requested'] = False
+            with queue._conn:
+                queue._conn.execute('UPDATE tasks SET payload=? WHERE id=?',
+                    (json.dumps(task['payload']), task['id']))
+            queue.close()
+        second = execute(checkpoint=first['checkpoint'])
+        assert second['ok'] and second['checkpoint']['task_id'] == first['checkpoint']['task_id'], second
+        assert len(calls) == 2
+        assert second['runs'][0]['result']['task_commit_evidence_ref'] != first_ref
+        old = execute(checkpoint=first['checkpoint'])
+        assert old['cached'] and not old['refresh_performed'] and len(calls) == 2
+        with sqlite3.connect(case['db_path']) as con:
+            assert con.execute('SELECT count(*) FROM canonical_data').fetchone()[0] == 2
+            assert con.execute("SELECT count(*) FROM app_evidence_records WHERE feature_id='COLLECTOR_TASK_COMMIT'").fetchone()[0] == 2
+
+
 def test_v4_real_permission_transaction_persists_and_reopens_without_reexecution(durable_case):
     case = durable_case
     task_id = approved_task(case)
@@ -207,16 +323,29 @@ def test_resume_requires_literal_boolean(durable_case, confirmation):
 
 def test_process_death_after_business_commit_recovers_signed_receipt_without_fetch(durable_case, monkeypatch):
     """Actual child exits at queue checkpoint; new process reconciles committed SQL."""
-    import multiprocessing
-    from lumenis.system.collector.guard.task_queue import TaskQueue
+    from tests.test_collector_transaction_truth import _feed
     case = durable_case
     task_id = approved_task(case)
-    def crash_after_commit():
-        TaskQueue.save_progress = lambda *args, **kwargs: os._exit(86)
-        case['service']._job(task_id)
-    process = multiprocessing.get_context('fork').Process(target=crash_after_commit)
-    process.start(); process.join(20)
-    assert process.exitcode == 86
+    manifest = case['db_path'].parent / 'commit-worker.json'
+    manifest.write_text(json.dumps({
+        'root': str(case['db_path'].parent), 'db_path': str(case['db_path']),
+        'queue_path': str(case['queue_path']), 'task_id': task_id,
+        'source_url': SOURCE_URL, 'atom': _feed(1234).decode('utf-8'),
+    }), encoding='utf-8')
+    # Explicit fixture setup replaces inherited fork/monkeypatch state. Keep
+    # platform/model/session/signing configuration out of both new interpreters.
+    env = {key: value for key, value in os.environ.items() if key.upper() in {
+        'SYSTEMROOT', 'WINDIR', 'TEMP', 'TMP', 'PATH', 'PATHEXT', 'COMSPEC',
+        'LANG', 'LC_ALL', 'PYTHONHOME', 'VIRTUAL_ENV',
+    }}
+    env.update(PYTHONUTF8='1', PYTHONDONTWRITEBYTECODE='1')
+    worker = Path(__file__).with_name('collector_commit_worker.py')
+    def run_worker(mode):
+        return subprocess.run([sys.executable, '-X', 'utf8', str(worker), str(manifest), mode],
+            env=env, text=True, encoding='utf-8', capture_output=True, timeout=35,
+            cwd=str(Path(__file__).resolve().parents[1]))
+    crashed = run_worker('crash')
+    assert crashed.returncode == 86, crashed.stdout + crashed.stderr
     assert_committed_once(case)
     queue = case['service']._queue()
     row = queue.get(int(task_id[3:]))
@@ -227,39 +356,60 @@ def test_process_death_after_business_commit_recovers_signed_receipt_without_fet
     with queue._conn:
         queue._conn.execute('UPDATE tasks SET scheduled_at=0 WHERE id=?', (row['id'],))
     queue.close()
-    script = """
-import json
-from lumenis.adapters import collector_service as service
-from lumenis.system.collector.adapters import secondary_collection as entry
-from lumenis.system.collector.guard import task_queue
-from lumenis.system import security
-from lumenis.system.security import permission
-task_queue.DEFAULT_PATH = QUEUE_PATH
-gate = permission.PermissionGate()
-gate.grant_permission(permission.PermissionLevel.COMMIT)
-permission.get_permission_gate = security.get_permission_gate = lambda: gate
-queue = service._queue(); row = queue.get(int(TASK_ID[3:])); queue.close()
-payload = row['payload']
-_, denial = entry._manual_collection_guard({'id': payload['actor_id']}, payload['scope'],
-    'web_atom', payload['keyword'], payload['max_results'])
-if denial is not None:
-    assert denial['status'] == 'APPROVAL_REQUIRED', denial
-    gate.grant_approval('data_import', resource=denial['approval_resource'],
-                       granted_by='explicit isolated restart verification')
-entry._get_runtime_adapter = lambda *args: (_ for _ in ()).throw(AssertionError('receipt recovery fetched source'))
-service._job(TASK_ID)
-completed = service.get_task(TASK_ID)
-assert completed['success'] is True, completed
-assert completed['per_platform']['web_atom']['commit_reconciled'] is True
-print(json.dumps(completed))
-"""
-    script = 'QUEUE_PATH=' + repr(str(case['queue_path'])) + '\nTASK_ID=' + repr(task_id) + '\n' + script
-    env = {**os.environ, 'ZBC_DB_PATH': str(case['db_path']),
-           'ZBC_DATA_DIR': str(case['queue_path'].parent)}
-    recovered = subprocess.check_output([sys.executable, '-c', script], env=env, text=True)
-    assert json.loads(recovered.splitlines()[-1])['success'] is True
+    recovered = run_worker('recover')
+    assert recovered.returncode == 0, recovered.stdout + recovered.stderr
+    assert json.loads(recovered.stdout.splitlines()[-1])['success'] is True
     assert_committed_once(case)
     assert case['service'].get_task(task_id)['success'] is True
+
+
+@pytest.mark.parametrize('source_token', [False, True])
+def test_independent_detail_uses_same_permission_transaction_and_replays_exact_commit(collector_case, monkeypatch, source_token):
+    from lumenis.system.collector.adapters.base import CollectionResult, CollectionStatus
+    from tests.test_collector_transaction_truth import REGISTERED_NAME
+    case = collector_case
+    entry = case['surface']
+    note_id = 'e' * 24
+    url = 'https://www.rednote.com/explore/' + note_id
+    requested = url + '?xsec_token=isolated-locator-never-evidence' if source_token else note_id
+    expected_backend_url = url + '?xsec_token=isolated-locator-never-evidence' if source_token else url
+    calls = []
+    class ExactDetailAdapter:
+        def detail(self, target, **kwargs):
+            calls.append((target, kwargs['acquisition_fingerprint']))
+            assert target == expected_backend_url
+            return CollectionResult(CollectionStatus.SUCCESS, 'xhs', raw_count=1,
+                items=[{'note_id': note_id, 'title': REGISTERED_NAME + ' permitted detail fixture',
+                        'content': 'Original permitted source content for ' + REGISTERED_NAME,
+                        'url': url, 'source_platform': 'xhs', 'liked_count': 0,
+                        'comment_count': None, 'collected_count': 1,
+                        'publish_datetime': '2026-10-01T08:00:00Z',
+                        'detail_fetched': True, 'detail_identity_verified': True}],
+                metadata={'provider': 'isolated_detail_fixture', 'source': 'www.rednote.com',
+                          'source_platform': 'xhs', 'acquisition_capability': 'detail'})
+    monkeypatch.setattr(entry, '_get_runtime_adapter', lambda *a: ExactDetailAdapter())
+    monkeypatch.setattr(entry, '_adapter_health', lambda *a, **k: {'status': 'SUCCESS', 'can_attempt': True})
+    with case['client'].application.test_request_context('/', headers=case['focus_headers'],
+            environ_overrides={'REMOTE_ADDR': '127.0.0.1'}):
+        actor = case['permission'].resolve_local_workspace_principal(module='collector', action='write')
+        args = {'actor': actor, 'scope': case['scope'], 'operation_key': 'isolated-independent-detail-01'}
+        denied = entry.collect_detail('xhs', requested, **args)
+        assert denied['status'] == 'APPROVAL_REQUIRED' and not calls
+        case['gate'].grant_approval('data_import', resource=denied['approval_resource'],
+                                    granted_by='isolated exact detail permission')
+        monkeypatch.setitem(entry._last_action, 'xiaohongshu', 0.0)
+        committed = entry.collect_detail('xhs', requested, **args)
+        assert committed['ok'], committed
+        assert committed['evidence_recorded']
+        replayed = entry.collect_detail('xhs', url, **args)
+        assert replayed['commit_reconciled'] and len(calls) == 1
+        assert 'isolated-locator-never-evidence' not in json.dumps(replayed)
+        with sqlite3.connect(case['db_path']) as con:
+            for (material,) in con.execute("SELECT inputs_json||outputs_json FROM app_evidence_records"):
+                assert 'isolated-locator-never-evidence' not in material
+        assert _pipeline_counts(case['db_path']) == {
+            'notes': 1, 'canonical_data': 1, 'app_evidence_records': 2,
+            'platform_contents': 1, 'metric_snapshots': 1}
 
 
 def test_tampered_commit_receipt_does_not_refetch(durable_case):

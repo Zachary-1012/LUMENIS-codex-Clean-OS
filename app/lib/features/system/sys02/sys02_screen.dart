@@ -6,6 +6,7 @@ import 'sys02_repository.dart';
 import 'sys02_snapshot.dart';
 import 'sys02_view_model.dart';
 import 'sys_system_foundation.dart';
+import 'collector_request_panel.dart';
 
 class Sys02Screen extends StatefulWidget {
   const Sys02Screen({required this.client, this.repository, super.key});
@@ -81,6 +82,7 @@ class _Sys02ScreenState extends State<Sys02Screen> {
               collecting: _collecting,
               collectMessageKey: _collectMessageKey,
               onManualCollect: _manualCollect,
+              client: widget.client,
             ),
           },
         ),
@@ -96,6 +98,7 @@ class _CollectorContent extends StatelessWidget {
     required this.collecting,
     required this.collectMessageKey,
     required this.onManualCollect,
+    required this.client,
   });
 
   final Sys02Snapshot snapshot;
@@ -103,143 +106,135 @@ class _CollectorContent extends StatelessWidget {
   final bool collecting;
   final String? collectMessageKey;
   final VoidCallback onManualCollect;
+  final LumenisCoreClient client;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final width = constraints.maxWidth;
-        final mobile = width < 768;
-        final desktop = width >= 1100;
-        final horizontalPadding = width < 480
-            ? 18.0
-            : width < 900
-            ? 26.0
-            : 38.0;
-        String copy(String key) => SysSystemCopy.text(context, key);
-
-        final header = SysPageHeader(
-          eyebrow: copy('sys02.eyebrow'),
-          title: copy('sys02.title'),
-          subtitle: copy('sys02.subtitle'),
-          onRefresh: onRefresh,
-        );
-        final manual = Wrap(
-          spacing: 12,
-          runSpacing: 8,
-          crossAxisAlignment: WrapCrossAlignment.center,
+    final palette = LumenisTheme.of(context);
+    String copy(String key) => SysSystemCopy.text(context, key);
+    final connections = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
           children: [
-            FilledButton.tonalIcon(
-              key: const ValueKey('sys02-manual-collect'),
-              onPressed: collecting ? null : onManualCollect,
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(copy('sys02.manual.action')),
+            Expanded(
+              child: Text(
+                copy('sys02.lanes.title'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
-            Text(
-              copy(collectMessageKey ?? 'sys02.manual.hint'),
-              style: TextStyle(color: LumenisTheme.of(context).muted),
+            IconButton(
+              onPressed: onRefresh,
+              tooltip: copy('sys.common.refresh'),
+              icon: const Icon(Icons.refresh),
             ),
           ],
-        );
-        final summary = _SummaryStrip(metrics: snapshot.metrics);
-        final lanes = SysPanel(
-          title: copy('sys02.lanes.title'),
-          detail: copy('sys02.lanes.detail'),
-          child: _CollectorLanes(collectors: snapshot.collectors),
-        );
-        final boundary = SysPanel(
-          title: copy('sys02.boundary.title'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 12),
+        _CollectorLanes(collectors: snapshot.collectors),
+        if (snapshot.note != null && snapshot.note!.isNotEmpty) ...[
+          const Divider(height: 28),
+          Text(snapshot.note!, style: TextStyle(color: palette.muted)),
+        ],
+        const SizedBox(height: 20),
+        Material(
+          color: Colors.transparent,
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            title: Text(copy('sys02.summary.title')),
             children: [
-              Text(
-                copy('sys02.boundary.detail'),
-                style: TextStyle(
-                  color: LumenisTheme.of(context).muted,
-                  height: 1.5,
-                ),
-              ),
+              _SummaryStrip(metrics: snapshot.metrics),
               const SizedBox(height: 14),
-              _BoundaryLine(
-                icon: Icons.lock_outline_rounded,
-                text: copy('sys02.boundary.noActions'),
+              FilledButton.tonalIcon(
+                key: const ValueKey('sys02-manual-collect'),
+                onPressed: collecting ? null : onManualCollect,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: Text(copy('sys02.manual.action')),
               ),
-              const SizedBox(height: 10),
-              _BoundaryLine(
-                icon: Icons.source_outlined,
-                text: copy('sys02.source.detail'),
-              ),
-              if (snapshot.note != null && snapshot.note!.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text(
-                  snapshot.note!,
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).quiet,
-                    height: 1.45,
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Semantics(
+                  liveRegion: collectMessageKey != null,
+                  child: Text(copy(collectMessageKey ?? 'sys02.manual.hint')),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide =
+            constraints.maxWidth >= 1000 &&
+            MediaQuery.textScalerOf(context).scale(16) <= 24;
+        final request = CollectorRequestPanel(
+          client: client,
+          onComplete: onRefresh,
+        );
+        final heading = Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 18),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  copy('sys02.title'),
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+              ),
+              Container(width: 8, height: 8, color: palette.system),
             ],
           ),
         );
-
-        final desktopContent = Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 7, child: lanes),
-            const SizedBox(width: 18),
-            Expanded(flex: 4, child: boundary),
-          ],
-        );
-        final tabletContent = Column(
-          key: const ValueKey('sys02/layout-tablet'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [lanes, const SizedBox(height: 14), boundary],
-        );
-        final mobileContent = Column(
-          key: const ValueKey('sys02/layout-mobile'),
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            summary,
-            const SizedBox(height: 14),
-            lanes,
-            const SizedBox(height: 14),
-            boundary,
-          ],
-        );
-
-        return Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1660),
-            child: SingleChildScrollView(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                26,
-                horizontalPadding,
-                48,
+        if (wide) {
+          return Column(
+            key: const ValueKey('sys02/layout-desktop'),
+            children: [
+              heading,
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                        child: request,
+                      ),
+                    ),
+                    VerticalDivider(width: 1, color: palette.line),
+                    Expanded(
+                      flex: 4,
+                      child: ColoredBox(
+                        color: palette.surface,
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                          child: connections,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  header,
-                  const SizedBox(height: 16),
-                  manual,
-                  const SizedBox(height: 20),
-                  if (!mobile) summary,
-                  if (!mobile) const SizedBox(height: 18),
-                  if (desktop)
-                    KeyedSubtree(
-                      key: const ValueKey('sys02/layout-desktop'),
-                      child: desktopContent,
-                    )
-                  else if (mobile)
-                    mobileContent
-                  else
-                    tabletContent,
-                ],
+            ],
+          );
+        }
+        return SingleChildScrollView(
+          key: ValueKey(
+            constraints.maxWidth < 768
+                ? 'sys02/layout-mobile'
+                : 'sys02/layout-tablet',
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              heading,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: request,
               ),
-            ),
+              Padding(padding: const EdgeInsets.all(24), child: connections),
+            ],
           ),
         );
       },
@@ -462,33 +457,6 @@ class _CollectorLane extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-}
-
-class _BoundaryLine extends StatelessWidget {
-  const _BoundaryLine({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: LumenisTheme.of(context).system, size: 18),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              color: LumenisTheme.of(context).muted,
-              height: 1.45,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

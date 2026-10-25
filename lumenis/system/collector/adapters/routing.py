@@ -46,6 +46,16 @@ def _route(route_id: str, platform: str, capability: str, order: int,
 # planned providers. Z2 is represented by AccessClass for the canonical model,
 # but no Z2 route is registered until an official API adapter is actually bound.
 CAPABILITY_ROUTES: tuple[CapabilityRoute, ...] = (
+    *(_route('weibo.' + capability + '.session','weibo',capability,1,
+             AccessClass.Z1_AUTHORIZED_SESSION,'weibo_first_party_read_api',
+             authorization_contract='existing_platform_session')
+      for capability in ('search','detail','comments','creator','author_posts')),
+    *(_route('zhihu.' + capability + '.public', 'zhihu', capability, 1,
+             AccessClass.Z0_PUBLIC, 'zhihu_first_party_read_api')
+      for capability in ('search','detail','comments','creator')),
+    *(_route('bilibili.' + capability + '.public', 'bilibili', capability, 1,
+             AccessClass.Z0_PUBLIC, 'bilibili_first_party_read_api')
+      for capability in ('search', 'detail', 'comments', 'creator', 'author_posts')),
     _route("public-http.search", "public_http", "search", 1,
            AccessClass.Z0_PUBLIC, "public_http"),
     _route("public-http.detail", "public_http", "detail", 1,
@@ -82,6 +92,12 @@ CAPABILITY_ROUTES: tuple[CapabilityRoute, ...] = (
            authorization_contract="existing_platform_session"),
     _route("xhs.search.session", "xiaohongshu", "search", 1,
            AccessClass.Z1_AUTHORIZED_SESSION, "existing_collector.search_xiaohongshu",
+           authorization_contract="existing_platform_session"),
+    _route("xhs.detail.session", "xiaohongshu", "detail", 1,
+           AccessClass.Z1_AUTHORIZED_SESSION, "existing_collector.detail_xiaohongshu",
+           authorization_contract="existing_platform_session"),
+    _route("xhs.comments.session", "xiaohongshu", "comments", 1,
+           AccessClass.Z1_AUTHORIZED_SESSION, "existing_collector.detail_xiaohongshu",
            authorization_contract="existing_platform_session"),
     _route("douyin.search.session", "douyin", "search", 1,
            AccessClass.Z1_AUTHORIZED_SESSION, "lumenis.adapters.douyin.DouyinAdapter",

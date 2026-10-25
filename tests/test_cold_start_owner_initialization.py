@@ -1,9 +1,135 @@
 """Cold import and deferred owner initialization regressions, not product E2E."""
+import base64
+import hashlib
 import json
 import os
-from pathlib import Path
+import shutil
 import subprocess
 import sys
+from pathlib import Path
+
+import pytest
+
+
+def _initialize_bundle_data(core, data, *, adopt=False):
+    if os.name != 'nt' or not shutil.which('pwsh'):
+        pytest.skip('native Windows junction contract requires installed PowerShell')
+    command = r'''
+$ErrorActionPreference='Stop'
+$syntax=[Management.Automation.Language.Parser]::ParseFile($env:CASE_SCRIPT,[ref]$null,[ref]$null)
+$function=$syntax.Find({param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'Initialize-LumenisDesktopData'},$true)
+Invoke-Expression $function.Extent.Text
+$plan=[pscustomobject]@{Core=$env:CASE_CORE;Data=$env:CASE_DATA}
+Initialize-LumenisDesktopData $plan -AdoptExisting:($env:CASE_ADOPT -eq '1')
+'''
+    return subprocess.run([shutil.which('pwsh'), '-NoProfile', '-NonInteractive', '-EncodedCommand',
+                           base64.b64encode(command.encode('utf-16le')).decode('ascii')],
+        env={**os.environ, 'CASE_SCRIPT': str(Path('scripts/start_production.ps1').resolve()),
+             'CASE_CORE': str(core), 'CASE_DATA': str(data), 'CASE_ADOPT': '1' if adopt else '0'},
+        capture_output=True, text=True, encoding='utf-8', timeout=20, check=False)
+
+
+def _bundle_manual_fixture(tmp_path, monkeypatch):
+    if os.name != 'nt':
+        pytest.skip('portable Windows bundle mapping')
+    import app
+    core = tmp_path / 'bundle/core'
+    core.mkdir(parents=True)
+    source = Path(app.__file__).read_bytes()
+    (core / 'app.py').write_bytes(source)
+    monkeypatch.setattr(app, '__file__', str(core / 'app.py'))
+    digest = hashlib.sha256(source).hexdigest()
+    manifest = {'schema': 'lumenis.windows-portable-bundle/v1', 'core_port': 18375,
+                'core_base_url': 'http://127.0.0.1:18375', 'app_core_base_url': 'http://127.0.0.1:18375',
+                'source_entry_sha256': digest, 'files': [{'path': 'core/app.py', 'sha256': digest}]}
+    (core.parent / 'bundle-manifest.json').write_text(json.dumps(manifest), encoding='utf-8')
+    data = tmp_path / 'retained-user-data'
+    env = {'ZBC_DATA_DIR': str(data), 'ZBC_DB_PATH': str(data / 'monitor.db'),
+           'LUMENIS_DESKTOP_BUNDLE_ROOT': str(core.parent), 'LUMENIS_CORE_ENTRY_SHA256': digest}
+    argv = ['--manual-workspace', '--host', '127.0.0.1', '--port', '18375']
+    return app, core, data, env, argv
+
+
+def test_bundle_manual_workspace_first_start_and_reopen_preserve_existing_work(tmp_path, monkeypatch):
+    import sqlite3
+    app, core, data, env, argv = _bundle_manual_fixture(tmp_path, monkeypatch)
+    result = _initialize_bundle_data(core, data)
+    assert result.returncode == 0, result.stderr
+    assert not (data / 'monitor.db').exists()
+    assert app._activate_manual_workspace(argv, env) == (str(data / 'monitor.db'), str(data))
+    con = sqlite3.connect(data / 'monitor.db')
+    con.execute('CREATE TABLE retained_work(body TEXT)')
+    con.execute("INSERT INTO retained_work VALUES ('saved manuscript')")
+    con.commit()
+    con.close()
+    original = (data / 'monitor.db').read_bytes()
+    assert os.path.samefile(core / 'data/monitor.db', data / 'monitor.db')
+    result = _initialize_bundle_data(core, data)
+    assert result.returncode == 0, result.stderr
+    app._activate_manual_workspace(argv, env)
+    assert (data / 'monitor.db').read_bytes() == original
+
+
+def test_bundle_manual_workspace_adopts_only_explicit_existing_work(tmp_path, monkeypatch):
+    app, core, data, env, argv = _bundle_manual_fixture(tmp_path, monkeypatch)
+    data.mkdir()
+    database = data / 'monitor.db'
+    database.write_bytes(b'isolated-existing-work-preserved')
+    denied = _initialize_bundle_data(core, data)
+    assert denied.returncode != 0 and 'Explicit adoption' in denied.stderr
+    assert not (data / '.oevira-user-data.json').exists()
+    result = _initialize_bundle_data(core, data, adopt=True)
+    assert result.returncode == 0, result.stderr
+    app._activate_manual_workspace(argv, env)
+    assert database.read_bytes() == b'isolated-existing-work-preserved'
+
+
+def test_bundle_manual_workspace_rejects_forged_or_aliased_mapping(tmp_path, monkeypatch):
+    app, core, data, env, argv = _bundle_manual_fixture(tmp_path, monkeypatch)
+    result = _initialize_bundle_data(core, data)
+    assert result.returncode == 0, result.stderr
+    database = data / 'monitor.db'
+    database.write_bytes(b'isolated-protected-work')
+    marker = data / '.oevira-user-data.json'
+    original_marker = marker.read_bytes()
+    manifest_file = core.parent / 'bundle-manifest.json'
+    original_manifest = manifest_file.read_bytes()
+    marker.unlink()
+    with pytest.raises(ValueError, match='bundle data mapping'):
+        app._activate_manual_workspace(argv, dict(env))
+    marker.write_bytes(original_marker)
+    manifest = json.loads(original_manifest)
+    manifest['source_entry_sha256'] = '0' * 64
+    manifest_file.write_text(json.dumps(manifest), encoding='utf-8')
+    with pytest.raises(ValueError, match='bundle data mapping'):
+        app._activate_manual_workspace(argv, dict(env))
+    manifest_file.write_bytes(original_manifest)
+    with pytest.raises(ValueError, match='production database'):
+        app._activate_manual_workspace(argv, {k: v for k, v in env.items() if k != 'LUMENIS_DESKTOP_BUNDLE_ROOT'})
+    protected = tmp_path / 'isolated-production.db'
+    protected.write_bytes(b'protected-production-sentinel')
+    database.unlink()
+    os.link(protected, database)
+    with pytest.raises(ValueError, match='bundle data mapping'):
+        app._activate_manual_workspace(argv, dict(env))
+    assert protected.read_bytes() == b'protected-production-sentinel'
+    database.unlink()
+    database.write_bytes(b'isolated-protected-work')
+    os.rmdir(core / 'data')  # Removes only this verified fixture junction.
+    (core / 'data').mkdir()
+    with pytest.raises(ValueError, match='bundle data mapping'):
+        app._activate_manual_workspace(argv, dict(env))
+    os.rmdir(core / 'data')
+    other = tmp_path / 'wrong-data'
+    other.mkdir()
+    result = subprocess.run([shutil.which('pwsh'), '-NoProfile', '-NonInteractive', '-Command',
+        'New-Item -ItemType Junction -Path $env:CASE_LINK -Target $env:CASE_TARGET | Out-Null'],
+        env={**os.environ, 'CASE_LINK': str(core / 'data'), 'CASE_TARGET': str(other)},
+        capture_output=True, text=True, encoding='utf-8', timeout=15, check=False)
+    assert result.returncode == 0, result.stderr
+    with pytest.raises(ValueError, match='bundle data mapping'):
+        app._activate_manual_workspace(argv, dict(env))
+    assert database.read_bytes() == b'isolated-protected-work'
 
 
 def test_importing_session_and_ai_owners_does_not_open_database(tmp_path):

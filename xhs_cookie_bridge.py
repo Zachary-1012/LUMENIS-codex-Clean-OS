@@ -59,7 +59,11 @@ def _resolve_runtime_data_dir(root: str | None = None, environ=None) -> str:
 
 
 DATA_DIR = _resolve_runtime_data_dir()
-PRIVATE_DATA_DIR = os.path.join(DATA_DIR, 'private')
+RUNTIME_PRIVATE_DATA_DIR = os.path.join(DATA_DIR, 'private')
+from lumenis.adapters.cookie_vault import registered_session_data_dir
+# Session registration may be shared by explicitly authorized local instances;
+# collection output, limits and operational checkpoints belong to this runtime.
+PRIVATE_DATA_DIR = os.path.join(registered_session_data_dir(root=ROOT), 'private')
 # 统一 Node 解析（PATH 优先，项目内置 nodejs/ 兜底），避免常驻进程 PATH 缺 node 抛 WinError 2
 try:
     from runtime_bin import resolve_node as _resolve_node
@@ -1039,8 +1043,8 @@ def _run_search(keyword,max_scroll=6):
     effective_scroll = min(max_scroll, adaptive.get('current_scroll_limit', 6))
     delay = adaptive.get('current_delay_seconds', 2)
     
-    os.makedirs(PRIVATE_DATA_DIR, exist_ok=True)
-    out=os.path.join(PRIVATE_DATA_DIR,f'xhs_{int(time.time()*1000)}.json')
+    os.makedirs(RUNTIME_PRIVATE_DATA_DIR, exist_ok=True)
+    out=os.path.join(RUNTIME_PRIVATE_DATA_DIR,f'xhs_{int(time.time()*1000)}.json')
     env=os.environ.copy()
     env['LUMENIS_SERVICE_PYTHON'] = service_python
     # Resolve the approved identity and profile through the existing Python owners.
@@ -1168,9 +1172,9 @@ def _run_search(keyword,max_scroll=6):
         time.sleep(delay)
 
 # ========== 六态状态机：采集日志落库 + 自动熔断 ==========
-CIRCUIT_FILE=os.path.join(PRIVATE_DATA_DIR,'xhs_circuit.json')
+CIRCUIT_FILE=os.path.join(RUNTIME_PRIVATE_DATA_DIR,'xhs_circuit.json')
 # 用户级“手动暂停采集”开关（区别于风控熔断：由用户主动设置，手动/自动一律不发起平台请求，直到用户主动恢复）
-USER_PAUSE_FILE=os.path.join(PRIVATE_DATA_DIR,'xhs_user_paused.json')
+USER_PAUSE_FILE=os.path.join(RUNTIME_PRIVATE_DATA_DIR,'xhs_user_paused.json')
 
 def is_user_paused():
     """返回用户暂停信息 dict；未暂停返回 None。"""

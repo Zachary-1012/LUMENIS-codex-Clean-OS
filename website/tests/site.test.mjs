@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { test } from "node:test";
 import { join } from "node:path";
 import { isReservedPublicHost } from "../src/public-host.mjs";
+import { buildWorkspaceHref } from "../src/site-config.mjs";
 
 const root = new URL("../dist/", import.meta.url);
 const pages = ["index.html", "en/index.html", "ko/index.html"];
@@ -27,7 +28,8 @@ test("renders every locale as a semantic, localized document", async () => {
     assert.match(html, /<h1[\s>]/);
     assert.match(html, /<h2[\s>]/);
     assert.match(html, /application\/ld\+json/);
-    assert.match(html, /Illustrative|Fictional|허구|虚构/);
+    assert.match(html, /home-guides/);
+    assert.doesNotMatch(html, /data-chain-root|class="demo-status"/);
   }
 });
 
@@ -242,46 +244,29 @@ test("internal actions resolve to known anchors or localized routes", async () =
   }
 });
 
-test("the illustrative business chain keeps every step available without JavaScript", async () => {
+test("real interface guides replace simulated outputs and remain readable without JavaScript", async () => {
   for (const path of pages) {
     const html = await page(path);
-    const steps = [...html.matchAll(/class="chain-step"[^>]*href="#demo-step-([^"]+)"/g)];
-    const details = [...html.matchAll(/class="demo-detail"/g)];
-
-    assert.equal(steps.length, 9, `${path} renders all business-chain nodes`);
-    assert.equal(details.length, 9, `${path} keeps all detail sections in the static document`);
-    assert.match(html, /data-chain-view-toggle hidden/);
-    assert.match(html, /data-chain-controls hidden/);
-    assert.match(html, /aria-live="polite"/);
-    assert.match(html, /aria-describedby="trace-range-help"/);
-    assert.doesNotMatch(html, /class="demo-detail"[^>]*\shidden/);
-
-    for (const [, id] of steps) {
-      assert.match(html, new RegExp(`id="demo-step-${id}"`), `${path} resolves the ${id} detail`);
+    assert.match(html, /id="home-guides-title"/);
+    const guides = html.match(/<ol class="home-guide-list">([\s\S]*?)<\/ol>/)?.[1];
+    assert.ok(guides);
+    assert.equal((guides.match(/<li>/g) ?? []).length, 6);
+    for (const id of ["research", "writing", "video", "podcast", "commerce", "brand"]) {
+      assert.ok(guides.includes(`/help/#${id}`));
     }
+    assert.doesNotMatch(html, /data-chain-root|data-chain-view-toggle|data-chain-controls|class="demo-status"/);
+    assert.match(html, /Recorded product walkthrough not yet provided|真实操作视频暂未提供|실제 제품 사용 영상은 아직 제공되지 않습니다/);
   }
 });
 
-test("spatial browsing remains opt-in, localized, and motion-aware", async () => {
+test("existing site motion keeps reduced motion and keyboard-safe workflow navigation", async () => {
   const motion = await readFile(new URL("../src/scripts/site-motion.js", import.meta.url), "utf8");
   const styles = await readFile(new URL("../src/styles/site.css", import.meta.url), "utf8");
-
-  for (const path of pages) {
-    const html = await page(path);
-    assert.match(html, /Illustration layout|示意区排列方式|예시 배치 방식/);
-    assert.match(html, /Linear timeline|线性时间线|선형 타임라인/);
-    assert.match(html, /Orbit view|环形探索|원형 탐색/);
-  }
-
   assert.match(motion, /prefers-reduced-motion: reduce/);
   assert.match(motion, /pointer: fine/);
-  assert.match(motion, /data-chain-view-option/);
   assert.match(motion, /ArrowRight/);
-  assert.match(motion, /ArrowDown/);
   assert.match(motion, /popstate/);
   assert.match(motion, /hashchange/);
-  assert.match(motion, /data-workflow-root/);
-  assert.match(styles, /data-chain-view="orbit"/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
@@ -304,7 +289,8 @@ test("access actions never imply a configured destination", async () => {
   ];
   const configuredDestinations = destinationVariables.filter((name) => process.env[name]);
 
-  assert.equal(disabledActions, 4 - configuredDestinations.length);
+  assert.equal(disabledActions, 3 - configuredDestinations.filter((name) => name !== "LUMENIS_PUBLIC_HELP_URL").length);
+  if (!process.env.LUMENIS_PUBLIC_HELP_URL) assert.match(accessList, /href="\/help\/"/);
   for (const name of configuredDestinations) {
     const url = new URL(process.env[name]);
     assert.ok(html.includes(`href="${url.href.replaceAll("&", "&amp;")}"`));
@@ -336,5 +322,74 @@ test("online display migration keeps OEVIRA identity and positioning in all loca
     assert.ok(schemaText, `${path} contains product metadata`);
     const schema = JSON.parse(schemaText);
     assert.ok(JSON.stringify(schema).includes("OEVIRA"));
+  }
+});
+
+const families = ["products", "solutions", "outcomes", "help", "trust", "updates", "download", "contact", "terms", "privacy", "license"];
+const localePrefixes = ["", "en/", "ko/"];
+
+test("every approved public family is a localized, addressable page", async () => {
+  for (const prefix of localePrefixes) {
+    for (const family of families) {
+      const path = `${prefix}${family}/index.html`;
+      const html = await page(path);
+      assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1, path);
+      assert.match(html, /<main id="main"/);
+      assert.match(html, /<footer[\s>]/);
+      assert.match(html, /name="description"/);
+      for (const alternate of localePrefixes) assert.ok(html.includes(`href="/${alternate}${family}/"`), `${path} keeps the page on language switch`);
+      assert.equal(attribute(html, "robots"), configured ? "index,follow" : "noindex,nofollow");
+      assert.doesNotMatch(html, /data-chain-root|<form[\s>]|<video[\s>]/);
+    }
+  }
+});
+
+test("the help library includes sources, creation, recovery and settings without requiring JavaScript", async () => {
+  for (const prefix of localePrefixes) {
+    const html = await page(`${prefix}help/index.html`);
+    for (const id of ["start", "sources", "research", "writing", "video", "podcast", "commerce", "brand", "recovery", "settings"]) {
+      assert.ok(html.includes(`id="${id}"`), `${prefix}help contains ${id}`);
+    }
+    assert.equal((html.match(/\sdata-guide-item(?:\s|>)/g) ?? []).length, 10);
+    assert.equal((html.match(/<details>/g) ?? []).length, 10);
+    assert.match(html, /id="guide-search" type="search"/);
+    assert.match(html, /data-guide-empty[^>]*role="status"/);
+  }
+});
+
+test("products expose permitted task deep links only when a workspace is configured", async () => {
+  for (const prefix of localePrefixes) {
+    const html = await page(`${prefix}products/index.html`);
+    assert.equal((html.match(/class="product-direction /g) ?? []).length, 6);
+    if (process.env.LUMENIS_PUBLIC_WORKSPACE_URL) {
+      for (const entry of ["manuscript", "video", "audio"]) assert.ok(html.includes(`entry=${entry}`));
+    } else {
+      assert.doesNotMatch(html, /href="[^"\s]*\/workspace\//);
+    }
+    assert.doesNotMatch(html, /127\.0\.0\.1|localhost|download="/);
+  }
+});
+
+test("task links preserve the configured mount and clear an earlier task scope", () => {
+  assert.equal(
+    buildWorkspaceHref('https://workspace.example.org/product/workspace/ACC-03?scope=old#draft', 'SH-01', 'video'),
+    'https://workspace.example.org/product/workspace/SH-01?entry=video',
+  );
+  assert.throws(() => buildWorkspaceHref('https://workspace.example.org/', 'OTHER-OWNER'));
+  assert.throws(() => buildWorkspaceHref('https://workspace.example.org/', 'SH-01', 'execute'));
+});
+
+test("all public navigation and guide anchors resolve in the built site", async () => {
+  const paths = localePrefixes.flatMap((prefix) => [`${prefix}index.html`, ...families.map((family) => `${prefix}${family}/index.html`)]);
+  const documents = new Map(await Promise.all(paths.map(async (path) => [path, await page(path)])));
+  for (const [path, html] of documents) {
+    for (const [, raw] of html.matchAll(/<a\b[^>]*\shref="([^"]+)"/g)) {
+      if (!raw.startsWith('/') && !raw.startsWith('#')) continue;
+      const url = new URL(raw.replaceAll('&amp;', '&'), `https://built-site.invalid/${path}`);
+      const file = url.pathname.endsWith('/') ? `${url.pathname.slice(1)}index.html` : url.pathname.slice(1);
+      const target = documents.get(file);
+      assert.ok(target, `${path} links to missing ${file}`);
+      if (url.hash) assert.ok(target.includes(`id="${decodeURIComponent(url.hash.slice(1))}"`), `${path} links to missing ${url.hash}`);
+    }
   }
 });

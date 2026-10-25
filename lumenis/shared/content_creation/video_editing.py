@@ -27,7 +27,7 @@ class VideoEditingError(ValueError):
 
 
 ALLOWED_FORMAT_RATIOS = ("9:16", "4:5", "3:4", "16:9", "1:1")
-ALLOWED_OPERATIONS = frozenset({"trim", "split", "reorder", "delete", "transition", "hold"})
+ALLOWED_OPERATIONS = frozenset({"trim", "split", "reorder", "delete", "transition", "hold", "word_cut"})
 MAX_EDIT_TIME_SEC = 24 * 60 * 60
 MAX_TRANSITION_DURATION_SEC = 30.0
 MAX_SERIALIZED_INTEGER = 1_000_000_000
@@ -38,6 +38,9 @@ _EDIT_BATCH_COMMAND_FIELDS: dict[str, tuple[frozenset[str], frozenset[str]]] = {
     "reorder": (frozenset({"op", "clip_id", "new_index"}), frozenset()),
     "audio_mix": (frozenset({"op", "clip_id", "mix"}), frozenset()),
     "move_audio_clip": (frozenset({"op", "clip_id", "timeline_start"}), frozenset()),
+    "move_video_clip": (frozenset({"op", "clip_id", "timeline_start"}), frozenset()),
+    "playback_rate": (frozenset({"op", "clip_id", "playback_rate"}), frozenset()),
+    "track_controls": (frozenset({"op", "track_id"}), frozenset({"locked","muted","solo","hidden"})),
     "add_caption": (
         frozenset({"op", "start_sec", "end_sec", "text"}),
         frozenset({"layout_profile"}),
@@ -427,6 +430,33 @@ class FrameCrop:
 
 
 @dataclass(frozen=True)
+class VideoPlacement:
+    x: float = 0.0
+    y: float = 0.0
+    width: float = 1.0
+    height: float = 1.0
+    opacity: float = 1.0
+
+    def __post_init__(self):
+        for value in (self.x, self.y, self.opacity):
+            _bounded_number(value, error_code="VIDEO_PLACEMENT_INVALID", minimum=0, maximum=1)
+        for value in (self.width, self.height):
+            _bounded_number(value, error_code="VIDEO_PLACEMENT_INVALID", minimum=.01, maximum=1)
+        if self.x + self.width > 1 + 1e-9 or self.y + self.height > 1 + 1e-9:
+            raise VideoEditingError("VIDEO_PLACEMENT_OUTSIDE_CANVAS")
+
+    def to_dict(self):
+        self.__post_init__()
+        return dict(self.__dict__)
+
+    @classmethod
+    def from_dict(cls, value):
+        if type(value) is not dict or set(value) != {"x", "y", "width", "height", "opacity"}:
+            raise VideoEditingError("VIDEO_PLACEMENT_INVALID")
+        return cls(**value)
+
+
+@dataclass(frozen=True)
 class TimelineClip:
     clip_id: str
     media_asset_id: str
@@ -440,6 +470,8 @@ class TimelineClip:
     evidence_refs: Tuple[str, ...] = field(default_factory=tuple)
     audio_stream_index: Optional[int] = None
     frame_crop: Optional[FrameCrop] = None
+    video_placement: VideoPlacement | None = None
+    playback_rate: float = 1.0
 
     def __post_init__(self) -> None:
         self.validate()
@@ -452,13 +484,14 @@ class TimelineClip:
         source_out = _bounded_number(
             self.source_out, error_code="INVALID_CLIP_RANGE", minimum=0, maximum=MAX_EDIT_TIME_SEC
         )
-        duration = source_out - source_in
+        duration = (source_out - source_in) / self.playback_rate
         rounded_duration = round(duration, 6)
         if rounded_duration < 0.000001 or not math.isfinite(duration):
             raise VideoEditingError("INVALID_CLIP_RANGE")
         return rounded_duration
 
     def validate(self) -> None:
+        rate = _bounded_number(self.playback_rate, error_code="CLIP_PLAYBACK_RATE_INVALID", minimum=1 / 16, maximum=16)
         source_in = _bounded_number(
             self.source_in, error_code="INVALID_CLIP_RANGE", minimum=0, maximum=MAX_EDIT_TIME_SEC
         )
@@ -468,7 +501,7 @@ class TimelineClip:
         timeline_start = _bounded_number(
             self.timeline_start, error_code="INVALID_CLIP_RANGE", minimum=0, maximum=MAX_EDIT_TIME_SEC
         )
-        duration = source_out - source_in
+        duration = (source_out - source_in) / rate
         if (
             duration < 0.000001
             or timeline_start + duration > MAX_EDIT_TIME_SEC
@@ -486,11 +519,15 @@ class TimelineClip:
         if self.frame_crop is not None:
             if not isinstance(self.frame_crop,FrameCrop):raise VideoEditingError("FRAME_CROP_INVALID")
             self.frame_crop.to_dict()
+        if self.video_placement is not None:
+            if not isinstance(self.video_placement, VideoPlacement):
+                raise VideoEditingError("VIDEO_PLACEMENT_INVALID")
+            self.video_placement.to_dict()
         if self.evidence_refs:
             raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
         if not isinstance(self.audio_mix, AudioMix):
             raise VideoEditingError("INVALID_AUDIO_MIX")
-        self.audio_mix.validate(duration_sec=source_out - source_in)
+        self.audio_mix.validate(duration_sec=duration)
 
     def to_dict(self) -> Dict[str, Any]:
         self.validate()
@@ -507,6 +544,8 @@ class TimelineClip:
             "evidence_refs": list(self.evidence_refs),
             "audio_stream_index": self.audio_stream_index,
             **({"frame_crop":self.frame_crop.to_dict()} if self.frame_crop is not None else {}),
+            **({"video_placement": self.video_placement.to_dict()} if self.video_placement is not None else {}),
+            **({"playback_rate": self.playback_rate} if self.playback_rate != 1 else {}),
         }
 
 
@@ -515,6 +554,11 @@ class TimelineTrack:
     track_id: str
     kind: str
     clips: Tuple[TimelineClip, ...] = field(default_factory=tuple)
+    layout: str = "sequence"
+    locked: bool = False
+    muted: bool = False
+    solo: bool = False
+    hidden: bool = False
 
     def __post_init__(self) -> None:
         self.validate()
@@ -526,16 +570,26 @@ class TimelineTrack:
             raise VideoEditingError("TIMELINE_TRACK_KIND_NOT_ALLOWED")
         if not isinstance(self.clips, tuple):
             raise VideoEditingError("TIMELINE_TRACK_CLIPS_INVALID")
+        if self.layout not in {"sequence", "free"}:
+            raise VideoEditingError("TIMELINE_TRACK_LAYOUT_INVALID")
+        if any(type(value) is not bool for value in (self.locked,self.muted,self.solo,self.hidden)):
+            raise VideoEditingError('TRACK_CONTROL_INVALID')
+        if self.hidden and self.kind != 'video':
+            raise VideoEditingError('TRACK_VISIBILITY_VIDEO_ONLY')
         for clip in self.clips:
             if not isinstance(clip, TimelineClip):
                 raise VideoEditingError("TIMELINE_TRACK_CLIPS_INVALID")
             clip.validate()
             if clip.frame_crop is not None and self.kind != "video":
                 raise VideoEditingError("FRAME_CROP_VIDEO_ONLY")
+            if clip.video_placement is not None and self.kind != "video":
+                raise VideoEditingError("VIDEO_PLACEMENT_VIDEO_ONLY")
 
     def to_dict(self) -> Dict[str, Any]:
         self.validate()
-        return {"track_id": self.track_id, "kind": self.kind, "clips": [clip.to_dict() for clip in self.clips]}
+        return {"track_id": self.track_id, "kind": self.kind, "clips": [clip.to_dict() for clip in self.clips],
+                **({"layout": self.layout} if self.layout != "sequence" else {}),
+                **{name:True for name in ('locked','muted','solo','hidden') if getattr(self,name)}}
 
 
 @dataclass(frozen=True)
@@ -867,13 +921,17 @@ class Timeline:
         )
         mix_fields = ("volume", "fade_in_sec", "fade_out_sec", "ducking")
         for stored_track in document_list(root["tracks"]):
-            track_data = document_object(stored_track, track_fields)
+            controls = tuple(key for key in ('layout','locked','muted','solo','hidden')
+                             if type(stored_track) is dict and key in stored_track)
+            track_data = document_object(stored_track, track_fields + controls)
             track_id = document_string(track_data["track_id"])
             kind = document_string(track_data["kind"])
             clips: List[TimelineClip] = []
             for stored_clip in document_list(track_data["clips"]):
                 has_crop = type(stored_clip) is dict and "frame_crop" in stored_clip
-                clip_data = document_object(stored_clip, clip_fields + (("frame_crop",) if has_crop else ()))
+                has_placement = type(stored_clip) is dict and "video_placement" in stored_clip
+                has_rate = type(stored_clip) is dict and "playback_rate" in stored_clip
+                clip_data = document_object(stored_clip, clip_fields + (("frame_crop",) if has_crop else ()) + (("video_placement",) if has_placement else ()) + (("playback_rate",) if has_rate else ()))
                 mix_data = document_object(clip_data["audio_mix"], mix_fields)
                 if type(clip_data["evidence_refs"]) is not list or clip_data["evidence_refs"]:
                     raise VideoEditingError("CANONICAL_EVIDENCE_BINDING_UNAVAILABLE")
@@ -902,12 +960,15 @@ class Timeline:
                         evidence_refs=(),
                         audio_stream_index=audio_index,
                         frame_crop=FrameCrop.from_dict(clip_data["frame_crop"]) if has_crop else None,
+                        video_placement=VideoPlacement.from_dict(clip_data["video_placement"]) if has_placement else None,
+                        playback_rate=clip_data.get("playback_rate", 1.0),
                     ))
                 except (TypeError, ValueError) as exc:
                     if isinstance(exc, VideoEditingError):
                         raise
                     raise VideoEditingError("TIMELINE_DOCUMENT_VALUE_INVALID") from exc
-            tracks.append(TimelineTrack(track_id=track_id, kind=kind, clips=tuple(clips)))
+            tracks.append(TimelineTrack(track_id=track_id, kind=kind, clips=tuple(clips), layout=track_data.get("layout", "sequence"),
+                **{key:track_data.get(key,False) for key in ('locked','muted','solo','hidden')}))
 
         transitions: List[Transition] = []
         transition_fields = ("from_clip", "to_clip", "transition_type", "duration_sec", "reason")
@@ -979,6 +1040,24 @@ class Timeline:
                 return track
         raise VideoEditingError("TIMELINE_TRACK_NOT_FOUND")
 
+    def add_video_track(self, track_id: str) -> Timeline:
+        self.validate()
+        if any(track.track_id == track_id for track in self.tracks):
+            raise VideoEditingError("TIMELINE_TRACK_ALREADY_EXISTS")
+        return self._commit(tracks=(*self.tracks, TimelineTrack(track_id, "video", layout="free")))
+
+    def set_video_placement(self, clip_id: str, placement: VideoPlacement) -> Timeline:
+        track, clip = self._find_clip(clip_id)
+        if track.kind != "video":
+            raise VideoEditingError("VIDEO_PLACEMENT_VIDEO_ONLY")
+        return self._replace_clip(track, replace(clip, video_placement=placement))
+
+    def move_video_clip(self, clip_id: str, *, timeline_start: float) -> Timeline:
+        track, clip = self._find_clip(clip_id)
+        if track.kind != "video" or track.layout != "free":
+            raise VideoEditingError("VIDEO_POSITION_REQUIRES_FREE_TRACK")
+        return self._replace_clip(track, replace(clip, timeline_start=timeline_start))
+
     def add_audio_track(self, track_id: str, *, audio_role: str) -> "Timeline":
         """Add an explicit voice-over, BGM, or SFX track to the timeline."""
         normalized_role = str(audio_role or "").strip().lower()
@@ -1003,6 +1082,17 @@ class Timeline:
         overlays: Optional[Tuple[TimedOverlay, ...]] = None,
         format_ratio: Optional[str] = None,
     ) -> "Timeline":
+        if tracks is not None:
+            changed = {track.track_id:track for track in tracks}
+            for old in self.tracks:
+                current = changed.get(old.track_id)
+                if old.locked and (current is None or (old.kind,old.layout,old.clips) != (current.kind,current.layout,current.clips)):
+                    raise VideoEditingError('TIMELINE_TRACK_LOCKED')
+        if transitions is not None and transitions != self.transitions:
+            locked = {clip.clip_id for track in self.tracks if track.locked for clip in track.clips}
+            changes = set(transitions).symmetric_difference(self.transitions)
+            if any(item.from_clip in locked or item.to_clip in locked for item in changes):
+                raise VideoEditingError('TIMELINE_TRACK_LOCKED')
         return replace(
             self,
             assets=assets if assets is not None else self.assets,
@@ -1014,8 +1104,23 @@ class Timeline:
             _history=self._history + (self._snapshot(),),
         )
 
+    def set_track_controls(self, track_id, **controls):
+        """Lock edits; hide only video; mute/solo the track's own audio."""
+        if (not controls or set(controls) - {'locked','muted','solo','hidden'}
+                or any(type(value) is not bool for value in controls.values())):
+            raise VideoEditingError('TRACK_CONTROL_INVALID')
+        selected = self._track(track_id)
+        updated = replace(selected,**controls)
+        return self._commit(tracks=tuple(updated if track.track_id == track_id else track for track in self.tracks))
+
+    def audible_tracks(self):
+        solo = any(track.solo for track in self.tracks)
+        return tuple(track for track in self.tracks if not track.muted and (not solo or track.solo))
+
     @staticmethod
     def _reflow(track: TimelineTrack, clips: Iterable[TimelineClip]) -> TimelineTrack:
+        if track.layout == "free":
+            return replace(track, clips=tuple(clips))
         cursor = 0.0
         result: List[TimelineClip] = []
         for clip in clips:
@@ -1056,7 +1161,7 @@ class Timeline:
         if track.kind == "video":
             if not asset.has_video:
                 raise VideoEditingError("VIDEO_TRACK_REQUIRES_VIDEO_ASSET")
-            if timeline_start is not None:
+            if timeline_start is not None and track.layout == "sequence":
                 raise VideoEditingError("VIDEO_TRACK_TIMELINE_POSITION_AUTOMATIC")
             if audio_role not in {"original", "muted"}:
                 raise VideoEditingError("AUDIO_TRACK_ROLE_NOT_ALLOWED")
@@ -1066,7 +1171,7 @@ class Timeline:
                 audio_stream_index = 0
             if audio_role == "muted" and audio_stream_index is not None:
                 raise VideoEditingError("MUTED_VIDEO_CLIP_CANNOT_SELECT_AUDIO")
-            timeline_position = 0.0
+            timeline_position = 0.0 if timeline_start is None else timeline_start
             clip_audio_role = audio_role
         else:
             if asset.audio_stream_count < 1:
@@ -1178,8 +1283,9 @@ class Timeline:
             # Reuse the current 30fps centred-handle contract, including boundary
             # conflicts and unsupported types. Do not weaken the export guard.
             from .rendering import _video_transition_plan
-            video_clips = [item for layer in candidate.tracks if layer.kind == "video" for item in layer.clips]
-            _video_transition_plan(candidate, video_clips)
+            for layer in candidate.tracks:
+                if layer.kind == "video":
+                    _video_transition_plan(candidate, sorted(layer.clips, key=lambda item: item.timeline_start))
         return self._commit(assets=assets, tracks=tracks)
 
     def replace_audio_source(
@@ -1273,8 +1379,9 @@ class Timeline:
         candidate = replace(self, assets=assets, tracks=tuple(tracks), overlays=tuple(overlays))
         if self.transitions:
             from .rendering import _video_transition_plan
-            video_clips = [clip for track in candidate.tracks if track.kind == "video" for clip in track.clips]
-            _video_transition_plan(candidate, video_clips)
+            for layer in candidate.tracks:
+                if layer.kind == "video":
+                    _video_transition_plan(candidate, sorted(layer.clips, key=lambda item: item.timeline_start))
         if candidate.to_dict() == self.to_dict():
             return self
         return self._commit(assets=assets, tracks=tuple(tracks), overlays=tuple(overlays))
@@ -1301,8 +1408,8 @@ class Timeline:
         )
         if not clip.source_in < at < clip.source_out:
             raise VideoEditingError("SPLIT_POINT_OUTSIDE_CLIP")
-        first_duration = round(at - clip.source_in, 6)
-        second_duration = round(clip.source_out - at, 6)
+        first_duration = round((at - clip.source_in) / clip.playback_rate, 6)
+        second_duration = round((clip.source_out - at) / clip.playback_rate, 6)
         first_mix = replace(
             clip.audio_mix,
             fade_in_sec=min(clip.audio_mix.fade_in_sec, first_duration),
@@ -1320,7 +1427,7 @@ class Timeline:
             clip,
             clip_id=f"{clip.clip_id}-b",
             source_in=at,
-            timeline_start=round(clip.timeline_start + (at - clip.source_in), 6),
+            timeline_start=round(clip.timeline_start + (at - clip.source_in) / clip.playback_rate, 6),
             audio_mix=second_mix,
         )
         clips: List[TimelineClip] = []
@@ -1329,14 +1436,144 @@ class Timeline:
         updated = self._reflow(track, clips) if track.kind == "video" else replace(track, clips=tuple(clips))
         tracks = tuple(updated if item.track_id == track.track_id else item for item in self.tracks)
         transitions = tuple(
-            item for item in self.transitions if item.from_clip != clip_id and item.to_clip != clip_id
+            replace(item, from_clip=second.clip_id if item.from_clip == clip_id else item.from_clip,
+                    to_clip=first.clip_id if item.to_clip == clip_id else item.to_clip)
+            for item in self.transitions
         )
         return self._commit(tracks=tracks, transitions=transitions)
+
+    def set_playback_rate(self, clip_id: str, *, playback_rate: float) -> "Timeline":
+        """Change source speed explicitly while keeping the source and stream identity."""
+        track, clip = self._find_clip(clip_id)
+        rate = _bounded_number(playback_rate, error_code="CLIP_PLAYBACK_RATE_INVALID", minimum=1 / 16, maximum=16)
+        duration = (clip.source_out - clip.source_in) / rate
+        mix = replace(clip.audio_mix, fade_in_sec=min(clip.audio_mix.fade_in_sec, duration / 2),
+                      fade_out_sec=min(clip.audio_mix.fade_out_sec, duration / 2))
+        return self._replace_clip(track, replace(clip, playback_rate=rate, audio_mix=mix))
+
+    def cut_source_intervals(self, cuts, *, synchronize: bool = True) -> "Timeline":
+        """Apply a reviewed word selection as one immutable, synchronized transaction.
+
+        Cuts are source coordinates of explicitly selected clip occurrences. The
+        resulting timeline intervals remove matching video/audio/subtitle spans
+        across tracks when synchronization is selected. Source media never change.
+        """
+        from fractions import Fraction
+        from bisect import bisect_right
+        self.validate()
+        if (type(cuts) is not list or not cuts or len(cuts) > 100000
+                or type(synchronize) is not bool):
+            raise VideoEditingError("WORD_EDIT_SELECTION_INVALID")
+        coordinates = []
+        selected_ids = set()
+        for cut in cuts:
+            if type(cut) is not dict or set(cut) != {"clip_id", "source_in", "source_out"}:
+                raise VideoEditingError("WORD_EDIT_SELECTION_INVALID")
+            _track, clip = self._find_clip(cut["clip_id"])
+            begin = _bounded_number(cut["source_in"], error_code="WORD_EDIT_OUTSIDE_CLIP")
+            end = _bounded_number(cut["source_out"], error_code="WORD_EDIT_OUTSIDE_CLIP")
+            if not clip.source_in <= begin < end <= clip.source_out:
+                raise VideoEditingError("WORD_EDIT_OUTSIDE_CLIP")
+            source_in, origin, rate = map(lambda value: Fraction(str(value)),
+                                           (clip.source_in, clip.timeline_start, clip.playback_rate))
+            coordinates.append((origin + (Fraction(str(begin)) - source_in) / rate,
+                                origin + (Fraction(str(end)) - source_in) / rate))
+            selected_ids.add(clip.clip_id)
+        intervals = []
+        for begin, end in sorted(coordinates):
+            if intervals and begin <= intervals[-1][1]:
+                intervals[-1] = (intervals[-1][0], max(intervals[-1][1], end))
+            else:
+                intervals.append((begin, end))
+        starts = [begin for begin, _end in intervals]
+        ends = [end for _begin, end in intervals]
+        removed_prefix = [Fraction(0)]
+        for begin, end in intervals:
+            removed_prefix.append(removed_prefix[-1] + end - begin)
+
+        def shifted(point):
+            completed = bisect_right(ends, point)
+            removed = removed_prefix[completed]
+            if completed < len(intervals) and starts[completed] < point:
+                removed += point - starts[completed]
+            return point - removed
+
+        def surviving(begin, end):
+            cursor = begin
+            for index in range(bisect_right(ends, begin), len(intervals)):
+                left, right = intervals[index]
+                if left >= end:
+                    break
+                if cursor < left:
+                    yield cursor, min(left, end)
+                cursor = max(cursor, right)
+                if cursor >= end:
+                    return
+            if cursor < end:
+                yield cursor, end
+
+        for transition in self.transitions:
+            _track, right = self._find_clip(transition.to_clip)
+            boundary = Fraction(str(right.timeline_start))
+            half = Fraction(str(transition.duration_sec)) / 2
+            if any(begin < boundary + half and end > boundary - half for begin, end in intervals):
+                raise VideoEditingError("WORD_EDIT_TRANSITION_CONFLICT")
+        tracks, replacements = [], {}
+        for track in self.tracks:
+            clips = []
+            for clip in track.clips:
+                begin = Fraction(str(clip.timeline_start))
+                rate = Fraction(str(clip.playback_rate))
+                end = begin + (Fraction(str(clip.source_out)) - Fraction(str(clip.source_in))) / rate
+                if not synchronize and clip.clip_id not in selected_ids:
+                    clips.append(clip)
+                    replacements[clip.clip_id] = [clip]
+                    continue
+                pieces = list(surviving(begin, end))
+                result = []
+                for index, (left, right) in enumerate(pieces):
+                    # Time is exact until serialization. No 30fps word-boundary floor.
+                    if right - left < Fraction(1, 1000000):
+                        raise VideoEditingError("WORD_EDIT_REMAINDER_TOO_SHORT")
+                    unchanged = len(pieces) == 1 and (left, right) == (begin, end)
+                    identity = clip.clip_id if unchanged else clip.clip_id + "-w" + hashlib.sha256(
+                        f"{left}:{right}".encode()).hexdigest()[:10]
+                    duration = float(right - left)
+                    fade_in = min(clip.audio_mix.fade_in_sec, duration) if left == begin else 0.0
+                    fade_out = min(clip.audio_mix.fade_out_sec, duration - fade_in) if right == end else 0.0
+                    part = replace(clip, clip_id=identity,
+                        source_in=float(Fraction(str(clip.source_in)) + (left - begin) * rate),
+                        source_out=float(Fraction(str(clip.source_in)) + (right - begin) * rate),
+                        timeline_start=float(shifted(left)),
+                        audio_mix=replace(clip.audio_mix, fade_in_sec=fade_in, fade_out_sec=fade_out))
+                    result.append(part)
+                    clips.append(part)
+                replacements[clip.clip_id] = result
+            tracks.append(replace(track, clips=tuple(clips)))
+        if not any(track.clips for track in tracks):
+            raise VideoEditingError("WORD_EDIT_WOULD_REMOVE_ALL_AUDIO")
+        overlays = []
+        for overlay in self.overlays:
+            if not synchronize:
+                overlays.append(overlay)
+                continue
+            pieces = list(surviving(Fraction(str(overlay.start_sec)), Fraction(str(overlay.end_sec))))
+            for index, (begin, end) in enumerate(pieces):
+                overlays.append(replace(overlay,
+                    overlay_id=overlay.overlay_id if len(pieces) == 1 else f"{overlay.overlay_id}-w{index}",
+                    start_sec=float(shifted(begin)), end_sec=float(shifted(end))))
+        transitions = []
+        for transition in self.transitions:
+            left, right = replacements[transition.from_clip], replacements[transition.to_clip]
+            if not left or not right:
+                raise VideoEditingError("WORD_EDIT_TRANSITION_CONFLICT")
+            transitions.append(replace(transition, from_clip=left[-1].clip_id, to_clip=right[0].clip_id))
+        return self._commit(tracks=tuple(tracks), overlays=tuple(overlays), transitions=tuple(transitions))
 
     def reorder(self, clip_id: str, *, new_index: int) -> "Timeline":
         self.validate()
         track, clip = self._find_clip(clip_id)
-        if track.kind != "video":
+        if track.kind != "video" or track.layout != "sequence":
             raise VideoEditingError("REORDER_VIDEO_TRACK_ONLY")
         clips = [item for item in track.clips if item.clip_id != clip_id]
         if type(new_index) is not int or not 0 <= new_index <= len(clips):
@@ -1352,7 +1589,7 @@ class Timeline:
             raise VideoEditingError("DELETE_RIPPLE_FLAG_INVALID")
         track, removed = self._find_clip(clip_id)
         clips = tuple(item for item in track.clips if item.clip_id != clip_id)
-        if ripple and track.kind != "video":
+        if ripple and (track.kind != "video" or track.layout == "free"):
             end=removed.timeline_start+removed.duration_sec
             if any(item.timeline_start<end-1e-6 and item.timeline_start+item.duration_sec>removed.timeline_start+1e-6 for item in clips):
                 raise VideoEditingError("AUDIO_RIPPLE_OVERLAP_NOT_SUPPORTED")
@@ -1538,6 +1775,13 @@ class Timeline:
                     except (TypeError, ValueError) as exc:
                         raise VideoEditingError("INVALID_AUDIO_MIX") from exc
                 updated = updated.set_audio_mix(command["clip_id"], value)
+            elif op == "move_video_clip":
+                updated = updated.move_video_clip(command["clip_id"], timeline_start=command["timeline_start"])
+            elif op == "playback_rate":
+                updated = updated.set_playback_rate(command["clip_id"], playback_rate=command["playback_rate"])
+            elif op == 'track_controls':
+                updated = updated.set_track_controls(command['track_id'],
+                    **{key:command[key] for key in ('locked','muted','solo','hidden') if key in command})
             elif op == "move_audio_clip":
                 updated = updated.move_audio_clip(
                     command["clip_id"], timeline_start=command["timeline_start"]
@@ -1639,10 +1883,12 @@ class Timeline:
                     active.append({
                         "clip_id": clip.clip_id, "track_id": track.track_id,
                         "media_asset_id": clip.media_asset_id, "source_sha256": asset.sha256,
-                        "source_position_sec": clip.source_in + (playhead - clip_start),
+                        "source_position_sec": clip.source_in + (playhead - clip_start) * clip.playback_rate,
                         "audio_role": clip.audio_role, "audio_stream_index": clip.audio_stream_index,
                         "stream_index_kind": "audio_type_relative_ordinal",
-                        "mapping_method": "current_unit_rate_timeline_seconds",
+                        "mapping_method": ("current_unit_rate_timeline_seconds" if clip.playback_rate == 1 else
+                                           "source_in_plus_timeline_offset_times_playback_rate"),
+                        **({"playback_rate":clip.playback_rate} if clip.playback_rate != 1 else {}),
                     })
                 visible_start, visible_end = max(start, clip_start), min(end, clip_end)
                 if visible_start >= visible_end:
@@ -1653,14 +1899,15 @@ class Timeline:
                     "media_kind": asset.media_kind,
                     "visible_timeline_range_sec": [visible_start, visible_end],
                     "visible_source_range_sec": [
-                        clip.source_in + (visible_start - clip_start),
-                        clip.source_in + (visible_end - clip_start),
+                        clip.source_in + (visible_start - clip_start) * clip.playback_rate,
+                        clip.source_in + (visible_end - clip_start) * clip.playback_rate,
                     ],
                     "start_fraction": (visible_start - start) / span,
                     "width_fraction": (visible_end - visible_start) / span,
                     "clipped_at_left": clip_start < start, "clipped_at_right": clip_end > end,
                 })
-            tracks.append({"track_id": track.track_id, "kind": track.kind, "clips": visible})
+            tracks.append({"track_id": track.track_id, "kind": track.kind, "clips": visible,
+                           **{name:getattr(track,name) for name in ('locked','muted','solo','hidden')}})
         overlays = []
         for overlay in self.overlays:
             a, b = max(start, overlay.start_sec), min(end, overlay.end_sec)
@@ -1823,6 +2070,11 @@ class EditDecision:
                 raise VideoEditingError("EDL_REORDER_INDEX_INVALID")
         if self.operation == "delete" and "ripple" in metadata and type(metadata["ripple"]) is not bool:
             raise VideoEditingError("EDL_DELETE_RIPPLE_INVALID")
+        if self.operation == "word_cut":
+            if (set(metadata) != {"cuts", "synchronize"} or type(metadata["cuts"]) is not list
+                    or not metadata["cuts"] or len(metadata["cuts"]) > 100000
+                    or type(metadata["synchronize"]) is not bool):
+                raise VideoEditingError("WORD_EDIT_SELECTION_INVALID")
         if self.operation == "transition":
             duration = _bounded_number(
                 metadata.get("duration_sec", 0.3),
@@ -1926,6 +2178,8 @@ def _apply_edl_operations(timeline: Timeline, edl: EditDecisionList) -> Timeline
         elif decision.operation == "transition":
             result = result.add_transition(decision.source_clip_ref, decision.metadata["to_clip"],
                 duration_sec=decision.metadata.get("duration_sec", .3), reason=decision.reason)
+        elif decision.operation == "word_cut":
+            result = result.cut_source_intervals(decision.metadata["cuts"], synchronize=decision.metadata["synchronize"])
         else:
             raise VideoEditingError("EDL_OPERATION_NOT_IMPLEMENTED")
     return result

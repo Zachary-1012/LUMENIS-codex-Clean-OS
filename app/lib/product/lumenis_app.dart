@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'dart:ui' as ui;
 
 import '../core/lumenis_core_client.dart';
+import '../core/lumenis_botanical.dart';
 import '../core/lumenis_theme.dart';
 import '../l10n/lumenis_localizations.dart';
 import '../navigation/lumenis_router.dart';
@@ -20,14 +21,19 @@ class LumenisApp extends StatefulWidget {
   State<LumenisApp> createState() => _LumenisAppState();
 }
 
-class _LumenisAppState extends State<LumenisApp> {
+class _LumenisAppState extends State<LumenisApp> with WidgetsBindingObserver {
   late final LumenisCoreClient _client;
   late final _router = createLumenisRouter(
     client: _client,
     onLocaleChanged: _setLocale,
     initialLocation: widget.initialLocation,
   );
-  Locale? _locale;
+  Locale? get _locale => switch (_appearance.localeTag) {
+    'zh-CN' => const Locale('zh', 'CN'),
+    'en' => const Locale('en'),
+    'ko' => const Locale('ko'),
+    _ => null,
+  };
   final _appearance = Sys05AppearanceController();
   String? _materialRequest;
   bool _nativeActive = false;
@@ -35,9 +41,15 @@ class _LumenisAppState extends State<LumenisApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _client = widget.client ?? LumenisCoreClient();
     _appearance.addListener(_applyAppearance);
     _appearance.restore();
+  }
+
+  @override
+  void didChangeAccessibilityFeatures() {
+    if (mounted) setState(() {});
   }
 
   void _applyAppearance() {
@@ -66,7 +78,7 @@ class _LumenisAppState extends State<LumenisApp> {
   }
 
   void _setLocale(Locale? locale) {
-    setState(() => _locale = locale);
+    _appearance.update(localeTag: locale?.toLanguageTag() ?? 'system');
   }
 
   @override
@@ -119,12 +131,19 @@ class _LumenisAppState extends State<LumenisApp> {
       ],
       theme: LumenisTheme.forPalette(palette).copyWith(
         visualDensity: _appearance.compact
-            ? VisualDensity.compact
+            ? const VisualDensity(horizontal: -1, vertical: -1)
             : VisualDensity.standard,
       ),
-      themeAnimationDuration: _appearance.reducedMotion || usesWallpaper
+      themeAnimationDuration:
+          _appearance.reducedMotion ||
+              usesWallpaper ||
+              WidgetsBinding
+                  .instance
+                  .platformDispatcher
+                  .accessibilityFeatures
+                  .disableAnimations
           ? Duration.zero
-          : const Duration(milliseconds: 160),
+          : LumenisMotion.transition,
       builder: (context, child) {
         setLumenisDocumentLanguage(
           Localizations.localeOf(context).toLanguageTag(),
@@ -141,19 +160,22 @@ class _LumenisAppState extends State<LumenisApp> {
                   _appearance.reducedMotion ||
                   MediaQuery.of(context).disableAnimations,
             ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ExcludeSemantics(
-                  child: IgnorePointer(
-                    child: _WorkspaceBackdrop(
-                      appearance: _appearance,
-                      nativeActive: _nativeActive,
+            child: LumenisBotanicalScope(
+              enabled: _appearance.botanicalRoles,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  ExcludeSemantics(
+                    child: IgnorePointer(
+                      child: _WorkspaceBackdrop(
+                        appearance: _appearance,
+                        nativeActive: _nativeActive,
+                      ),
                     ),
                   ),
-                ),
-                child ?? const SizedBox.shrink(),
-              ],
+                  child ?? const SizedBox.shrink(),
+                ],
+              ),
             ),
           ),
         );
@@ -166,6 +188,7 @@ class _LumenisAppState extends State<LumenisApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _appearance.removeListener(_applyAppearance);
     _appearance.dispose();
     _router.dispose();
@@ -229,58 +252,17 @@ class _WorkspaceBackdrop extends StatelessWidget {
           else
             ColoredBox(
               color: appearance.isDark
-                  ? const Color(0xFF14161C)
-                  : const Color(0xFFF7F5F2),
-              child: ImageFiltered(
-                imageFilter: ui.ImageFilter.blur(
-                  sigmaX: appearance.blur,
-                  sigmaY: appearance.blur,
-                  tileMode: TileMode.clamp,
-                ),
-                child: CustomPaint(
-                  painter: _OpticalFieldPainter(dark: appearance.isDark),
-                ),
-              ),
+                  ? LumenisTheme.darkPalette.canvas
+                  : LumenisTheme.canvas,
             ),
           ColoredBox(
             key: const ValueKey('workspace/backdrop-scrim'),
             color: appearance.mode == WorkspaceBackdrop.wallpaper
                 ? LumenisTheme.wallpaperScrim(LumenisTheme.of(context))
-                : (appearance.isDark ? Colors.black : Colors.white).withValues(
-                    alpha: .18,
-                  ),
+                : Colors.transparent,
           ),
         ],
       ),
     );
   }
-}
-
-class _OpticalFieldPainter extends CustomPainter {
-  const _OpticalFieldPainter({required this.dark});
-  final bool dark;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final face = dark ? const Color(0xFF222B30) : const Color(0xFFE3E7E8);
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()
-        ..shader =
-            ui.Gradient.linear(Offset.zero, Offset(size.width, size.height), [
-              Color.lerp(face, Colors.white, dark ? .04 : .3)!,
-              face,
-              Color.lerp(face, Colors.black, .06)!,
-            ]),
-    );
-    final brush = Paint()
-      ..color = (dark ? Colors.white : Colors.black).withValues(alpha: .018)
-      ..strokeWidth = .5;
-    for (double y = 1; y < size.height; y += 3) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), brush);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_OpticalFieldPainter oldDelegate) =>
-      oldDelegate.dark != dark;
 }

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
+import 'package:lumenis_app/core/transport/lumenis_http_transport.dart';
 
 void main() {
   late HttpServer server;
@@ -48,7 +49,9 @@ void main() {
       request.response.statusCode = responseStatus;
       request.response.headers.contentType = ContentType.parse(responseType);
       if (responseBytes != null) {
-        request.response.add(responseBytes!);
+        request.response.contentLength = responseBytes!.length;
+        request.response.headers.set('Accept-Ranges', 'bytes');
+        if (request.method != 'HEAD') request.response.add(responseBytes!);
       } else {
         request.response.write(jsonEncode(response));
       }
@@ -299,7 +302,7 @@ void main() {
   );
 
   test(
-    'artifact download keeps exact binary and rejects wrong media type or denial',
+    'artifact download validates scoped stream metadata and rejects wrong media type or denial',
     () async {
       responseBytes = [80, 75, 0, 255, 128];
       responseType = 'application/zip';
@@ -308,7 +311,11 @@ void main() {
         artifactId: 'ART-version',
         package: true,
       );
-      expect(file.bytes, responseBytes);
+      expect(file.bytes, isEmpty);
+      expect(calls.single['method'], 'HEAD');
+      expect(file.streamUri?.path, '/api/experience/content-projects/ART-version/package');
+      expect(file.streamUri?.queryParameters['format'], 'package');
+      expect(jsonDecode(file.streamUri!.queryParameters['context']!)['X-Subject-ID'], 'brand-one');
       expect(file.filename, 'ART-version.zip');
       expect(file.mediaType, 'application/zip');
       expect(
@@ -517,4 +524,15 @@ void main() {
       );
     },
   );
+
+  test('file stream upload preserves bytes, scope and explicit write with no file path disclosure', () async {
+    final chunks = [List<int>.generate(65536, (i) => i % 256), [0, 255, 128, 4]];
+    await client.importContentSourceStream(domainId: 'BMP', filename: 'large.wav',
+      upload: LumenisUploadBody(length: chunks.fold<int>(0, (n, c) => n + c.length),
+        openRead: () => Stream.fromIterable(chunks)));
+    expect(calls.single['bytes'], chunks.expand((c) => c).toList());
+    expect(calls.single['action'], 'WRITE');
+    expect(calls.single['subject'], 'brand-one');
+    expect(calls.single['query'], {'filename': 'large.wav'});
+  });
 }

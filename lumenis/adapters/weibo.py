@@ -70,9 +70,16 @@ class WeiboAdapter(BaseAdapter):
             "X-Requested-With": "XMLHttpRequest",
         }
 
-    def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
+    def search(self, keyword: str, max_results: int = 20, *, cursor=None) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
+        if type(max_results) is not int or not 1 <= max_results <= 20:
+            return AdapterResult(success=False,error='WEIBO_PAGE_SIZE_INVALID')
+        if cursor is not None and (not isinstance(cursor,dict) or set(cursor) not in ({'page'},{'since_id'})
+                or 'page' in cursor and (type(cursor['page']) is not int or not 1 <= cursor['page'] <= 100000)
+                or 'since_id' in cursor and (not isinstance(cursor['since_id'],str)
+                    or re.fullmatch(r'[0-9]{1,30}',cursor['since_id']) is None)):
+            return AdapterResult(success=False,error='WEIBO_SEARCH_CURSOR_INVALID')
         try:
             # 注入 manager 时优先采信其登录态：明确未登录则前置短路，不发任何请求
             # （账号保活/不暴力采集；也使全 mock 单测不触网）
@@ -100,12 +107,11 @@ class WeiboAdapter(BaseAdapter):
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
 
-            from urllib.parse import quote
-
             containerid = self.CONTAINER_TEMPLATE.format(
-                type=1, keyword=quote(keyword.strip())
+                type=1, keyword=keyword.strip()
             )
-            params = {"containerid": containerid}
+            params = {"containerid": containerid,'page_type':'searchall',
+                      **(cursor if cursor is not None else {'page':1})}
 
             resp = requests.get(
                 self.SEARCH_URL,
@@ -137,10 +143,18 @@ class WeiboAdapter(BaseAdapter):
                 if len(notes) >= max_results:
                     break
 
-            if notes:
-                return AdapterResult(success=True, notes=notes, raw_count=len(notes))
-            # 正常无内容
-            return AdapterResult(success=True, notes=[], raw_count=0)
+            info = (data.get('data') or {}).get('cardlistInfo') or {}
+            next_id = info.get('since_id')
+            known = type(next_id) is int and next_id >= 0 or isinstance(next_id,str) and next_id.isascii() and next_id.isdigit()
+            next_cursor = {'since_id':str(next_id)} if known and str(next_id) != '0' else None
+            if next_cursor == cursor:
+                next_cursor = None
+            return AdapterResult(success=True,notes=notes,raw_count=len(notes),metadata={
+                'pagination':{'request_cursor':cursor,'next_cursor':next_cursor,
+                    'exhausted':str(next_id)=='0' if known else True if info.get('total') == 0 else None,
+                    'reported_total':optional_int(info.get('total')), 'page_complete':len(notes) >= len([
+                        card for card in cards if isinstance(card,dict) and card.get('mblog')]),
+                    'coverage_scope':'PROVIDER_VISIBLE_WEIBO_SEARCH_PAGE'}})
 
         except Exception as exc:
             logger.exception("微博采集异常")
@@ -149,7 +163,8 @@ class WeiboAdapter(BaseAdapter):
     def _mblog_to_note(self, mblog: dict):
         """将微博 mblog 转为标准化 CollectedNote。"""
         try:
-            text_html = mblog.get("text", "") or ""
+            long_body = (mblog.get('longText') or {}).get('longTextContent')
+            text_html = long_body or mblog.get("text", "") or ""
             content = self._clean_html(text_html)
             user = mblog.get("user") or {}
             mid = str(mblog.get("mid") or mblog.get("id") or "")
@@ -176,7 +191,10 @@ class WeiboAdapter(BaseAdapter):
                     "is_long_text": mblog.get("isLongText", False),
                     "source": mblog.get("source", ""),
                     "region_name": mblog.get("region_name", ""),
-                    "page_info": bool(mblog.get("page_info")),
+                    'body_state':'NATIVE_LONG_TEXT' if long_body else
+                        'TRUNCATED_PLATFORM_TEXT' if mblog.get('isLongText') is True else 'PLATFORM_TEXT',
+                    'page_info':mblog.get('page_info'), 'pics':mblog.get('pics'),
+                    'source_observation':mblog,
                 },
             )
         except Exception as exc:
@@ -246,6 +264,12 @@ class WeiboAdapter(BaseAdapter):
     def comments(self, mid: str, max_comments: int = 20, **kwargs) -> AdapterResult:
         if not mid or not str(mid).strip():
             return AdapterResult(success=False, error="mid 为空")
+        cursor = kwargs.get('cursor')
+        if (type(max_comments) is not int or not 1 <= max_comments <= 20
+                or cursor is not None and (not isinstance(cursor,dict) or set(cursor)!={'max_id','max_id_type'}
+                    or not isinstance(cursor['max_id'],str) or re.fullmatch(r'[0-9]{1,30}',cursor['max_id']) is None
+                    or type(cursor['max_id_type']) is not int or not 0 <= cursor['max_id_type'] <= 3)):
+            return AdapterResult(success=False,error='WEIBO_COMMENT_CURSOR_INVALID')
         try:
             if not self._cookie_ok():
                 return AdapterResult(success=False, error="微博 cookie 缺失或无关键认证 cookie，请更新 data/weibo_cookies.json")
@@ -253,19 +277,23 @@ class WeiboAdapter(BaseAdapter):
             if not cookie_string:
                 return AdapterResult(success=False, error="微博 cookie 为空")
             resp = requests.get(
-                "https://m.weibo.cn/api/comments/show",
-                params={"id": str(mid).strip(), "page": 1},
+                "https://m.weibo.cn/comments/hotflow",
+                params={"id":str(mid).strip(),'mid':str(mid).strip(),'max_id_type':0,
+                        **(cursor or {})},
                 headers=self._get_headers(cookie_string),
                 timeout=15,
             )
             data = resp.json()
             if data.get("ok") != 1:
                 return AdapterResult(success=False, error=f"微博评论失败: {data.get('msg', str(data))}")
-            hot = (data.get("data") or {}).get("hot_data") or []
-            normal = (data.get("data") or {}).get("data") or []
-            all_comments = (hot + normal)[:max_comments]
+            payload = data.get('data') or {}
+            normal = payload.get('data') or []
+            selected = []
+            for root in normal[:max_comments]:
+                selected.append((root,None))
+                selected.extend((child,root.get('id')) for child in root.get('comments') or [])
             notes = []
-            for c in all_comments:
+            for c,parent in selected:
                 user = c.get("user") or {}
                 notes.append(self._make_note(
                     title="",
@@ -280,14 +308,90 @@ class WeiboAdapter(BaseAdapter):
                     shares=None,
                     cover="",
                     source_platform=self.platform_name,
-                    raw_data={"engine": "weibo_comments_api", "cid": c.get("id"), "type": "comment"},
+                    raw_data={'engine':'weibo_hotflow_read_api','cid':c.get('id'),'type':'comment',
+                        'parent_content_id':str(mid).strip(),'parent_comment_id':parent or c.get('rootid'),
+                        'reply_to_comment_id':c.get('reply_id') or (c.get('reply_comment') or {}).get('id'),
+                        'reply_count':c.get('total_number'),'source_observation':c},
                 ))
-            return AdapterResult(success=True, notes=notes, raw_count=len(notes))
+            next_id, next_type = payload.get('max_id'),payload.get('max_id_type')
+            known = (type(next_id) is int and next_id >= 0 or isinstance(next_id,str)
+                     and next_id.isascii() and next_id.isdigit())
+            complete = len(normal) <= max_comments
+            next_cursor = {'max_id':str(next_id),'max_id_type':next_type} if (
+                known and str(next_id) != '0' and type(next_type) is int and 0 <= next_type <= 3 and complete) else None
+            reply_totals_known = all(type(item.get('total_number')) is int and item['total_number']>=0 for item in normal[:max_comments])
+            replies_complete = all(item['total_number'] <= len(item.get('comments') or [])
+                                   for item in normal[:max_comments]) if reply_totals_known else None
+            return AdapterResult(success=True,notes=notes,raw_count=len(notes),metadata={
+                'pagination':{'request_cursor':cursor,'next_cursor':next_cursor,
+                    'exhausted':str(next_id)=='0' if known and complete else None,
+                    'page_complete':complete, 'replies_complete':replies_complete,
+                    'coverage_scope':'PROVIDER_VISIBLE_HOTFLOW_ROOT_PAGE_WITH_RETURNED_REPLIES',
+                    'partial_reason':'REQUESTED_ROOT_LIMIT_REACHED' if not complete else
+                        'NATIVE_REPLY_PAGES_NOT_OBSERVED' if replies_complete is False else
+                        'NATIVE_NEXT_CURSOR_NOT_OBSERVED' if not known else None}})
         except Exception as exc:
             logger.exception("微博评论采集异常")
             return AdapterResult(success=False, error=f"微博评论异常: {exc}")
 
     # ── creator: 微博用户信息（container/getIndex INFO tab）──
+    def author_posts(self, author_id, *, max_results=20, cursor=None, **kwargs):
+        """One native author timeline page using the observed timeline container."""
+        uid = str(author_id or '').strip()
+        if re.fullmatch(r'[1-9][0-9]{0,24}',uid) is None:
+            return AdapterResult(success=False,error='WEIBO_AUTHOR_ID_INVALID')
+        if type(max_results) is not int or not 1 <= max_results <= 20:
+            return AdapterResult(success=False,error='WEIBO_AUTHOR_PAGE_SIZE_INVALID')
+        if cursor is not None and (not isinstance(cursor,dict) or set(cursor)!={'container_id','since_id'}
+                or not isinstance(cursor['container_id'],str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',cursor['container_id']) is None
+                or not isinstance(cursor['since_id'],str) or re.fullmatch(r'[0-9]{1,30}',cursor['since_id']) is None):
+            return AdapterResult(success=False,error='WEIBO_AUTHOR_CURSOR_INVALID')
+        try:
+            if not self._cookie_ok():
+                return AdapterResult(success=False,error='微博 cookie 缺失或无关键认证 cookie')
+            cookie = to_cookie_string('weibo')
+            if not cookie:
+                return AdapterResult(success=False,error='微博 cookie 为空')
+            if cursor is None:
+                response = requests.get(self.SEARCH_URL,params={'type':'uid','value':uid},
+                    headers=self._get_headers(cookie),timeout=15)
+                data = response.json()
+                if data.get('ok') != 1:
+                    return AdapterResult(success=False,error='微博作者目录失败: '+str(data.get('msg') or 'PROVIDER_UNAVAILABLE'))
+                payload = data.get('data') or {}
+                user = payload.get('userInfo') or {}
+                if str(user.get('id')) != uid:
+                    return AdapterResult(success=False,error='WEIBO_AUTHOR_ID_MISMATCH')
+                containers = [tab.get('containerid') for tab in (payload.get('tabsInfo') or {}).get('tabs') or []
+                              if tab.get('tab_type') == 'weibo']
+                if len(containers)!=1 or not isinstance(containers[0],str) or re.fullmatch(r'[A-Za-z0-9_-]{1,128}',containers[0]) is None:
+                    return AdapterResult(success=False,error='WEIBO_NATIVE_AUTHOR_CONTAINER_NOT_OBSERVED')
+                container, since = containers[0],None
+            else:
+                container,since = cursor['container_id'],cursor['since_id']
+            response = requests.get(self.SEARCH_URL,params={'type':'uid','value':uid,'containerid':container,
+                **({'since_id':since} if since is not None else {})},headers=self._get_headers(cookie),timeout=15)
+            data = response.json()
+            if data.get('ok') != 1:
+                return AdapterResult(success=False,error='微博作者历史失败: '+str(data.get('msg') or 'PROVIDER_UNAVAILABLE'))
+            payload = data.get('data') or {}
+            posts = [card['mblog'] for card in payload.get('cards') or [] if isinstance(card,dict) and isinstance(card.get('mblog'),dict)]
+            if any(str((post.get('user') or {}).get('id')) != uid for post in posts):
+                return AdapterResult(success=False,error='WEIBO_AUTHOR_POST_OWNER_MISMATCH')
+            notes = [note for post in posts[:max_results] if (note:=self._mblog_to_note(post)) is not None]
+            next_id = (payload.get('cardlistInfo') or {}).get('since_id')
+            known = type(next_id) is int and next_id>=0 or isinstance(next_id,str) and next_id.isascii() and next_id.isdigit()
+            complete = len(posts)<=max_results
+            next_cursor = {'container_id':container,'since_id':str(next_id)} if known and str(next_id)!='0' and complete else None
+            return AdapterResult(success=True,notes=notes,raw_count=len(notes),metadata={
+                'author_id':uid,'pagination':{'request_cursor':cursor,'next_cursor':next_cursor,
+                    'exhausted':str(next_id)=='0' if known and complete else None,
+                    'page_complete':complete,'coverage_scope':'PROVIDER_VISIBLE_AUTHOR_TIMELINE',
+                    'partial_reason':'REQUESTED_ROOT_LIMIT_REACHED' if not complete else
+                        'NATIVE_NEXT_CURSOR_NOT_OBSERVED' if not known else None}})
+        except Exception as exc:
+            return AdapterResult(success=False,error=f'微博作者历史异常: {type(exc).__name__}')
+
     def creator(self, uid: str, **kwargs) -> AdapterResult:
         if not uid or not str(uid).strip():
             return AdapterResult(success=False, error="uid 为空")
@@ -336,9 +440,11 @@ class WeiboAdapter(BaseAdapter):
                     "uid": user_info.get("id"),
                     "followers": user_info.get("followers_count"),
                     "follow_count": user_info.get("follow_count"),
+                    'content_count':user_info.get('statuses_count'),
                     "verified": user_info.get("verified"),
                     "verified_reason": user_info.get("verified_reason"),
                     "type": "creator",
+                    'source_observation':user_info,
                 },
             )
             return AdapterResult(success=True, notes=[note], raw_count=1)

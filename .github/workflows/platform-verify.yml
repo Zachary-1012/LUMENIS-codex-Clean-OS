@@ -155,6 +155,21 @@ jobs:
               'tests/test_governance_machine_contract.py', 'tests/test_online_progress_governance.py', '.codex/tests/test_engineering.py',
               'tests/test_ai_task_engine.py', 'tests/test_content_generation_parent_evidence.py',
               'tests/test_ai_conversation_migration.py',
+              'tests/test_ai_context_pack.py',
+              'tests/test_ai_hub_owned_gateway.py',
+              'tests/test_audit_inventory_boundaries.py',
+              'tests/test_business_work_owner_routes.py',
+              'tests/test_business_domain_workbench.py',
+              'tests/test_business_execution_observations.py',
+              'tests/test_business_single_derived_revision.py',
+              'tests/test_agent_conversation_context.py',
+              'tests/test_agent_runtime_http_binding.py',
+              'tests/agent_runtime/test_loop_execution_resume.py',
+              'tests/test_office_package_editing.py',
+              'tests/test_office_owner_routes.py',
+              'tests/test_workspace_evidence_signing.py',
+              'tests/test_database_backup_signing_contract.py',
+              'tests/test_database_restore_contract.py',
               'tests/test_cold_start_owner_initialization.py',
               'tests/test_xhs_cdp_native_truth.py', 'tests/test_source_brief_job.py',
               'tests/test_business_decision_workflow.py', 'tests/test_runtime_api_diagnostics.py',
@@ -260,6 +275,7 @@ jobs:
               'tests/test_video_editing_core.py',
               'tests/test_timeline_rendering.py',
               'tests/test_audio_timeline_rendering.py',
+              'tests/test_media_long_programme_contract.py',
               'tests/test_internal_pitch_shared_av.py::test_pitch_owner_response_preserves_unavailable_and_denied',
               'tests/test_internal_pitch_shared_av.py::test_pitch_unauthenticated_read_cannot_initialize_account_database']))
           PY
@@ -308,6 +324,7 @@ jobs:
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-owned-http.xml'),
               'tests/test_ai_conversation_owner.py',
+              'tests/test_scoped_derived_memory.py',
               'tests/test_owned_training_runtime_recovery.py::test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation']))
           PY
 

@@ -96,8 +96,11 @@ def test_conversation_response_reservation_context_accounting_and_no_auto_retry(
     assert replied.status_code == 200, replied.get_json()
     result = replied.get_json(); row['revision'] = result['revision']
     accounting = result['turn']['content']['context_accounting']
-    assert accounting['history_turns_total'] == 8 and accounting['history_turns_included'] == 6
-    assert accounting['history_turns_omitted'] == 2 and accounting['history_characters_omitted'] > 0
+    assert accounting['history_turns_total'] == 8 and accounting['history_turns_included'] == 8
+    assert accounting['history_turns_omitted'] == 0 and accounting['history_characters_omitted'] == 0
+    assert accounting['context_policy'] == 'versioned_complete_source_free_context_pack_v1'
+    assert accounting['token_budget_verified'] is False
+    assert len(calls[0][1]) == 8 and calls[0][1][0]['content'] == 'long content ' * 100
     assert len(calls) == 1 and calls[0][0] == 'current full question'
     assert api.post(endpoint, json=request).get_json()['idempotent_hit'] is True
     assert len(calls) == 1
@@ -127,6 +130,88 @@ def test_conversation_sensitive_input_and_failed_storage_leave_no_fake_turn(conv
     failed = api.post(root + '/turns', json={'text':'safe','idempotency_key':'safe','expected_revision':1})
     assert failed.status_code == 503
     assert api.get(root).get_json()['conversation']['revision'] == 1
+
+
+def test_human_context_reopens_corrects_and_invalidates_late_result(conversation_client, monkeypatch):
+    from lumenis.ai_hub import conversations, service
+    api, app, path = conversation_client
+    row = create(api)
+    first = append(api, row, 'old budget is 100; original human writing', 'old-input')
+    value = {'goal': 'finish original manuscript', 'constraints': ['budget is 80', 'no publication'],
+             'draft': 'human draft kept in full', 'decisions': ['reject sending'],
+             'excluded_turn_ids': [first['turn_id']]}
+    with app.test_request_context('/', headers={'Host': 'localhost'}, environ_overrides={'REMOTE_ADDR': '127.0.0.1'}):
+        actor = conversations.current_actor('write')
+        saved = conversations.update_context(actor, row['conversation_id'], value=value,
+                    idempotency_key='context-one', expected_revision=row['revision'])
+        row['revision'] = saved['revision']
+        assert conversations.read_context(actor, row['conversation_id'])['context']['content']['value'] == value
+        assert conversations.update_context(actor, row['conversation_id'], value=value,
+                    idempotency_key='context-one', expected_revision=1)['idempotent_hit']
+        with pytest.raises(ValueError, match='EXCLUSION_USER_TURN_REQUIRED'):
+            conversations.update_context(actor, row['conversation_id'], value={**value, 'excluded_turn_ids': ['foreign']},
+                    idempotency_key='foreign', expected_revision=row['revision'])
+    user = append(api, row, 'continue with the current writing', 'continue')
+    seen = []
+    def synthetic(question, history, **kwargs):
+        seen.extend(history)
+        # A fresh manual correction during generation must invalidate its late
+        # result, and must never overwrite the new human state.
+        current = conversations.read_context(actor, row['conversation_id'])
+        conversations.update_context(actor, row['conversation_id'], value={**value, 'draft': 'newer human edit'},
+            idempotency_key='context-newer', expected_revision=current['revision'])
+        return {'ok': True, 'reply': 'obsolete synthetic result', 'provider': 'synthetic-fixture'}
+    monkeypatch.setattr(service, 'chat', synthetic)
+    response = api.post('/v4/ai/conversations/' + row['conversation_id'] + '/turns/' + user['turn_id'] + '/respond',
+        json={'idempotency_key': 'late-response', 'expected_revision': row['revision']})
+    assert response.status_code == 200, response.get_json()
+    turn = response.get_json()['turn']
+    assert turn['state'] == 'interrupted'
+    assert turn['content']['code'] == 'CONVERSATION_CONTEXT_CHANGED_NO_RESULT_ADOPTED'
+    assert 'text' not in turn['content']
+    assert len(seen) == 1 and 'human draft kept in full' in seen[0]['content']
+    with app.test_request_context('/', headers={'Host': 'localhost'}, environ_overrides={'REMOTE_ADDR': '127.0.0.1'}):
+        assert conversations.read_context(actor, row['conversation_id'])['context']['content']['value']['draft'] == 'newer human edit'
+    with sqlite3.connect(path) as con:
+        assert json.loads(con.execute('SELECT content_json FROM ai_conversation_turns WHERE turn_id=?',
+            (first['turn_id'],)).fetchone()[0])['text'] == 'old budget is 100; original human writing'
+
+
+def test_context_http_owner_permission_reopen_conflict_and_no_inference(conversation_client, monkeypatch):
+    from lumenis.ai_hub import service
+    api, app, path = conversation_client
+    monkeypatch.setattr(service, 'chat', lambda *args, **kwargs: pytest.fail('human context editing invoked a model'))
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    row = create(api, own)
+    first = append(api, row, 'dated budget: 100; old human paragraph', 'original', own)
+    url = '/v4/ai/conversations/' + row['conversation_id'] + '/context'
+    assert api.get(url, headers=own).get_json()['context'] is None
+    value = {'goal': 'complete the existing manuscript', 'constraints': ['budget is 80', 'do not send'],
+             'draft': 'complete current human draft', 'decisions': ['review before export'],
+             'excluded_turn_ids': [first['turn_id']]}
+    body = {'value': value, 'idempotency_key': 'save-context', 'expected_revision': row['revision']}
+    saved = api.put(url, json=body, headers=own)
+    assert saved.status_code == 200, saved.get_json()
+    result = saved.get_json()
+    assert api.put(url, json=body, headers=own).get_json()['idempotent_hit']
+    reopened = app.test_client().get(url, headers=own).get_json()
+    assert reopened['context']['content']['value'] == value and reopened['revision'] == result['revision']
+    assert reopened['effect_permission'] == reopened['training_admission'] == 'NOT_GRANTED'
+    conflict = api.put(url, json={**body, 'idempotency_key': 'stale'}, headers=own)
+    assert conflict.status_code == 409 and conflict.get_json()['code'] == 'CONVERSATION_REVISION_CONFLICT'
+    assert api.put(url, json={**body, 'actor_id': 2}, headers=own).status_code == 400
+    assert api.get(url, headers={'Authorization': 'Bearer fixture-session-two'}).status_code == 403
+    assert api.put(url, json=body, headers={'Authorization': 'Bearer fixture-session-two'}).status_code == 403
+    assert api.get(url).status_code == 403
+    with sqlite3.connect(path) as con:
+        con.execute("DELETE FROM v4_member_authorizations WHERE user_id=1 AND product_id='SHARED' AND action='write'")
+    assert api.get(url, headers=own).status_code == 200
+    denied = api.put(url, json={**body, 'expected_revision': result['revision'], 'idempotency_key': 'denied'}, headers=own)
+    assert denied.status_code == 403
+    with sqlite3.connect(path) as con:
+        assert con.execute("SELECT COUNT(*) FROM ai_conversation_turns WHERE origin_kind='system_status'").fetchone()[0] == 1
+        con.execute("DELETE FROM v4_member_authorizations WHERE user_id=1 AND product_id='SHARED'")
+    assert app.test_client().get(url, headers=own).status_code == 403
 
 
 def test_conversation_concurrent_append_and_workspace_copy_are_isolated(conversation_client, monkeypatch, tmp_path):
@@ -350,3 +435,275 @@ def test_workspace_draft_restart_scope_conflict_and_account_isolation(conversati
     with sqlite3.connect(path) as con:
         con.execute("DELETE FROM v4_member_authorizations WHERE module='conversation' AND user_id=1")
     assert read().status_code == 403
+
+
+@pytest.fixture
+def conversation_sources(conversation_client, monkeypatch, tmp_path):
+    import socket
+
+    import shared_artifacts
+    from lumenis.ai_hub import conversations
+    from lumenis.importer import documents
+    from lumenis.shared.evidence import store
+    from lumenis.shared.reporting import saved_work
+    from lumenis.system.security import permission
+
+    api, app, path = conversation_client
+    monkeypatch.setenv('ZBC_ARTIFACT_DIR', str(tmp_path / 'source-artifacts'))
+    def denied(*args, **kwargs):
+        raise AssertionError('CONVERSATION_SOURCE_NETWORK_FORBIDDEN')
+    monkeypatch.setattr(socket.socket, 'connect', denied)
+    monkeypatch.setattr(socket.socket, 'connect_ex', denied)
+    monkeypatch.setattr(socket, 'create_connection', denied)
+    shared_artifacts.ensure_artifact_table()
+    store.init_evidence_store(str(path))
+    with sqlite3.connect(path) as con:
+        con.executemany("INSERT INTO v4_member_authorizations(user_id,product_id,module,action) VALUES(1,'SHARED','reports',?)",
+                        [('read',), ('write',)])
+    permission.get_permission_gate().grant_permission(permission.PermissionLevel.COMMIT)
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    scope = {'scope_kind': 'shared_workspace', 'version': 1}
+    with app.test_request_context('/', headers=own):
+        actor = conversations.current_actor('write')
+    def save(text, title='Original orchard material', filename='source.txt'):
+        source = tmp_path / filename
+        source.write_text(text, encoding='utf-8')
+        return documents.save_private_document(source, actor=actor, scope=scope,
+            request_id='source-' + filename.replace('.', '-'), title=title)
+    row = create(api, own)
+    yield {'api': api, 'app': app, 'db': path, 'actor': actor, 'scope': scope,
+           'headers': own, 'save': save, 'root': '/v4/ai/conversations/' + row['conversation_id'],
+           'row': row, 'work': saved_work}
+
+
+def _search_sources(ws, query='orchard', **options):
+    response = ws['api'].get(ws['root'] + '/context', headers=ws['headers'],
+                            query_string={'query': query, **options})
+    assert response.status_code == 200, response.get_json()
+    return response.get_json()['search']
+
+
+def _source_context_body(revision, references, key='adopt-original'):
+    return {'value': {'goal': 'finish writing', 'constraints': ['do not publish'],
+                     'draft': 'manual writing survives source withdrawal', 'decisions': ['review first'],
+                     'excluded_turn_ids': []}, 'source_references': references,
+            'idempotency_key': key, 'expected_revision': revision}
+
+
+def test_conversation_source_search_preview_adopt_reopen_and_source_free_model_boundary(conversation_sources, monkeypatch):
+    from lumenis.ai_hub import service
+    ws = conversation_sources
+    text = 'orchard original evidence statement 🙂 ' * 100
+    made = ws['save'](text)
+    result = _search_sources(ws)
+    assert result['verification_complete'] is True
+    assert result['retrieval']['mode'] == 'BM25_ONLY'
+    assert result['retrieval']['neural_retrieval_performed'] is False
+    source = result['records'][0]
+    assert source['character_count'] == len(text) and len(source['text']) == 1200
+    assert source['text_basis'] == 'retained_original_parsed_text'
+    reference = {**source['reference'], 'start': 0, 'end': len(text)}
+    assert reference['type'] == 'private_document'
+    assert reference['artifact_id'] == made['artifact']['artifact_id']
+    preview = ws['api'].get(ws['root'] + '/context', headers=ws['headers'],
+                           query_string={'source_reference': json.dumps(reference)}).get_json()['source_preview']
+    assert preview['text'] == text and preview['model_source_use'] == 'NOT_GRANTED'
+    body = _source_context_body(ws['row']['revision'], [reference])
+    saved = ws['api'].put(ws['root'] + '/context', headers=ws['headers'], json=body)
+    assert saved.status_code == 200, saved.get_json()
+    assert ws['api'].put(ws['root'] + '/context', headers=ws['headers'], json=body).get_json()['idempotent_hit']
+    reopened = ws['app'].test_client().get(ws['root'] + '/context', headers=ws['headers']).get_json()
+    assert reopened['source_references'][0]['text'] == text
+    assert reopened['context']['content']['value'] == body['value']
+    assert reopened['context']['content']['source_references'] == [reference]
+    with sqlite3.connect(ws['db']) as con:
+        assert con.execute('SELECT COUNT(*) FROM ai_task').fetchone()[0] == 0
+        stored = con.execute("SELECT content_json FROM ai_conversation_turns WHERE origin_kind='system_status'").fetchone()[0]
+        assert text not in stored and 'orchard original evidence statement' not in stored
+    ws['row']['revision'] = saved.get_json()['revision']
+    user = append(ws['api'], ws['row'], 'continue manual writing', headers=ws['headers'])
+    captured = []
+    def synthetic(question, history, **kwargs):
+        captured.extend(history)
+        return {'ok': True, 'reply': 'synthetic boundary response', 'provider': 'synthetic-fixture'}
+    monkeypatch.setattr(service, 'chat', synthetic)
+    replied = ws['api'].post(ws['root'] + '/turns/' + user['turn_id'] + '/respond', headers=ws['headers'],
+        json={'expected_revision': ws['row']['revision'], 'idempotency_key': 'manual-source-free'})
+    assert replied.status_code == 200, replied.get_json()
+    assert 'manual writing survives source withdrawal' in json.dumps(captured)
+    assert 'orchard original evidence statement' not in json.dumps(captured)
+    assert reference['artifact_id'] not in json.dumps(captured)
+
+
+def test_conversation_source_reference_withdrawal_preserves_manual_context_and_explicit_removal(conversation_sources):
+    ws = conversation_sources
+    ws['save']('orchard original source available for an explicit human selection')
+    reference = _search_sources(ws)['records'][0]['reference']
+    body = _source_context_body(1, [reference])
+    saved = ws['api'].put(ws['root'] + '/context', headers=ws['headers'], json=body)
+    assert saved.status_code == 200, saved.get_json()
+    revision = saved.get_json()['revision']
+    with sqlite3.connect(ws['db']) as con:
+        con.execute("DELETE FROM v4_member_authorizations WHERE user_id=1 AND module='reports'")
+    reopened = ws['api'].get(ws['root'] + '/context', headers=ws['headers'])
+    assert reopened.status_code == 200, reopened.get_json()
+    projection = reopened.get_json()
+    assert projection['context']['content']['value'] == body['value']
+    assert projection['source_references'] == [{'reference': reference, 'state': 'source_access_unavailable',
+        'model_source_use': 'NOT_GRANTED', 'training_admission': 'NOT_GRANTED'}]
+    assert ws['api'].get(ws['root'] + '/context', headers=ws['headers'], query_string={'query': 'orchard'}).status_code == 403
+    # A manual-only edit neither adopts the source again nor needs source access.
+    manual = {**body, 'expected_revision': revision, 'idempotency_key': 'manual-withdrawn'}
+    manual.pop('source_references')
+    kept = ws['api'].put(ws['root'] + '/context', headers=ws['headers'], json=manual)
+    assert kept.status_code == 200, kept.get_json()
+    assert kept.get_json()['turn']['content']['source_references'] == [reference]
+    removed = ws['api'].put(ws['root'] + '/context', headers=ws['headers'],
+        json=_source_context_body(kept.get_json()['revision'], [], 'remove-withdrawn'))
+    assert removed.status_code == 200, removed.get_json()
+    assert ws['api'].get(ws['root'] + '/context', headers=ws['headers']).get_json()['source_references'] == []
+
+
+@pytest.mark.parametrize('mutation', ['delete', 'replace'])
+def test_conversation_source_post_rank_original_file_change_is_rejected(conversation_sources, monkeypatch, mutation):
+    import shared_artifacts
+    from agent_memory import retrieval
+
+    ws = conversation_sources
+    made = ws['save']('orchard original same-size source before ranking')
+    binding = made['document']['attachments'][0]
+    source = shared_artifacts.artifact_file_path(binding['artifact_id'])
+    assert source is not None
+    original = retrieval.lexical_search
+    def ranked(*args, **kwargs):
+        result = original(*args, **kwargs)
+        if mutation == 'delete':
+            source.unlink()
+        else:
+            source.write_bytes(b'X' * source.stat().st_size)
+        return result
+    monkeypatch.setattr(retrieval, 'lexical_search', ranked)
+    response = ws['api'].get(ws['root'] + '/context', headers=ws['headers'], query_string={'query': 'orchard'})
+    assert response.status_code == 409, response.get_json()
+    assert response.get_json()['code'] == 'MEMORY_REFERENCE_CHANGED'
+    assert 'records' not in response.get_json()
+
+
+def test_conversation_source_pagination_scope_cas_and_reference_validation(conversation_sources):
+    ws = conversation_sources
+    ws['save']('orchard one', filename='one.txt')
+    ws['save']('orchard two', filename='two.txt')
+    result = _search_sources(ws, limit=1)
+    assert result['has_more'] and result['next_offset'] == 1
+    second = _search_sources(ws, limit=1, offset=1, snapshot=result['retrieval']['source_snapshot_sha256'])
+    assert second['records'][0]['reference'] != result['records'][0]['reference']
+    reference = result['records'][0]['reference']
+    url = ws['root'] + '/context'
+    for query in ({'query': 'orchard', 'offset': 1}, {'query': 'orchard', 'snapshot': '0' * 64}):
+        assert ws['api'].get(url, headers=ws['headers'], query_string=query).status_code == 409
+    for query in ({'query': 'orchard', 'actor_id': '2'}, {'limit': 1}, {'source_reference': 'null'},
+                  {'source_reference': json.dumps({**reference, 'end': 64001})}):
+        assert ws['api'].get(url, headers=ws['headers'], query_string=query).status_code == 400
+    for refs in (None, [reference, reference], [{**reference, 'type': []}]):
+        response = ws['api'].put(url, headers=ws['headers'], json=_source_context_body(1, refs))
+        assert response.status_code == 400, response.get_json()
+    altered = {**reference, 'sha256': '0' * 64}
+    assert ws['api'].put(url, headers=ws['headers'], json=_source_context_body(1, [altered])).status_code == 409
+    saved = ws['api'].put(url, headers=ws['headers'], json=_source_context_body(1, [reference]))
+    assert saved.status_code == 200, saved.get_json()
+    assert ws['api'].put(url, headers=ws['headers'], json=_source_context_body(1, [], 'stale-remove')).status_code == 409
+    assert ws['api'].get(url, headers={'Authorization': 'Bearer fixture-session-two'},
+        query_string={'query': 'orchard'}).status_code == 403
+    ws['save']('orchard third', filename='three.txt')
+    stale = ws['api'].get(url, headers=ws['headers'], query_string={'query': 'orchard', 'offset': 1,
+        'snapshot': result['retrieval']['source_snapshot_sha256']})
+    assert stale.status_code == 409 and stale.get_json()['code'] == 'MEMORY_SEARCH_SNAPSHOT_CHANGED'
+
+
+def test_conversation_source_signed_original_scope_and_source_use_rechecked(conversation_sources, tmp_path, monkeypatch):
+    import intelligence_library_api
+    from lumenis.importer import documents
+    from lumenis.system.security import permission
+    ws = conversation_sources
+    with sqlite3.connect(ws['db']) as con:
+        con.executemany("INSERT INTO v4_member_authorizations(user_id,product_id,module,action,data_scope) "
+                        "VALUES(1,'CTH','reports',?,?)", [('read', '{"global":true}'), ('write', '{"global":true}')])
+    source = tmp_path / 'signed-orchard.txt'
+    text = 'orchard signed source retained with its actual rights and domain.'
+    source.write_text(text, encoding='utf-8')
+    arguments = {'actor': ws['actor'],
+        'scope': {'domain_id': 'cth', 'subject_id': None, 'brand_focus_id': None, 'global_scope': True},
+        'provenance': {'title': 'Signed orchard material', 'source_url': 'https://example.org/isolated-orchard',
+                       'rights': 'public-reference-only', 'captured_at': '2026-10-25T00:00:00Z', 'published_at': None}}
+    resource = documents.document_import_resource(str(source), **arguments)
+    permission.get_permission_gate().grant_approval('data_import', resource=resource, granted_by='isolated-test')
+    documents.import_document(str(source), **arguments)
+    result = _search_sources(ws)
+    reference = result['records'][0]['reference']
+    assert reference['type'] == 'evidence' and result['records'][0]['text'] == text
+    body = _source_context_body(1, [reference])
+    saved = ws['api'].put(ws['root'] + '/context', headers=ws['headers'], json=body)
+    assert saved.status_code == 200, saved.get_json()
+    reader = intelligence_library_api.verified_research_source
+    def read_then_revoke(connection, *args, **kwargs):
+        result = reader(connection, *args, **kwargs)
+        # A source's domain permission may change independently of the still
+        # readable Shared conversation. Never send the already-read body.
+        connection.execute("DELETE FROM v4_member_authorizations WHERE user_id=1 AND product_id='CTH'")
+        return result
+    with monkeypatch.context() as patch:
+        patch.setattr(intelligence_library_api, 'verified_research_source', read_then_revoke)
+        unselected = create(ws['api'], ws['headers'])
+        response = ws['api'].get('/v4/ai/conversations/' + unselected['conversation_id'] + '/context', headers=ws['headers'],
+                                query_string={'source_reference': json.dumps(reference)})
+        assert response.status_code == 409 and 'source_preview' not in response.get_json()
+    with sqlite3.connect(ws['db']) as con:
+        con.execute("UPDATE v4_member_authorizations SET data_scope=? WHERE user_id=1 AND product_id='CTH'",
+                    ('{"subject_ids":["other-subject"]}',))
+    reopened = ws['api'].get(ws['root'] + '/context', headers=ws['headers']).get_json()
+    assert reopened['source_references'][0]['state'] == 'source_access_unavailable'
+    assert 'text' not in reopened['source_references'][0]
+    assert _search_sources(ws)['records'] == []
+
+
+def test_conversation_saved_work_reference_version_correction_requires_explicit_new_adoption(conversation_sources):
+    ws = conversation_sources
+    made = ws['work'].save_work(title='Orchard current document', markdown='orchard first full manuscript',
+        kind='report', payload={}, citations=[], request_id='saved-original', actor=ws['actor'], scope=ws['scope'])
+    reference = _search_sources(ws)['records'][0]['reference']
+    assert reference['type'] == 'saved_work'
+    saved = ws['api'].put(ws['root'] + '/context', headers=ws['headers'], json=_source_context_body(1, [reference]))
+    assert saved.status_code == 200, saved.get_json()
+    revised = ws['work'].save_work(title='Orchard revised document', markdown='orchard corrected full manuscript',
+        kind='report', payload={}, citations=[], request_id='saved-revision', actor=ws['actor'], scope=ws['scope'],
+        work_id=made['document']['work_id'], previous_artifact_id=made['artifact']['artifact_id'],
+        expected_draft_digest=made['document']['draft_digest'])
+    reopened = ws['api'].get(ws['root'] + '/context', headers=ws['headers']).get_json()
+    assert reopened['source_references'][0]['state'] == 'source_access_unavailable'
+    result = _search_sources(ws)
+    assert len(result['records']) == 1
+    new = result['records'][0]['reference']
+    assert new['version'] == 2 and new['artifact_id'] == revised['artifact']['artifact_id']
+    adopted = ws['api'].put(ws['root'] + '/context', headers=ws['headers'],
+        json=_source_context_body(saved.get_json()['revision'], [new], 'adopt-correction'))
+    assert adopted.status_code == 200, adopted.get_json()
+    assert ws['api'].get(ws['root'] + '/context', headers=ws['headers']).get_json()['source_references'][0]['text'] == 'orchard corrected full manuscript'
+
+
+def test_conversation_source_late_withdrawal_rolls_back_adoption(conversation_sources, monkeypatch):
+    import shared_artifacts
+    from lumenis.ai_hub import conversations
+    ws = conversation_sources
+    made = ws['save']('orchard material withdrawn during context commit')
+    reference = _search_sources(ws)['records'][0]['reference']
+    source = shared_artifacts.artifact_file_path(made['document']['attachments'][0]['artifact_id'])
+    insert = conversations._insert_turn
+    def insert_then_withdraw(*args, **kwargs):
+        result = insert(*args, **kwargs)
+        source.unlink()
+        return result
+    monkeypatch.setattr(conversations, '_insert_turn', insert_then_withdraw)
+    response = ws['api'].put(ws['root'] + '/context', headers=ws['headers'], json=_source_context_body(1, [reference]))
+    assert response.status_code == 409 and response.get_json()['code'] == 'MEMORY_REFERENCE_CHANGED'
+    reopened = ws['api'].get(ws['root'] + '/context', headers=ws['headers']).get_json()
+    assert reopened['revision'] == 1 and reopened['context'] is None and reopened['source_references'] == []

@@ -119,16 +119,29 @@ def _manuscript_document(manuscript):
             raise ValueError("每节成稿必须有标题和实际正文")
     authorship = manuscript.get("authorship", "assisted")
     labels = {
-        "zh": {"assisted": "开发辅助原创草案 未获客户批准",
+        "zh": {"assisted": "辅助创作草稿 审阅与批准待确认",
                "user_supplied": "用户提供的成稿 审阅及使用授权待确认"},
-        "en": {"assisted": "Original draft prepared with development assistance. Client approval pending.",
+        "en": {"assisted": "Draft prepared with assistance. Review and approval pending.",
                "user_supplied": "Supplied manuscript. Review and usage approval pending."},
-        "ko": {"assisted": "개발 지원으로 작성한 독창적 초안 고객 승인 대기",
+        "ko": {"assisted": "도움을 받아 작성한 초안 검토 및 승인 대기",
                "user_supplied": "제공된 원고 검토 및 사용 승인 대기"},
     }
+    # These are document language disclosures, not claims of model execution.
+    for code, assisted, supplied in (
+        ('ja','支援を受けて作成した草稿。レビューと承認は未完了です。','ユーザー提供の原稿。レビューと利用許可は確認待ちです。'),
+        ('fr','Brouillon rédigé avec assistance. Révision et approbation en attente.','Manuscrit fourni par l’utilisateur. Révision et autorisation d’utilisation à confirmer.'),
+        ('de','Mit Unterstützung erstellter Entwurf. Prüfung und Freigabe stehen aus.','Vom Nutzer bereitgestelltes Manuskript. Prüfung und Nutzungsfreigabe stehen aus.'),
+        ('es','Borrador elaborado con asistencia. Revisión y aprobación pendientes.','Manuscrito proporcionado por el usuario. Revisión y autorización de uso pendientes.'),
+        ('pt','Rascunho elaborado com assistência. Revisão e aprovação pendentes.','Manuscrito fornecido pelo usuário. Revisão e autorização de uso pendentes.'),
+        ('ru','Черновик подготовлен с помощью. Проверка и одобрение ещё не выполнены.','Рукопись предоставлена пользователем. Проверка и разрешение на использование ожидаются.'),
+        ('ar','مسودة أُعدّت بمساعدة. المراجعة والموافقة قيد الانتظار.','مخطوطة قدّمها المستخدم. المراجعة وإذن الاستخدام قيد الانتظار.'),
+        ('hi','सहायता से तैयार मसौदा। समीक्षा और अनुमोदन लंबित हैं।','उपयोगकर्ता द्वारा दी गई पांडुलिपि। समीक्षा और उपयोग की अनुमति लंबित हैं।'),
+        ('id','Draf disusun dengan bantuan. Peninjauan dan persetujuan masih menunggu.','Naskah disediakan pengguna. Peninjauan dan izin penggunaan masih menunggu.'),
+    ):
+        labels[code] = {'assisted':assisted, 'user_supplied':supplied}
     language = manuscript.get("language", "zh")
     if language not in labels:
-        raise ValueError("成稿语言必须为 zh、en 或 ko")
+        raise ValueError("成稿语言不受支持")
     if authorship not in labels[language]:
         raise ValueError("成稿来源必须为 assisted 或 user_supplied")
     doc = Document()

@@ -1112,15 +1112,19 @@ class InstagramAdapter(BaseAdapter):
                         const key = author + '|' + content.slice(0, 40);
                         if (seen.has(key)) continue;
                         seen.add(key);
-                        let likes = 0;
+                        let likes = null;
                         const likeText = el.innerText || '';
                         const lm = likeText.match(/(\d[\d,.]*)\s*(likes?|次赞)/i);
-                        if (lm) likes = parseInt(lm[1].replace(/[,.]/g,'')) || 0;
+                        if (lm && /^\d[\d,]*$/.test(lm[1])) likes = Number(lm[1].replace(/,/g,''));
+                        const native = el.getAttribute('data-comment-id') || '';
+                        const parent = el.getAttribute('data-parent-comment-id') || '';
                         out.push({
                             author: author,
                             content: content,
                             publish_time: timeEl.getAttribute('datetime') || '',
                             likes: likes,
+                            platform_comment_id: /^\d+$/.test(native) ? native : null,
+                            parent_comment_id: /^\d+$/.test(parent) ? parent : null,
                         });
                     }
                     return out;
@@ -1155,7 +1159,11 @@ class InstagramAdapter(BaseAdapter):
                     "comments": comments_list,
                 },
             )
-            return AdapterResult(success=True, notes=[note], raw_count=len(comments_list))
+            return AdapterResult(success=True, notes=[note], raw_count=len(comments_list),
+                metadata={'pagination': {'request_cursor': None, 'next_cursor': None,
+                    'exhausted': None, 'page_complete': True,
+                    'coverage_scope': 'LOADED_COMMENT_DOM_ONLY',
+                    'partial_reason': 'NATIVE_CURSOR_AND_TOTAL_NOT_OBSERVED'}})
         finally:
             if page is not None:
                 try:

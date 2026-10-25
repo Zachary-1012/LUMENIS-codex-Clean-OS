@@ -11,6 +11,7 @@ class CoreAcc02Repository implements Acc02Repository {
   CoreAcc02Repository({required this._client});
 
   final LumenisCoreClient _client;
+  String domainId = 'CTH';
 
   @override
   Future<Acc02Snapshot> load() async {
@@ -25,7 +26,7 @@ class CoreAcc02Repository implements Acc02Repository {
       contextError = error;
     }
     try {
-      subjectsResponse = await _client.settingsSubjects(domainId: 'CTH');
+      subjectsResponse = await _client.settingsSubjects(domainId: domainId);
     } catch (error) {
       subjectsError = error;
     }

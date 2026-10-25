@@ -21,8 +21,9 @@ import os
 import json
 import time
 import threading
+from pathlib import Path
 from typing import Dict, Optional
-from ..config import BASE_DIR
+from lumenis.shared.database.registry import get_data_dir
 
 # ---------- 风险等级 ----------
 HEALTHY = "HEALTHY"            # 健康：基线频率
@@ -48,7 +49,7 @@ DEFAULT_POLICY = {
     "light_to_medium": 2,       # 轻度下再犯N次升中度
     "medium_to_iprisk": 2,
     "net_backoff": 60,
-    "state_file": os.path.join(BASE_DIR, "..", "data", "risk_state.json"),
+    "state_file": str(Path(get_data_dir()) / 'risk_state.json'),
 }
 
 _LEVEL_CN = {
@@ -69,6 +70,7 @@ class PlatformRisk:
         self.last_success_at = 0.0
         self.cooldown_until = 0.0
         self.detail = ""
+        self.provider_retry_after_until = 0.0
 
     def to_dict(self) -> dict:
         return self.__dict__.copy()
@@ -204,6 +206,22 @@ class RiskController:
         with self._g:
             return self._interval_locked(self._of(platform), now)
 
+    def defer_retry_after(self, platform: str, seconds: int, *, now: float = None):
+        """Persist an observed provider cooldown for every manual/auto caller."""
+        if type(seconds) is not int or seconds < 0:
+            raise ValueError('Retry-After requires nonnegative observed seconds')
+        stamp = time.time() if now is None else now
+        with self._g:
+            state = self._of(platform)
+            state.provider_retry_after_until = max(state.provider_retry_after_until,stamp+seconds)
+            self._save()
+
+    def retry_after_remaining(self, platform: str, *, now: float = None) -> int:
+        import math
+        stamp = time.time() if now is None else now
+        with self._g:
+            return max(0,math.ceil(self._of(platform).provider_retry_after_until-stamp))
+
     def allow(self, platform: str, manual: bool = False, now: float = None):
         """是否允许此刻采集。返回 (allowed, reason)。
         手动：仅 NEED_VERIFY / IP_RISK 冷却中硬拦截（保护账号）；
@@ -211,6 +229,8 @@ class RiskController:
         now = now or time.time()
         with self._g:
             st = self._of(platform)
+            if now < st.provider_retry_after_until:
+                return False, f'平台 Retry-After 冷却中，剩余{int(st.provider_retry_after_until-now)+1}s'
             if st.level == NEED_VERIFY:
                 return False, "登录态失效，需重新登录/验证"
             if st.level == IP_RISK:
@@ -238,6 +258,8 @@ class RiskController:
                     "last_result": st.last_result, "last_run_at": st.last_run_at,
                     "last_success_at": st.last_success_at, "cooldown_remain": cooling,
                     "interval_s": self._interval_locked(st, now), "detail": st.detail,
+                    'provider_retry_after_remain':max(0,int(st.provider_retry_after_until-now)+1)
+                        if now < st.provider_retry_after_until else 0,
                 })
         return out
 

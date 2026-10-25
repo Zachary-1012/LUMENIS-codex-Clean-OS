@@ -242,6 +242,191 @@ def test_authorized_memory_methods_use_real_signed_sources_and_task_owner(agent_
     assert tm.query_tasks(status='succeeded')
 
 
+def _memory_search_sources(path):
+    from canonical_data import (
+        CanonicalRecord,
+        ensure_canonical_table,
+        persist_canonical,
+    )
+    from lumenis.shared.evidence import store
+    from subject_registry import ensure_schema
+    with sqlite3.connect(path) as con:
+        ensure_schema(con)
+        con.executemany("""INSERT INTO lumenis_subject_registry
+            (subject_id,domain_id,subject_type,name_en,name_zh,name_en_norm,name_zh_norm,created_at,updated_at)
+            VALUES(?,'CTH','company',?,?,?,?,datetime('now'),datetime('now'))""",
+            [(identity, identity, identity, identity.lower(), identity) for identity in ('SEARCH-ONE', 'SEARCH-TWO')])
+        store.ensure_evidence_schema(con)
+        existing = {row[1] for row in con.execute('PRAGMA table_info(app_evidence_records)')}
+        for column, kind, default in store.EVIDENCE_CHAIN_NEW_COLUMNS:
+            if column not in existing:
+                suffix = f' DEFAULT {default}' if default != 'NULL' else ''
+                con.execute(f'ALTER TABLE app_evidence_records ADD COLUMN {column} {kind}{suffix}')
+        ensure_canonical_table(connection=con)
+        evidence_ids = []
+        for identity, subject, text, tags in [
+                ('exact', 'SEARCH-ONE', 'car 品牌营销 한국어', ['brief']),
+                ('substring', 'SEARCH-ONE', 'scar unrelated', ['other']),
+                ('other-scope', 'SEARCH-TWO', 'car private other scope', ['brief'])]:
+            evidence = store.record_evidence(connection=con, source='isolated-search-fixture',
+                project='LUMENIS', product='CTH', feature_id='SCOPED_MEMORY', test_name=identity,
+                result='PASS', status='verified', inputs={'source_ids': [identity]},
+                outputs={'fixture': True}, domain_id='cth', subject_id=subject)
+            evidence_ids.append(evidence)
+            persist_canonical(con, CanonicalRecord(canonical_id=identity, source_id=identity,
+                external_id=identity, product_id='CTH', domain_id='cth', subject_id=subject,
+                source_table='notes', title=text, content=text, tags=json.dumps(tags),
+                scope_status='VERIFIED', scope_evidence_ref=str(evidence)))
+    return evidence_ids
+
+
+def _focused_memory_search_task(api):
+    response = api.post('/api/ai/tasks', headers={'Authorization': 'Bearer fixture-session-one'}, json={
+        'execution_mode': 'agent', 'input': 'Search the original permitted materials', 'domain_id': 'cth',
+        'scope': {'global_scope': False, 'subject_id': 'SEARCH-ONE', 'brand_focus_id': None},
+        'steps': [{'skill_id': 'zbc.skill_registry_snapshot', 'input': {}}]})
+    assert response.status_code == 202, response.get_json()
+    return response.get_json()['task']['task_id']
+
+
+def test_http_memory_search_executes_bm25_with_original_scope_and_reopen(request, monkeypatch):
+    from lumenis.system.ai_gateway import core
+    monkeypatch.setattr(core, 'run_owned_analysis', lambda **_: pytest.fail('search invoked a model'))
+    api, app, path = request.getfixturevalue('agent_client')
+    _memory_search_sources(path)
+    task_id = _focused_memory_search_task(api)
+    url = f'/api/ai/tasks/{task_id}/memory'
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    for query in ('car', '品牌营销', '한국어'):
+        response = app.test_client().get(url, headers=own,
+            query_string={'layer': 'semantic', 'query': query, 'limit': 1, 'tag': 'brief'})
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        assert [row['canonical_id'] for row in body['records']] == ['exact']
+        assert body['truth_kind'] == 'source_reference' and body['read_state'] == 'ready'
+        assert body['retrieval']['mode'] == 'BM25_ONLY'
+        assert body['retrieval']['authorized_candidates'] == 1
+        assert body['retrieval']['dense'] == 'BLOCKED_MODEL_NOT_ADMITTED'
+        assert not body['retrieval']['neural_retrieval_performed']
+    assert api.get(url, headers=own, query_string={'layer': 'semantic', 'query': 'car',
+        'sub_library': 'not-declared'}).get_json()['records'] == []
+    assert api.get(url, headers={'Authorization': 'Bearer fixture-session-two'},
+        query_string={'layer': 'semantic', 'query': 'car'}).status_code == 403
+    derived = {'layer': 'semantic', 'key': 'draft', 'value': {'text': 'human memory'}, 'expected_revision': 0}
+    assert api.post(url, headers=own, json=derived).status_code == 200
+    old = api.get(url, headers=own, query_string={'layer': 'semantic'}).get_json()
+    assert old['truth_kind'] == 'derived_memory' and old['records'][0]['value'] == derived['value']
+    assert 'retrieval' not in old
+
+
+@pytest.mark.parametrize('params', [
+    {'layer': 'episodic', 'query': 'car'}, {'layer': 'semantic', 'query': ''},
+    {'layer': 'semantic', 'query': 'car', 'key': 'draft'},
+    {'layer': 'semantic', 'query': 'car', 'actor_id': '2'},
+    {'layer': 'semantic', 'query': 'car', 'subject_id': 'SEARCH-TWO'},
+    {'layer': 'semantic', 'query': 'car', 'limit': '0'},
+    {'layer': 'semantic', 'query': 'car', 'limit': '201'},
+    {'layer': 'semantic', 'query': 'car', 'limit': '1.5'},
+    [('layer', 'semantic'), ('query', 'car'), ('query', 'private')],
+])
+def test_http_memory_search_rejects_invalid_or_scope_overriding_fields(request, params):
+    api, _app, _path = request.getfixturevalue('agent_client')
+    task_id = submit(api)
+    response = api.get(f'/api/ai/tasks/{task_id}/memory', query_string=params,
+        headers={'Authorization': 'Bearer fixture-session-one'})
+    assert response.status_code == 400, response.get_json()
+
+
+@pytest.mark.parametrize('withdraw', ['task_permission', 'source_signature'])
+def test_http_memory_search_rechecks_revocation_during_actual_ranking(request, monkeypatch, withdraw):
+    from agent_memory import retrieval
+    api, _app, path = request.getfixturevalue('agent_client')
+    _memory_search_sources(path)
+    task_id = _focused_memory_search_task(api)
+    original = retrieval.lexical_search
+    def rank_then_withdraw(*args, **kwargs):
+        ranked = original(*args, **kwargs)
+        with sqlite3.connect(path) as con:
+            if withdraw == 'task_permission':
+                con.execute("DELETE FROM v4_member_authorizations WHERE module='agent_runtime'")
+            else:
+                con.execute("UPDATE app_evidence_records SET integrity_digest='withdrawn-fixture-signature'")
+        return ranked
+    monkeypatch.setattr(retrieval, 'lexical_search', rank_then_withdraw)
+    response = api.get(f'/api/ai/tasks/{task_id}/memory',
+        query_string={'layer': 'semantic', 'query': 'car'},
+        headers={'Authorization': 'Bearer fixture-session-one'})
+    assert response.status_code == 403, response.get_json()
+    assert 'records' not in response.get_json()
+
+
+@pytest.mark.parametrize('change', ['none', 'delete', 'rewrite', 'unselected_delete'])
+def test_http_memory_search_rechecks_selected_original_file_after_ranking(request, monkeypatch, tmp_path, change):
+    import socket
+
+    import shared_artifacts
+    from agent_memory import retrieval
+    from lumenis.importer import documents
+    from lumenis.system.security import permission
+
+    def no_network(*args, **kwargs):
+        pytest.fail('isolated source search attempted network access')
+    monkeypatch.setattr(socket.socket, 'connect', no_network)
+    monkeypatch.setattr(socket.socket, 'connect_ex', no_network)
+    monkeypatch.setattr(socket, 'create_connection', no_network)
+    api, app, path = request.getfixturevalue('agent_client')
+    _memory_search_sources(path)
+    monkeypatch.setenv('ZBC_ARTIFACT_DIR', str(tmp_path / 'original-artifacts'))
+    shared_artifacts.ensure_artifact_table()
+    with sqlite3.connect(path) as con:
+        con.executemany("INSERT INTO v4_member_authorizations(user_id,product_id,module,action,data_scope) "
+            "VALUES(1,'CTH','reports',?,?)", [(action, json.dumps({'global': True})) for action in ('read', 'write')])
+    gate = permission.get_permission_gate()
+    gate.grant_permission(permission.PermissionLevel.COMMIT)
+    scope = {'domain_id': 'cth', 'subject_id': 'SEARCH-ONE', 'brand_focus_id': None, 'global_scope': False}
+    originals = []
+    with app.test_request_context('/', headers={'Authorization': 'Bearer fixture-session-one'}):
+        for index, text in enumerate(('postrank original material', 'unrelated retained document')):
+            uploaded = tmp_path / f'search-original-{index}.txt'
+            uploaded.write_text(text, encoding='utf-8')
+            args = {'actor': {'id': 1}, 'scope': scope, 'provenance': {
+                'source_url': f'https://example.org/isolated-original-{index}', 'published_at': None,
+                'captured_at': '2026-10-25T00:00:00Z', 'rights': 'public-reference-only',
+                'title': text}}
+            resource = documents.document_import_resource(str(uploaded), **args)
+            gate.grant_approval('data_import', resource=resource, granted_by='isolated-test')
+            imported = documents.import_document(str(uploaded), **args)
+            original = shared_artifacts.artifact_file_path(imported['source_artifact_ref'])
+            assert original is not None and original.read_bytes() == uploaded.read_bytes()
+            originals.append(original)
+    task_id = _focused_memory_search_task(api)
+    rank = retrieval.lexical_search
+    def rank_then_change_original(*args, **kwargs):
+        found = rank(*args, **kwargs)
+        assert len(found[0]) == 1 and found[0][0]['title'] == 'postrank original material'
+        if change == 'delete':
+            originals[0].unlink()
+        elif change == 'rewrite':
+            raw = originals[0].read_bytes()
+            originals[0].write_bytes(b'x' * len(raw))
+        elif change == 'unselected_delete':
+            originals[1].unlink()
+        return found
+    monkeypatch.setattr(retrieval, 'lexical_search', rank_then_change_original)
+    before = path.read_bytes()
+    response = api.get(f'/api/ai/tasks/{task_id}/memory',
+        query_string={'layer': 'semantic', 'query': 'postrank', 'limit': 1},
+        headers={'Authorization': 'Bearer fixture-session-one'})
+    assert path.read_bytes() == before, 'File withdrawal must not require a database mutation'
+    if change in {'delete', 'rewrite'}:
+        assert response.status_code == 403, response.get_json()
+        assert response.get_json()['code'] == 'MEMORY_SOURCE_CHANGED'
+        assert 'records' not in response.get_json()
+    else:
+        assert response.status_code == 200, response.get_json()
+        assert [row['title'] for row in response.get_json()['records']] == ['postrank original material']
+
+
 def test_learning_http_scoped_review_qualification_restart_and_inactive_apply(agent_client):
     api, app, path = agent_client
     task_id = submit(api)

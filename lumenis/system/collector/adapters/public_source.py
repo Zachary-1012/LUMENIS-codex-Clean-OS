@@ -335,6 +335,8 @@ def _validate_public_url_and_pin(
         hostname = _canonical_hostname(hostname)
     else:
         is_dns_name = False
+        if not _is_globally_routable(hostname):
+            raise PublicSourceError("private or local network sources are not allowed")
     pins = load_public_source_host_pins() if host_pins is None else host_pins
     pinned = _host_pin(hostname, pins)
     resolver = "operator_pin" if pinned else "system_dns"

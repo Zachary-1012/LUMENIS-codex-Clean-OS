@@ -78,9 +78,10 @@ abstract final class SysSystemCopy {
       'sys.failure.response.title': '系统状态暂不可用',
       'sys.failure.response.detail': '系统没有提供有效结果，请稍后重试。',
       'sys02.eyebrow': '系统 · 采集',
-      'sys02.title': '采集器状态',
+      'sys02.title': '获取资料',
+      'sys02.summary.title': '采集记录',
       'sys02.manual.action': '手动采集',
-      'sys02.manual.hint': '可选；默认对全部已登记主体自动采集，在系统后台运行。',
+      'sys02.manual.hint': '刷新时采集；定时采集需单独开启。',
       'sys02.manual.queued': '已提交手动采集，在系统后台运行。',
       'sys02.manual.failed': '手动采集未能提交，请稍后重试。',
       'sys02.subtitle': '查看调度、限流、重试与入链状态；未验证的采集不会被标为已运行。',
@@ -88,7 +89,7 @@ abstract final class SysSystemCopy {
       'sys02.summary.partial': '受限连通',
       'sys02.summary.missing': '缺少访问条件',
       'sys02.summary.blocked': '被安全策略阻断',
-      'sys02.lanes.title': '平台运行线',
+      'sys02.lanes.title': '来源连接',
       'sys02.lanes.detail': '每条线只呈现最近一次返回的状态，不把注册记录当作健康证明。',
       'sys02.lanes.empty': '当前接口没有返回平台运行线。',
       'sys02.field.platform': '平台',
@@ -259,10 +260,11 @@ abstract final class SysSystemCopy {
       'sys.failure.response.detail':
           'The system did not return a valid result. Try again later.',
       'sys02.eyebrow': 'SYSTEM · COLLECTION',
-      'sys02.title': 'Collector status',
+      'sys02.title': 'Collect sources',
+      'sys02.summary.title': 'Collection history',
       'sys02.manual.action': 'Collect now',
       'sys02.manual.hint':
-          'Optional; all registered subjects are collected automatically in the system background by default.',
+          'Collect on refresh. Scheduled collection is optional.',
       'sys02.manual.queued':
           'Manual collection queued in the system background.',
       'sys02.manual.failed':
@@ -273,7 +275,7 @@ abstract final class SysSystemCopy {
       'sys02.summary.partial': 'Partially connected',
       'sys02.summary.missing': 'Access condition missing',
       'sys02.summary.blocked': 'Policy blocked',
-      'sys02.lanes.title': 'Platform lanes',
+      'sys02.lanes.title': 'Connections',
       'sys02.lanes.detail':
           'Each lane shows only the latest returned state; registration is not health proof.',
       'sys02.lanes.empty': 'The current endpoint returned no platform lanes.',
@@ -471,9 +473,10 @@ abstract final class SysSystemCopy {
       'sys.failure.response.title': '시스템 상태를 사용할 수 없음',
       'sys.failure.response.detail': '시스템이 유효한 결과를 반환하지 않았습니다. 나중에 다시 시도하세요.',
       'sys02.eyebrow': 'SYSTEM · 수집',
-      'sys02.title': '수집기 상태',
+      'sys02.title': '자료 수집',
+      'sys02.summary.title': '수집 기록',
       'sys02.manual.action': '수동 수집',
-      'sys02.manual.hint': '선택 사항이며 기본적으로 등록된 모든 주체를 시스템 백그라운드에서 자동 수집합니다.',
+      'sys02.manual.hint': '새로고침할 때 수집합니다. 예약 수집은 별도로 설정합니다.',
       'sys02.manual.queued': '수동 수집이 시스템 백그라운드에 등록되었습니다.',
       'sys02.manual.failed': '수동 수집을 등록하지 못했습니다. 잠시 후 다시 시도하세요.',
       'sys02.subtitle': '스케줄, 제한, 재시도와 체인 유입을 확인하며 등록 상태를 정상으로 표시하지 않습니다.',
@@ -481,7 +484,7 @@ abstract final class SysSystemCopy {
       'sys02.summary.partial': '부분 연결',
       'sys02.summary.missing': '접근 조건 없음',
       'sys02.summary.blocked': '정책 차단',
-      'sys02.lanes.title': '플랫폼 실행 라인',
+      'sys02.lanes.title': '출처 연결',
       'sys02.lanes.detail': '각 라인은 마지막 반환 상태만 표시하며 등록은 정상 증명이 아닙니다.',
       'sys02.lanes.empty': '현재 엔드포인트가 플랫폼 실행 라인을 반환하지 않았습니다.',
       'sys02.field.platform': '플랫폼',
@@ -683,27 +686,16 @@ class SysPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: LumenisTheme.of(context).surface,
-        border: Border.all(color: LumenisTheme.of(context).line),
-        borderRadius: BorderRadius.circular(14),
-      ),
+      decoration: LumenisTheme.paper(LumenisTheme.of(context)),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(LumenisSpace.section),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (title != null) ...[
-              Text(
-                title!,
-                style: TextStyle(
-                  color: LumenisTheme.of(context).foreground,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(title!, style: Theme.of(context).textTheme.titleMedium),
               if (detail != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: LumenisSpace.tight),
                 Text(
                   detail!,
                   style: TextStyle(
@@ -712,7 +704,7 @@ class SysPanel extends StatelessWidget {
                   ),
                 ),
               ],
-              const SizedBox(height: 18),
+              const SizedBox(height: LumenisSpace.section),
             ],
             child,
           ],
@@ -745,36 +737,20 @@ class SysPageHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                eyebrow,
-                style: TextStyle(
-                  color: LumenisTheme.of(context).system,
-                  fontSize: 11,
-                  letterSpacing: 1.1,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  color: LumenisTheme.of(context).foreground,
-                  fontSize: 30,
-                  height: 1.12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 10),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
-                child: Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).muted,
-                    height: 1.5,
+              Text(title, style: Theme.of(context).textTheme.headlineMedium),
+              if (subtitle.trim().isNotEmpty) ...[
+                const SizedBox(height: LumenisSpace.inset),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 760),
+                  child: Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: LumenisTheme.of(context).muted,
+                      height: 1.5,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -801,17 +777,19 @@ class SysStatusBadge extends StatelessWidget {
     return Semantics(
       label: '${SysSystemCopy.text(context, 'sys.common.status')}: $label',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: ShapeDecoration(
           color: color.withValues(alpha: 0.11),
-          border: Border.all(color: color.withValues(alpha: 0.42)),
-          borderRadius: BorderRadius.circular(18),
+          shape: LumenisPixelBorder(
+            step: 2,
+            side: BorderSide(color: color.withValues(alpha: 0.42)),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            LumenisIcon(Icons.circle, size: 7, color: color),
-            const SizedBox(width: 7),
+            SizedBox.square(dimension: 4, child: ColoredBox(color: color)),
+            const SizedBox(width: LumenisSpace.tight),
             Text(
               label,
               style: TextStyle(
@@ -1004,24 +982,33 @@ class WaitingFeedback extends StatelessWidget {
   Widget build(BuildContext context) {
     final appearance = Sys05AppearanceScope.maybeOf(context);
     final tone = appearance?.waitingTone ?? WaitingTone.simple;
-    final reduced = appearance?.reducedMotion == true ||
+    final reduced =
+        appearance?.reducedMotion == true ||
         MediaQuery.maybeOf(context)?.disableAnimations == true;
     // English/Korean deliberately use neutral copy pending editorial review.
-    final playfulChinese = tone == WaitingTone.playful &&
+    final playfulChinese =
+        tone == WaitingTone.playful &&
         Localizations.localeOf(context).languageCode == 'zh';
-    return ExcludeSemantics(child: IgnorePointer(child: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _WaitingPaper(reduced: reduced, scene: scene),
-        if (tone != WaitingTone.off) ...[
-          const SizedBox(height: 8),
-          Text(playfulChinese ? _jokes[scene]! :
-            SysSystemCopy.text(context, 'sys.waiting.neutral'),
-            key: const ValueKey('sys/waiting-extra-text')),
-        ],
-      ],
-    )));
+    return ExcludeSemantics(
+      child: IgnorePointer(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _WaitingPaper(reduced: reduced, scene: scene),
+            if (tone != WaitingTone.off) ...[
+              const SizedBox(height: 8),
+              Text(
+                playfulChinese
+                    ? _jokes[scene]!
+                    : SysSystemCopy.text(context, 'sys.waiting.neutral'),
+                key: const ValueKey('sys/waiting-extra-text'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1032,6 +1019,7 @@ class _WaitingPaper extends StatefulWidget {
   @override
   State<_WaitingPaper> createState() => _WaitingPaperState();
 }
+
 class _WaitingPaperState extends State<_WaitingPaper>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _motion;
@@ -1039,44 +1027,68 @@ class _WaitingPaperState extends State<_WaitingPaper>
   @override
   void initState() {
     super.initState();
-    _motion = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
-    _foreground = WidgetsBinding.instance.lifecycleState == null ||
+    _motion = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+    _foreground =
+        WidgetsBinding.instance.lifecycleState == null ||
         WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
   }
+
   void _sync() {
-    if (!widget.reduced && _foreground && TickerMode.valuesOf(context).enabled) {
+    if (!widget.reduced &&
+        _foreground &&
+        TickerMode.valuesOf(context).enabled) {
       if (!_motion.isAnimating) _motion.repeat(reverse: true);
     } else {
       _motion.stop();
       _motion.value = 0;
     }
   }
+
   @override
-  void didChangeDependencies() { super.didChangeDependencies(); _sync(); }
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
   @override
   void didUpdateWidget(covariant _WaitingPaper oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.scene != widget.scene) _motion.value = 0;
     _sync();
   }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed; _sync();
+    _foreground = state == AppLifecycleState.resumed;
+    _sync();
   }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _motion.dispose(); super.dispose();
+    _motion.dispose();
+    super.dispose();
   }
+
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _motion, builder: (context, _) => CustomPaint(
-      key: const ValueKey('sys/waiting-paper'), size: const Size(64, 40),
-      painter: _PaperPainter(_motion.value, Theme.of(context).colorScheme.primary, widget.scene),
+    animation: _motion,
+    builder: (context, _) => CustomPaint(
+      key: const ValueKey('sys/waiting-paper'),
+      size: const Size(64, 40),
+      painter: _PaperPainter(
+        _motion.value,
+        Theme.of(context).colorScheme.primary,
+        widget.scene,
+      ),
     ),
   );
 }
+
 class _PaperPainter extends CustomPainter {
   const _PaperPainter(this.phase, this.color, this.scene);
   final double phase;
@@ -1085,56 +1097,107 @@ class _PaperPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final wave = math.sin(phase * math.pi);
-    final ink = Paint()..color = color..style = PaintingStyle.stroke..strokeWidth = 1.6;
+    final ink = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6;
     void line(double x, double y, double xx, double yy) =>
-      canvas.drawLine(Offset(x, y), Offset(xx, yy), ink);
+        canvas.drawLine(Offset(x, y), Offset(xx, yy), ink);
     switch (scene) {
       case WaitingScene.search:
         canvas.drawRect(Rect.fromLTWH(8, 8, 23, 26), ink);
-        line(12, 14, 24, 14); line(12, 20, 22, 20);
+        line(12, 14, 24, 14);
+        line(12, 20, 22, 20);
         canvas.drawCircle(Offset(34 + wave * 5, 18), 8, ink);
         line(40 + wave * 5, 24, 48 + wave * 5, 32);
         break;
       case WaitingScene.sources:
         for (var i = 0; i < 3; i++) {
-          canvas.drawRect(Rect.fromLTWH(10.0 + i * (5.0 - wave * 2.0), 5.0 + i * 5.0, 28.0, 22.0), ink);
+          canvas.drawRect(
+            Rect.fromLTWH(
+              10.0 + i * (5.0 - wave * 2.0),
+              5.0 + i * 5.0,
+              28.0,
+              22.0,
+            ),
+            ink,
+          );
         }
-        canvas.drawCircle(const Offset(40, 9), 3, ink); line(40, 12, 40, 18);
+        canvas.drawCircle(const Offset(40, 9), 3, ink);
+        line(40, 12, 40, 18);
         break;
       case WaitingScene.compare:
         for (var i = 0; i < 2; i++) {
           final x = 12.0 + i * 26;
           final y = 6 + (i == 0 ? wave : 1 - wave) * 4;
-          canvas.drawPath(Path()..moveTo(x, y)..lineTo(x + 5, y)
-            ..lineTo(x + 5, 28)..lineTo(x + 2.5, 33)..lineTo(x, 28)..close(), ink);
+          canvas.drawPath(
+            Path()
+              ..moveTo(x, y)
+              ..lineTo(x + 5, y)
+              ..lineTo(x + 5, 28)
+              ..lineTo(x + 2.5, 33)
+              ..lineTo(x, 28)
+              ..close(),
+            ink,
+          );
         }
         line(25, 19, 33, 19);
         break;
       case WaitingScene.analysis:
         final d = wave * 3;
-        canvas.drawPath(Path()..moveTo(16 + d, 8)..lineTo(10 + d, 8)
-          ..lineTo(10 + d, 32)..lineTo(16 + d, 32), ink);
-        canvas.drawPath(Path()..moveTo(48 - d, 8)..lineTo(54 - d, 8)
-          ..lineTo(54 - d, 32)..lineTo(48 - d, 32), ink);
+        canvas.drawPath(
+          Path()
+            ..moveTo(16 + d, 8)
+            ..lineTo(10 + d, 8)
+            ..lineTo(10 + d, 32)
+            ..lineTo(16 + d, 32),
+          ink,
+        );
+        canvas.drawPath(
+          Path()
+            ..moveTo(48 - d, 8)
+            ..lineTo(54 - d, 8)
+            ..lineTo(54 - d, 32)
+            ..lineTo(48 - d, 32),
+          ink,
+        );
         line(24, 17, 39, 17);
         canvas.drawCircle(const Offset(31, 26), 3, ink);
         break;
       case WaitingScene.export:
         // A folded paper remains on-screen; no claimed delivery or success.
-        canvas.drawPath(Path()..moveTo(8, 10)..lineTo(53, 8 + wave * 3)
-          ..lineTo(36, 33)..lineTo(27, 23)..close(), ink);
-        line(27, 23, 53, 8 + wave * 3); line(27, 23, 24, 32);
+        canvas.drawPath(
+          Path()
+            ..moveTo(8, 10)
+            ..lineTo(53, 8 + wave * 3)
+            ..lineTo(36, 33)
+            ..lineTo(27, 23)
+            ..close(),
+          ink,
+        );
+        line(27, 23, 53, 8 + wave * 3);
+        line(27, 23, 24, 32);
         break;
       case WaitingScene.waiting:
-        canvas.drawPath(Path()..moveTo(36, 11)..lineTo(36, 28)
-          ..quadraticBezierTo(36, 36, 28, 36)..quadraticBezierTo(20, 36, 20, 28)
-          ..lineTo(20, 9 - wave * 3)..quadraticBezierTo(20, 3, 26, 3)
-          ..quadraticBezierTo(32, 3, 32, 9)..lineTo(32, 27)
-          ..quadraticBezierTo(32, 31, 28, 31)..quadraticBezierTo(25, 31, 25, 27)
-          ..lineTo(25, 12), ink);
+        canvas.drawPath(
+          Path()
+            ..moveTo(36, 11)
+            ..lineTo(36, 28)
+            ..quadraticBezierTo(36, 36, 28, 36)
+            ..quadraticBezierTo(20, 36, 20, 28)
+            ..lineTo(20, 9 - wave * 3)
+            ..quadraticBezierTo(20, 3, 26, 3)
+            ..quadraticBezierTo(32, 3, 32, 9)
+            ..lineTo(32, 27)
+            ..quadraticBezierTo(32, 31, 28, 31)
+            ..quadraticBezierTo(25, 31, 25, 27)
+            ..lineTo(25, 12),
+          ink,
+        );
         break;
     }
   }
+
   @override
   bool shouldRepaint(_PaperPainter old) =>
       old.phase != phase || old.color != color || old.scene != scene;

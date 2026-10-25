@@ -390,9 +390,25 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
                   ? Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        SizedBox(width: 300, child: side),
-                        VerticalDivider(width: 1, color: theme.line),
-                        Expanded(child: paper),
+                        SizedBox(
+                          width: 310,
+                          child: DecoratedBox(
+                            decoration: LumenisTheme.chassis(theme),
+                            child: side,
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(8, 8, 24, 24),
+                            child: DecoratedBox(
+                              decoration: LumenisTheme.paper(theme),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: paper,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     )
                   : DefaultTabController(
@@ -431,7 +447,7 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
   }
 
   Widget _sidebar(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(20),
+    padding: const EdgeInsets.fromLTRB(24, 22, 24, 28),
     children: [
       Text(
         _copy(context, '选择资料', 'Choose sources', '자료 선택'),
@@ -465,7 +481,7 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
             '자료실에서 파일을 먼저 가져오세요.',
           ),
         ),
-      const SizedBox(height: 18),
+      const SizedBox(height: 26),
       TextField(
         controller: _question,
         maxLength: 1500,
@@ -482,6 +498,7 @@ class _SharedResearchWorkspaceState extends State<SharedResearchWorkspace> {
         ),
         onChanged: (_) => setState(() {}),
       ),
+      const SizedBox(height: 12),
       FilledButton.icon(
         onPressed:
             _busy ||

@@ -342,6 +342,44 @@ class TaskQueue:
         except Exception:
             pass
 
+    def yield_pending(self, task_id, *, run_id=None, worker_id=None, lease_owner=None, delay=0):
+        """Release one page/chunk without consuming the transport retry budget."""
+        if not self._has_attempt_receipt(run_id, worker_id, lease_owner):
+            return False
+        with _LOCK, self._conn:
+            current = self._conn.execute('SELECT payload FROM tasks WHERE id=? AND status=\'running\' '
+                'AND run_id=? AND worker_id=? AND lease_owner=?',
+                (task_id, run_id, worker_id, lease_owner)).fetchone()
+            if current is None or json.loads(current['payload']).get('cancel_requested') is True:
+                return False
+            self._conn.execute('UPDATE tasks SET status=\'pending\',scheduled_at=?,locked_at=0,lease_owner=\'\' '
+                'WHERE id=? AND run_id=? AND worker_id=? AND lease_owner=?',
+                (time.time() + max(0, float(delay)), task_id, run_id, worker_id, lease_owner))
+            return True
+
+    def set_manual_request_cancelled(self, task_id, request_key, *, cancelled):
+        """Operational transition after the Collector revalidates its exact owner.
+
+        Cancellation invalidates the attempt before a subsequent business commit.
+        A commit already published is recovered from its signed Source receipt.
+        """
+        if type(cancelled) is not bool or not isinstance(request_key, str) or not request_key:
+            return False
+        with _LOCK, self._conn:
+            self._conn.execute('BEGIN IMMEDIATE')
+            row = self._conn.execute("SELECT * FROM tasks WHERE id=? AND task_type=? AND json_extract(payload,'$.request_key')=?",
+                (task_id, 'collector_manual_request', request_key)).fetchone()
+            if row is None or row['status'] == 'done':
+                return False
+            payload = json.loads(row['payload'])
+            if cancelled is False and payload.get('cancel_requested') is not True:
+                return False
+            payload['cancel_requested'] = cancelled
+            self._conn.execute('UPDATE tasks SET payload=?,status=\'pending\',scheduled_at=?,run_id=\'\','
+                'worker_id=\'\',lease_owner=\'\',locked_at=0,last_error=? WHERE id=?',
+                (json.dumps(payload, ensure_ascii=False), time.time(), 'CANCELLED' if cancelled else '', task_id))
+            return True
+
     def stats(self):
         """各状态计数 + 汇总（Observatory/监控消费）。"""
         with _LOCK, self._conn:

@@ -90,6 +90,8 @@ class CapabilityMetadata:
             requires_approval=self.requires_approval,
             enabled=self.status == CapabilityStatus.ENABLED,
             version=self.version,
+            input_schema=self.input_schema or None,
+            output_schema=self.output_schema or None,
         )
 
 

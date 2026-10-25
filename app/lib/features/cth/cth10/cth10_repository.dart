@@ -68,6 +68,7 @@ class Cth10Report {
     required this.scopeLabel,
     required this.blocks,
     required this.evidence,
+    this.sourceBrief,
   });
 
   final String id;
@@ -77,6 +78,25 @@ class Cth10Report {
   final String scopeLabel;
   final List<Cth10ReportBlock> blocks;
   final List<Cth10EvidenceReference> evidence;
+  final Cth10SourceBrief? sourceBrief;
+}
+
+/// Presentation projection of the existing owner response, after read binding.
+/// These counts describe returned sources, never market or business metrics.
+class Cth10SourceBrief {
+  const Cth10SourceBrief({
+    required this.contentHash,
+    required this.status,
+    required this.coverage,
+    required this.freshness,
+    required this.collectionState,
+    required this.sample,
+    required this.records,
+  });
+
+  final String contentHash, status, coverage, freshness, collectionState;
+  final Map<String, dynamic> sample;
+  final List<Map<String, dynamic>> records;
 }
 
 class Cth10WorkspaceData {
@@ -139,7 +159,11 @@ class CoreCth10Repository implements Cth10Repository {
     var droppedRows = false;
     final reports = <Cth10Report>[];
     for (final raw in _maps(reportSection['items'])) {
-      final decoded = _decodeReport(raw, context);
+      final decoded = _decodeReport(
+        raw,
+        context,
+        _map(response['source_brief']),
+      );
       if (decoded == null) {
         droppedRows = true;
       } else {
@@ -163,6 +187,7 @@ class CoreCth10Repository implements Cth10Repository {
   ({Cth10Report value, bool dropped})? _decodeReport(
     Map<String, dynamic> raw,
     Cth10Context context,
+    Map<String, dynamic>? sourceBrief,
   ) {
     final id = _safeText(raw['id']);
     final title = _safeText(raw['title']);
@@ -182,6 +207,20 @@ class CoreCth10Repository implements Cth10Repository {
     ).map(_decodeBlock).whereType<Cth10ReportBlock>().toList(growable: false);
     if (blocks.isEmpty) return null;
 
+    final brief = id.startsWith('source-brief:')
+        ? _decodeSourceBrief(
+            sourceBrief,
+            id,
+            scopeLabel,
+            blocks,
+            evidence.items,
+            context,
+          )
+        : null;
+    // Never fall back to diagnostic Markdown when the structured projection
+    // does not belong to this exact report/source snapshot.
+    if (id.startsWith('source-brief:') && brief == null) return null;
+
     return (
       value: Cth10Report(
         id: id,
@@ -191,8 +230,93 @@ class CoreCth10Repository implements Cth10Repository {
         scopeLabel: scopeLabel,
         blocks: blocks,
         evidence: evidence.items,
+        sourceBrief: brief,
       ),
       dropped: evidence.dropped || blocks.length != rawBlocks.length,
+    );
+  }
+
+  Cth10SourceBrief? _decodeSourceBrief(
+    Map<String, dynamic>? brief,
+    String reportId,
+    String scopeLabel,
+    List<Cth10ReportBlock> blocks,
+    List<Cth10EvidenceReference> evidence,
+    Cth10Context context,
+  ) {
+    if (brief == null) return null;
+    final hash = brief['content_hash'];
+    final scope = _map(brief['scope']);
+    final sample = _map(brief['sample']);
+    final records = _maps(brief['records']);
+    final focused = context.mode == Cth10ContextMode.focused;
+    if (hash is! String ||
+        !RegExp(r'^[0-9a-f]{64}$').hasMatch(hash) ||
+        reportId != 'source-brief:$hash' ||
+        !blocks.any(
+          (block) =>
+              block.kind == 'source_brief' && block.body == brief['markdown'],
+        ) ||
+        scope?['product_id'] != 'CTH' ||
+        scope?['domain_id'] != 'cth' ||
+        scope?['global'] != !focused ||
+        scope?['subject_id'] != (focused ? context.subjectId : null) ||
+        scope?['brand_focus_id'] != null ||
+        scope?['entity_label'] != scopeLabel ||
+        brief['records'] is! List ||
+        records.length != (brief['records'] as List).length ||
+        records.length != evidence.length ||
+        sample?['returned_verified_count'] != records.length ||
+        !{'AVAILABLE', 'PARTIAL', 'EMPTY'}.contains(brief['status'])) {
+      return null;
+    }
+    for (final key in [
+      'candidate_count',
+      'scanned_count',
+      'rejected_count',
+      'withheld_count',
+    ]) {
+      final count = sample?[key];
+      if (count is! int || count < 0) return null;
+    }
+    if (sample?['truncated'] is! bool || sample?['withheld'] is! bool) {
+      return null;
+    }
+    for (final key in ['source_type_counts_sample', 'platform_counts_sample']) {
+      final counts = _map(sample?[key]);
+      if (counts == null ||
+          counts.entries.any(
+            (entry) =>
+                _safeText(entry.key).isEmpty ||
+                entry.value is! int ||
+                (entry.value as int) < 0,
+          )) {
+        return null;
+      }
+    }
+    final identities = <String>{};
+    for (final record in records) {
+      final id = record['evidence_id'];
+      if (id is! String ||
+          !RegExp(r'^[1-9][0-9]*$').hasMatch(id) ||
+          record['scope_evidence_ref'] != id ||
+          !evidence.any((item) => item.id == 'evidence:canonical:$id') ||
+          !identities.add(id) ||
+          _safeText(record['source_id']).isEmpty ||
+          (focused && record['subject_id'] != context.subjectId)) {
+        return null;
+      }
+    }
+    return Cth10SourceBrief(
+      contentHash: hash,
+      status: brief['status'] as String,
+      coverage: _safeText(brief['coverage']),
+      freshness: _safeText(brief['freshness']),
+      collectionState: _safeText(brief['collection_state']),
+      sample: Map.unmodifiable(sample!),
+      records: List.unmodifiable(
+        records.map((record) => Map<String, dynamic>.unmodifiable(record)),
+      ),
     );
   }
 
@@ -314,6 +438,8 @@ class CoreCth10Repository implements Cth10Repository {
       );
     }
     if (binding?['screen'] != 'CTH-10' ||
+        binding?['contract'] != 'lumenis.scope-read-binding.v1' ||
+        binding?['module'] != 'commercial_realtime_stream' ||
         binding?['applied'] != true ||
         binding?['domain_id'] != 'CTH' ||
         binding?['product_id'] != 'CTH' ||
@@ -326,14 +452,20 @@ class CoreCth10Repository implements Cth10Repository {
         Cth10BlockedReason.pageBindingUnavailable,
       );
     }
-    if (binding?['actor_scope'] != 'verified') {
+    final policy = binding?['policy'];
+    final actorScope = binding?['actor_scope'];
+    final localRead =
+        policy == 'local-workspace-read-v1' && actorScope == 'anonymous_read';
+    final actorRead =
+        policy == 'actor-exact-scope-v1' && actorScope == 'authenticated';
+    if (!localRead && !actorRead) {
       throw const Cth10BlockedException(
         Cth10BlockedReason.pageBindingUnavailable,
       );
     }
     if (context.mode == Cth10ContextMode.globalAll &&
         (binding?.containsKey('subject_id') != true ||
-            binding?['global_all_granted'] != true ||
+            binding?['global_all_granted'] != actorRead ||
             binding?['subject_id'] != null)) {
       throw const Cth10BlockedException(
         Cth10BlockedReason.pageBindingUnavailable,

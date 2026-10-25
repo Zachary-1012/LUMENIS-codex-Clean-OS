@@ -1,58 +1,78 @@
 {
-  "recorded_at": "2026-10-24T06:36:40.294983+00:00",
-  "source_base": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
-  "scope": "Integrated Web/Windows Home, unsent draft and existing manuscript continuity. Entire 30 outcome groups / 396 requirements remain OPEN.",
-  "state": "IMPLEMENTED_WITH_BOUNDED_WEB_OPERATION",
+  "recorded_at": "2026-10-24T15:49:39.472427+00:00",
+  "source_base": "ceb55251f8e0776d474bb65fcaeed8b4458d807e",
+  "scope": "Complete approved product retained:30 outcomes/396 coverage/213 interactions/PE01-24. Current implementation joins domain reports, signed imports, immutable Office editing, media composition, work context and local packaging. No full outcome is inferred from this batch.",
+  "state": "LOCAL_IMPLEMENTATION_WITH_BOUNDED_REAL_OPERATIONS_NOT_PUBLISHED",
   "source_pins": {
-    ".github/workflows/app-verify.yml": "05a4ca41e578fc306c66418e414aaec3eed8ba74f69ebe33f510afdd73199b79",
-    ".github/workflows/platform-verify.yml": "ef0018ce28335243896c364193d6ebfa031aadbf291c1339479def55ec5c0eb1",
-    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": "1bb6acca3a764d754338342f1044a1112745ad3231bfd2859b305aa4e88227fb",
-    "app/lib/core/lumenis_core_client.dart": "caf7c7b2c4b787ff927b27d8cc68a9dc5d57c333c1266195f96ed13a8c642e56",
-    "app/lib/core/lumenis_theme.dart": "169f2abbc6b400877794a2b4b7867284ca9b5b1f164bbb0a5118afc341c3dabe",
-    "app/lib/features/account/acc03/acc03_screen.dart": "0f5cdd0ba0ba98dfea7391edc1b7a9c3fe7fa61564dde269f580211c7d32bfdb",
-    "app/lib/features/ai01/ai01_conversation_panel.dart": "757451a9fa1b368281c48a91b42152bc95f81848fd2431eaaa8682b2952eb9a7",
-    "app/lib/features/ai01/ai01_screen.dart": "530676daee4de5d725162a79aa00b3a714f48cd67db80abd5c0274eca6580975",
-    "app/lib/features/ai01/ai01_workspace_draft.dart": "055a37ea125183ba971e42d794b81b99d6893326cbb105230c036bd0f375e1e2",
-    "app/lib/features/shared/sh01/manuscript_controller.dart": "2d52874c01a93963c15615ca39a71fdd55ef1c52a8d53fce70fa150f27bd70c5",
-    "app/lib/features/shared/sh01/manuscript_editor.dart": "b06654c5a43ef550b8c0e67ebb9f0a6bece575851755386357ce635c42281133",
-    "app/lib/product/lumenis_app.dart": "255e120a41bd51ccc1dec19ff699d62bc25e084e3d45d5520eab6786abf94e81",
-    "app/lib/shell/lumenis_workspace_shell.dart": "f00b9818d20349948c63af02d4cf7b5da6bf494010970d89cd21141b83bcfc40",
-    "app/test/features/ai01/ai01_workspace_draft_test.dart": "5184ac8dd6f4b73b102e48ca3f21a19790ecdd1dec76b858acde3d173c15a3b8",
-    "app/test/features/shared/sh01/manuscript_controller_test.dart": "beef35c94badf71f83f8b62db64556487e26fe9109d4e5439a3307bdd0825455",
-    "app/test/shell/lumenis_workspace_shell_test.dart": "f2086822776266ce2c4aead6b36f8a349fd21b7d2a2bc04d737e7ec244fb8763",
-    "contracts/experience/screen-specifications/ACC-03.md": "264c28b035c1af48cc4cbf0acfe6f388dd96cc39b015274b8475023daf6dffa4",
-    "contracts/experience/screen-specifications/AI-01.md": "2e7c8117053b05eed8caddf46ee50899f7deaf0bcadebc751f0d1ed5bf756b20",
-    "contracts/experience/screen-specifications/SH-01.md": "499d1e9f8edc4bd8a121d877dd47e5d1156f5744144849da55889165a42ced8b",
-    "lumenis/ai_hub/conversations.py": "f08d8e36b7403bf79770050fa3d0efd8ecd40f8a4ec4fdbe0943742e18d67f7a",
-    "lumenis/ai_hub/routes.py": "32432177e84007f416f7a320e1e82e4eb46ce824781e48b77e27a1c447c4c5a5",
-    "lumenis/shared/database/migrations.py": "660d1a844357640b8c357781c4aa31359249107d3385175d5af183ad0d881ec6",
-    "tests/test_ai_conversation_migration.py": "e872fd48175d3e75e2bd1a408acc86fdab398852f27e66ccd9a7d6a68ab5b413",
-    "tests/test_ai_conversation_owner.py": "f33cdeca12da1f95cb7b6c2855e34aa62560bfd23fd100ec946b391fb785f7de",
-    "app/lib/features/shared/sh01/sh01_screen.dart": "f1d2b35724357fe29de7aa99ebc978ad33e6637787a63248cc582446dc32d0dc"
+    "app.py": "8978bc24910b746225352375910411bfc5241c032d2457d1b2e888fc49272f10",
+    "api_dual_domain.py": "6b67f72ca5a014558c69075d1c499481ccaae945f5e6d5b651309aa77c4a1627",
+    "lumenis_app_api.py": "dde3c40407c5c9c4b929ddf6ae203e9d426aa94b5042507144c8d8c500f979cd",
+    "experience_runtime.py": "ebf5eabacdb1d033e22fd8ae1712be6eee9616a4eeccc092d3a803faf5d2516d",
+    "lumenis/importer/documents.py": "cc2d63a85014b5847d0bea2eef74f890ea76fd38817b1f4607038a4ded0f1546",
+    "lumenis/importer/office_package.py": "38f0195da8a396af6661e18e8bf0e902b0cdb72b0388b328294a0372d315a274",
+    "lumenis/shared/evidence/signing_config.py": "f7dba73c4428ebdc874107e36ff09cca82bac58d31d88e9b17944200c813360f",
+    "lumenis/shared/database/migrations.py": "0b6c6732067182aeac3939f8b02bd46ebbfd87255d0e46411a5fa67e9ff7d0c0",
+    "lumenis/shared/reporting/word_pdf_export.py": "748ace54fac158e35cbefbd67412276b089f6a82163b2dd4c41c900d79c3e361",
+    "lumenis/shared/reporting/saved_work.py": "b2430b433ace83d2c690911f921182bfcf582d86db6bcb9e42563cbb2fc711e1",
+    "shared_artifacts.py": "4571e7a9837f1558915720452cf6e31e2cfcef094e40e2aafef7c804953fb64f",
+    "lumenis/shared/content_creation/rendering.py": "39c42faa46e6532be6863d55940049684160564c0739881a3709ed4d76aa3813",
+    "lumenis/shared/content_creation/video_editing.py": "fb8b63c718e1115f3d79bdcf4f140affd44fc277a55896c92e642b79d884e271",
+    "lumenis/ai_hub/conversations.py": "c7a34579f254219bb1f3110691a2bb0215e21e7bb00e9db85c5602f5585dac5e",
+    "lumenis/ai_hub/context_pack.py": "3d4c3997d62bb141bd6a36877da8d3b81a50177b9b7633a30744cfc4c0ef543e",
+    "agent_memory/retrieval.py": "9bc5ca3a495c048b0f3db8c57b7ad983a5a9236c7c977ddc80a850b7d2a6d5c2",
+    "app/lib/features/cth/cth10/business_work_panel.dart": "df3d4c4cb05cac4d337795a8ab6da01b4d6b07932bdc9ca053c5686c18c4e4f1",
+    "app/tool/build_windows.ps1": "76bac1abd5967988ef1af6f9d2bf51b4b4835cb1288213c7809e35905b7df713",
+    "scripts/start_production.ps1": "cd39b3df071852e0896f4709f5e86b604c976528d780f790a3c40b62128d7f75"
   },
   "verification": {
-    "python_owner_migration": "16 PASS, isolated SQLite, not production DB",
-    "flutter_affected": "82 distinct affected regressions: 26 shell, 15 manuscript controller, 10 manuscript editor, 4 draft including IME, 4 Home and 23 creation-screen tests including Chinese/English/Korean at 200 percent. Not product acceptance.",
-    "flutter_analyze": "PASS no issues; latest creation layout 9.6 seconds",
-    "flutter_web_build": "PASS final paired narrow layout release, 108.5 seconds. Build is not user acceptance.",
-    "flutter_windows_build": "PASS final paired narrow layout release, 75.1 seconds. Native write acceptance remains NOT_VERIFIED.",
-    "ruff": "46 baseline findings, 0 new against exact base; full-file lint is not clean",
-    "governance": "Constitution, Experience authority/anti-template/screen blueprints, machine governance, configuration, single product and refreshed source adoption PASS. Publication gate runs against staged change.",
-    "owned_http_ci_step": "PASS all 12 existing selected tests under the exact workflow owned-ephemeral socket guard; no external connection, no thread leak."
+    "media_composition": "146 PASS isolated contracts and actual installed-encoder cases; media-composition-final.log. Not professional multi-hour user E2E.",
+    "business": "136 PASS /1 existing BMP Case not applicable skip; business-report-number-regression.log.",
+    "source_brief": "71 passing tests; one initial narrow-layout failure repaired and isolated9-layout-case rereun passed;14 local read-aloud tests passed. Analyzer0 errors/0 warnings/8 INFO retained.",
+    "business_ui": "38 cases have final passing evidence across initial36 and targeted failure repairs; 12 viewport/locale/text-scale combinations; final analysis0diagnostics. No claim of one final38-case run or visual acceptance.",
+    "database_signing_restore": "98 isolated checks, Windows DPAPI and independent process signatures. Actual permitted data restore below.",
+    "startup_signing": "26 PASS cold-start and persisted-signing contracts.",
+    "current_combined_build": "1280-breakpoint Web112.2s andWindows77.2s PASS; subsequent business-export consumer changes are not included in these builds and require new paired build.",
+    "public_product_acceptance": "NOT_DELIVERED; complete visuals NOT_ACCEPTED",
+    "decision_revision": "28 focused and49 dependent owner/permission/planning/history checks PASS. Independent source review found no new P0/P1/P2. Not real UI acceptance.",
+    "office_formula_results": "11 isolated checks PASS; formula output ranges remain readonly and ordinary-cell export/reopen retains original parent package.",
+    "bundle_existing_data": "8 isolated real-Windows-junction startup cases and2 data-preservation/launcher cases PASS. Actual assembled bundle startup remains pending.",
+    "compile_static": "44 Python source/test files AST-pass; raw-byte Ruff baseline1126 current1117;0introduced. Existing findings retained. Earlier Windows text-pipe newline diagnostic preserved.",
+    "business_1280_layout": "2 targeted widget checks with30 width/locale/text-size combinations PASS; analyzer0diagnostics. Actual1280 screenshot shows source/options/decision simultaneously with corrected review date. Complete visual quality remains NOT_ACCEPTED.",
+    "keyless_backup_restore": "65 cases have passing evidence:64 initial,1 exact rerun after using an offline backup rather than protected live canonical DB. Original failure retained. Compile/diff pass; Ruff17 baseline/current,0introduced. No production/runtime operation by helper."
   },
   "runtime": {
     "port": 58724,
-    "parent_pid": 19952,
-    "listener_pid": 31348,
-    "boot_id": "e55c89f92a50484eb9733c671fc8657f",
-    "data": "D:/OEVIRA-Runtime/workspace-20261024",
+    "launcher_pid": 26080,
+    "boot_id": "9b4d4e5a374e41b9823587508fe1667e",
+    "data": "data/runtime/workspace-20261024",
     "entry": "app.py --manual-workspace --host 127.0.0.1 --port 58724 --no-scheduler",
     "scheduler": "not_started",
-    "base_commit": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
-    "loaded_version_boundary": "Working backend at initial launch; later schema compatibility validation not reloaded. Disk hashes alone are not memory proof.",
-    "restart": "BLOCKED_BY_EXECUTION_POLICY; stop/start command rejected before execution",
+    "restart": "OWNED_INSTANCE_RELOADED_AFTER_SIGNED_CONSISTENT_BACKUP",
+    "restart_at": "2026-10-24T15:23:21.406000+00:00",
+    "backup_sha256": "79a180f2e7ec9a92af56e6a5b3641d55877f2042b08242580083f03f4ab83a5a",
+    "preserved_artifacts": 24,
+    "loaded_version_boundary": "Owned manual workspace only. Health is not user acceptance. No production 8201, production data or automatic collection touched. Exact source pins captured at controlled launch; later disk hashes do not retroactively prove loaded versions.",
     "production_8201_changed": false,
-    "production_database_changed": false
+    "production_database_changed": false,
+    "loaded_source_pins": {
+      "app.py": "8978bc24910b746225352375910411bfc5241c032d2457d1b2e888fc49272f10",
+      "api_dual_domain.py": "6b67f72ca5a014558c69075d1c499481ccaae945f5e6d5b651309aa77c4a1627",
+      "lumenis_app_api.py": "dde3c40407c5c9c4b929ddf6ae203e9d426aa94b5042507144c8d8c500f979cd",
+      "experience_runtime.py": "ebf5eabacdb1d033e22fd8ae1712be6eee9616a4eeccc092d3a803faf5d2516d",
+      "lumenis/importer/documents.py": "cc2d63a85014b5847d0bea2eef74f890ea76fd38817b1f4607038a4ded0f1546",
+      "lumenis/importer/office_package.py": "38f0195da8a396af6661e18e8bf0e902b0cdb72b0388b328294a0372d315a274",
+      "lumenis/shared/evidence/signing_config.py": "f7dba73c4428ebdc874107e36ff09cca82bac58d31d88e9b17944200c813360f",
+      "lumenis/shared/database/migrations.py": "25d369a1c20d6914b0af9d89d0672f85cdfaa69b0c898f2393ddd6c13d1b590e",
+      "lumenis/shared/reporting/word_pdf_export.py": "748ace54fac158e35cbefbd67412276b089f6a82163b2dd4c41c900d79c3e361",
+      "lumenis/shared/reporting/saved_work.py": "b2430b433ace83d2c690911f921182bfcf582d86db6bcb9e42563cbb2fc711e1",
+      "shared_artifacts.py": "4571e7a9837f1558915720452cf6e31e2cfcef094e40e2aafef7c804953fb64f",
+      "lumenis/shared/content_creation/rendering.py": "39c42faa46e6532be6863d55940049684160564c0739881a3709ed4d76aa3813",
+      "lumenis/shared/content_creation/video_editing.py": "fb8b63c718e1115f3d79bdcf4f140affd44fc277a55896c92e642b79d884e271",
+      "lumenis/ai_hub/conversations.py": "c7a34579f254219bb1f3110691a2bb0215e21e7bb00e9db85c5602f5585dac5e",
+      "lumenis/ai_hub/context_pack.py": "3d4c3997d62bb141bd6a36877da8d3b81a50177b9b7633a30744cfc4c0ef543e",
+      "agent_memory/retrieval.py": "9bc5ca3a495c048b0f3db8c57b7ad983a5a9236c7c977ddc80a850b7d2a6d5c2"
+    },
+    "production_statement_time_boundary": "Only the recorded controlled restart stage ending 2026-10-24T15:23:21.406000+00:00; the later erroneous test-entry import has no pre-import DB hash and complete logical non-change is NOT_VERIFIED. See current_integration_delta_20261025."
   },
   "real_operations": [
     {
@@ -78,6 +98,25 @@
       "surface": "Web",
       "action": "Creation entry groups verified versions of the same work and previews actual saved text",
       "observed": "At 1440x900, one manuscript folio displayed version3 and its version menu independently opened version2 and version1. Final 390x844 release uses two paired action rows; clicking the folio reopened actual saved version3 and returning retained the library. No Artifact edited or overwritten by grouping."
+    },
+    {
+      "surface": "Web",
+      "action": "Business decision correction, immutable v3 save and independent v3/v2 reopen",
+      "observed_at": "2026-10-24T15:41:48.437029+00:00",
+      "v1": "ART-5327f3c44017408b",
+      "v2": "ART-29ebcf7ca68d44e8",
+      "v3": "ART-232c6cafeff84427",
+      "observed": "Actual product edit set review to 2026-10-25T11:00:00+08:00, with separate correction reason. v3 independently reopened with 2026-10-25T03:00:00.000Z; v2 independently reopened retaining 2026-10-31T14:40:19.531Z. Original analysis, four options and ownership retained. No claim of external business execution or independent platform verification.",
+      "evidence": [
+        "work/product-closure-20261011/workspace-20261024/business-v3-readback.txt",
+        "work/product-closure-20261011/workspace-20261024/business-v2-after-v3-readback.txt",
+        "work/product-closure-20261011/workspace-20261024/business-1280-actual.png"
+      ],
+      "artifact_sha256": {
+        "ART-5327f3c44017408b": "ccdb2723b821c53514def39a20c2390852d243c087887ab334ae326d0906053e",
+        "ART-29ebcf7ca68d44e8": "d6170d21341a91b42e737edb5076b6f3dd757ab96b77c7c2f4846998b6ec5440",
+        "ART-232c6cafeff84427": "e00756d7564068c8673331afeda8e6d9236bd29d271b0c0cfb0605ecf09aac04"
+      }
     }
   ],
   "retained_failures": [
@@ -89,7 +128,8 @@
     "Real old-parent save returned WORK_REVISION_CONFLICT; task-pitch-72223d5779469ba0b6d5b189 was cancelled and read back cancelled. New explicit continue-from-latest operation subsequently saved v3 through original Owner/CAS, not replay or weakened guard.",
     "First staged publication guard found the historical RULES_ONLY_PUBLICATION marker still active; current publication state reconciled in the existing snapshot before commit, without changing the validator.",
     "Authorized XLSX upload was denied by browser tool workspace-root enforcement for both the supplied attachment and a previously approved project-local seed; no upload occurred and no alternate transport was attempted.",
-    "PR140 first Product Gate failed because the complete conversation owner test file includes a real ephemeral TCP test and had been assigned to the offline-deny-all step. Entire owner file moved to existing guarded ephemeral HTTP step; no test or assertion removed, skipped or weakened. Exact step replay passed 12 tests."
+    "PR140 first Product Gate failed because the complete conversation owner test file includes a real ephemeral TCP test and had been assigned to the offline-deny-all step. Entire owner file moved to existing guarded ephemeral HTTP step; no test or assertion removed, skipped or weakened. Exact step replay passed 12 tests.",
+    "2026-10-24T16:17Z erroneous unittest app.tool entry imported root app.py; signing guard refused v21-to-v22 migration. Observed schema21 and older main-file mtime do not prove complete logical unchanged without pre-import hash; no8201 process started/restarted. Exact failure/readback paths are retained in current_integration_delta_20261025."
   ],
   "remaining": [
     "Full planned visual acceptance and task-specific surfaces",
@@ -575,5 +615,1887 @@
       "app\\lib\\features\\shared\\sh01\\native_media_player.dart": "550c6e594bda9f6cabdca486246e2fe36aec693d2f08f703a5235ca322ef9740",
       "app\\lib\\features\\shared\\sh01\\native_media_preview_controller.dart": "13b37d7cc9be037b33ff73fff4aba6cdf354f2ea4720ad86c87251e011ead604"
     }
+  },
+  "initial_workspace_observation": {
+    "recorded_at": "2026-10-24T06:36:40.294983+00:00",
+    "source_base": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
+    "source_pins": {
+      ".github/workflows/app-verify.yml": "05a4ca41e578fc306c66418e414aaec3eed8ba74f69ebe33f510afdd73199b79",
+      ".github/workflows/platform-verify.yml": "ef0018ce28335243896c364193d6ebfa031aadbf291c1339479def55ec5c0eb1",
+      "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": "1bb6acca3a764d754338342f1044a1112745ad3231bfd2859b305aa4e88227fb",
+      "app/lib/core/lumenis_core_client.dart": "caf7c7b2c4b787ff927b27d8cc68a9dc5d57c333c1266195f96ed13a8c642e56",
+      "app/lib/core/lumenis_theme.dart": "169f2abbc6b400877794a2b4b7867284ca9b5b1f164bbb0a5118afc341c3dabe",
+      "app/lib/features/account/acc03/acc03_screen.dart": "0f5cdd0ba0ba98dfea7391edc1b7a9c3fe7fa61564dde269f580211c7d32bfdb",
+      "app/lib/features/ai01/ai01_conversation_panel.dart": "757451a9fa1b368281c48a91b42152bc95f81848fd2431eaaa8682b2952eb9a7",
+      "app/lib/features/ai01/ai01_screen.dart": "530676daee4de5d725162a79aa00b3a714f48cd67db80abd5c0274eca6580975",
+      "app/lib/features/ai01/ai01_workspace_draft.dart": "055a37ea125183ba971e42d794b81b99d6893326cbb105230c036bd0f375e1e2",
+      "app/lib/features/shared/sh01/manuscript_controller.dart": "2d52874c01a93963c15615ca39a71fdd55ef1c52a8d53fce70fa150f27bd70c5",
+      "app/lib/features/shared/sh01/manuscript_editor.dart": "b06654c5a43ef550b8c0e67ebb9f0a6bece575851755386357ce635c42281133",
+      "app/lib/product/lumenis_app.dart": "255e120a41bd51ccc1dec19ff699d62bc25e084e3d45d5520eab6786abf94e81",
+      "app/lib/shell/lumenis_workspace_shell.dart": "f00b9818d20349948c63af02d4cf7b5da6bf494010970d89cd21141b83bcfc40",
+      "app/test/features/ai01/ai01_workspace_draft_test.dart": "5184ac8dd6f4b73b102e48ca3f21a19790ecdd1dec76b858acde3d173c15a3b8",
+      "app/test/features/shared/sh01/manuscript_controller_test.dart": "beef35c94badf71f83f8b62db64556487e26fe9109d4e5439a3307bdd0825455",
+      "app/test/shell/lumenis_workspace_shell_test.dart": "f2086822776266ce2c4aead6b36f8a349fd21b7d2a2bc04d737e7ec244fb8763",
+      "contracts/experience/screen-specifications/ACC-03.md": "264c28b035c1af48cc4cbf0acfe6f388dd96cc39b015274b8475023daf6dffa4",
+      "contracts/experience/screen-specifications/AI-01.md": "2e7c8117053b05eed8caddf46ee50899f7deaf0bcadebc751f0d1ed5bf756b20",
+      "contracts/experience/screen-specifications/SH-01.md": "499d1e9f8edc4bd8a121d877dd47e5d1156f5744144849da55889165a42ced8b",
+      "lumenis/ai_hub/conversations.py": "f08d8e36b7403bf79770050fa3d0efd8ecd40f8a4ec4fdbe0943742e18d67f7a",
+      "lumenis/ai_hub/routes.py": "32432177e84007f416f7a320e1e82e4eb46ce824781e48b77e27a1c447c4c5a5",
+      "lumenis/shared/database/migrations.py": "660d1a844357640b8c357781c4aa31359249107d3385175d5af183ad0d881ec6",
+      "tests/test_ai_conversation_migration.py": "e872fd48175d3e75e2bd1a408acc86fdab398852f27e66ccd9a7d6a68ab5b413",
+      "tests/test_ai_conversation_owner.py": "f33cdeca12da1f95cb7b6c2855e34aa62560bfd23fd100ec946b391fb785f7de",
+      "app/lib/features/shared/sh01/sh01_screen.dart": "f1d2b35724357fe29de7aa99ebc978ad33e6637787a63248cc582446dc32d0dc"
+    },
+    "verification": {
+      "python_owner_migration": "16 PASS, isolated SQLite, not production DB",
+      "flutter_affected": "82 distinct affected regressions: 26 shell, 15 manuscript controller, 10 manuscript editor, 4 draft including IME, 4 Home and 23 creation-screen tests including Chinese/English/Korean at 200 percent. Not product acceptance.",
+      "flutter_analyze": "PASS no issues; latest creation layout 9.6 seconds",
+      "flutter_web_build": "PASS final paired narrow layout release, 108.5 seconds. Build is not user acceptance.",
+      "flutter_windows_build": "PASS final paired narrow layout release, 75.1 seconds. Native write acceptance remains NOT_VERIFIED.",
+      "ruff": "46 baseline findings, 0 new against exact base; full-file lint is not clean",
+      "governance": "Constitution, Experience authority/anti-template/screen blueprints, machine governance, configuration, single product and refreshed source adoption PASS. Publication gate runs against staged change.",
+      "owned_http_ci_step": "PASS all 12 existing selected tests under the exact workflow owned-ephemeral socket guard; no external connection, no thread leak."
+    },
+    "runtime": {
+      "port": 58724,
+      "parent_pid": 19952,
+      "listener_pid": 31348,
+      "boot_id": "e55c89f92a50484eb9733c671fc8657f",
+      "data": "D:/OEVIRA-Runtime/workspace-20261024",
+      "entry": "app.py --manual-workspace --host 127.0.0.1 --port 58724 --no-scheduler",
+      "scheduler": "not_started",
+      "base_commit": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
+      "loaded_version_boundary": "Working backend at initial launch; later schema compatibility validation not reloaded. Disk hashes alone are not memory proof.",
+      "restart": "BLOCKED_BY_EXECUTION_POLICY; stop/start command rejected before execution",
+      "production_8201_changed": false,
+      "production_database_changed": false
+    }
+  },
+  "current_operations": [
+    {
+      "surface": "Web",
+      "action": "Office original package partial edit, immutable versions and native return",
+      "observed": "Actual report DOCX imported, edits saved and independently reopened, exported and edited in installed LibreOffice, then imported as a new original. Untouched package parts retained; not full professional Office challenge."
+    },
+    {
+      "surface": "Web",
+      "action": "Subject registration, permitted document source, research and business work",
+      "observed": "Registered actual subject, imported permitted secondary DOCX, saved/reopened SourceBrief and CTH v1; resumed paused decision, explicitly recalibrated report and saved v2; independently reopened oldv1 and newv2. Actual v2 exposed wrong cached review date; original preserved; current fix requires explicit newv3 and actual readback."
+    },
+    {
+      "surface": "Local recovery",
+      "action": "Consistent signed material backup restored independently",
+      "at": "2026-10-24T13:32:26.168860+00:00",
+      "database_sha256": "f61c2dccf96f56cc0427c6153fe349ef7692d8d418196bc6eb62369e3a0d6798",
+      "signed_evidence_rows": 3,
+      "observed": "Original signatures verified in a new isolated directory. No running database replaced and no service started. External media remains at original root; not full application recovery."
+    },
+    {
+      "surface": "Windows recorded native bundle",
+      "action": "Chinese IME draft save and same-draft cold recovery",
+      "observed": "Actual draft 保存报告 并重新打开 saved; cold Home in OEVIRA-5.9.9-20261025 showed same draft and manuscript v4. Not complete Windows acceptance.",
+      "evidence": "work/product-closure-20261011/workspace-20261024/bundle-launch-20261024T163516Z.json"
+    },
+    {
+      "surface": "Windows recorded native bundle",
+      "action": "Independent manuscript v4 and oldv3 normal-list reopen",
+      "observed": "Normal Open list opened v4 with revised title and complete original body/saved-version4; oldv3 independently retained old title/body/saved-version3.",
+      "evidence": [
+        "work/product-closure-20261011/workspace-20261024/native-bundle-manuscript-v4-reopened.txt",
+        "work/product-closure-20261011/workspace-20261024/native-bundle-manuscript-v3-reopened.txt"
+      ]
+    },
+    {
+      "surface": "Native office",
+      "action": "Actual business v4 DOCX opened",
+      "observed": "oevira-operations-v4.docx opened in LibreOffice; long-title fix under review and initial CTH binding in frontend repair, neither PASS."
+    }
+  ],
+  "current_remaining": [
+    "All original full product requirements remain mandatory; this is not a reduced release.",
+    "Final frozen-UI Web/Windows build; business-result export and final same-version readback. Date correction/v1-v3 independent reopen already observed.",
+    "Independent Windows bundle with same Web assets, runtime dependencies and explicit licensing inventory; native input/continued work and release checks.",
+    "Complete visual quality and all professional challenges, browser research, all required business/creation/AI/model/math capabilities not proved here.",
+    "Mainline PR/required checks/integration/readback; no current local-source publication claim."
+  ],
+  "runtime_history": [
+    {
+      "port": 58724,
+      "launcher_pid": 14636,
+      "boot_id": "721104ca75974ae8944103247ef32e22",
+      "data": "data/runtime/workspace-20261024",
+      "entry": "app.py --manual-workspace --host 127.0.0.1 --port 58724 --no-scheduler",
+      "scheduler": "not_started",
+      "restart": "OWNED_INSTANCE_RELOADED_AFTER_SIGNED_CONSISTENT_BACKUP",
+      "restart_at": "2026-10-24T13:55:14.181334+00:00",
+      "backup_sha256": "811bdccc1f0349bc0cfd112c83c70c3c4a4f8a65831859bd864ac2c15cda6f3e",
+      "preserved_artifacts": 23,
+      "loaded_version_boundary": "Controlled process restart and actual entry hash; per-module files pinned at restart. A disk hash alone is not an in-memory module identity. Final frontend builds and packaged runtime have independent receipts.",
+      "production_8201_changed": false,
+      "production_database_changed": false
+    }
+  ],
+  "current_integration_delta_20261025": {
+    "recorded_at": "2026-10-24T16:52:15.055725+00:00",
+    "state": "LOCAL_FROZEN_OWNER_FIXES_WITH_BOUNDED_NATIVE_READBACK_NOT_PUBLISHED",
+    "source_pins": {
+      "ai_api.py": "c5335fc9ea2187be152efb0060e4a849ad65c5b04c824be363f511a3595066c8",
+      "agent_memory/retrieval.py": "9bc5ca3a495c048b0f3db8c57b7ad983a5a9236c7c977ddc80a850b7d2a6d5c2",
+      "agent_memory/semantic.py": "fb0a79fcee27a8120a40de41749a528c2a62d21483e6457439649bb37a947927",
+      "agent_runtime/durable_adapter.py": "f64fb3b3dee3ed67bb88aeb94c07b9074899204a28c388594068b13dac41c4df",
+      "agent_runtime/planner.py": "62537e17aa7d11201b5f709c492003a4325ee40bd51f06be00b2c0b7cb521667",
+      "agent_runtime/task_binding.py": "7b600d693f4d7cb5b3e0829231ffacbdc6e80a915025e221a65b954a38c7adb7",
+      "lumenis/ai_hub/context_pack.py": "3d4c3997d62bb141bd6a36877da8d3b81a50177b9b7633a30744cfc4c0ef543e",
+      "lumenis/ai_hub/conversations.py": "c7a34579f254219bb1f3110691a2bb0215e21e7bb00e9db85c5602f5585dac5e",
+      "lumenis/ai_hub/routes.py": "1b7f2105a1af26a1ee797ee37fc2b570d4ff2d2b6a867ad576ff10f0f76aff9d",
+      "lumenis/ai_hub/service.py": "254b385ea3e55e98c9104216399c284b84127ffa7dd13a68645450b03c38a580",
+      "lumenis/system/ai_gateway/core.py": "2f5115e9448f4eea954cf96538e07a2805c5af458ac0b0898e9ac4dc7a477edb",
+      "app/lib/features/ai01/ai01_conversation_panel.dart": "cfac76b4fd53961b9ae1db4201f8add0837c8dc56f770c842689385bc32b2f65",
+      "app/lib/features/ai01/ai01_conversations.dart": "f2b6556d0ddad6eb5282494503fe18f620aad698f72ae5d5e346411300ff12b9",
+      "contracts/experience/screen-specifications/AI-01.md": "cb4edff6eeecd89dd0c691d3699d52ff3d74fc7cede741e8782746b6ce6471db",
+      "tests/test_ai_context_pack.py": "b3bb3ab60888cce93edc81d742adae5ed84d389aa1ca03ad2fc7137925015d34",
+      "tests/test_agent_conversation_context.py": "1f88551c69f96c124e0b7a7c7342a5f6e887e981a334e31a0029628ea7289e61",
+      "tests/test_ai_conversation_owner.py": "d8f5ddde664ba32551f94bc409a2d19b164a0e3c1d863a8e646461594d4468a9",
+      "tests/test_ai_hub_owned_gateway.py": "ddc22368ec0df61901e317526c28f48f26d821b71fc1870efc9fa7ed34765f8d",
+      "tests/test_scoped_derived_memory.py": "9b9b7d6980216d7c71887c4e4bf03064f01467ef36aa2dcd3b7ae5c2e083795a",
+      "tests/agent_runtime/test_loop_checkpoint_contract.py": "a4d206667427a4a1d6c4237d27886f0cc21450f597d410ba6267c80689dfa86b",
+      "tests/agent_runtime/test_loop_execution_resume.py": "ca17ed5869e16491aaecf102eb99b42b114b336f68aa1ce419f9af6f35294d56",
+      "app/test/features/ai01/ai01_conversations_test.dart": "0323f3034aaf229d378bac12a6cb30c17a0d98238a247c019593880e741e7e0d"
+    },
+    "source_pin_boundary": "Frozen AI/Memory owner files only. Existing top-level runtime/source pins describe earlier snapshots; root integrates and refreshes final package/runtime pins. No claim that later disk repairs are loaded by the recorded package.",
+    "visual_composition": "New task-specific business, creation/media and shell compositions remain source/local-operation evidence; full visual NOT_ACCEPTED. Initial CTH binding and long-title repair are still being repaired/reviewed.",
+    "memory_after_rank": {
+      "state": "IMPLEMENTED_ISOLATED_TESTED",
+      "selected_source_original_bytes": "verified_research_source after actual BM25 ranking, followed by Task permission and database-version checks",
+      "tests": "16 memory_search cases PASS / 13 deselected, including actual temporary imported Artifact deletion and same-length rewrite rejection, valid-source retention and unselected-file deletion; sockets denied and source DB main bytes unchanged",
+      "scope": "BM25_ONLY; not admitted dense/cross-encoder execution; no source body in source-free chat/Planner"
+    },
+    "context_revocation": {
+      "state": "IMPLEMENTED_ISOLATED_TESTED",
+      "tests": "24 AI01 widget cases PASS; read401/403/404/410 clears restricted context and parent detail, write denial rechecks reading, network/server-unknown retains draft and reconciles before repeating unknown save; two-file analyzer no issues"
+    },
+    "gateway_ci": {
+      "workflow": ".github/workflows/platform-verify.yml",
+      "selection": "tests/test_ai_hub_owned_gateway.py added to original isolated offline step",
+      "replay": "8 cases PASS, exit0; explicit temporary data/DB/schema seed created before pytest, network denied, no real model invocation",
+      "log": "work/product-closure-20261011/workspace-20261024/ai-hub-owned-gateway-offline-replay-20261025.log",
+      "log_sha256": "93a5513981e8dfed5a47d9f711021729252e006df31fd0fd0fba34d64c6ab8cf"
+    },
+    "static": "AST compile and git diff check PASS; Ruff baseline/current semantic12/12, scopedtest29/29 and ai_api50/50, zero introduced; three Experience gates PASS at their recorded scope",
+    "native_bundle": {
+      "receipt": "work/product-closure-20261011/workspace-20261024/bundle-launch-20261024T163516Z.json",
+      "bundle": "D:\\LUMENIS_REBUILD\\序\\序境\\app\\build\\distribution\\OEVIRA-5.9.9-20261025",
+      "manifest_sha256": "536f2d7862705d6a8d403971246cb33a26108d151437cedd5bca4a34f413ea88",
+      "data_root": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024",
+      "launch_observed_at": "2026-10-24T16:35:46.789766+00:00",
+      "artifacts_unchanged": true,
+      "chinese_ime_draft": "保存报告 并重新打开",
+      "draft_observation": "Root actual native Windows IME save; same draft survived cold Home reopening",
+      "manuscript_v4": {
+        "title": "寰意产品工作流交付说明修订",
+        "saved_version": 4,
+        "cold_home": "same v4 shown",
+        "normal_open_list_independent_reopen": "work/product-closure-20261011/workspace-20261024/native-bundle-manuscript-v4-reopened.txt",
+        "body": "Original summary/body retained; saved-version4 state observed"
+      },
+      "manuscript_v3": {
+        "title": "寰意产品工作流交付说明",
+        "saved_version": 3,
+        "independent_reopen": "work/product-closure-20261011/workspace-20261024/native-bundle-manuscript-v3-reopened.txt",
+        "body": "Original title/body retained; saved-version3 state observed"
+      },
+      "acceptance_boundary": "Same recorded package actual operations; not final post-repair source alignment, complete Windows, visual, release or full-product acceptance"
+    },
+    "business_export": {
+      "filename": "oevira-operations-v4.docx",
+      "observed": "Actual v4 DOCX opened in installed LibreOffice",
+      "long_title_repair": "UNDER_REVIEW_NOT_PASS",
+      "initial_cth_binding": "FRONTEND_REPAIR_IN_PROGRESS_NOT_PASS"
+    },
+    "retained_test_entry_incident": {
+      "entry_receipt": "work/business-product-delivery-20261024/launcher-test-entry-error-20261025.json",
+      "readback_receipt": "work/business-product-delivery-20261024/test-import-production-readback-20261025.json",
+      "error": "Incorrect python -m unittest app.tool entry imported root app.py and attempted schema initialization",
+      "guard_refusal": "WORKSPACE_SIGNING_KEY_RECOVERY_REQUIRED before v21-to-v22 migration",
+      "observed_production_schema_max": 21,
+      "production_main_mtime_utc": "2026-10-24T04:45:59.185769+00:00",
+      "observed_wal_bytes": 0,
+      "pre_import_hash": "NOT_CAPTURED",
+      "complete_logical_unchanged": "NOT_VERIFIED; earlier initialization side-writes not ruled out",
+      "production_8201_process_changed": false,
+      "historical_no_change_boundary": "Earlier untouched statements apply only to their recorded stages and do not establish batch-wide production logical non-change"
+    },
+    "remaining_boundary": "All original 30 outcomes / 396 coverage / 213 interactions / PE01-PE24, full Website/Web/Windows workflows, nine math families and AI/model/training acceptance remain. Complete visual NOT_ACCEPTED; full product NOT_DELIVERED; this local batch has not been pushed or accepted on main.",
+    "office_signature_detection": {
+      "state": "IMPLEMENTED_AND_ISOLATED_VERIFIED",
+      "scope": "OPC signature recognition by relationship and ContentType, preserving existing acknowledgement and original parts; not signature validity or re-signing",
+      "checks": "12 affected cases PASS, AST/Ruff PASS, independent source review no new P0-P2",
+      "source_sha256": "4b7bf2eb5cf15e4cbdcc5115795da4973682a3e5d0575a967edbd05e9b914011",
+      "test_sha256": "2974f05def642b4b18bc06da2270e8dbfbf85b5c459f391b8eb45be2601992f4",
+      "runtime": "not included in the earlier OEVIRA-5.9.9-20261025-release recorded bundle; final rebuild pending"
+    }
+  },
+  "pause_sync_20261025": {
+    "recorded_at": "2026-10-25T14:02:16.723898+00:00",
+    "po_instruction": "全部暂停，保证线上线下统一；只执行同步收口，不恢复开发。",
+    "development_state": "PAUSED",
+    "publication_state": "LOCAL_CANDIDATE_NOT_PUBLISHED",
+    "base": "7361e37705e5599dbacd3e564ed9a5a19cb6a379",
+    "branch": "codex/full-product-implementation-20261025",
+    "preservation": {
+      "path": "work/pause-sync-20261025/before.json",
+      "copied_files": 271,
+      "sha256_readback": "PASS",
+      "raw_source_files": [
+        {
+          "path": ".codex/README.md",
+          "bytes": 31659,
+          "sha256": "7136eba0b5bbe0d2f37ced67ebdadd10fb3d3a413c4bf62fe3dba0011f97ac54",
+          "state": "preserved"
+        },
+        {
+          "path": ".codex/hooks.example.json",
+          "bytes": 6299,
+          "sha256": "7c1260c6479885caab34648bff653823c0f76de477bd19f1bbf05c22bb7d2a11",
+          "state": "preserved"
+        },
+        {
+          "path": ".codex/hooks/lumenis_hooks.py",
+          "bytes": 156272,
+          "sha256": "9e1818169e7ecfd0a2c15082ebabc0a34cdeabde7cb5c712fb38519cf7406336",
+          "state": "preserved"
+        },
+        {
+          "path": ".gitattributes",
+          "bytes": 2419,
+          "sha256": "e50d0c8b70ef3bf74b7c193075a9b45d26bcfdc30882d28ebc7c718c04a4dc9d",
+          "state": "preserved"
+        },
+        {
+          "path": ".github/workflows/app-verify.yml",
+          "bytes": 8509,
+          "sha256": "f427d038e352ad439580841ecd2efd01c973aa221f01d7c54b0f0b61808d82cc",
+          "state": "preserved"
+        },
+        {
+          "path": ".github/workflows/platform-verify.yml",
+          "bytes": 24396,
+          "sha256": "e6a31cc2e829a66751e52f850389231fd6fe005c7c3d990d382b24c5d730fddf",
+          "state": "preserved"
+        },
+        {
+          "path": "00-GOVERNANCE/evidence/round-15/workspace-continuity-20261024.json",
+          "bytes": 63760,
+          "sha256": "1d24f6115a6ba9ebaba508a97c4adaf639ad40389ca2ad59ddfa3166a7716da6",
+          "state": "preserved"
+        },
+        {
+          "path": "account/skills.py",
+          "bytes": 39518,
+          "sha256": "dbcb38106e6e1f26117df5134c5d0e7724ff0f50c3adce107ed0512481360d06",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_capability/router.py",
+          "bytes": 41033,
+          "sha256": "c878667dd700190f490a65983ddffad14726c54f4f134ac2258e2eebbaf76771",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_capability/skill_upgrade.py",
+          "bytes": 11917,
+          "sha256": "59e2282efe46d405f9166bc6a0f85e5e5375a77c5ef17ac9fb365e3fda7c35d2",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_memory/retrieval.py",
+          "bytes": 6720,
+          "sha256": "a13f316ea1a179ec799a90b54fa940bc066cbccaed2ad9df8282f450b5d45c95",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_memory/semantic.py",
+          "bytes": 27384,
+          "sha256": "aac01002f5c9d294f48f0e0ceea193ceb0c155627bea2ae1b1c66e6752aaf6df",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_runtime/durable_adapter.py",
+          "bytes": 45042,
+          "sha256": "f3d246e60d0ec964067ff5e059b37a2a91d30f8851c5d5f2e3eb5b687e4e68d5",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_runtime/loop.py",
+          "bytes": 68376,
+          "sha256": "866d203b7a418b04f35cb5eb70bdf86154921fc35fa2071cd495b77e9d971f8c",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_runtime/planner.py",
+          "bytes": 26340,
+          "sha256": "0f79f0238bc5c6862235fd70d7f383108af8e17cca1408c3f97164b7a8ad63c9",
+          "state": "preserved"
+        },
+        {
+          "path": "agent_runtime/task_binding.py",
+          "bytes": 43271,
+          "sha256": "cf0711fddf55822208473ac5e3bfe129a44286f9880d5ad6d485c8f2ddddef4a",
+          "state": "preserved"
+        },
+        {
+          "path": "ai_api.py",
+          "bytes": 76700,
+          "sha256": "d55d31a7ef9d70d63aaef6f9348be7c534e26789fe047d3a0b558bcb8bbb42f8",
+          "state": "preserved"
+        },
+        {
+          "path": "api_dual_domain.py",
+          "bytes": 341094,
+          "sha256": "b4ed2d602c646e0d88e78cca9b8d6bb875abe01db214d6f0f50c4e524d092f94",
+          "state": "preserved"
+        },
+        {
+          "path": "app.py",
+          "bytes": 430804,
+          "sha256": "7016e8b940b56de9a693f7d233eb43072c7a6e8d3306971bfc8c2c5fd43711d8",
+          "state": "preserved"
+        },
+        {
+          "path": "app/README.md",
+          "bytes": 23705,
+          "sha256": "953288d940d9527a1a13b570fcbc5cc473dafbbd287a4ac0c683a5b581a5f322",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/lumenis_botanical.dart",
+          "bytes": 11834,
+          "sha256": "4d9ed96e13f97378f1c9432bdb1f1938a4615d10f957f904a5a36fc3f9cbcc48",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/lumenis_context_menu.dart",
+          "bytes": 1593,
+          "sha256": "5d20833d52bcead9e2804195b6989b2cb7888aff2321b142a3196fa118de7350",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/lumenis_core_client.dart",
+          "bytes": 124143,
+          "sha256": "cafbb150a349dddd9ed2f2286d63852d8af6b2d67230fa6dc8f1037ec199511d",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/lumenis_icon.dart",
+          "bytes": 8683,
+          "sha256": "9f4dfe4d4623b621c2a1aff63bdda1cf6158f35e197b168abfc2975632753bd7",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/lumenis_split_handle.dart",
+          "bytes": 4307,
+          "sha256": "8202056c2b319390c90805a954adbca801720f293a8147c4844e9f2cdc9313d2",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/lumenis_theme.dart",
+          "bytes": 39536,
+          "sha256": "0cc2f71eea8a8d363b1ee44eafc60030db5bc3be70d98b062e517369667282f0",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/lumenis_work_object.dart",
+          "bytes": 3987,
+          "sha256": "a677a6b3ee713373cdbfef158ef381adab1903f8f86285b738258318a34b3473",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/transport/lumenis_http_transport_io.dart",
+          "bytes": 5611,
+          "sha256": "fcd5767ab3d065c1dc5a5b9bee268be118543487f868f674ff46b9002b28c432",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/transport/lumenis_http_transport_types.dart",
+          "bytes": 4053,
+          "sha256": "aade08d0e6e91a80e48aa33ce954af134c3a51b9e9e6d1acf524ee3747430a6b",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/core/transport/lumenis_http_transport_web.dart",
+          "bytes": 6683,
+          "sha256": "d3910e0b73f16ec9427e40b9ae97fdb0eeeb0c74b8aaaf559ec357429c935ffc",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/account/acc01/acc01_repository.dart",
+          "bytes": 1868,
+          "sha256": "6854233a3144d72b33124e943b98497942323a4aec5bb98f6dac3400ead5ad41",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/account/acc01/acc01_screen.dart",
+          "bytes": 19116,
+          "sha256": "4eb8e563bba580f20a3eaf3eefc1d2f9fdd2ccd0f540bc31759084ac3f2325d0",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/account/acc02/acc02_repository.dart",
+          "bytes": 1402,
+          "sha256": "3b7e5acf8a1d6fb4b54c2717fbd9969d94a6d1cbd92b5398f1ccc1ac652c3eea",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/account/acc02/acc02_screen.dart",
+          "bytes": 59231,
+          "sha256": "d68aa70e0e2ba71ba331bb4f46477762c688332afedae0ecfa75061863602484",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/account/acc03/acc03_recent_work.dart",
+          "bytes": 12661,
+          "sha256": "e0fda19f562bab08b626c742530031b2af4301c5de2fc9e2be9952bbd94c709f",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/account/acc03/acc03_screen.dart",
+          "bytes": 13053,
+          "sha256": "8950b3df7b1478933b87ae1ae9b6b34a8562f6ac438c8f7eceb33c831a09dd50",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/account/acc04/acc04_screen.dart",
+          "bytes": 15445,
+          "sha256": "157d9a01126c99ab6b9d27387f8b7a25b7bcff12982c03ab69700c733932fa0d",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/ai01/ai01_conversation_panel.dart",
+          "bytes": 67442,
+          "sha256": "d7cce648b4d295bd6e07e537878162c634fe9484a84fb2d9049287e419a873b1",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/ai01/ai01_conversations.dart",
+          "bytes": 39700,
+          "sha256": "0847c6ba85eb29f3a3dfc739546e5eb11c0c815bb63fc494998d6c83d9624d56",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/ai01/ai01_source_picker.dart",
+          "bytes": 12289,
+          "sha256": "2cc4ce5443dbeb791b6cf742929052f4fe180554279df1f2df575f7c27377182",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/bmp01/bmp01_screen.dart",
+          "bytes": 19443,
+          "sha256": "4e47f36090f9d9074793ee7594407cc75eb48d225032771247851a237efdbaa0",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/cth/cth01/cth01_screen.dart",
+          "bytes": 48171,
+          "sha256": "434856515c13e77ad384016d053b5babd9cb49c956e8b6c79d0ac71cd28ed4e1",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/cth/cth10/business_domain_plan_editor.dart",
+          "bytes": 23608,
+          "sha256": "9963cfb2fe7670d38341f99f7ce4b35d0d3caef15a85bfb15564b2bab7d1f101",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/cth/cth10/business_work_panel.dart",
+          "bytes": 102049,
+          "sha256": "dbd2bd5a0ba13c0c28830d7fefb0877ed057188e6b1a5b3dcb7e09cae106eeb5",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/cth/cth10/cth10_repository.dart",
+          "bytes": 16629,
+          "sha256": "742c2f92cee07526f521c375caf34bf9055f4a60450a8af6bae637d397377d06",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/cth/cth10/cth10_screen.dart",
+          "bytes": 44491,
+          "sha256": "315abd47218741971ae4585439e1f87f823b7c6d43fa148ba56f807a387d2452",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/cth/cth10/source_brief_panel.dart",
+          "bytes": 95987,
+          "sha256": "1b2c9d8c6755acda293700681fb09d64e4eb5416dc680b420bfa9859d609e60e",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/cth/cth10/source_brief_view_model.dart",
+          "bytes": 107350,
+          "sha256": "dec068baa0d4d8c0760e4240269fb0f8e863a5209b918edc801d2d2e34a31e78",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/read_aloud_action.dart",
+          "bytes": 11857,
+          "sha256": "26ca1b168df74b1afe03b110384d4861e98d0167daa0ad1fb5a0d5656016dcac",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/research/shared_research_workspace.dart",
+          "bytes": 30396,
+          "sha256": "51b61403b8395965125998c7a55291f030f4844418c1cf9e19f2b2a525bc38c9",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/creation_brief_dialog.dart",
+          "bytes": 18230,
+          "sha256": "01e44a7dea4e0c1e436f95a812f9a2b6bb59affc217faa4dc6aca499f26ecc99",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/manuscript_controller.dart",
+          "bytes": 59885,
+          "sha256": "ab00b6fde0e6de46fd3cb0b19d359af4f0509b012706992a178f2887144d2fed",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/manuscript_draft_files.dart",
+          "bytes": 5170,
+          "sha256": "58cff28d206fe7f73d7316eb12ccbc50602110cb9a0000f381a3647c16eb5183",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/manuscript_editor.dart",
+          "bytes": 54164,
+          "sha256": "023f7724323e2485ef2b02242c30ba4c5c5a99b56714ebf27a53ef7f2ae1e475",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/media_file_save_io.dart",
+          "bytes": 1735,
+          "sha256": "5a500613b5f41d548ad1f834f45f71824ed6a867b1bf17c2ac0c8c514da2f74c",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/media_file_save_stub.dart",
+          "bytes": 155,
+          "sha256": "f0ee3fb41ce1475e2898537cf8de9eeadc7ecb81f8c29853b582db2ca11eb6d3",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/media_file_save_web.dart",
+          "bytes": 593,
+          "sha256": "3220a6a81178c7e941e2cf47b52f2d96bb8f609efa98cbebb93c406b38c2b90b",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/media_project_controller.dart",
+          "bytes": 44982,
+          "sha256": "db2d743a07f79e9496ca0451fc383b2bc2d3f63f2df9c6dc438e6e220d59aeea",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/media_project_files.dart",
+          "bytes": 1722,
+          "sha256": "00cf1192ccdf823827d52fa3e88f3fbf1b6b81b03dd074e6b51e8132feee1247",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/media_project_snapshot.dart",
+          "bytes": 53938,
+          "sha256": "0930c6de3ce671cda161fd595dd6eb18cf251da2575ffaa603ba87c7eacdca56",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/media_project_workbench.dart",
+          "bytes": 199649,
+          "sha256": "91a1c61296ab92bcac8294a035aa0e6ee618f46d8b1b59df761fa12adcd4f448",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh01/sh01_screen.dart",
+          "bytes": 51341,
+          "sha256": "ed257e1a519f87e7228b2e5a99acb26596b566c7b1879313de4942e2900b9ac6",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh02/office_property_editor.dart",
+          "bytes": 9566,
+          "sha256": "692a4f079fd9b1e7c78c8f9de8f298627845f12887fc2e43e998512e990726cc",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh02/sh02_office_controller.dart",
+          "bytes": 27377,
+          "sha256": "3526fcf4765ef2ad387478d1a673909c2063db0afd1bc50edfc02cf781e21993",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh02/sh02_screen.dart",
+          "bytes": 140028,
+          "sha256": "ef4e945dfe98b9b63c3be8d21596bd3405e881c284e95ca307a18c69bd7b177b",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh02/sh02_snapshot.dart",
+          "bytes": 20532,
+          "sha256": "a32cb1633bac37a2eaf497e42b703251617bc7415b809ece07ef15af48585450",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/shared/sh02/sh02_view_model.dart",
+          "bytes": 16336,
+          "sha256": "cdcc8e71f0c357c1be56e782465c9b164205842bead2b2ea85c85ca30f16575f",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys02/collected_comments_panel.dart",
+          "bytes": 12856,
+          "sha256": "bba81fd11a7877f3b34f69b757b392851e6b05205ef634909c33bc913fa1088a",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys02/collector_request_panel.dart",
+          "bytes": 14941,
+          "sha256": "69ca8f60dd84b95a1e9d5ac41965b258aa32f38678d468c247c919632e263831",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys02/sys02_screen.dart",
+          "bytes": 14482,
+          "sha256": "dc9fa625bbb987be092bcd8394caffc4b10cab6427f7637d734f5008762761fd",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys02/sys_system_foundation.dart",
+          "bytes": 53480,
+          "sha256": "ba1589c77a43cea061941e09867f63a8fa034bf811d07d533d27a8379ee67245",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys05/sys05_appearance_controller.dart",
+          "bytes": 13511,
+          "sha256": "665554ec6ee0f280633dd97c7d8ba7661c2fc4d4b46d055eabb0c10d137a202e",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys05/sys05_appearance_editor.dart",
+          "bytes": 34104,
+          "sha256": "9f24fcbaaea872c94966d1a1f8e5de4886dbcedffc563729a3024636e3a8bac5",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys05/sys05_repository.dart",
+          "bytes": 2376,
+          "sha256": "55a297c9fbb779a481f2c96183d73639050c6ba58852a6ec8dd54cf45216e252",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys05/sys05_screen.dart",
+          "bytes": 35973,
+          "sha256": "609db98e265d84ec1cedadbf755891422d20bf36fd7a6663d93b88e2f15e033e",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/features/system/sys06/sys06_screen.dart",
+          "bytes": 121137,
+          "sha256": "e0ee84dc6d09127b8eb573a60fdc69e3d28759db78c038864aaba0c9f2679d85",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/l10n/lumenis_copy.g.dart",
+          "bytes": 223398,
+          "sha256": "95a77489141937e47c74f3ab36037519860f1a0947905ebbaffeeff233480e7d",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/product/lumenis_app.dart",
+          "bytes": 8896,
+          "sha256": "548b3838d6c972800dc5888cf15da95579acadc7ef6b560038c5a7281ed1f35e",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/shell/lumenis_workspace_frame.dart",
+          "bytes": 14436,
+          "sha256": "d25f17de7723e35de78df1d3af67ec7c4ae6f0e7bfd740948937b4eb04756200",
+          "state": "preserved"
+        },
+        {
+          "path": "app/lib/shell/lumenis_workspace_shell.dart",
+          "bytes": 83166,
+          "sha256": "e9751ec09fa3fb1c46d0cecbbcbd46c5e26e49dd33c31c7272189c5fe276a865",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/core/content_project_client_test.dart",
+          "bytes": 17725,
+          "sha256": "f647fe039fc4f408f8d1f51e338191f99498f76694532900625bff78d126e99a",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/core/lumenis_theme_test.dart",
+          "bytes": 5994,
+          "sha256": "bc67509203b5ddfd5d48abb92796cfa96cf4b0739891c5de1c0d20bee7de5d4b",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/core/source_brief_client_test.dart",
+          "bytes": 13106,
+          "sha256": "96b6ead906129b6aca1957ca015b37c9ab7181e9aa30bbf14bd158f25b0b927c",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/account/acc02/acc02_registration_test.dart",
+          "bytes": 7783,
+          "sha256": "f86ae4cf5051dbb2f05de34b02694fbba4bd74589a2d097b4c30fa8c66735029",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/ai01/ai01_conversations_test.dart",
+          "bytes": 40760,
+          "sha256": "4c2842fae0a0cb572c0b598410d7e6a5ec7d860abbc9b7c559da0ef66bb530e0",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/bmp01/bmp01_screen_test.dart",
+          "bytes": 16614,
+          "sha256": "cbddeb283f9b7df5778bcc448676516ca95199c3f6b569610041777158c05bba",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/cth/cth01/cth01_screen_test.dart",
+          "bytes": 14089,
+          "sha256": "3334b4b19c0f055f3cb1f5bcec8f74da88a125d91ef927d582dccd11a95bcc52",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/cth/cth10/business_work_panel_test.dart",
+          "bytes": 61313,
+          "sha256": "aff61459b7dcf8531258533fd94f322e3941cce4d574ea96645f726b0ca99be2",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/cth/cth10/cth10_repository_test.dart",
+          "bytes": 18101,
+          "sha256": "c581cc7a54e8037d28fc9f42feeddaa1652deea338fa2686ba0f74717721ee39",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/cth/cth10/cth10_screen_test.dart",
+          "bytes": 15837,
+          "sha256": "543a2a9b480abb06ffbeeae0d8268b93c776984c2fbd9cea79d4a2775e241446",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/cth/cth10/source_brief_domain_import_test.dart",
+          "bytes": 15906,
+          "sha256": "29a33eb8002319f71994ec1cc193fb1a1554d22b032989d17f30ee0567af0b83",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/cth/cth10/source_brief_panel_test.dart",
+          "bytes": 36443,
+          "sha256": "180ee20175990cdf78eccd393acadd5098bc0759a1d679dfa2fdc6c256943799",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/cth/cth10/source_brief_view_model_test.dart",
+          "bytes": 49803,
+          "sha256": "b8f854085efdd7ea87508b66bfe70577bb8634cfda38326e45de59102cb8f998",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh01/manuscript_controller_test.dart",
+          "bytes": 29852,
+          "sha256": "00a1397f3d833760af32c4361e5b1f56424ff0d527449ae6b45a23a07f7dffa9",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh01/manuscript_editor_test.dart",
+          "bytes": 12450,
+          "sha256": "79daa74875a8c784a99a1edb59b9e763baabff198653bf4ae99c28a5e6c87c13",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh01/media_project_controller_test.dart",
+          "bytes": 44164,
+          "sha256": "4a2d10351d37f2b5881e6dbf94d19413ee92dfbca0c500f7117ac5aa1f822a5b",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh01/media_project_snapshot_test.dart",
+          "bytes": 21905,
+          "sha256": "d6b2e127b4bd0b34018ec0e81245b196b0a856d2147d63cfd727969a9c6150e9",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh01/media_project_workbench_test.dart",
+          "bytes": 150812,
+          "sha256": "1827cc322d83586714b7739d50aefc53cfa93881972978f8af46bdf66bf81ed7",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh01/owned_creation_contract_test.dart",
+          "bytes": 4775,
+          "sha256": "2a11ae8b5efba31fa35f35d11634dc38670608851420c244f0ec0edf886e470f",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh01/sh01_screen_test.dart",
+          "bytes": 26535,
+          "sha256": "40ed16b7cd9afe02224ab9fb2e14ed11ba6d980d2473f8079c3edaac5848e4f0",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh02/office_test_support.dart",
+          "bytes": 8556,
+          "sha256": "ce7202b9544e0449416d23ae16f989b8da47db255d6f39e9c95de9c59008c5dc",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh02/sh02_office_controller_test.dart",
+          "bytes": 25534,
+          "sha256": "e6e3194160534ed7b28326487eff539e2186a540b6933a8827fcda2d233cfc12",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/shared/sh02/sh02_office_screen_test.dart",
+          "bytes": 5019,
+          "sha256": "0c9f1ac83f0751a99d38a65aa7594f629657dfa61f47489429fe01ef3bae5a38",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/features/system/sys05_subject_directory_test.dart",
+          "bytes": 3662,
+          "sha256": "bf1731d51a79cd5e4eb1a03963c5b525b7271561a8f1d4bd1ab3ceeaf38ba5c8",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/fixtures/creation/external-source.json",
+          "bytes": 16529,
+          "sha256": "69084f7470fedfc6552b6f3e05d1266e9e682c5ca1ec7e2ed591a01dd809435f",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/fixtures/creation/private-source.json",
+          "bytes": 15559,
+          "sha256": "aa9010bf0c18f5079a0c68bf9c6a7b28dc3de06e96be17b8cfbf9b6d8647284a",
+          "state": "preserved"
+        },
+        {
+          "path": "app/test/shell/lumenis_workspace_shell_test.dart",
+          "bytes": 49577,
+          "sha256": "5479285a58348dda68735337f5622aa4c9a79e88c3ee3e50e16c17f7ca1e38b9",
+          "state": "preserved"
+        },
+        {
+          "path": "app/tool/build_windows.ps1",
+          "bytes": 65238,
+          "sha256": "b77aa6e046789845a8a16017b3e0c2ad6aad6827752fca1e28f468bf5801b189",
+          "state": "preserved"
+        },
+        {
+          "path": "app/tool/generate_brand_icons.py",
+          "bytes": 3323,
+          "sha256": "cbdd13494d29aa56d7e6ffc86af0135ff96f0e9fe82ba6be4eb9b3ae711d85fd",
+          "state": "preserved"
+        },
+        {
+          "path": "app/tool/test_build_windows.py",
+          "bytes": 61714,
+          "sha256": "d3fe4feeea2da5d9fbaf5cc81f2de6dc5e733916a66b0b66f479a597f0ad542f",
+          "state": "preserved"
+        },
+        {
+          "path": "app/web/favicon.svg",
+          "bytes": 10945,
+          "sha256": "fa241d16809421f57d74cf5c2fab8c3426f5d0881236b705c4a2fd24fc4745b1",
+          "state": "preserved"
+        },
+        {
+          "path": "app/web/icons/Icon-192.png",
+          "bytes": 1029,
+          "sha256": "0b25ffce789d5747591ac8db6b29a6445ab0c63e22457aa513dfb3c2ebe8c4f5",
+          "state": "preserved"
+        },
+        {
+          "path": "app/web/icons/Icon-512.png",
+          "bytes": 2860,
+          "sha256": "1ba99a12fa4962a3f932316fe55337b68e1b9681b56bbb231e1c03e2ec04374e",
+          "state": "preserved"
+        },
+        {
+          "path": "app/web/index.html",
+          "bytes": 856,
+          "sha256": "dc8c45b6dd8c721573cd9d4deac32aa77e967f5faf617f931294c3ea3cdef10f",
+          "state": "preserved"
+        },
+        {
+          "path": "app/web/manifest.json",
+          "bytes": 760,
+          "sha256": "c4c1c13882c0ef12aac6acb798b330e1b194083a384b8e251fbf3f848b4201f6",
+          "state": "preserved"
+        },
+        {
+          "path": "app/windows/runner/resources/app_icon.ico",
+          "bytes": 4122,
+          "sha256": "ffc022b68992e75d7ef60d207b186fc679a2d54e085523226d63513e9c5329d5",
+          "state": "preserved"
+        },
+        {
+          "path": "collector.py",
+          "bytes": 65833,
+          "sha256": "20d06a7164f80d1029fa782749947233540188d3db04f5a9547b978e39ac9869",
+          "state": "preserved"
+        },
+        {
+          "path": "content_generation.py",
+          "bytes": 158378,
+          "sha256": "8c4a978b2a78987919ae41bbb64cf95af9093f8ca8dfa3a6bc50da62c027ca82",
+          "state": "preserved"
+        },
+        {
+          "path": "contracts/experience/i18n/en.delta.json",
+          "bytes": 71198,
+          "sha256": "970696b8aa92eaa765fdf4db3b7f056d8738c9ffd3d468fdf1461567136690b4",
+          "state": "preserved"
+        },
+        {
+          "path": "contracts/experience/i18n/ko.delta.json",
+          "bytes": 80375,
+          "sha256": "8ed7c5c8c52b95242e5588746238a83e003c18a5940d188446dcb717596f0c31",
+          "state": "preserved"
+        },
+        {
+          "path": "contracts/experience/i18n/zh-CN.delta.json",
+          "bytes": 68274,
+          "sha256": "d4ecd321c594e96c26b5a16562b159bfd5786a72832c3998f16762a8b3bec49f",
+          "state": "preserved"
+        },
+        {
+          "path": "database.py",
+          "bytes": 119191,
+          "sha256": "907b1cc1b6f61c25dafdacb7647df9684b711baf2c86e365b4480ffee56a9e4b",
+          "state": "preserved"
+        },
+        {
+          "path": "experience_runtime.py",
+          "bytes": 338641,
+          "sha256": "c4197ae19ec4fadd280bd15592e78b76a1f4838d03d41bd30f1bad8f4e2011b7",
+          "state": "preserved"
+        },
+        {
+          "path": "intelligence_library_api.py",
+          "bytes": 76794,
+          "sha256": "124939fc25a872ed38761e986df50ff321438d1c125ed40385463cf51825e6d1",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/auth_recovery.py",
+          "bytes": 33596,
+          "sha256": "fe5c6fec6d3cf0e7a23d86c4a48f907d125dc4293768b203aeee7ae8257d1263",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/base.py",
+          "bytes": 19200,
+          "sha256": "78a8e6f0e8105ea8761f93d7141cce08c5af4027364ddbcdc80c3a5f16a58232",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/bilibili.py",
+          "bytes": 35284,
+          "sha256": "0fc77ba48d953dd660abeb0efb4076e18aec28fda7c389e982d9f1d5085e5224",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/cookie_vault.py",
+          "bytes": 19137,
+          "sha256": "f03e6b668ae242f433ffadfd24c896dd888169b197f7aee78fcd81eee4b0de2b",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/douyin.py",
+          "bytes": 33609,
+          "sha256": "3c9150d1c7c5632da3abd0baf1fb5afdd7d889e7d2e50d32efaa94d9cd74fead",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/human_browser.py",
+          "bytes": 58565,
+          "sha256": "83149a798f9f546420a4e8847694f4947a96dbe5446bf02138659fb2b40bf9d7",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/instagram.py",
+          "bytes": 69622,
+          "sha256": "3daee636ee7c05f4b3d081db5135688ac576f6dc8e1fdb2a1189527a06c986de",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/risk_controller.py",
+          "bytes": 11837,
+          "sha256": "a9aa7f198bf7613d56cea0eafd5ed4b5d2c2ed3ca6443f4dd661be2fe4b5823b",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/weibo.py",
+          "bytes": 25257,
+          "sha256": "deb4f08e3a82bae2549a5303aa38736d1596f11c2b279e04fc136510dced6dcc",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/x_platform.py",
+          "bytes": 34473,
+          "sha256": "33d8ef63399b6ef9ff6f819b3b3ad228575f27578d8ac663d9affa91738b15c0",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/adapters/zhihu.py",
+          "bytes": 31794,
+          "sha256": "4c18e8a83617b01fa93e0850410d3ef62bb3da9e69d48ec2ff810f1a5158f5f1",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/ai_hub/context_pack.py",
+          "bytes": 8086,
+          "sha256": "3d4c3997d62bb141bd6a36877da8d3b81a50177b9b7633a30744cfc4c0ef543e",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/ai_hub/conversations.py",
+          "bytes": 50723,
+          "sha256": "8671087ca37cd1c554ada7bb71de39ba3f6caf65793b384a611efc110e1db73c",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/ai_hub/routes.py",
+          "bytes": 12655,
+          "sha256": "9fac7f161a9cc2d6733670023e6d72deeb17a15612d0c701684a0f6b29b41d8a",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/ai_hub/service.py",
+          "bytes": 22033,
+          "sha256": "381d629474ed34939c3311ace72eb0d9fa638ca1d6f9dce0a90d66abd56b89e5",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/importer/documents.py",
+          "bytes": 94668,
+          "sha256": "c2e906cc489dfa69805e280501cb19b39cffcd9fa7938d5c379994ecc1afa150",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/importer/office_package.py",
+          "bytes": 51933,
+          "sha256": "f22d81bb077e536de07a015dfe8575aba0f0833cc315d24c171f632befc0d564",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/agents/skills/execution.py",
+          "bytes": 87478,
+          "sha256": "b4b88f405d7a2030b2e851588e24a82c3ccc123f9b80a8256edcc34664761ee9",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/agents/skills/registry.py",
+          "bytes": 13560,
+          "sha256": "5dcbe976ead870be6f18455c4aea5e7a792b439e46309d955b3cbb49f4289854",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/audio_visuals.py",
+          "bytes": 37515,
+          "sha256": "9f757f2b17855498f8ce7b5a536d39e8d4236991dcf9d635e627eb3466952e0f",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/cover_candidates.py",
+          "bytes": 7220,
+          "sha256": "3e762f11cf2c3950bbb1b3ac469fd2c05cf8e715798a4cc4dab70d3af8a0bc02",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/internal_pitch.py",
+          "bytes": 46374,
+          "sha256": "309c71eb6fd25eb22cb1637ca03eaccdb6797076e348ac570c7545e7332b66e1",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/rendering.py",
+          "bytes": 91253,
+          "sha256": "ac94b8d5e3306ec8f333b1374c3a837481b9a296ffff84ca1f1e5d10c34ca0f5",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/speech_transcription.py",
+          "bytes": 24453,
+          "sha256": "db0772e447523d13360d0ebfa5491bf67357446fe2f5fc598d254ac3b81b1e49",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/timeline_interchange.py",
+          "bytes": 33415,
+          "sha256": "d03ae3e089d88bdf9a80286d1b4adab433477336a19fee454b35ae9c0892bbb5",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/transcript_editing.py",
+          "bytes": 21180,
+          "sha256": "f8c971d7ffd87be5b6c736bdf5feec7ffb75132ff0af3680b6210dee70fa8044",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/content_creation/video_editing.py",
+          "bytes": 107142,
+          "sha256": "410b76fc6df0deca403d6e702885b8ebb38b3c9d800590814670c261af9eeacb",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/database/migrations.py",
+          "bytes": 69063,
+          "sha256": "0b6c6732067182aeac3939f8b02bd46ebbfd87255d0e46411a5fa67e9ff7d0c0",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/database/platform_content.py",
+          "bytes": 29800,
+          "sha256": "88c9ae6a096c8397dcfe2b1033413a81dc262dc1146d830219fe5c45fbd7f755",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/evidence/signing_config.py",
+          "bytes": 9489,
+          "sha256": "f7dba73c4428ebdc874107e36ff09cca82bac58d31d88e9b17944200c813360f",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/reporting/saved_work.py",
+          "bytes": 96386,
+          "sha256": "423bfe0e5f00eb02bf0ecbfb5296b274678ac089cb932d11ace532b45a6ec418",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/shared/reporting/word_pdf_export.py",
+          "bytes": 40862,
+          "sha256": "5fb25bd08fa57cd00cf52cf13ee080d74029fe2b953c82cd2c869886b7fc0282",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/ai_gateway/core.py",
+          "bytes": 38961,
+          "sha256": "8220358d2e8a196191f0defbf24b3ae79bea35aa85d1756055e15a51ac6a7895",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/ai_gateway/owned_service.py",
+          "bytes": 53604,
+          "sha256": "dad590159654e3653eb36e98773f668d3b42a405baf9040ef91ecb8b596b9e94",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/ai_gateway/owned_training.py",
+          "bytes": 39967,
+          "sha256": "89af1641e8dd92d71a0f6be3615ccb3ce5953f15e8b876f919c2a773f58540c0",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/base.py",
+          "bytes": 8486,
+          "sha256": "065f7b30bfa9fce098bdde5156fb1b53b2fefc0533703db5818c93f7eb5ab90e",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/bilibili.py",
+          "bytes": 10239,
+          "sha256": "3d5e3458d98f7a2015e1ef6df9d4987c716c620fbf541d740e6b85e8f7be1225",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/config.py",
+          "bytes": 12265,
+          "sha256": "fea151085f68b435b8c4c6cd4c1e83cf5e79695cdcfe7548c50fa8cdbe9685d7",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/douyin.py",
+          "bytes": 24904,
+          "sha256": "8fe322cdbd20e3021b1d6956ed55c05723eb986c5fc4e72256814af13875245b",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/facebook.py",
+          "bytes": 21649,
+          "sha256": "54c01f79a3af5bcaa7ddea4b58c1cc9a7037f3b170d872fe1cb75083caef14b2",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/instagram.py",
+          "bytes": 43419,
+          "sha256": "ab7288df4f3300341c065ccb6ef10b07edf49ed4052b5c99d0ebe600dd079399",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/platform_naming.py",
+          "bytes": 47226,
+          "sha256": "eea8a4596dc891e70fc538ed4428f4d109be8ab72b5378c9439b1303a63f994d",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/public_http.py",
+          "bytes": 23987,
+          "sha256": "f70d891125b621fe8b06c5f431f647ff4f859255d0800fb9c7f7264001db3eda",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/public_source.py",
+          "bytes": 36103,
+          "sha256": "88b916545cd820080a0637f5eb9683b09381b41bf942cff06e9f91a272659303",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/routing.py",
+          "bytes": 20086,
+          "sha256": "da7d1746a739fd4d81f66a62cd14a9b88e9bee527fe47fce0fe884236ab194e7",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/secondary_collection.py",
+          "bytes": 401328,
+          "sha256": "cab2a3b8f8ffbb298d34ee64a349ca933eb08dedcd8eea36264b12e300a5a1d5",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/wechat.py",
+          "bytes": 25302,
+          "sha256": "949cd84a9d41fd6fccae5e7b75f02ab9c4f133250ff987836382aeebdfabf366",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/weibo.py",
+          "bytes": 9092,
+          "sha256": "599a97a7ba4b16c6a5c63edd2d3ca50fd76b6b3dceba3f77c018de77ee4ac8dd",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/x_platform.py",
+          "bytes": 31801,
+          "sha256": "c864e44992b828b4439c4dfd021606c8111eefc8ef2d8169c8533761c37744c9",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/xhs.py",
+          "bytes": 37978,
+          "sha256": "da50cb003fe5f882e1c76d25209c39b11a69e4ea6bc5c34493f6e22fd8db900f",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/adapters/zhihu.py",
+          "bytes": 7266,
+          "sha256": "87f4135ed4fcfe64bd6b19fbef60d86d4af62518767b36a5e63ea7c32e3a5ce5",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/collector/guard/task_queue.py",
+          "bytes": 21394,
+          "sha256": "c97d6c60f838c6f617265823d15285c498bf8bc0340e2c25fe778758e79c4897",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/security/owned_model_admission.py",
+          "bytes": 29283,
+          "sha256": "1ce57ae464b0745ffa391748a8c62c1d090950330bdf238b8798cdec47383e6f",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis/system/security/permission.py",
+          "bytes": 339605,
+          "sha256": "4ad801d7051209af67246a8c7375b0586a2e091b2691820c989a6873281ec305",
+          "state": "preserved"
+        },
+        {
+          "path": "lumenis_app_api.py",
+          "bytes": 57244,
+          "sha256": "ad50ab554b30b141518836ef01caaceb7a2e878905a76631eb510d1efdee7f6e",
+          "state": "preserved"
+        },
+        {
+          "path": "scripts/audit_tools/verify_lumenis_single_product.py",
+          "bytes": 24866,
+          "sha256": "303423dc8d55b04820de6471418d01527350b2c72533c4a230c9b0fa99b1fd40",
+          "state": "preserved"
+        },
+        {
+          "path": "scripts/backup_db.py",
+          "bytes": 6046,
+          "sha256": "7de086b0b9466310a80391e5b8639531e3c7a66bbe54ed7572c3e5993c5a73a2",
+          "state": "preserved"
+        },
+        {
+          "path": "scripts/pitch_export.py",
+          "bytes": 21785,
+          "sha256": "90741092aa9938a9100e03f29bfb81dcf8ed328ef18e1dcaf8a56e4da3e26c3e",
+          "state": "preserved"
+        },
+        {
+          "path": "scripts/start_production.ps1",
+          "bytes": 27968,
+          "sha256": "5ca0b7f8afdfd1cff973d97d6089e23a3fd6f39025a9f16290f323aeb0260e85",
+          "state": "preserved"
+        },
+        {
+          "path": "shared_artifacts.py",
+          "bytes": 185726,
+          "sha256": "25078b8989cd152c2e8456ccaf6254265c2a914a4169d379b5e5ec826fef2297",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/agent_runtime/test_loop_checkpoint_contract.py",
+          "bytes": 14649,
+          "sha256": "a4d206667427a4a1d6c4237d27886f0cc21450f597d410ba6267c80689dfa86b",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/agent_runtime/test_loop_execution_resume.py",
+          "bytes": 23661,
+          "sha256": "ca17ed5869e16491aaecf102eb99b42b114b336f68aa1ce419f9af6f35294d56",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/collector_commit_worker.py",
+          "bytes": 3830,
+          "sha256": "44ab1d4af136e759067cf3e843d4eb45b96103ec54d089b0dd08df7d0563720a",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_agent_conversation_context.py",
+          "bytes": 33904,
+          "sha256": "b35adb1091eaf47c79131e40dd6acb71f29a462942ff5085a6b9dbe3031ce473",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_agent_skill_contract_binding.py",
+          "bytes": 9761,
+          "sha256": "7ff378e8ce1312f860b9f4792eb5434efa6cf9f6b94b2c2e66ff9bd1830128bb",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_ai_context_pack.py",
+          "bytes": 8740,
+          "sha256": "b3bb3ab60888cce93edc81d742adae5ed84d389aa1ca03ad2fc7137925015d34",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_ai_conversation_owner.py",
+          "bytes": 45709,
+          "sha256": "4c928230f96b19c0d96d12d615fa4c3e1af12f8c2c4c7b5d43fab8fcac9a6d0f",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_ai_hub_owned_gateway.py",
+          "bytes": 9544,
+          "sha256": "ddc22368ec0df61901e317526c28f48f26d821b71fc1870efc9fa7ed34765f8d",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_ai_memory_passages.py",
+          "bytes": 2579,
+          "sha256": "1981b1c0e83bdcdb733391af4ad11bd59d2477557c838e83af725dd099619359",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_audit_inventory_boundaries.py",
+          "bytes": 9195,
+          "sha256": "315b24162febec2467a41601d6457d7eb1c6496e232351c75072695847be4f9e",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_bilibili_adapter.py",
+          "bytes": 9223,
+          "sha256": "bff73f33f00b0c11fee667bd77f6825a9be35d0d6851605318bb42e3bf940754",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_builtin_skill_discovery_execution.py",
+          "bytes": 5012,
+          "sha256": "8565c58a090b8c30577813245223852a2b02f62663072b86d8841dbc3154ec9b",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_business_action_costs.py",
+          "bytes": 11516,
+          "sha256": "3a4e38e477df6e6751733d7fd3bf5185407debd2214403ecbfc68b14c358555e",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_business_collection_runtime.py",
+          "bytes": 15230,
+          "sha256": "67c318161ce453508370f2a26340720a8ac78c2486cb2e25f8f3e639a74332ac",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_business_domain_analysis_candidate.py",
+          "bytes": 99507,
+          "sha256": "d060bca1cc8b90a4c0d2504fb426b66b67b312f1207fe41a26c88b09bb270a60",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_business_domain_workbench.py",
+          "bytes": 12504,
+          "sha256": "32d5d629274ff53093da75224deb04279fe776bf787c40b249ad539fdc403c96",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_business_execution_observations.py",
+          "bytes": 25891,
+          "sha256": "b9d0cd5f8885818e1edb00ec67e5219f0658297be250016e3eedd566e85af35d",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_business_single_derived_revision.py",
+          "bytes": 11148,
+          "sha256": "104c734aaa1273be27a588b66ba1b4a79e6a77d8e7e6f48a0869baa90cf17ad5",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_business_work_owner_routes.py",
+          "bytes": 18115,
+          "sha256": "7254408a1f8411fe08543d1a575de69f5dfb2fbcab99f25e32746d9acccfbf09",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_cold_start_owner_initialization.py",
+          "bytes": 20269,
+          "sha256": "478c5060bfb5bfb9381d6a2bb4e64137e61b187729917fcdbde237bd7ec87549",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collected_public_research_workflow.py",
+          "bytes": 6394,
+          "sha256": "ba376deab715e2e42f05d5b353956cca8e1fcf0fbba122cb0c96b9f8f2d3a66f",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collected_source_use.py",
+          "bytes": 7224,
+          "sha256": "3d79e336c4988c5b06ebfecbeec698c7d1ddc079580a1d0ffc2b39078a40bb44",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collection_scope_routes.py",
+          "bytes": 7789,
+          "sha256": "ffd9dfea8559c029b004abfc637d92a3f6f9edecdbb70e640a830a46998e66fc",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_comment_pages.py",
+          "bytes": 19779,
+          "sha256": "397f8f18c47e0c583625040be8c8ec1646ce8fcc8a65302d9cb25249eaed342c",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_durable_compatibility.py",
+          "bytes": 39686,
+          "sha256": "2de3541353b97b67a4901e7b03fec19bd05f6f040df385b93bc730e88becfcc3",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_manual_task_continuity.py",
+          "bytes": 5412,
+          "sha256": "be0a0155604985bff07dc13b5aa0606cef40a774c5355335d5592b5c6d3321ee",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_native_author_data.py",
+          "bytes": 3369,
+          "sha256": "fe8f203f01aada9100596096e0a2da6f71ea1b98d60b6d4a1aabdcf5565b7863",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_native_comment_adapters.py",
+          "bytes": 7505,
+          "sha256": "b40518f1d7c0f6450447cd697a4d8b51cf40412a4876871a06a8ebfa8974693e",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_native_source_consumers.py",
+          "bytes": 4783,
+          "sha256": "f26d4a98812e3bf32b751515cbd16015cf1fd2134aef891c65b3a11d3e201cd9",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_public_original.py",
+          "bytes": 3705,
+          "sha256": "1a85b9a895284b8f419a28a16351711a3759d6fd6caf2404b3fedf6dfec3f1a9",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_collector_request_confirmation.py",
+          "bytes": 5440,
+          "sha256": "9ce7552697b5a2c41fb86dd4aa6a492fd7865ed58299d23782698eb7ca7514ce",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_comment_page_source_use.py",
+          "bytes": 13090,
+          "sha256": "fe88a0685d7fd921865634ac6e4733669fcd83e3e2ba8fbabc5e60e57179282b",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_comment_research_saved_work.py",
+          "bytes": 15985,
+          "sha256": "5b0eeefde8ad627437dd36c2a8d80613e30ca199896e81fa597ef99751b0e69c",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_content_project_listing.py",
+          "bytes": 10854,
+          "sha256": "f659f0a70c877cc817d2199dfccb42fd938d9b295708d6cb40aff109bf37ee3b",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_content_source_import_permission.py",
+          "bytes": 19530,
+          "sha256": "ba362bb4a2dd5d3ffae95d86d7c927a6db524a87e4b65982124688e468b8f965",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_content_source_streaming.py",
+          "bytes": 7702,
+          "sha256": "573e292d1b50a23c9d660e5951564cbaf498fd9e9822e371d5b399b8124c6d37",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_cookie_vault_runtime_path.py",
+          "bytes": 2893,
+          "sha256": "58449bd31097fba8552061ab5ebc58cb664d761bc9f9dd9cf60e8c97f0bb6768",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_database_backup_signing_contract.py",
+          "bytes": 14528,
+          "sha256": "0364810f6d532c9e2021e5ffec27c47959c9ebb3be8f171099c8dd4020ad5a96",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_database_restore_contract.py",
+          "bytes": 17509,
+          "sha256": "6ccd6c86f0f75ab56b3af082ca96ac59ea5ce850cd201f2124ab1f951f810dac",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_detail_comments_creator_delegation.py",
+          "bytes": 11591,
+          "sha256": "6d09c5425fb25c502760d79291e92c2523d7fa7627f1c8c01594beae6a16fab9",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_local_content_source_routes.py",
+          "bytes": 38490,
+          "sha256": "c2dbbf66932811b53094ffb7634ebc625dfb41a784ce0bd0d2b140eca5620ddc",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_media_long_programme_contract.py",
+          "bytes": 11580,
+          "sha256": "d98c355a5228ee067a26b17639ccf7b5ce040abcb61272195724a8279c4b9ade",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_office_owner_routes.py",
+          "bytes": 4555,
+          "sha256": "3be9bc3843aca6472db8522efb7df4637217710b7c8f051b5c789ac4a87e7340",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_office_package_editing.py",
+          "bytes": 44275,
+          "sha256": "436a9da6b65c5d2a15502e0418fad9a215fab9d6c3c8c1e928e6a78f5df9ca7a",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_owned_conversation_consumer.py",
+          "bytes": 12842,
+          "sha256": "0289d04c322d5b7de611a483b789841b3af3723186e914e4164b5343c3b91ed5",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_owned_creation_research_parent.py",
+          "bytes": 2749,
+          "sha256": "9e5ffe7302509eaa571f21976d5ea2230666c8060e9692ca86aaeaa4c0d4f294",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_owned_creation_shared_accounts.py",
+          "bytes": 2144,
+          "sha256": "d47f5bbd5aebb3d204a369e5a360dc8d0ff5520f70840d421b3fbf679112c107",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_owned_creation_workflow.py",
+          "bytes": 23205,
+          "sha256": "7fc1d1cb13758ab3844f8e738f20c1e1b62a02a706af4570cfb3dc324ab7d035",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_owned_model_admission.py",
+          "bytes": 18778,
+          "sha256": "457ae50470364f1728b189845637dc06892b8bd5e9a2764904bccf62a498975b",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_owned_service.py",
+          "bytes": 22049,
+          "sha256": "f2145bfe35ab92c84465b7f2571224cbc7ee7cc374cecf372f95650dd01ac7e4",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_registered_skill_background.py",
+          "bytes": 11531,
+          "sha256": "ed6e661dba3addc864f57acf1682988c8ebf90a3db64bac5a81806bbe2bf4c5a",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_safety_boundary_backup_contract.py",
+          "bytes": 12473,
+          "sha256": "62608ca8d673e077661fc7f56fceb246fadf8c6df756046835eee5540ffeb73b",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_saved_document_workflow.py",
+          "bytes": 84321,
+          "sha256": "62edb49570f97796167b1da829f85d91d1d1d7d8e54b498ae813af7ee9888d5e",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_saved_work_pptx_exports.py",
+          "bytes": 14801,
+          "sha256": "0c04904a3d0d7f379bd640a62d3b752c3756fa8027353a02e2714e4e16c0fc0d",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_scoped_derived_memory.py",
+          "bytes": 41704,
+          "sha256": "9b9b7d6980216d7c71887c4e4bf03064f01467ef36aa2dcd3b7ae5c2e083795a",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_secondary_collection_surface.py",
+          "bytes": 37870,
+          "sha256": "ca92504badf8a9cd2ab2b6576933fc8ee6010d458bfcd8e2b24e3783001a2dca",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_speech_transcription_timebase.py",
+          "bytes": 13370,
+          "sha256": "a2f69a7db3d5507e39e4489ded61598ebde6aec82e7945ca73dde2f98e7b152d",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_t2_collection_chain.py",
+          "bytes": 18635,
+          "sha256": "926159ad37c898a151e7ea3f2ac02db5a24a222fafa35c490b923e42747dbe0e",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_timeline_rendering.py",
+          "bytes": 67823,
+          "sha256": "63344388bc2f5944f913a98dd64dc2508f60263868abdb65fdd5529495c1a9f0",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_timeline_track_controls.py",
+          "bytes": 6657,
+          "sha256": "0e0c3641105227f664e3cc61a6850e44267a3d64373b7793bd37cc5966e51bfa",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_transcript_editing.py",
+          "bytes": 10413,
+          "sha256": "9e205159765f633c021569bd10e6fd3930f1f51d84812044bf2ecc0f72774fc3",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_visual_document_workflow.py",
+          "bytes": 6668,
+          "sha256": "5e7ee8dd4d758bdd1de929d9dd63c75a4f60ba5e808894454d3fdd90c38c7256",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_wechat_public_sources.py",
+          "bytes": 13323,
+          "sha256": "54e995d39e2b99ef11ff2f5e38d75eb16333f056dec465e33d75ccff15e33470",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_workspace_evidence_signing.py",
+          "bytes": 6488,
+          "sha256": "8f47d3ce6fc92b9c86b614d5310d9748b7637684aaed72a0ae82a4e9d73a3d76",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_xhs_cdp_native_truth.py",
+          "bytes": 30305,
+          "sha256": "cdade5e78a2db3f04f29d28a1915bb94e6c617676d987ed22a07c033aa2a8d4b",
+          "state": "preserved"
+        },
+        {
+          "path": "tests/test_zhihu_adapter.py",
+          "bytes": 7025,
+          "sha256": "031c01fb44ad897718c5660c253ab4f5e8ab673842222cef5941ca34274ae2a6",
+          "state": "preserved"
+        },
+        {
+          "path": "vendor/lumenis-reuse-notices/windows-python/flask-cors-6.0.5.LICENSE.txt",
+          "bytes": 1056,
+          "sha256": "134a20d852c0cf9e0f3c228767921b76f4bfc4af4a2fc7c4cc90f6b4fd407b5c",
+          "state": "preserved"
+        },
+        {
+          "path": "vendor/lumenis-reuse-notices/windows-python/flatbuffers-25.12.19.LICENSE.txt",
+          "bytes": 11358,
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "state": "preserved"
+        },
+        {
+          "path": "vendor/lumenis-reuse-notices/windows-python/magika-0.6.3.LICENSE.txt",
+          "bytes": 11357,
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "state": "preserved"
+        },
+        {
+          "path": "vendor/lumenis-reuse-notices/windows-python/markitdown-0.1.8.LICENSE.txt",
+          "bytes": 1141,
+          "sha256": "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383",
+          "state": "preserved"
+        },
+        {
+          "path": "vendor/lumenis-reuse-notices/windows-python/ordered-set-4.1.0.LICENSE.txt",
+          "bytes": 1064,
+          "sha256": "0cf8f55f36dc1306b3fe89bf29e29a0c742f279f038d149244319e593ab16ca4",
+          "state": "preserved"
+        },
+        {
+          "path": "website/README.md",
+          "bytes": 6365,
+          "sha256": "0c38f6cc144429c384b6222c52bbc8eef83a5c2168687522c933d2f10e607374",
+          "state": "preserved"
+        },
+        {
+          "path": "website/public/favicon.svg",
+          "bytes": 10945,
+          "sha256": "fa241d16809421f57d74cf5c2fab8c3426f5d0881236b705c4a2fd24fc4745b1",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/components/CreativePaths.astro",
+          "bytes": 2148,
+          "sha256": "0f1b932ea8b446afefb53db46bd5c5f4fd94319ab741368eaf3d4ee47ac99470",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/components/PixelPlant.astro",
+          "bytes": 4137,
+          "sha256": "370b29c69717f28e90af59673037ef3fd59982107cf2c6114d3de41586f8f444",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/components/PublicContent.astro",
+          "bytes": 9180,
+          "sha256": "df71588cbf551a9d6f1af856b93de3c3b0b28b1ffa39d675451b2babf09418aa",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/components/PublicNavigation.astro",
+          "bytes": 1683,
+          "sha256": "69031f1a8c24b0711e2e6cb1f3cd3f632762df54a52fb43a0ea2bfdc121de17e",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/components/SitePage.astro",
+          "bytes": 19272,
+          "sha256": "b2bb4249aaf3f26263367114c2e8105da595f4e5b92d24059761b4341ebe2de3",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/i18n.ts",
+          "bytes": 46618,
+          "sha256": "886fa2b36dc91da19c88d4f5ca6d03a5974647c4a00e75db7c1c77253b22bbcb",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/pages/[...page].astro",
+          "bytes": 494,
+          "sha256": "b365c1e78dc8aa8aab5352c70775f60f200c66426f95e848612905597559683d",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/pages/sitemap.xml.ts",
+          "bytes": 1353,
+          "sha256": "3e8b75b0365d5c568201cc1ffc36e3788b7936f818c658b736a73159a9dd5999",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/public-content.ts",
+          "bytes": 42807,
+          "sha256": "0e75049e0ff66ca9b772e3606b814bc3155c0b4f5b3398424804ae670c1c46f2",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/site-config.mjs",
+          "bytes": 1932,
+          "sha256": "832d83767604b3235cad7f930a445d165373b2840d799a113d924e7e40f802a9",
+          "state": "preserved"
+        },
+        {
+          "path": "website/src/styles/site.css",
+          "bytes": 65744,
+          "sha256": "da25a79f2ea4623d35a15d525b0d432de508b0ea848c71e3ce0ca2afef55d6a2",
+          "state": "preserved"
+        },
+        {
+          "path": "website/tests/site.test.mjs",
+          "bytes": 19164,
+          "sha256": "7ada299319a4381f834cdaa5751fd43f42be9db0a99a4b5f20582f1b8a300572",
+          "state": "preserved"
+        },
+        {
+          "path": "xhs_cdp_collector.py",
+          "bytes": 92049,
+          "sha256": "52d95b26e250217787cd7ccf681e170ebb10c4caa8cde9eb5b5736f5a1e0c049",
+          "state": "preserved"
+        },
+        {
+          "path": "xhs_cookie_bridge.py",
+          "bytes": 95622,
+          "sha256": "fd0ade06ed3e5b290a222f64fc3c65715042587846d52f8707e5248ecad50969",
+          "state": "preserved"
+        }
+      ]
+    },
+    "checks": {
+      "python_syntax": "147 changed Python files parsed; no imports or product effects",
+      "dart_analysis": "lib/test: exit 0, no diagnostics",
+      "website_build": "PASS: 36 pages; not visual acceptance",
+      "constitution": "PASS",
+      "governance_machine_contract": "PASS",
+      "experience_authority": "PASS",
+      "screen_blueprints": "PASS",
+      "takeover_governance_initial": "FAILED: stale .codex/README.md binding; retained local log",
+      "source_secret_pattern_scan": "No high-confidence key/private-key patterns found in frozen source; not a complete security acceptance",
+      "required_pr_ci": "NOT_RUN",
+      "takeover_governance_staged": "PASS after updating the single .codex/README.md hash binding; original failure retained",
+      "credential_path_boundary": "PASS: 0 tracked credential paths",
+      "diff_whitespace": "PASS"
+    },
+    "normalization": "auth_recovery.py mixed CRLF normalized to LF only; original bytes preserved",
+    "scope": "No functional repair after pause. Source snapshot is not whole-product or frontend acceptance.",
+    "remaining": [
+      "Required exact-head CI and substantive integration review",
+      "Mainline/local source readback after a reviewed merge",
+      "All original unfinished product and visual acceptance requirements remain paused"
+    ]
   }
 }

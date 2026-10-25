@@ -338,6 +338,25 @@ class Sh02ViewModel extends ChangeNotifier {
 
   Future<void> openImportById(String artifactId) => _openImport(artifactId);
 
+  /// The Office reader supplies the exact version it has independently reopened.
+  /// Historical inspection changes the reader, never the latest library row.
+  void presentOfficeVersion(Sh02ImportedMaterial material) {
+    final previous = _openedImport;
+    if (_disposed ||
+        previous == null ||
+        previous.workId == null ||
+        previous.workId != material.workId) {
+      return;
+    }
+    if (previous.artifactId == material.artifactId) return;
+    _readGeneration++;
+    _openedImport = material;
+    _sourcePage = null;
+    _rowsLoading = false;
+    _rowsFailed = false;
+    _notifyIfAlive();
+  }
+
   Future<void> _openImport(
     String artifactId, {
     Sh02ImportedMaterial? expected,

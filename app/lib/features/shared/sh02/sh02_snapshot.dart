@@ -221,6 +221,9 @@ class Sh02ImportedMaterial {
     required this.text,
     required this.excerpts,
     required this.limitations,
+    this.workId,
+    this.version,
+    this.parentArtifactId,
   });
 
   final String artifactId;
@@ -235,6 +238,9 @@ class Sh02ImportedMaterial {
   final String text;
   final List<String> excerpts;
   final List<String> limitations;
+  final String? workId;
+  final int? version;
+  final String? parentArtifactId;
 
   static Sh02ImportedMaterial? tryParse(Object? value) {
     final item = _asMap(value);
@@ -254,8 +260,34 @@ class Sh02ImportedMaterial {
     final tableCount = analysis?['table_count'];
     final text = parsed?['text'];
     final createdAt = _string(artifact?['created_at']);
+    final workId = _string(document?['work_id']);
+    final version = document?['version'];
+    final parentArtifactId = _string(document?['parent_artifact_id']);
+    final edit = _asMap(payload?['office_edit']);
+    final editedOriginal =
+        source?['origin'] == 'user-edited-original-version' &&
+        edit?['schema'] == 'lumenis.office-edit/v1' &&
+        edit?['package_sha256'] == sourceSha &&
+        edit?['result_attachment_name'] == source?['attachment_name'] &&
+        edit?['source_artifact_id'] == parentArtifactId &&
+        edit?['source_artifact_sha256'] == document?['parent_sha256'] &&
+        edit?['original_retained_in_parent_version'] == true &&
+        parentArtifactId != null &&
+        RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(parentArtifactId) &&
+        document?['parent_sha256'] is String &&
+        RegExp(
+          r'^[0-9a-f]{64}$',
+        ).hasMatch(document!['parent_sha256'] as String) &&
+        edit?['parent_package_sha256'] is String &&
+        RegExp(
+          r'^[0-9a-f]{64}$',
+        ).hasMatch(edit!['parent_package_sha256'] as String) &&
+        workId != null &&
+        RegExp(r'^WORK-[0-9a-f]{24}$').hasMatch(workId) &&
+        version is int &&
+        version > 1;
     if (document?['kind'] != 'research' ||
-        source?['origin'] != 'user-upload' ||
+        (source?['origin'] != 'user-upload' && !editedOriginal) ||
         artifactId == null ||
         !RegExp(r'^ART-[0-9a-f]{16}$').hasMatch(artifactId) ||
         artifactSha == null ||
@@ -305,6 +337,9 @@ class Sh02ImportedMaterial {
       text: text,
       excerpts: excerpts,
       limitations: limitations,
+      workId: workId,
+      version: version is int ? version : null,
+      parentArtifactId: parentArtifactId,
     );
   }
 }

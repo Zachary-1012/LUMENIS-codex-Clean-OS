@@ -43,47 +43,55 @@ def _assert_collection_host():
     if COLLECTION_HOST != 'www.rednote.com':
         raise RuntimeError('当前生产采集仅允许香港/国际 RedNote 主机 www.rednote.com')
 
-def _assert_collection_identity(context):
+class CollectionIdentityError(RuntimeError):
+    """Safe failure stage, without identity, Cookie or endpoint values."""
+    def __init__(self, code, stage):
+        super().__init__(code)
+        self.stage = stage
+
+
+def _assert_collection_identity(context, *, expected_user_id=None):
     """Verify the existing RedNote UI identifies the approved HK account."""
-    expected = os.environ.get('XHS_EXPECTED_COLLECTION_USER_ID', '').strip()
+    expected = (expected_user_id if expected_user_id is not None else
+                os.environ.get('XHS_EXPECTED_COLLECTION_USER_ID', '')).strip()
     if not expected:
-        raise RuntimeError('COLLECTOR_IDENTITY_NOT_CONFIGURED')
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_NOT_CONFIGURED','APPROVED_IDENTITY_NOT_CONFIGURED')
     try:
         cookies = context.cookies([COLLECTION_ORIGIN])
     except Exception as exc:
-        raise RuntimeError('COLLECTOR_IDENTITY_UNAVAILABLE') from exc
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_UNAVAILABLE','REGISTERED_CONTEXT_COOKIE_READ_FAILED') from exc
     cookie_names = {
         str(cookie.get('name') or '').lower()
         for cookie in cookies if str(cookie.get('value') or '').strip()
     }
     if 'web_session' not in cookie_names:
-        raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_NOT_VERIFIED','WEB_SESSION_NOT_PRESENT')
     user_ids = {
         str(cookie.get('value') or '').strip()
         for cookie in cookies
         if cookie.get('name') == 'x-user-id-pro' and cookie.get('value')
     }
     if len(user_ids) > 1 or (user_ids and not hmac.compare_digest(next(iter(user_ids)), expected)):
-        raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','COOKIE_USER_ID_MISMATCH')
     holder_countries = {
         str(cookie.get('value') or '').strip().upper()
         for cookie in cookies
         if str(cookie.get('name') or '').lower() == 'x-rednote-holderctry' and cookie.get('value')
     }
     if holder_countries and holder_countries != {'HK'}:
-        raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','HOLDER_COUNTRY_MISMATCH')
 
     try:
         pages = getattr(context, 'pages', None) or []
         if not pages:
-            raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+            raise CollectionIdentityError('COLLECTOR_IDENTITY_NOT_VERIFIED','NO_EXISTING_APPROVED_ORIGIN_PAGE')
         rednote_pages = []
         for page in pages:
             page_url = urlsplit(str(page.url or ''))
             if page_url.scheme == 'https' and page_url.hostname == 'www.rednote.com':
                 rednote_pages.append(page)
         if not rednote_pages:
-            raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+            raise CollectionIdentityError('COLLECTOR_IDENTITY_NOT_VERIFIED','NO_EXISTING_APPROVED_ORIGIN_PAGE')
         candidates = []
         for page in rednote_pages:
             candidates.extend(page.locator('a.link-wrapper, a.bottom-channel').evaluate_all(
@@ -96,7 +104,7 @@ def _assert_collection_identity(context):
     except RuntimeError:
         raise
     except Exception as exc:
-        raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED') from exc
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_NOT_VERIFIED','SELF_NAVIGATION_READ_FAILED') from exc
 
     self_ids = set()
     for item in candidates or []:
@@ -107,17 +115,17 @@ def _assert_collection_identity(context):
             continue
         parsed = urlsplit(href)
         if parsed.scheme and (parsed.scheme != 'https' or parsed.hostname != 'www.rednote.com'):
-            raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+            raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','SELF_NAVIGATION_ORIGIN_MISMATCH')
         if parsed.netloc and parsed.netloc != 'www.rednote.com':
-            raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+            raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','SELF_NAVIGATION_ORIGIN_MISMATCH')
         match = re.fullmatch(r'/user/profile/([0-9a-fA-F]{24})/?', parsed.path)
         if not match:
-            raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+            raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','SELF_NAVIGATION_TARGET_INVALID')
         self_ids.add(match.group(1).lower())
     if not self_ids:
-        raise RuntimeError('COLLECTOR_IDENTITY_NOT_VERIFIED')
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_NOT_VERIFIED','SELF_NAVIGATION_NOT_OBSERVED')
     if len(self_ids) != 1 or not hmac.compare_digest(next(iter(self_ids)), expected.lower()):
-        raise RuntimeError('COLLECTOR_IDENTITY_MISMATCH')
+        raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','SELF_NAVIGATION_USER_ID_MISMATCH')
 
 
 def _existing_collection_context(browser):
@@ -838,7 +846,12 @@ _DETAIL_JS = r"""
   const comments = Array.from(document.querySelectorAll('.comment-item, .parent-comment')).map(c => {
     const u = c.querySelector('.name,.author a,.user .name'), x = c.querySelector('.content,.comment-content,.note-text'),
           t = c.querySelector('.time,.date'), l = c.querySelector('.like .count,.count');
+    const rawId=c.getAttribute('data-comment-id')||c.id||'';
+    const native=rawId.match(/^(?:comment[-_])?([0-9a-fA-F]{24})$/);
+    const rawParent=c.getAttribute('data-parent-comment-id')||'';
     return { user: u?(u.innerText||'').trim():'', content: x?(x.innerText||'').trim():'',
+             platform_comment_id:native?native[1]:null,
+             parent_comment_id:/^[0-9a-fA-F]{24}$/.test(rawParent)?rawParent:null,
              time: t?(t.innerText||'').trim():'', likes_raw: l?(l.innerText||'').trim():'' };
   });
   const hasVideo = !!document.querySelector('video,.video-container,[class*="video-player"]');
@@ -1082,6 +1095,117 @@ def _await_search_ready(page, keyword, result, progress=None, deadline=None, bud
         return False
     return True
 
+
+def _capture_verified_detail(page, target, *, detail_media_mode, human_view,
+                             video_watched=False, comment_seen=None, detail=None):
+    """One identity-checked detail parser for search and exact-URL reads."""
+    _validate_native_card(target)
+    detail = page.evaluate(_DETAIL_JS) if detail is None else detail
+    _require_detail_observation(detail)
+    _require_detail_identity(detail, target['note_id'])
+    metrics = _detail_metrics(detail, target)
+    published, time_observations, publication_source = _source_publication_time(detail, target)
+    record = {
+        'note_id': target['note_id'], 'xsec_token': target.get('xsec_token', ''),
+        'title': detail.get('title') or target.get('title', ''),
+        'detail_title': detail.get('title') or target.get('title', ''),
+        'desc': detail.get('desc', ''),
+        'author': detail.get('author') or target.get('author', ''),
+        'detail_author': detail.get('author') or target.get('author', ''),
+        'detail_publish_time': published, 'publish_time': published,
+        'time_raw': detail.get('time_raw') or target.get('time_raw', ''),
+        'time_source_observations': time_observations,
+        'publication_time_source': publication_source,
+        'native_metrics_raw': {'engage': detail.get('engage') or {},
+                               'card_likes_raw': target.get('likes_raw')},
+        'author_id': detail.get('author_id', ''), 'author_url': detail.get('author_url', ''),
+        'image_list': detail.get('image_list', []), 'video_list': detail.get('video_list', []),
+        'tag_list': detail.get('tag_list', []), **metrics,
+        'comment_list': detail.get('comment_list', []),
+        'comment_count': detail.get('comment_count', comment_seen),
+        'is_video': bool(detail.get('is_video') or detail.get('video_list') or video_watched),
+        'detail_media_mode': detail_media_mode, 'image_count': detail.get('image_count'),
+        'cover': target.get('cover', ''),
+        'url': page.url if human_view['opened_by'] == 'click' else target['url'],
+        'human_view': human_view,
+        'detail_fetched': True, 'collected_at': datetime.now().astimezone().isoformat(),
+        'source_note_ids': detail.get('source_note_ids'),
+        'source_page_url': detail.get('source_page_url'),
+        'detail_identity_verified': True, 'collector_version': 'xhs-cdp-py-human-2.3',
+    }
+    record['subject_hit'] = _compute_subject_hit(record['title'], record['desc'])
+    return record
+
+
+def collect_detail(keyword, detail_url, *, cdp_url=CDP_URL, progress=None,
+                   deadline=None, resume_ids=None, budget_kind='worker_chunk',
+                   detail_media_mode='legacy'):
+    """Read one requested RedNote note through the registered search worker.
+
+    No search, alternate endpoint, profile creation, or personal-session fallback
+    is allowed. A failed chunk retains the exact pending note for normal recovery.
+    """
+    if detail_media_mode not in {'legacy', 'cover_only'}:
+        raise ValueError('INVALID_DETAIL_MEDIA_MODE')
+    _assert_collection_host()
+    parsed = urlsplit(detail_url)
+    match = re.fullmatch(r'/(?:explore|search_result|discovery/item)/([0-9a-fA-F]{24})/?', parsed.path)
+    if not match:
+        raise ValueError('DETAIL_SOURCE_UNVERIFIED')
+    target = _validate_native_card({'note_id': match.group(1).lower(), 'url': detail_url})
+    _validate_native_card({'note_id': target['note_id'], 'url': keyword})
+    result = {'ok': False, 'keyword': keyword, 'mode': 'detail',
+              'detail_media_mode': detail_media_mode, 'notes': [],
+              'discovered_cards': [target],
+              'summary': {'resumed_note_ids': sorted(resume_ids or ())}}
+    _update_detail_progress(result)
+    if target['note_id'] in (resume_ids or ()):
+        result['ok'] = True
+        return result
+    from playwright.sync_api import sync_playwright
+    with sync_playwright() as playwright:
+        browser, context = _connect_verified_collection_context(playwright, cdp_url)
+        result['identity_verified'] = True
+        page = context.new_page()
+        try:
+            if progress:
+                progress(result)
+            if _budget_reached(result, deadline, budget_kind):
+                return result
+            robust_goto(page, detail_url)
+            if _risk_check(page, result) or _budget_reached(result, deadline, budget_kind):
+                return result
+            page.wait_for_selector(_DETAIL_READY_SEL, timeout=10000)
+            # Verify the selected note before consuming any media/comments.
+            observed = page.evaluate(_DETAIL_JS)
+            _require_detail_observation(observed)
+            _require_detail_identity(observed, target['note_id'])
+            profile, depth = human_reading_profile()
+            consumed = human_consume_detail(page, profile, depth, detail_media_mode)
+            if _risk_check(page, result) or _budget_reached(result, deadline, budget_kind):
+                return result
+            result['notes'].append(_capture_verified_detail(page, target,
+                detail_media_mode=detail_media_mode,
+                video_watched=consumed['video_watched'], comment_seen=consumed['comments_seen'],
+                human_view={'opened_by': 'goto', 'profile': profile, 'depth': depth,
+                            'dwell_sec': consumed['dwell_sec'],
+                            'video_watched': consumed['video_watched'],
+                            'images_swiped': consumed['images_swiped'],
+                            'comments_seen': consumed['comments_seen']}))
+            _update_detail_progress(result)
+            result['summary'].update(detail_success=1, detail_total=1, interactions_made=0,
+                                      acquisition_capability='detail')
+            result['ok'] = True
+            if progress:
+                progress(result)
+            return result
+        finally:
+            try:
+                page.close()
+            except Exception:
+                pass
+            # The approved existing browser/context is deliberately retained.
+
 def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progress=None, deadline=None,
                   resume_ids=None, resume_cards=None, budget_kind='worker_chunk',
                   detail_media_mode='legacy'):
@@ -1233,43 +1357,16 @@ def collect_human(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progre
                     comment_seen = consume['comments_seen']
 
                     d = page.evaluate(_DETAIL_JS)
-                    _require_detail_observation(d)
-                    _require_detail_identity(d, target['note_id'])
-                    metrics = _detail_metrics(d, target)
-                    likes, collects, comments, shares = (metrics[k] for k in ('likes', 'collects', 'comments', 'shares'))
-                    pub, time_observations, publication_source = _source_publication_time(d, target)
-                    rec = {
-                        'note_id': target['note_id'], 'xsec_token': target.get('xsec_token', ''),
-                        'title': d.get('title') or target.get('title', ''),
-                        'detail_title': d.get('title') or target.get('title', ''),
-                        'desc': d.get('desc', ''),
-                        'author': d.get('author') or target.get('author', ''),
-                        'detail_author': d.get('author') or target.get('author', ''),
-                        'detail_publish_time': pub, 'publish_time': pub,
-                        'time_raw': d.get('time_raw') or target.get('time_raw', ''),
-                        'time_source_observations': time_observations,
-                        'publication_time_source': publication_source,
-                        'native_metrics_raw': {'engage': d.get('engage') or {}, 'card_likes_raw': target.get('likes_raw')},
-                        'author_id': d.get('author_id', ''), 'author_url': d.get('author_url', ''),
-                        'image_list': d.get('image_list', []), 'video_list': d.get('video_list', []),
-                        'tag_list': d.get('tag_list', []),
-                        'likes': likes, 'collects': collects, 'comments': comments, 'shares': shares,
-                        'comment_list': d.get('comment_list', []), 'comment_count': d.get('comment_count', comment_seen),
-                        'is_video': bool(d.get('is_video') or d.get('video_list') or video_watched),
-                        'detail_media_mode': detail_media_mode,
-                        'image_count': d.get('image_count'),
-                        'cover': target.get('cover', ''), 'url': page.url if opened_by_click else target['url'],
-                        'human_view': {'opened_by': 'click' if opened_by_click else 'goto',
-                                       'profile': profile, 'depth': depth,
-                                       'dwell_sec': consume['dwell_sec'],
-                                        'video_watched': video_watched, 'images_swiped': img_swiped,
-                                       'comments_seen': comment_seen},
-                        'detail_fetched': True, 'collected_at': datetime.now().astimezone().isoformat(),
-                        'source_note_ids': d.get('source_note_ids'), 'source_page_url': d.get('source_page_url'),
-                        'detail_identity_verified': True,
-                        'collector_version': 'xhs-cdp-py-human-2.3',
-                    }
-                    rec['subject_hit'] = _compute_subject_hit(rec.get('title'), rec.get('desc'))
+                    rec = _capture_verified_detail(page, target, detail=d,
+                        detail_media_mode=detail_media_mode,
+                        video_watched=video_watched, comment_seen=comment_seen,
+                        human_view={'opened_by': 'click' if opened_by_click else 'goto',
+                                    'profile': profile, 'depth': depth,
+                                    'dwell_sec': consume['dwell_sec'],
+                                    'video_watched': video_watched, 'images_swiped': img_swiped,
+                                    'comments_seen': comment_seen})
+                    likes, collects, comments, shares = (rec[k] for k in ('likes', 'collects', 'comments', 'shares'))
+                    pub = rec['publish_time']
                     result['notes'].append(rec)
                     ok_detail += 1
                     if progress:
@@ -1543,7 +1640,8 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
 
 
 def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1, progress=None, deadline=None,
-            resume_ids=None, resume_cards=None, budget_kind='worker_chunk', detail_media_mode='legacy'):
+            resume_ids=None, resume_cards=None, budget_kind='worker_chunk', detail_media_mode='legacy',
+            detail_url=None):
     """统一入口：human=1 真人浏览链路（默认），human=0 旧直连。"""
     if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
         return {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {},
@@ -1554,6 +1652,10 @@ def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1, pro
     if not cdp_url:
         return {'ok': False, 'keyword': keyword, 'notes': [], 'summary': {},
                 'error': 'COLLECTOR_ENDPOINT_NOT_CONFIGURED'}
+    if detail_url is not None:
+        return collect_detail(keyword, detail_url, cdp_url=cdp_url, progress=progress,
+                              deadline=deadline, resume_ids=resume_ids, budget_kind=budget_kind,
+                              detail_media_mode=detail_media_mode)
     if int(human) == 0:
         return collect_direct(keyword, max_scroll, max_details, cdp_url, progress, deadline,
                               resume_ids, resume_cards, budget_kind)
@@ -1579,6 +1681,8 @@ def main():
     ap.add_argument('--detail-media-mode', choices=('legacy', 'cover_only'), default='legacy',
                     help='Detail read mode; cover_only skips media watch/swipe waits while preserving native clues')
     ap.add_argument('--resume-from', default='')
+    ap.add_argument('--detail-url', default=None,
+                    help='Exact permitted RedNote note URL; reuse the same identity-verified worker')
     args = ap.parse_args()
     if args.time_budget is not None and (not math.isfinite(args.time_budget) or args.time_budget <= 0):
         ap.error('--time-budget must be a finite positive number when supplied')
@@ -1632,6 +1736,8 @@ def main():
             progress(initial)
             resume_ids = _completed_detail_ids(previous)
             resume_options = {'resume_cards': _resume_pending_cards(previous, resume_ids)} if previous is not None else {}
+            if args.detail_url is not None:
+                resume_options['detail_url'] = args.detail_url
             res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human,
                           progress, deadline, resume_ids, budget_kind=budget_kind,
                           detail_media_mode=args.detail_media_mode, **resume_options)
@@ -1648,6 +1754,8 @@ def main():
                 pass
         code = str(e) if re.fullmatch(r'[A-Z][A-Z0-9_]{0,100}', str(e)) else type(e).__name__
         res.update({'ok': False, 'partial': True, 'error': f'CDP_EXCEPTION: {code}'})
+        if isinstance(e,CollectionIdentityError):
+            res['identity_failure_stage'] = e.stage
     if not terminal_replay:
         res.setdefault('detail_media_mode', args.detail_media_mode)
         res['elapsed'] = round(time.time() - t0, 1)

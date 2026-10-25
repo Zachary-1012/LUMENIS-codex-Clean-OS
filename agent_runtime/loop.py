@@ -604,6 +604,10 @@ class AgentLoop:
                     security, exec_result = self._admit_and_execute_step(
                         step, context, task_id, step_index, fresh_authorization=resuming)
                 except FormationError as exc:
+                    if self._is_cancelled():
+                        sm.cancel(reason='external cancellation during tool formation')
+                        result.status = 'cancelled'
+                        return self._finalize(result, sm)
                     result.status = "reconciliation_required"
                     result.error = str(exc)
                     result.metrics["formation_changed_fields"] = list(exc.changed_fields)
@@ -642,16 +646,15 @@ class AgentLoop:
                 self._safe_transition(sm, AgentState.EXECUTING,
                                       reason=f"executing step {step_index}",
                                       metadata={"step": step_index})
+                if self._is_cancelled() or exec_result.get("cancelled"):
+                    sm.cancel(reason="cancelled during tool execution")
+                    result.status = "cancelled"
+                    return self._finalize(result, sm)
                 if exec_result.get("reconciliation_required"):
                     result.status = "reconciliation_required"
                     result.error = exec_result.get("error")
                     sm.fail(result.error)
                     return self._finalize(result, sm)
-                if self._is_cancelled() or exec_result.get("cancelled"):
-                    sm.cancel(reason="cancelled before tool dispatch")
-                    result.status = "cancelled"
-                    return self._finalize(result, sm)
-
                 if exec_result.get("timeout"):
                     sm.fail("TOOL_STEP_TIMEOUT")
                     result.status, result.error = "timeout", "TOOL_STEP_TIMEOUT"

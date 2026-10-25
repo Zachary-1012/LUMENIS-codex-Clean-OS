@@ -25,7 +25,6 @@ from flask import Blueprint, jsonify, request, send_file
 # 路径与蓝图
 # ---------------------------------------------------------------------------
 experience_bp = Blueprint("experience_runtime", __name__)
-_CONTENT_SOURCE_IMPORT_MAX_BYTES = 128 * 1024 * 1024
 
 # 已完成真实后端绑定的屏幕（其余屏幕由前端保持原型，服务端明确返回 bound=False）
 BOUND_SCREENS = ("CTH-01", "AI-01")
@@ -1139,8 +1138,9 @@ def cth_platform_collection_search():
     no external write or publish path.
     """
     body = request.get_json(silent=True)
-    allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results",
-                      "business_requests", "max_queries", "continuation", "checkpoint", "request_id"}
+    allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results", "capability", "content_id",
+                      "business_requests", "max_queries", "continuation", "checkpoint", "request_id",
+                      "source_id", "include_replies", "action", "confirmed_resource", "task_id", "author_id"}
     if not isinstance(body, dict) or set(body) - allowed_fields:
         return jsonify({"ok": False, "status": "invalid_request", "code": "INVALID_COLLECTION_REQUEST",
                         "read_only": True, "external_write": False}), 400
@@ -1163,17 +1163,67 @@ def cth_platform_collection_search():
         }), 400
     platform = body.get("platform")
     keyword = body.get("keyword")
+    capability = body.get("capability", "search")
+    if capability not in {"search", "detail", "comments", "author", "author_posts"}:
+        return jsonify({"ok": False, "code": "INVALID_COLLECTION_CAPABILITY"}), 400
     max_results = body.get("max_results", 20)
+    action = body.get("action", "run")
+    if action not in {"prepare", "confirm", "run", "start", "status", "step", "cancel", "resume","recover"}:
+        return jsonify({"ok": False, "code": "INVALID_COLLECTION_ACTION"}), 400
+    if action != "confirm" and "confirmed_resource" in body:
+        return jsonify({"ok": False, "code": "INVALID_COLLECTION_CONFIRMATION"}), 400
     try:
         from shared_artifacts import LocalArtifactError
-        from lumenis.system.collector.adapters.secondary_collection import collect_search
+        from lumenis.system.collector.adapters.secondary_collection import (
+            collect_comments, collect_detail, collect_search,
+            collect_author, collect_author_posts,
+            prepare_collection_request, confirm_collection_request, operate_collection_request,
+        )
         try:
             actor, scope = _content_project_scope("write", module="collector")
         except LocalArtifactError as exc:
             return _content_project_error(exc)
-        if "business_requests" in body:
+        if action in {"status", "step", "cancel", "resume","recover"}:
+            if set(body) - {"operator", "confirm_read_only", "action", "task_id"}:
+                raise ValueError("An existing collection task uses its saved source request")
+            result = operate_collection_request(action, actor=actor, scope=scope, task_id=body.get("task_id"))
+        elif action == "start":
+            if set(body) & {"business_requests", "max_queries", "continuation", "checkpoint", "task_id"}:
+                raise ValueError("Start one exact approved source request")
+            if capability == "detail" and "max_results" in body:
+                raise ValueError("Detail accepts one content_id")
+            result = operate_collection_request(action, actor=actor, scope=scope, request_id=body.get("request_id"),
+                capability=capability, platform=platform, keyword=keyword, content_id=body.get("content_id"),
+                source_id=body.get("source_id"), max_results=max_results, include_replies=body.get("include_replies", False),
+                author_id=body.get('author_id'))
+        elif action in {"prepare", "confirm"}:
+            if set(body) & {"business_requests", "max_queries", "continuation", "checkpoint", "request_id", "task_id"}:
+                raise ValueError("Confirm one explicit source request before acquisition")
+            if capability == "detail" and "max_results" in body:
+                raise ValueError("Detail accepts one content_id")
+            source_request = {"capability": capability, "platform": platform, "keyword": keyword,
+                              "content_id": body.get("content_id"), "source_id": body.get("source_id"),
+                              "max_results": max_results, "include_replies": body.get("include_replies", False),
+                              "author_id":body.get('author_id')}
+            result = (prepare_collection_request(actor=actor, scope=scope, **source_request)
+                      if action == "prepare" else confirm_collection_request(
+                          actor=actor, scope=scope, confirmed_resource=body.get("confirmed_resource"),
+                          confirmed=body.get("confirm_read_only"), **source_request))
+        elif capability in {'author','author_posts'}:
+            if set(body) & {'business_requests','keyword','content_id','source_id','max_queries','checkpoint',
+                            'continuation','include_replies','task_id','request_id'}:
+                raise ValueError('Author operations require one explicit profile or saved task')
+            result = (collect_author(platform,body.get('author_id'),actor=actor,scope=scope) if capability=='author'
+                      else collect_author_posts(platform,body.get('author_id'),actor=actor,scope=scope,max_results=max_results))
+        elif capability == "comments":
+            if set(body) & {"business_requests", "platform", "keyword", "content_id", "max_queries", "checkpoint", "task_id", "author_id"}:
+                raise ValueError("Comments require an admitted source, not a new platform query")
+            result = collect_comments(body.get("source_id"), actor=actor, scope=scope,
+                request_id=body.get("request_id"), max_results=max_results,
+                include_replies=body.get("include_replies", False), continuation=body.get("continuation"))
+        elif "business_requests" in body:
             from lumenis.system.collector.adapters.secondary_collection import collect_business_queries
-            if "platform" in body or "keyword" in body:
+            if set(body) & {"platform", "keyword", "content_id", "source_id", "include_replies", "task_id", "author_id"} or capability != "search":
                 raise ValueError("Choose one explicit source query or a task-selected business batch")
             max_queries = body.get("max_queries", 32)
             if type(max_queries) is not int or not 1 <= max_queries <= 64:
@@ -1184,10 +1234,18 @@ def cth_platform_collection_search():
                 max_queries=max_queries, continuation=body.get("continuation"),
                 checkpoint=body.get("checkpoint"), request_id=body.get("request_id"))
         else:
-            if set(body) & {"max_queries", "continuation", "checkpoint", "request_id"}:
+            if set(body) & {"max_queries", "continuation", "checkpoint", "request_id", "source_id", "include_replies", "task_id", "author_id"}:
                 raise ValueError("Business continuation fields require business_requests")
-            result = collect_search(platform, keyword, max_results=max_results, operator=operator,
-                                    actor=actor, scope=scope)
+            if capability == "detail":
+                if "keyword" in body or "max_results" in body:
+                    raise ValueError("Detail accepts a content_id, not search fields")
+                result = collect_detail(platform, body.get("content_id"), operator=operator,
+                                        actor=actor, scope=scope)
+            else:
+                if "content_id" in body:
+                    raise ValueError("A content_id requires detail capability")
+                result = collect_search(platform, keyword, max_results=max_results, operator=operator,
+                                        actor=actor, scope=scope)
         state = result.get("status")
         http_status = (401 if state == "AUTH_REQUIRED" else
                        403 if state in {"SCOPE_UNAUTHORIZED", "APPROVAL_REQUIRED"} else
@@ -1195,14 +1253,65 @@ def cth_platform_collection_search():
                        409 if state in {"BUSY", "RATE_LIMITED"} else 200)
         return jsonify(result), http_status
     except PermissionError as exc:
-        return jsonify({"ok": False, "status": "denied", "code": "HUMAN_OPERATOR_REQUIRED",
-                        "reason": str(exc), "read_only": True, "external_write": False}), 403
+        code = str(exc) if str(exc).startswith(("COMMENT_", "COLLECTION_", "AUTHOR_")) else "HUMAN_OPERATOR_REQUIRED"
+        return jsonify({"ok": False, "status": "denied", "code": code,
+                        "read_only": True, "external_write": False}), 403
+    except LookupError as exc:
+        code = "COLLECTION_TASK_NOT_FOUND" if str(exc) == "COLLECTION_TASK_NOT_FOUND" else "COMMENT_PARENT_NOT_FOUND"
+        return jsonify({"ok": False, "code": code}), 404
     except ValueError as exc:
         return jsonify({"ok": False, "status": "invalid_request", "error": str(exc)}), 400
     except RuntimeError as exc:
         return jsonify({"ok": False, "status": "blocked", "error_type": type(exc).__name__}), 503
     except Exception as exc:  # noqa: BLE001 - no adapter details at HTTP boundary
         return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
+
+
+@experience_bp.get('/api/experience/cth/platform-collection/results')
+def cth_platform_collection_results():
+    from shared_artifacts import LocalArtifactError
+    from lumenis.system.collector.adapters.secondary_collection import read_collected_items
+    if set(request.args) != {'evidence_ref'} or len(request.args.getlist('evidence_ref')) != 1:
+        return jsonify({'ok':False, 'code':'COLLECTION_RESULT_REFERENCE_REQUIRED'}), 400
+    try:
+        actor, scope = _content_project_scope('read', module='collector', read_only_auth=True)
+        return jsonify(read_collected_items(request.args['evidence_ref'], actor=actor, scope=scope))
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except PermissionError as exc:
+        return jsonify({'ok':False, 'code':str(exc)}), 403
+    except ValueError as exc:
+        return jsonify({'ok':False, 'code':str(exc)}), 400
+    except Exception:
+        return jsonify({'ok':False, 'code':'COLLECTION_RESULT_READ_UNAVAILABLE'}), 503
+
+
+@experience_bp.route("/api/experience/cth/platform-collection/comments")
+def cth_platform_collection_comments():
+    from shared_artifacts import LocalArtifactError
+    from lumenis.system.collector.adapters.secondary_collection import read_collected_comments
+
+    if set(request.args) - {"source_id", "limit", "before", "page_ref"} or any(
+        len(request.args.getlist(key)) != 1 for key in request.args
+    ):
+        return jsonify({"ok": False, "code": "COMMENT_REQUEST_INVALID"}), 400
+    try:
+        actor, scope = _content_project_scope("read", module="collector", read_only_auth=True)
+        result = read_collected_comments(request.args.get("source_id"), actor=actor, scope=scope,
+            limit=int(request.args.get("limit", "20")), before=request.args.get("before"),
+            page_ref=request.args.get("page_ref"))
+        return jsonify(result)
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except PermissionError as exc:
+        code = str(exc) if str(exc).startswith("COMMENT_") else "COMMENT_SOURCE_NOT_AUTHORIZED"
+        return jsonify({"ok": False, "code": code}), 403
+    except LookupError:
+        return jsonify({"ok": False, "code": "COMMENT_PARENT_NOT_FOUND"}), 404
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "code": "COMMENT_REQUEST_INVALID"}), 400
+    except Exception:
+        return jsonify({"ok": False, "code": "COMMENT_READ_UNAVAILABLE"}), 503
 
 
 def _content_project_scope(action: str, *, module="content", include_decision=False, read_only_auth=False, selectors=None):
@@ -2295,7 +2404,7 @@ def _content_project_error_code(exc):
 
 def _content_project_error(exc):
     code = _content_project_error_code(exc)
-    status = 503 if code.endswith("_UNAVAILABLE") else 404 if code.endswith("_NOT_FOUND") else 401 if code == "AUTH_REQUIRED" else 403 if code in {
+    status = 507 if code == "CONTENT_MEDIA_STORAGE_REQUIRED" else 503 if code.endswith("_UNAVAILABLE") or code == "CONTENT_MEDIA_RESOURCE_BUSY" else 404 if code.endswith("_NOT_FOUND") else 401 if code == "AUTH_REQUIRED" else 403 if code in {
         "CONTENT_SCOPE_DENIED", "ACTOR_SCOPE_PERMISSION_DENIED", "DOMAIN_REQUIRED", "CONTEXT_SCOPE_MISMATCH",
         "CONTENT_PROJECT_CONTEXT_MISMATCH", "CONTENT_PROJECT_PARENT_SCOPE_MISMATCH",
         "CONTENT_SOURCE_CONTEXT_MISMATCH", "CONTENT_SOURCE_SCOPE_DENIED",
@@ -2453,6 +2562,12 @@ def _shared_saved_work_route_allowed():
         "experience_runtime.revise_shared_work": (
             "/api/experience/saved-work/<artifact_id>/revise", "POST",
             r"/api/experience/saved-work/ART-[0-9a-f]{16}/revise"),
+        "experience_runtime.read_office_document": (
+            "/api/experience/saved-work/<artifact_id>/office", "GET",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/office"),
+        "experience_runtime.edit_office_document": (
+            "/api/experience/saved-work/<artifact_id>/office/edit", "POST",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/office/edit"),
         "experience_runtime.search_shared_work": (
             "/api/experience/saved-work", "GET", r"/api/experience/saved-work"),
         "experience_runtime.read_shared_work": (
@@ -2518,10 +2633,10 @@ def _shared_content_project_route_allowed():
             "/api/experience/content-projects/<artifact_id>", "GET",
             r"/api/experience/content-projects/ART-[0-9a-f]{16}"),
         "experience_runtime.content_project_package": (
-            "/api/experience/content-projects/<artifact_id>/package", "GET",
+            "/api/experience/content-projects/<artifact_id>/package", ("GET", "HEAD"),
             r"/api/experience/content-projects/ART-[0-9a-f]{16}/package"),
         "experience_runtime.content_project_media": (
-            "/api/experience/content-projects/<artifact_id>/media", "GET",
+            "/api/experience/content-projects/<artifact_id>/media", ("GET", "HEAD"),
             r"/api/experience/content-projects/ART-[0-9a-f]{16}/media"),
     }
     expected = routes.get(request.endpoint)
@@ -2668,6 +2783,8 @@ def _shared_work_local_access_allowed():
                  "experience_runtime.save_reporting_preferences": "POST",
                  "experience_runtime.read_reporting_notifications": "GET",
                  "experience_runtime.revise_shared_work": "POST"}
+    endpoints.update({"experience_runtime.read_office_document": "GET",
+                      "experience_runtime.edit_office_document": "POST"})
     if endpoints.get(request.endpoint) != request.method:
         return False
     action = "read" if request.method == "GET" or request.endpoint == "experience_runtime.quote_shared_document" else "write"
@@ -3016,6 +3133,38 @@ def revise_shared_work(artifact_id):
             # copied metadata must never fall back to a generic successful save.
             return work_dependencies.revise_owned_work(artifact_id, actor=actor, scope=scope, **body)
         return revise_work(artifact_id, actor=actor, scope=scope, **body)
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/saved-work/<artifact_id>/office")
+def read_office_document(artifact_id):
+    def execute():
+        from lumenis.importer.documents import read_office_document as read
+        if (set(request.args) - {"offset", "limit"}
+                or any(len(request.args.getlist(key)) != 1 for key in request.args)):
+            raise ValueError("OFFICE_PAGE_INVALID")
+        values = [request.args.get("offset", "0"), request.args.get("limit", "100")]
+        if any(not value.isascii() or not value.isdecimal() for value in values):
+            raise ValueError("OFFICE_PAGE_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        return read(artifact_id, actor=actor, scope=scope, offset=int(values[0]), limit=int(values[1]))
+    return _shared_work_response(execute)
+
+
+@experience_bp.post("/api/experience/saved-work/<artifact_id>/office/edit")
+def edit_office_document(artifact_id):
+    def execute():
+        from lumenis.importer.documents import edit_office_document as edit
+        from lumenis_app_api import _internal_pitch_body
+        if not _content_source_same_origin():
+            raise PermissionError("OFFICE_ORIGIN_DENIED")
+        body = _internal_pitch_body()
+        required = {"request_id", "expected_sha256", "expected_package_sha256", "reason", "commands"}
+        if (not required.issubset(body)
+                or set(body) - required - {"acknowledge_signature_invalidation"}):
+            raise ValueError("OFFICE_EDIT_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("write")
+        return edit(artifact_id, actor=actor, scope=scope, **body)
     return _shared_work_response(execute)
 
 
@@ -3525,8 +3674,9 @@ def _content_project_assets(payload, actor, scope):
         paths = payload.get("asset_paths")
         if not isinstance(paths, list) or not 1 <= len(paths) <= 64:
             raise LocalArtifactError("LOCAL_ASSETS_REQUIRED")
-        normalized_paths = [validate_local_asset(value) for value in paths]
-        if sum(path.stat().st_size for path in normalized_paths) > 500 * 1024 * 1024:
+        normalized_paths = [validate_local_asset(value, resource_budget=True) for value in paths]
+        from shared_artifacts import content_media_resource_budget
+        if sum(path.stat().st_size for path in normalized_paths) > content_media_resource_budget()["storage_capacity_bytes"]:
             raise LocalArtifactError("CONTENT_SOURCE_TOTAL_TOO_LARGE")
         assets = [fingerprint_local_media(str(path)) for path in normalized_paths]
         asset_ids = [asset.asset_id for asset in assets]
@@ -3546,7 +3696,7 @@ def inspect_content_project_media():
         if not isinstance(body, dict) or body.get("action_type") != "READ":
             raise LocalArtifactError("CONTENT_INSPECT_REQUIRES_READ")
         payload = body.get("input")
-        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcript_edit", "edit_batch", "audio_comparison"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
+        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcript_edit", "edit_batch", "audio_comparison", "source_preview"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
             raise LocalArtifactError("INVALID_CONTENT_INPUT")
         actor, scope = _content_project_scope("read")
         with _content_project_assets(payload, actor, scope) as (_, assets, source_refs):
@@ -3554,6 +3704,19 @@ def inspect_content_project_media():
                 current_actor, current_scope = _content_project_scope("read")
                 if current_actor != actor or current_scope != scope:
                     raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
+            source_preview = None
+            if "source_preview" in payload:
+                from shared_artifacts import prepare_content_source_preview
+                options = payload['source_preview']
+                if (not source_refs or type(options) is not dict or not {'asset_id','kind'} <= set(options)
+                        or set(options) - {'asset_id','kind','audio_stream_index'}):
+                    raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_INVALID')
+                index = next((index for index, asset in enumerate(assets) if asset.asset_id == options['asset_id']), None)
+                if index is None:
+                    raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_INVALID')
+                source_preview = prepare_content_source_preview(source_refs[index], actor=actor, **scope,
+                    expected_sha256=assets[index].sha256, source_asset=assets[index], kind=options['kind'],
+                    audio_stream_index=options.get('audio_stream_index'), check_continue=check_read)
             if "audio_comparison" in payload:
                 from lumenis.shared.content_creation.rendering import (
                     preview_audio_processing,
@@ -3598,7 +3761,11 @@ def inspect_content_project_media():
             if "transcript_edit" in payload:
                 from lumenis.shared.content_creation.transcript_editing import project_word_deletion_candidate
                 options=payload["transcript_edit"]
-                if not isinstance(options,dict) or set(options) not in ({"project_id","word_ids"},{"project_id","filler_terms","expected_transcript_sha256"}) or not isinstance(options["project_id"],str):
+                if (not isinstance(options,dict) or "project_id" not in options
+                        or set(options)-{"project_id","word_ids","filler_terms","expected_transcript_sha256","clip_ids","synchronize","transcript_asset_id"}
+                        or (("word_ids" in options) == ("filler_terms" in options))
+                        or "filler_terms" in options and "expected_transcript_sha256" not in options
+                        or not isinstance(options["project_id"],str)):
                     raise LocalArtifactError("WORD_EDIT_OPTIONS_INVALID")
                 transcript_edit=project_word_deletion_candidate(actor=actor,scope=scope,source_artifact_refs=source_refs,**options)
                 check_read()
@@ -3665,7 +3832,7 @@ def inspect_content_project_media():
                     raise LocalArtifactError("WAVEFORM_INPUT_INVALID")
                 waveforms = [extract_waveform(asset, **options, check_continue=check_read) for asset in assets]
                 check_read()
-            return jsonify({"ok": True, **({"edit_batch": edit_batch} if edit_batch is not None else {}), **({"transcript_edit":transcript_edit} if transcript_edit is not None else {}), **({"transcription":transcription} if transcription is not None else {}), **({"toolchain":toolchain} if toolchain is not None else {}), **({"broll":broll} if broll is not None else {}), **({"stream_metadata":stream_metadata} if "stream_metadata" in payload else {}), **({"silence_edl":silence_edl} if silence_edl is not None else {}), **({"silence_proposals": silence_proposals} if "silence_proposal" in payload else {}), **({"waveforms": waveforms} if "waveform" in payload else {}), "assets": [asset.to_dict() for asset in assets],
+            return jsonify({"ok": True, **({"source_preview": source_preview} if source_preview is not None else {}), **({"edit_batch": edit_batch} if edit_batch is not None else {}), **({"transcript_edit":transcript_edit} if transcript_edit is not None else {}), **({"transcription":transcription} if transcription is not None else {}), **({"toolchain":toolchain} if toolchain is not None else {}), **({"broll":broll} if broll is not None else {}), **({"stream_metadata":stream_metadata} if "stream_metadata" in payload else {}), **({"silence_edl":silence_edl} if silence_edl is not None else {}), **({"silence_proposals": silence_proposals} if "silence_proposal" in payload else {}), **({"waveforms": waveforms} if "waveform" in payload else {}), "assets": [asset.to_dict() for asset in assets],
                             "source_artifact_refs": source_refs, "rights_state": "unknown",
                             "external_fetch": False})
     except ValueError as exc:
@@ -3852,7 +4019,8 @@ def preview_podcast_editorial():
 def import_content_source():
     """Import one bounded local media body into the scoped Artifact owner."""
     from werkzeug.exceptions import RequestEntityTooLarge
-    from shared_artifacts import LocalArtifactError, artifact_root, stage_content_source_artifact
+    from shared_artifacts import (LocalArtifactError, artifact_root, stage_content_source_artifact,
+                                  content_media_resource_budget)
     from shared_artifacts import _safe_content_source_filename, parse_media_license_header, validate_media_license, _media_license_digest
     from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
     from lumenis.system.security.permission import ContentSourceImport
@@ -3874,8 +4042,18 @@ def import_content_source():
         filename = _safe_content_source_filename(filenames[0])
         media_license = parse_media_license_header(request.headers.get("X-Lumenis-Media-License"))
         declared_length = request.content_length
-        if declared_length is not None and declared_length > _CONTENT_SOURCE_IMPORT_MAX_BYTES:
-            raise RequestEntityTooLarge()
+        budget = content_media_resource_budget()
+        # Keep enough space for the incoming temporary body and immutable original.
+        upload_budget = max(0, (budget["available_bytes"] - 65536) // 2)
+        if declared_length is not None and declared_length > upload_budget:
+            raise LocalArtifactError("CONTENT_MEDIA_STORAGE_REQUIRED")
+        # Flask 3.1 supplies a per-request setter. Keep the application's other
+        # request limits intact while admitting this authenticated streaming body.
+        try:
+            request.max_content_length = upload_budget
+        except AttributeError:
+            if declared_length is None or declared_length > (request.max_content_length or upload_budget):
+                raise LocalArtifactError('CONTENT_SOURCE_STREAM_RUNTIME_UNAVAILABLE')
         # Independently bound observed bytes; the supported Flask >=2 range
         # does not always expose a writable per-request max_content_length.
 
@@ -3897,12 +4075,16 @@ def import_content_source():
             body_digest = hashlib.sha256()
             with open(upload_path, "xb") as output:
                 while True:
-                    chunk = request.stream.read(min(1024 * 1024, _CONTENT_SOURCE_IMPORT_MAX_BYTES - observed + 1))
+                    chunk = request.stream.read(min(budget["chunk_bytes"], upload_budget - observed + 1))
                     if not chunk:
                         break
                     observed += len(chunk)
-                    if observed > _CONTENT_SOURCE_IMPORT_MAX_BYTES:
-                        raise RequestEntityTooLarge()
+                    if observed > upload_budget:
+                        raise LocalArtifactError("CONTENT_MEDIA_STORAGE_REQUIRED")
+                    if (actor, scope) != _content_project_scope("write"):
+                        raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
+                    if len(chunk) > content_media_resource_budget()["available_bytes"]:
+                        raise LocalArtifactError("CONTENT_MEDIA_STORAGE_REQUIRED")
                     body_digest.update(chunk)
                     output.write(chunk)
             if observed <= 0:
@@ -4058,13 +4240,13 @@ def content_source_detail(artifact_id: str):
         actor, scope = _content_project_scope("read", selectors=selectors)
         formats = request.args.getlist("format")
         if formats:
-            if (formats != ["media"] or set(request.args) - {"format", "sha256", "context"}
+            if (formats != ["media"] or set(request.args) - {"format", "sha256", "context", "preview_key"}
                     or len(request.args.getlist("sha256")) != 1):
                 raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
             if not _content_source_same_origin():
                 raise ValueError("CONTENT_SOURCE_ORIGIN_DENIED")
             media = open_content_source_media(
-                artifact_id, expected_sha256=request.args["sha256"], actor=actor, **scope)
+                artifact_id, expected_sha256=request.args["sha256"], preview_key=request.args.get('preview_key'), actor=actor, **scope)
             from flask import Response, stream_with_context
 
             etag = f'"{media.sha256}"'
@@ -4104,13 +4286,13 @@ def content_source_detail(artifact_id: str):
                         "publish_status": "not_performed"}), 503
 
 
-def _content_media_selectors():
+def _content_media_selectors(*, expected_format="media"):
     from werkzeug.datastructures import Headers
 
     if "context" not in request.args:
         return request.headers
     values = request.args.getlist("context")
-    if len(values) != 1 or len(values[0].encode("utf-8")) > 2048 or request.args.getlist("format") != ["media"]:
+    if len(values) != 1 or len(values[0].encode("utf-8")) > 2048 or request.args.getlist("format") != [expected_format]:
         raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
 
     def unique(pairs):
@@ -4310,12 +4492,22 @@ def content_project_detail(artifact_id: str):
 
 @experience_bp.route("/api/experience/content-projects/<artifact_id>/package")
 def content_project_package(artifact_id: str):
-    from shared_artifacts import _verified_content_project
+    from shared_artifacts import _verified_content_project, ContentProjectMedia, _source_file_identity
 
     try:
-        actor, scope = _content_project_scope("read")
-        _, _, _, path = _verified_content_project(artifact_id, actor=actor, **scope)
-        return send_file(path, mimetype="application/zip", as_attachment=True, download_name=f"{artifact_id}.zip")
+        if set(request.args) - {'format','context','sha256'}:
+            raise ValueError('CONTENT_PROJECT_FORMAT_INVALID')
+        if not _content_source_same_origin():
+            raise ValueError('CONTENT_SOURCE_ORIGIN_DENIED')
+        selectors = _content_media_selectors(expected_format='package')
+        actor, scope = _content_project_scope("read", selectors=selectors)
+        project, _, record, path = _verified_content_project(artifact_id, actor=actor, **scope)
+        if 'sha256' in request.args and request.args.getlist('sha256') != [record['sha256']]:
+            raise ValueError('CONTENT_PROJECT_VERSION_MISMATCH')
+        media = ContentProjectMedia(f'{artifact_id}.zip', 'application/zip', record['sha256'], record['size_bytes'],
+            path, 0, _source_file_identity(path), artifact_id, actor, scope, record['sha256'],
+            tuple(project.get('source_artifact_refs', [])))
+        return _content_project_stream_response(media, actor=actor, scope=scope, selectors=selectors, as_attachment=True)
     except ValueError as exc:
         return _content_project_error(exc)
     except Exception:
@@ -4324,18 +4516,53 @@ def content_project_package(artifact_id: str):
 
 @experience_bp.route("/api/experience/content-projects/<artifact_id>/media")
 def content_project_media(artifact_id: str):
-    from io import BytesIO
-    from shared_artifacts import authorized_project_media
+    from shared_artifacts import open_content_project_media
 
     try:
-        actor, scope = _content_project_scope("read")
-        media = authorized_project_media(artifact_id, actor=actor, **scope)
-        return send_file(BytesIO(media["data"]), mimetype=media["media_type"],
-                         download_name=media["filename"], conditional=True)
+        if set(request.args) - {"format", "context", "sha256"}:
+            raise ValueError("CONTENT_PROJECT_FORMAT_INVALID")
+        if not _content_source_same_origin():
+            raise ValueError('CONTENT_SOURCE_ORIGIN_DENIED')
+        selectors = _content_media_selectors()
+        actor, scope = _content_project_scope("read", selectors=selectors)
+        media = open_content_project_media(artifact_id, actor=actor, **scope)
+        if "sha256" in request.args and request.args.getlist("sha256") != [media.sha256]:
+            raise ValueError("CONTENT_PROJECT_VERSION_MISMATCH")
+        return _content_project_stream_response(media, actor=actor, scope=scope, selectors=selectors)
     except ValueError as exc:
         return _content_project_error(exc)
     except Exception:
         return jsonify({"ok": False, "code": "CONTENT_PROJECT_UNAVAILABLE"}), 503
+
+
+def _content_project_stream_response(media, *, actor, scope, selectors, as_attachment=False):
+    from flask import Response, stream_with_context
+    etag = f'"{media.sha256}"'
+    disposition = 'attachment' if as_attachment else 'inline'
+    headers = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+               "Accept-Ranges": "bytes", "ETag": etag,
+               "Cross-Origin-Resource-Policy": "same-origin",
+               "Content-Disposition": f'{disposition}; filename="{media.filename}"'}
+    start, stop, status = 0, media.size_bytes, 200
+    if request.method != 'HEAD' and request.headers.get('Range') and request.headers.get('If-Range', etag) == etag:
+        ranges = request.range
+        selected = ranges.range_for_length(media.size_bytes) if ranges is not None and ranges.units == 'bytes' else None
+        if selected is None:
+            headers['Content-Range'] = f'bytes */{media.size_bytes}'
+            return Response(status=416, headers=headers)
+        start, stop = selected
+        status = 206
+        headers['Content-Range'] = f'bytes {start}-{stop - 1}/{media.size_bytes}'
+
+    def authorize_stream():
+        if (actor, scope) != _content_project_scope('read', selectors=selectors):
+            raise ValueError('CONTENT_PROJECT_CONTEXT_MISMATCH')
+
+    response = Response(() if request.method == 'HEAD' else stream_with_context(
+        media.iter_bytes(start, stop, authorize=authorize_stream)), status=status,
+        headers=headers, mimetype=media.media_type, direct_passthrough=True)
+    response.content_length = stop - start
+    return response
 
 
 @experience_bp.route("/api/experience/shared-skills/shared.video_shotcraft/render", methods=["POST"])

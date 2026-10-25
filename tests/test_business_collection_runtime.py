@@ -171,3 +171,87 @@ def test_terminal_failed_batch_returns_failure_and_never_reexecutes(monkeypatch,
     assert result['status'] == 'FAILED' and result['attempts'] == 3
     assert result['new_collection_requires_new_request_id'] is True
     assert len(calls) == 3
+
+
+def test_verified_native_partial_resumes_same_task_and_old_receipts_never_refetch(monkeypatch):
+    reqs = prepare(monkeypatch, ('x',))
+    calls = []
+    def collect(platform, keyword, **kwargs):
+        calls.append(kwargs['operation_key'])
+        if len(calls) == 1:
+            return {'ok': False, 'status': 'PARTIAL_COMMITTED',
+                'source_status': 'PARTIAL_ACQUISITION_PENDING', 'native_continuation_verified': True,
+                'new_collection_required': False, 'task_commit_evidence_ref': 'app_evidence_records:1'}
+        return {'ok': True, 'status': 'SUCCESS'}
+    monkeypatch.setattr(entry, 'collect_search', collect)
+    scope = {'bmp': {'domain_id': 'bmp', 'global_scope': True}}
+    first = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope)
+    assert not first['ok'] and first['native_continuation_required'] is True
+    assert first['continuation_required'] and not first['new_collection_requires_new_request_id']
+    repeated = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope)
+    assert repeated['cached'] and len(calls) == 1
+    continued = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope,
+        checkpoint=first['checkpoint'])
+    assert continued['ok'] and continued['checkpoint']['task_id'] == first['checkpoint']['task_id']
+    assert len(calls) == 3 and calls[1] == calls[0] + ':native:1'
+    assert len(set(calls)) == 3
+    old = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope,
+        checkpoint=first['checkpoint'])
+    assert old['cached'] and old['refresh_performed'] is False and len(calls) == 3
+
+
+@pytest.mark.parametrize('fault', ['none', 'identity', 'persisted', 'run', 'host', 'terminal', 'complete'])
+def test_native_resume_requires_original_owner_metadata_and_saved_pointer(monkeypatch, tmp_path, fault):
+    from lumenis.system.collector.guard import checkpoint
+    monkeypatch.setattr(checkpoint, 'get_data_dir', lambda: str(tmp_path))
+    fingerprint = 'a' * 64
+    descriptor = {'task_binding': fingerprint, 'keyword': 'allowed isolated query',
+        'source_host': 'www.rednote.com', 'raw_path': str(tmp_path / 'never-opened.json'),
+        'raw_sha256': 'b' * 64, 'identity_fingerprint': 'c' * 64, 'run_id': 'isolated-run',
+        'pending_note_ids': ['d' * 24], 'complete': False, 'terminal_error': False,
+        'pagination_exhausted': False, 'continuation_required': True}
+    metadata = {'continuation_persisted': True, 'checkpoint_identity_verified': True,
+        'continuation': {'identity_verified': True, 'continuation_required': True,
+            'keyword': descriptor['keyword'], 'source_host': descriptor['source_host'],
+            'checkpoint_run_id': descriptor['run_id']}}
+    if fault == 'identity':
+        metadata['checkpoint_identity_verified'] = False
+    elif fault == 'persisted':
+        metadata['continuation_persisted'] = False
+    elif fault == 'run':
+        metadata['continuation']['checkpoint_run_id'] = 'another-run'
+    elif fault == 'host':
+        metadata['continuation']['source_host'] = 'unapproved.example'
+    elif fault == 'terminal':
+        descriptor['terminal_error'] = True
+    elif fault == 'complete':
+        descriptor['complete'] = True
+    assert checkpoint.Checkpoint('xhs').save_operational_resume(descriptor['keyword'], fingerprint, descriptor)
+    assert entry._verified_native_resume('xiaohongshu', descriptor['keyword'], fingerprint, metadata) is (fault == 'none')
+    assert not entry._verified_native_resume('x', descriptor['keyword'], fingerprint, metadata)
+
+
+def test_native_resume_finishes_current_query_page_before_advancing_query_cursor(monkeypatch):
+    reqs = prepare(monkeypatch, ('x',))
+    calls = []
+    def collect(platform, keyword, **kwargs):
+        calls.append((keyword, kwargs['operation_key']))
+        if len(calls) == 1:
+            return {'ok': False, 'status': 'PARTIAL_COMMITTED',
+                'source_status': 'PARTIAL_ACQUISITION_PENDING', 'native_continuation_verified': True,
+                'new_collection_required': False, 'task_commit_evidence_ref': 'app_evidence_records:1'}
+        return {'ok': True, 'status': 'SUCCESS'}
+    monkeypatch.setattr(entry, 'collect_search', collect)
+    args = {'actor': {'id': 101}, 'scopes': {'bmp': {'domain_id': 'bmp', 'global_scope': True}}, 'max_queries': 1}
+    first = entry.collect_business_queries(reqs, **args)
+    assert first['query_plan']['next_cursor'] is not None
+    assert first['native_continuation_required'] and first['next_cursor'] is None
+    second = entry.collect_business_queries(reqs, **args,
+        checkpoint=first['checkpoint'], continuation=first['next_cursor'])
+    assert second['ok'] and not second['native_continuation_required'] and second['next_cursor'] is not None
+    assert calls[0][0] == calls[1][0] and calls[1][1] == calls[0][1] + ':native:1'
+    final = entry.collect_business_queries(reqs, **args,
+        checkpoint=second['checkpoint'], continuation=second['next_cursor'])
+    assert final['ok'] and not final['continuation_required'] and len(calls) == 3
+    assert final['checkpoint']['task_id'] == first['checkpoint']['task_id']
+    assert calls[2][0] != calls[0][0]

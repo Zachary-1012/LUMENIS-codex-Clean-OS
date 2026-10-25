@@ -229,8 +229,10 @@ def _validate_record(record: object) -> tuple[dict, str]:
     domain_id = record["domain"].strip().lower()
     if domain_id == "zbmp":
         domain_id = "bmp"
-    if domain_id not in {"cth", "bmp"}:
-        raise ValueError("Training records must identify the canonical CTH or BMP domain")
+    if domain_id not in {"cth", "bmp", "shared"}:
+        raise ValueError("Training records must identify the canonical CTH, BMP or Shared scope")
+    if domain_id == "shared" and record["scope"] != "shared_workspace:v1":
+        raise ValueError("Shared records require their explicit independent workspace scope")
     refs = record["source_evidence_refs"]
     if not isinstance(refs, list) or not refs or any(not isinstance(ref, str) or not ref.strip() or ref.strip().upper() in _UNKNOWN for ref in refs):
         raise ValueError("Source Evidence references must be explicit")

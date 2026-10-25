@@ -27,6 +27,20 @@ BUILTIN_SKILLS = [
 
 def ensure_builtin_skills():
     """确保内置技能已登记到 DB（幂等）"""
+    # The bounded local execution lane is already implemented by these exact
+    # Registry handlers. Discover them here as disabled account projections;
+    # listing metadata never enables a Skill or runs an optional adapter.
+    from lumenis.shared.agents.skills.registry import get_skill_registry
+    from lumenis.shared.agents.skills.execution import _BACKGROUND_INPUTS, registered_background_contract
+    projections = []
+    registry = get_skill_registry()
+    for skill_id in sorted(_BACKGROUND_INPUTS):
+        metadata = registry.get(skill_id)
+        if metadata is None:
+            continue
+        contract = registered_background_contract({'skill_id': skill_id,
+            'input_schema_json': '{}', 'output_schema_json': json.dumps(metadata.output_schema)})
+        projections.append((metadata, contract))
     conn = get_db()
     try:
         for skill in BUILTIN_SKILLS:
@@ -38,6 +52,14 @@ def ensure_builtin_skills():
                     (skill["skill_id"], skill["name"], skill["description"],
                      skill["product"], skill["domain"], skill["version"])
                 )
+        for metadata, contract in projections:
+            conn.execute('''INSERT OR IGNORE INTO skills_registry
+                (skill_id,name,description,product,domain,status,version,source,source_type,runtime,
+                 input_schema_json,output_schema_json)
+                VALUES(?,?,?,?,?,'disabled',?,'builtin','builtin','builtin',?,?)''',
+                (metadata.skill_id, metadata.skill_id, metadata.description, metadata.product, metadata.domain,
+                 metadata.version, json.dumps(contract['input_schema'], ensure_ascii=False),
+                 json.dumps(contract['output_schema'], ensure_ascii=False)))
         conn.commit()
     finally:
         conn.close()
@@ -340,14 +362,20 @@ def get_skill_info(skill_id: str) -> dict:
 def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
                       action_type: str = "ANALYZE", user_id: int = None,
                       user_role: str = "user", product: str = None, *,
-                      _execution_id=None, _background=False, _agent_task_id=None, _workspace_principal=None, scope=None, _local_only=False) -> dict:
+                      _execution_id=None, _background=False, _agent_task_id=None, _workspace_principal=None, scope=None, _local_only=False,
+                      _execution_control=None) -> dict:
     """执行 Skill（走完整执行链：Permission→Firewall→Effect Fence→Execute→Evidence→Evaluation→Trace）"""
     from lumenis.shared.agents.skills.execution import (
         run_execution_chain, ActionType, SkillRuntimeInfo, registered_background_handler,
     )
+    if _execution_control is not None:
+        from agent_runtime.loop import StepExecutionControl
+        if type(_execution_control) is not StepExecutionControl:
+            raise PermissionError('TOOL_EXECUTION_CONTROL_INVALID')
+        _execution_control.check()
     if _workspace_principal is not None:
         return _execute_local_agent_skill(skill_id, task, input_payload or {}, action_type,
-            _execution_id, _agent_task_id, _workspace_principal, local_only=_local_only)
+            _execution_id, _agent_task_id, _workspace_principal, local_only=_local_only, execution_control=_execution_control)
     # 获取 Skill 信息用于权限检查
     info = get_skill_info(skill_id)
     if not info:
@@ -389,6 +417,13 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
             return {'success': False, 'error': 'Agent task binding denied', 'code': 'AGENT_SKILL_SCOPE_DENIED'}
 
     requested_product = str(product or info.get("product") or "").strip().upper()
+    if requested_product == 'SHARED':
+        from lumenis.shared.agents.skills.execution import _BACKGROUND_INPUTS
+        if (skill_id in _BACKGROUND_INPUTS and str(info.get('runtime') or 'builtin').lower() == 'builtin'
+                and str(info.get('source') or 'builtin').lower() == 'builtin'):
+            # A local Shared helper needs its own SYSTEM Skill permission, not
+            # an invented business Subject or a borrowed CTH/BMP context.
+            requested_product = 'SYSTEM'
     product_map = {
         "CTH": ("CTH", "cth"),
         "BMP": ("ZBMP", "zbmp"),
@@ -432,8 +467,17 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
             validate_source_free_input(skill_id, input_payload or {})
         except PermissionError:
             return {"success": False, "code": "SOURCE_READER_UNBOUND", "error": "Source reader is not bound"}
-    from lumenis.shared.agents.skills.execution import _background_binding
+    from lumenis.shared.agents.skills.execution import _background_binding, _BACKGROUND_INPUTS
     local_binding = _background_binding(info)
+    bounded_builtin = (skill_id in _BACKGROUND_INPUTS
+        and str(info.get('runtime') or 'builtin').lower() == 'builtin'
+        and str(info.get('source') or 'builtin').lower() == 'builtin')
+    trusted_cross_domain = []
+    if bounded_builtin:
+        from lumenis.shared.agents.skills.registry import get_skill_registry
+        metadata = get_skill_registry().get(skill_id)
+        if metadata is not None:
+            trusted_cross_domain = list(metadata.cross_domain_allowed)
     runtime_config = dict(info.get("config") or {})
     if "registry_sha256" in info:
         runtime_config["registry_sha256"] = info["registry_sha256"]
@@ -454,6 +498,7 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
         config=runtime_config,
         source=info.get("source") or "builtin",
         version=info.get("version") or "1.0.0",
+        cross_domain_allowed=trusted_cross_domain,
     )
 
     # 映射 action_type
@@ -502,7 +547,8 @@ def execute_skill_api(skill_id: str, task: str = "", input_payload: dict = None,
             execution_id=_execution_id,
             request_context=({"skill_scope": scope, "agent_task_id": _agent_task_id} if agent_context is not None
                              else {"skill_scope": scope} if scope is not None else None),
-            handler=registered_background_handler(skill_id) if _execution_id is not None or _local_only else None,
+            handler=registered_background_handler(skill_id) if _execution_id is not None or _local_only or bounded_builtin else None,
+            execution_control=_execution_control,
         )
     except Exception:
         if scope is None:
@@ -639,7 +685,7 @@ def recover_skill_metadata_candidate(skill_id: str, evidence_ref: str):
     return recover(skill_id, evidence_ref)
 
 
-def _execute_local_agent_skill(skill_id, task, inputs, action_type, execution_id, task_id, principal, *, local_only=False):
+def _execute_local_agent_skill(skill_id, task, inputs, action_type, execution_id, task_id, principal, *, local_only=False, execution_control=None):
     """Only the original server Agent task may invoke five bounded local tools."""
     from agent_runtime.task_binding import authorized_context, _current_binding, _digest
     from ai_task_engine import get_task_engine
@@ -666,7 +712,7 @@ def _execute_local_agent_skill(skill_id, task, inputs, action_type, execution_id
         action_type=ActionType.READ, user_id=None, user_role='user', product=context['product'],
         domain=context['domain_id'], permission_role=context['role'],
         request_context={'agent_task_id': task_id}, workspace_principal=principal,
-        execution_id=execution_id, handler=registered_background_handler(skill_id))
+        execution_id=execution_id, handler=registered_background_handler(skill_id), execution_control=execution_control)
     if local_only and ctx.status.value == 'completed':
         _current_binding(task_id, skill_id)
         if _background_binding(get_skill_info(skill_id)) != local_binding:

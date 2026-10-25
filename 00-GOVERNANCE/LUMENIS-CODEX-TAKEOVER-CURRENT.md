@@ -4,11 +4,29 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
-## 2026-10-25 current planning correction
+## 2026-10-25 implementation preservation and direct PO pause
 
-The latest direct PO instruction is **planning only; no product development now**. The complete approved functionality, task layouts, interactions and acceptance remain required. The current visual direction is pixel-cyber, botanical ecology and retro-futurism, with the Gypsophila logo and the five botanical characters specified in Experience §23. The supplied website recording informs the existing J01 and full-product sketch, not a replacement product scope. The prior frontend remains visually NOT_ACCEPTED; this planning correction does not establish implementation, runtime loading or user acceptance. Preserved unfinished source is not overwritten or deleted in this round. Development resumes only upon a later explicit PO instruction.
+The latest direct PO instruction pauses all product development and collaborating
+agents, with source synchronization as the only active task. The earlier
+planning-only restriction was superseded by the subsequent implementation order;
+that implementation is now paused. This publication does not resume development,
+collection, model execution, training, services or deployment.
 
-This batch is **RULES_ONLY_PUBLICATION**: the PO subsequently requested online/local planning synchronization through the existing checked PR route. Its base is the fresh local/remote `ceb55251f8e0776d474bb65fcaeed8b4458d807e`. The preserved unfinished implementation and historical runtime observations below remain separate and are not delivered by this planning publication. No product development, local product build/test or runtime restart is part of this round; existing mandatory PR gates still apply. Publication does not resume development or accept the frontend.
+The frozen working branch is `codex/full-product-implementation-20261025`, based on
+`7361e37705e5599dbacd3e564ed9a5a19cb6a379`. Fresh fetch and independent GitHub main
+readback agreed at freeze time. The 271 previously uncommitted files were copied
+and SHA256-verified before publication preparation. The existing round evidence
+records their identities, current checks and known limitations. Source remains
+work in progress: full frontend visual acceptance and complete collection/data,
+creation, AI and whole-product closure have not been established.
+
+This batch preserves the existing implementation across the original owners:
+botanical/pixel frontend components and navigation, Website content, collection
+and source-use consumers, business actions, Office/media editing, task memory,
+AI consumers, packaging and development continuity. It is not a completed
+frontend or product release. The approved full scope, current Experience and
+all outstanding requirements remain unchanged. Earlier runtime receipts below
+retain their own source pins and do not verify this combined snapshot.
 
 ## 2026-10-24 Web and Windows integrated product development
 
@@ -1165,6 +1183,12 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
+The current protected local candidate only is not yet part of GitHub main and is
+not published Product Source. Promotion requires one coherent delivery through
+review and the required exact-head PR checks. A remote development branch is a
+source-preservation point, not accepted mainline or runtime publication.
+
+
 ### 2026-10-20 Issue #17 first source repair — FIX-089
 
 PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) merged on 2026-10-20 at `644eec57f0796158034b9c5d325e80eeef829a59` (GitHub readback 2026-10-23). Its original base was `3f6d67785752b465b5b022847cbbe75a55e1eb47` and initial code head was `dff5b4a4635dddfc288a5139dbbcda4039aced3d`; the following checks and limitations describe that historical repair. It addresses only `FIX-089 · LOWER_ADAPTER_CACHE_SCOPE`: `lumenis/adapters/base.py` now binds cached fallback to complete actor/scope/query/task/source-version/result-limit identity and writes result+identity atomically; `lumenis/adapters/registry.py` carries an optional keyword-only context through existing search methods. Existing callers without complete trusted context retain live searches but fail truthfully without cached fallback. The current V4 search callers have not yet been wired to an authenticated complete context; their degraded cached fallback remains unavailable until their existing caller owner closes that boundary. No W6 composition file changed.
@@ -1180,9 +1204,9 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `LOCAL_CANDIDATE_NOT_PUBLISHED`
 
-The current source batch joins Web/Windows Home, scoped persistent drafts and manuscript version recovery. Publication becomes authoritative only at the reviewed PR merge and remote readback. Its exact working-source evidence and runtime limits are recorded in evidence/round-15/workspace-continuity-20261024.json; complete visual/product closure remains OPEN. The following document-alignment observations retain their historical scope.
+The current synchronization preserves the paused frontend, collection/data, business, Office/media, AI/context and packaging work described at the top of this file. The source snapshot and current check boundaries are recorded in evidence/round-15/workspace-continuity-20261024.json under pause_sync_20261025. Mainline publication remains conditional on reviewed exact-head checks; complete visual/product closure remains OPEN. The following observations retain their historical scope.
 
 Historical document-only alignment (not this implementation batch) started from GitHub/main
 `343ec0cc10231dc38005c77feaf4e907097b974f`, independently matched to origin/main

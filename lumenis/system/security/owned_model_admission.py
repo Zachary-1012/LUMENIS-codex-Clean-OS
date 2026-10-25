@@ -87,7 +87,7 @@ def _normalized_training_scope_payload(
     context: Mapping[str, Any],
     principal: Optional[Any],
 ) -> Tuple[Dict[str, Any], Dict[str, Any], str]:
-    """Reuse the existing typed CTH/BMP scope normalizer, never its grant."""
+    """Reuse canonical business or independent Shared scope, never a grant."""
     from lumenis.system.ai_gateway.owned_training import TrainingApprovalRequest
 
     request_cls = _request_type()
@@ -147,6 +147,16 @@ def _normalized_training_scope_payload(
         normalized_domain = "bmp"
     if values["domain_id"] != normalized_domain:
         raise ValueError("request domain does not match the server domain")
+
+    if normalized_domain == 'shared':
+        scope_name = 'shared_workspace:v1'
+        if (values['scopes'] != (scope_name,) or type(context) is not dict
+                or set(context) != {'scope_descriptors'}
+                or type(context['scope_descriptors']) is not dict
+                or set(context['scope_descriptors']) != {scope_name}):
+            raise ValueError('Shared model admission requires its exact independent workspace scope')
+        scope = _permission.validate_shared_workspace_scope(context['scope_descriptors'][scope_name])
+        return identity, {'scope_descriptors': [{'scope': scope_name, **scope}]}, normalized_domain
 
     # This helper is used only to canonicalize scopes and server identity. Its
     # MODEL_TRAIN operation and resource are deliberately discarded below.
@@ -415,6 +425,22 @@ class OwnedModelAdmissionVerifier:
                 context=self._context, principal=self._principal,
             )
             for descriptor in normalized_scope_payload["scope_descriptors"]:
+                if self._payload['domain_id'] == 'shared':
+                    actor = self._principal if self._principal is not None else {'id': self._actor_id}
+                    shared_scope = {key: descriptor[key] for key in ('scope_kind', 'version')}
+                    try:
+                        shared_context, shared_audit = permission.authorize_shared_workspace(
+                            actor, shared_scope, module='owned_model_admission', action='write',
+                            gate=self._gate, _return_audit=True)
+                    except Exception:
+                        return self._decision(False, 'ACTOR_SCOPE_DENIED', scope_audit_ids=tuple(scope_audit_ids))
+                    owner = ({'actor_id': self._actor_id} if self._principal is None else {
+                        'principal_kind': self._identity['principal_kind'], 'principal_ref': self._identity['principal_ref']})
+                    if (shared_context != {**shared_scope, **owner}
+                            or type(shared_audit) is not str or not shared_audit):
+                        return self._decision(False, 'ACTOR_SCOPE_DENIED', scope_audit_ids=tuple(scope_audit_ids))
+                    scope_audit_ids.append(shared_audit)
+                    continue
                 if identity["identity_kind"] == "workspace":
                     scope = permission.check_local_workspace_scope_permission(
                         self._principal,
@@ -508,14 +534,21 @@ class OwnedModelAdmissionVerifier:
                     )
 
             operation_id = f"owned-model-admission:{uuid.uuid4().hex}"
-            approval = self._gate.check(
-                permission.OperationType.RUNTIME_OPERATION,
-                resource=self._resource,
-                caller=self._identity["caller"],
-                operation_id=operation_id,
-                domain_id=self._payload["domain_id"],
-                exact_approval_required=True,
-            )
+            if self._payload['domain_id'] == 'shared':
+                actor = self._principal if self._principal is not None else {'id': self._actor_id}
+                approval = permission.check_shared_workspace_effect(
+                    actor, {'scope_kind': 'shared_workspace', 'version': 1},
+                    permission.OperationType.RUNTIME_OPERATION, self._resource,
+                    module='owned_model_admission', action='write', gate=self._gate)
+            else:
+                approval = self._gate.check(
+                    permission.OperationType.RUNTIME_OPERATION,
+                    resource=self._resource,
+                    caller=self._identity["caller"],
+                    operation_id=operation_id,
+                    domain_id=self._payload["domain_id"],
+                    exact_approval_required=True,
+                )
             token = self._gate.get_valid_approval_token(
                 permission.OperationType.RUNTIME_OPERATION.value,
                 self._resource,
@@ -527,8 +560,9 @@ class OwnedModelAdmissionVerifier:
                 and approval.operation_type == permission.OperationType.RUNTIME_OPERATION.value
                 and approval.resource == self._resource
                 and approval.caller == self._identity["caller"]
-                and permission._canonical_business_domain_id(approval.domain_id)
-                == permission._canonical_business_domain_id(self._payload["domain_id"])
+                and (approval.domain_id is None if self._payload['domain_id'] == 'shared' else
+                     permission._canonical_business_domain_id(approval.domain_id)
+                     == permission._canonical_business_domain_id(self._payload["domain_id"]))
                 and approval.risk_level == permission.RiskLevel.HIGH.value
                 and approval.permission_required == permission.PermissionLevel.COMMIT.value
                 and type(approval.audit_id) is str

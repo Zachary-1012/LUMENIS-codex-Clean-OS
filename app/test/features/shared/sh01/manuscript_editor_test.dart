@@ -45,6 +45,7 @@ class _LostSaveClient extends LumenisCoreClient {
     required InternalPitchManuscript manuscript,
     required String requestId,
     InternalPitchRevision? revision,
+    List<Map<String, dynamic>> citations = const [],
   }) async {
     lastScope = scope;
     throw const LumenisCoreException('Save response unavailable');
@@ -240,7 +241,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('manuscript-outline-toggle')));
     await tester.pumpAndSettle();
-    final add = find.widgetWithText(TextButton, '添加段落');
+    final add = find.byKey(const Key('manuscript-outline-add'));
     expect(tester.widget<TextButton>(add).onPressed, isNull);
     await tester.tap(find.text('撤销移除'));
     await tester.pumpAndSettle();

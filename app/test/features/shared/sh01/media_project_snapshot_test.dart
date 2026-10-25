@@ -424,6 +424,55 @@ void main() {
     },
   );
 
+  test(
+    'free video layers preserve positions, placement, crop, and saved versions',
+    () {
+      final asset = videoAsset();
+      final before = _videoProject().addVideoTrack('inset');
+      final placed = before
+          .addClip(
+            asset.assetId,
+            trackId: 'inset',
+            sourceIn: 1,
+            sourceOut: 5,
+            timelineStart: 2,
+            audioRole: 'muted',
+            clipId: 'inset-clip',
+          )
+          .setVideoPlacement(
+            'inset-clip',
+            const MediaVideoPlacement(
+              x: 0.5,
+              y: 0.5,
+              width: 0.5,
+              height: 0.5,
+              opacity: 0.75,
+            ),
+          );
+      final payload = placed.toJson();
+      final restored = MediaProjectSnapshot.fromJson(
+        payload,
+        inspectedAssets: placed.assets,
+      );
+      expect(restored.toJson(), payload);
+      expect(restored.tracks.last.layout, 'free');
+      expect(restored.tracks.last.clips.single.timelineStart, 2);
+      expect(restored.tracks.last.clips.single.videoPlacement!.opacity, 0.75);
+      final split = restored.splitClip('inset-clip', atSec: 3);
+      expect(split.tracks.last.clips.map((c) => c.timelineStart), [2, 4]);
+      expect(split.tracks.last.clips.map((c) => c.videoPlacement!.opacity), [
+        0.75,
+        0.75,
+      ]);
+      expect(split.undo().tracks.last.toJson(), restored.tracks.last.toJson());
+      expect(
+        () => restored.reorderVideoClip('inset-clip', newIndex: 0),
+        throwsFormatException,
+      );
+      expect(before.tracks.last.clips, isEmpty);
+    },
+  );
+
   test('split, delete, and undo keep transition references coherent', () {
     final initial = _videoProject(clipCount: 4);
     final clips = initial.tracks.first.clips;
@@ -433,7 +482,11 @@ void main() {
     ]);
 
     final split = before.splitClip(clips[1].clipId, atSec: 3);
-    expect(split.transitions, [before.transitions[1]]);
+    expect(split.transitions.length, 2);
+    expect(split.transitions[0].fromClip, 'video-0');
+    expect(split.transitions[0].toClip, 'video-1-a');
+    expect(split.transitions[0].durationSec, before.transitions[0].durationSec);
+    expect(split.transitions[1], before.transitions[1]);
     expect(split.tracks.first.clips.map((clip) => clip.clipId), [
       'video-0',
       'video-1-a',

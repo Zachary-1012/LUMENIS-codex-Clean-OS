@@ -39,6 +39,9 @@ final class InternalPitchSavedManuscript {
     required this.outputSha256,
     required this.outputSizeBytes,
     required this.manuscript,
+    this.revisionSections = const [],
+    this.citations = const [],
+    this.creationEvidence,
   });
 
   final String artifactId;
@@ -54,6 +57,9 @@ final class InternalPitchSavedManuscript {
   final String outputSha256;
   final int outputSizeBytes;
   final InternalPitchManuscript manuscript;
+  final List<Map<String, String>> revisionSections;
+  final List<Map<String, dynamic>> citations;
+  final Map<String, dynamic>? creationEvidence;
 
   /// The version to which the next revision must be bound.
   int get parentVersion => version;
@@ -138,6 +144,50 @@ final class ManuscriptController extends ChangeNotifier {
 
   bool get canContinueFromLatest =>
       _scope != null && _savedWork != null && !busy && !hasUnresolvedSave;
+
+  bool get canGenerate => _scope != null && !busy && !hasUnresolvedSave;
+  bool get generatedAttempt => _activeAttempt?.generation != null;
+
+  Future<void> generate(Map<String, dynamic> input) async {
+    if (!canGenerate) return;
+    final scope = _scope!;
+    final immutable = jsonDecode(jsonEncode(input)) as Map<String, dynamic>;
+    final key = _canonicalJson({
+      'scope': scope.toJson(),
+      'generation': immutable,
+      'parent': _revisionParent?.artifactId,
+      'parent_digest': _revisionParent?.draftDigest,
+    });
+    final attempt = _attempts.putIfAbsent(
+      key,
+      () => _ManuscriptAttempt(
+        key: key,
+        scope: scope,
+        manuscript: null,
+        generation: immutable,
+        parent: _revisionParent,
+        requestId: _newRequestId(),
+      ),
+    );
+    _activeAttempt = attempt;
+    _taskId = attempt.taskId;
+    _taskState = attempt.taskState;
+    _taskError = attempt.taskError;
+    if (!_begin(ManuscriptControllerPhase.preparing)) return;
+    final scopeGeneration = _scopeGeneration;
+    try {
+      if (attempt.taskId == null) {
+        if (await _prepare(attempt, scopeGeneration) &&
+            _isCurrent(scopeGeneration, scope)) {
+          await _continueAfterPrepare(attempt, scopeGeneration);
+        }
+      } else {
+        await _readAttempt(attempt, scopeGeneration);
+      }
+    } finally {
+      _end(scopeGeneration);
+    }
+  }
 
   Future<void> continueFromLatest() async {
     if (!canContinueFromLatest) return;
@@ -553,12 +603,20 @@ final class ManuscriptController extends ChangeNotifier {
 
   Future<bool> _prepare(_ManuscriptAttempt attempt, int generation) async {
     try {
-      final response = await _client.prepareInternalPitch(
-        scope: attempt.scope,
-        manuscript: attempt.manuscript,
-        requestId: attempt.requestId,
-        revision: attempt.revision,
-      );
+      final response = attempt.generation != null
+          ? await _client.prepareGeneratedPitch(
+              scope: attempt.scope,
+              generation: attempt.generation!,
+              requestId: attempt.requestId,
+              revision: attempt.revision,
+            )
+          : await _client.prepareInternalPitch(
+              scope: attempt.scope,
+              manuscript: attempt.manuscript!,
+              citations: attempt.parent?.citations ?? const [],
+              requestId: attempt.requestId,
+              revision: attempt.revision,
+            );
       final reply = _validateTaskReply(response, scope: attempt.scope);
       attempt
         ..taskId = reply.taskId
@@ -854,7 +912,16 @@ final class ManuscriptController extends ChangeNotifier {
     required String? expectedRequestId,
     required InternalPitchSavedManuscript? expectedSaved,
   }) {
-    final work = _stringMap(response['work']);
+    final rawWork = _stringMap(response['work']);
+    final work = rawWork == null
+        ? null
+        : <String, dynamic>{
+            ...rawWork,
+            if (response['revision_sections'] != null)
+              'revision_sections': response['revision_sections'],
+            if (response['creation_evidence'] != null)
+              'creation_evidence': response['creation_evidence'],
+          };
     final receipt = _stringMap(response['action_receipt']);
     if (work == null || receipt == null) {
       throw const FormatException(
@@ -908,7 +975,11 @@ final class ManuscriptController extends ChangeNotifier {
         !_isAuthoredManuscriptV4(contract) ||
         document['kind'] != 'report' ||
         payload == null ||
-        payload.length != 2 ||
+        !const {
+          'manuscript',
+          'truth_state',
+          'creation',
+        }.containsAll(payload.keys) ||
         !_stringMap(payload['truth_state']).isTruthyMap) {
       throw const FormatException('SavedWork manuscript contract is invalid.');
     }
@@ -918,6 +989,27 @@ final class ManuscriptController extends ChangeNotifier {
     }
     final manuscript = _parseManuscript(rawManuscript);
     final truthState = _stringMap(payload['truth_state'])!;
+    final creation = _stringMap(payload['creation']);
+    final rawCitations = document['citations'];
+    if (rawCitations is! List) {
+      throw const FormatException('Citations are missing.');
+    }
+    final citations = <Map<String, dynamic>>[];
+    for (final raw in rawCitations) {
+      final citation = _stringMap(raw);
+      if (citation == null ||
+          citation['evidence_id'] is! int ||
+          (citation['evidence_id'] as int) <= 0 ||
+          citation['start'] is! int ||
+          citation['end'] is! int ||
+          citation['quote'] is! String ||
+          (citation['start'] as int) < 0 ||
+          (citation['end'] as int) <= (citation['start'] as int) ||
+          (citation['quote'] as String).isEmpty) {
+        throw const FormatException('Citation identity is invalid.');
+      }
+      citations.add(Map.unmodifiable(citation));
+    }
     const truthFields = {
       'source_admission',
       'citation_admission',
@@ -926,24 +1018,73 @@ final class ManuscriptController extends ChangeNotifier {
       'external_effect',
       'business_outcome',
     };
-    if (truthFields.any((field) => truthState[field] is! String) ||
-        truthState.length != truthFields.length ||
-        truthState['source_admission'] !=
-            (manuscript.authorship == 'user_supplied'
-                ? 'USER_AUTHORED_CONTENT'
-                : 'ASSISTED_DERIVED_CONTENT') ||
-        truthState['citation_admission'] != 'NO_SIGNED_QUOTE' ||
-        truthState['external_fact_verification'] !=
-            'NOT_INFERRED_FROM_AUTHORSHIP' ||
-        truthState['owned_model_execution'] != 'NOT_RUN' ||
-        truthState['external_effect'] != 'NOT_PERFORMED' ||
-        truthState['business_outcome'] != 'NOT_OBSERVED' ||
-        payload.containsKey('shot_plan') ||
-        payload.containsKey('upstream_binding') ||
-        payload.containsKey('input_manifest')) {
+    if (creation == null &&
+        (truthFields.any((field) => truthState[field] is! String) ||
+            truthState.length != truthFields.length ||
+            truthState['source_admission'] !=
+                (manuscript.authorship == 'user_supplied'
+                    ? 'USER_AUTHORED_CONTENT'
+                    : 'ASSISTED_DERIVED_CONTENT') ||
+            truthState['citation_admission'] !=
+                (citations.isEmpty
+                    ? 'NO_SIGNED_QUOTE'
+                    : 'SIGNED_CITATIONS_BOUND') ||
+            truthState['external_fact_verification'] !=
+                'NOT_INFERRED_FROM_AUTHORSHIP' ||
+            truthState['owned_model_execution'] != 'NOT_RUN' ||
+            truthState['external_effect'] != 'NOT_PERFORMED' ||
+            truthState['business_outcome'] != 'NOT_OBSERVED' ||
+            payload.containsKey('shot_plan') ||
+            payload.containsKey('upstream_binding') ||
+            payload.containsKey('input_manifest'))) {
       throw const FormatException(
         'SavedWork manuscript truth state is invalid.',
       );
+    }
+    if (creation != null) {
+      final provenance = _stringMap(creation['provenance']);
+      final execution = _stringMap(creation['execution_evidence']);
+      final evidence = _stringMap(row['creation_evidence']);
+      if (manuscript.authorship != 'assisted' ||
+          creation['schema'] != 'lumenis.owned-creation/v1' ||
+          !const {
+            'create',
+            'revise_selected_sections',
+          }.contains(creation['operation']) ||
+          _stringMap(creation['brief']) == null ||
+          creation['source_bindings'] is! List ||
+          !_isDigest(creation['input_revision_sha256']) ||
+          !_isDigest(creation['source_binding_sha256']) ||
+          !_isDigest(creation['model_output_sha256']) ||
+          provenance == null ||
+          provenance['provider'] != 'owned' ||
+          provenance['status'] != 'COMPLETED' ||
+          provenance['operation'] != 'professional_creation' ||
+          provenance['real_input_bound'] != true ||
+          provenance['product_acceptance'] != false ||
+          execution?['source'] != 'shared_content' ||
+          execution?['feature_id'] != 'CONTENT_CREATION_EXECUTION' ||
+          execution?['asset_id'] != document['task_id'] ||
+          evidence == null ||
+          evidence['evidence_id'] is! int ||
+          (evidence['evidence_id'] as int) <= 0 ||
+          !_isDigest(evidence['integrity_digest']) ||
+          truthState['owned_model_execution'] != 'COMPLETED' ||
+          truthState['professional_quality'] != 'NOT_EVALUATED' ||
+          truthState['external_fact_verification'] !=
+              'SOURCE_CLAIMS_NOT_INDEPENDENTLY_VERIFIED' ||
+          !const {
+            'VERIFIED_SOURCE_USE',
+            'USER_BRIEF_ONLY',
+          }.contains(truthState['source_admission']) ||
+          !const {
+            'SIGNED_CITATIONS_BOUND',
+            'NO_SIGNED_QUOTE',
+          }.contains(truthState['citation_admission']) ||
+          truthState['external_effect'] != 'NOT_PERFORMED' ||
+          truthState['business_outcome'] != 'NOT_OBSERVED') {
+        throw const FormatException('Generated writing provenance is invalid.');
+      }
     }
 
     final artifactId = artifact['artifact_id'];
@@ -989,8 +1130,7 @@ final class ManuscriptController extends ChangeNotifier {
         document['title'] != manuscript.title ||
         document['markdown'] != _markdownFor(manuscript) ||
         document['assertion_id'] != null ||
-        document['citations'] is! List ||
-        (document['citations'] as List).isNotEmpty) {
+        document['citations'] is! List) {
       throw const FormatException('SavedWork manuscript identity is invalid.');
     }
 
@@ -1041,6 +1181,34 @@ final class ManuscriptController extends ChangeNotifier {
       throw const FormatException('SavedWork commit receipt is invalid.');
     }
 
+    final revisionSections = <Map<String, String>>[];
+    final sections = row['revision_sections'];
+    if (sections != null) {
+      if (sections is! List || sections.length != manuscript.sections.length) {
+        throw const FormatException(
+          'Revision sections do not match the writing.',
+        );
+      }
+      final ids = <String>{};
+      for (var i = 0; i < sections.length; i++) {
+        final section = _stringMap(sections[i]);
+        if (section == null ||
+            section['section_id'] is! String ||
+            (section['section_id'] as String).isEmpty ||
+            !ids.add(section['section_id'] as String) ||
+            section['heading'] != manuscript.sections[i].heading ||
+            section['body'] != manuscript.sections[i].body) {
+          throw const FormatException('Revision section identity is invalid.');
+        }
+        revisionSections.add(
+          Map.unmodifiable({
+            'section_id': section['section_id'] as String,
+            'heading': section['heading'] as String,
+            'body': section['body'] as String,
+          }),
+        );
+      }
+    }
     return InternalPitchSavedManuscript(
       artifactId: artifactId,
       artifactSha256: artifactSha256,
@@ -1055,6 +1223,11 @@ final class ManuscriptController extends ChangeNotifier {
       outputSha256: attachment['sha256'] as String,
       outputSizeBytes: attachment['size_bytes'] as int,
       manuscript: manuscript,
+      revisionSections: List.unmodifiable(revisionSections),
+      citations: List.unmodifiable(citations),
+      creationEvidence: creation == null
+          ? null
+          : Map.unmodifiable(_stringMap(row['creation_evidence'])!),
     );
   }
 
@@ -1131,7 +1304,8 @@ final class ManuscriptController extends ChangeNotifier {
         receipt['size_bytes'] == artifact['size_bytes'] &&
         receipt['draft_digest'] == document['draft_digest'] &&
         receipt['sources'] is List &&
-        (receipt['sources'] as List).isEmpty &&
+        ((document['citations'] as List).isNotEmpty ||
+            (receipt['sources'] as List).isEmpty) &&
         observations != null &&
         observations['committed_bytes_match'] == true &&
         observations['parent_chain_verified'] == true &&
@@ -1214,6 +1388,8 @@ final class ManuscriptController extends ChangeNotifier {
       left.outputArtifactId == right.outputArtifactId &&
       left.outputSha256 == right.outputSha256 &&
       left.outputSizeBytes == right.outputSizeBytes &&
+      _sameJson(left.citations, right.citations) &&
+      _sameJson(left.creationEvidence, right.creationEvidence) &&
       _sameJson(left.manuscript.toJson(), right.manuscript.toJson());
 
   bool _begin(ManuscriptControllerPhase phase) {
@@ -1436,11 +1612,13 @@ final class _ManuscriptAttempt {
     required this.manuscript,
     required this.parent,
     required this.requestId,
+    this.generation,
   });
 
   final String key;
   final LumenisWorkspaceScope scope;
-  final InternalPitchManuscript manuscript;
+  final InternalPitchManuscript? manuscript;
+  final Map<String, dynamic>? generation;
   final InternalPitchSavedManuscript? parent;
   final String requestId;
   String? taskId;

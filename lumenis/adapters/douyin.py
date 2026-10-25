@@ -67,9 +67,9 @@ def _configured_browser_worker_url() -> str:
         if not exact_local:
             raise RuntimeError("DOUYIN_CDP_URL loopback is restricted to the opted-in DOUYIN_READONLY worker")
         from pathlib import Path
-        from .cookie_vault import _current_data_dir
+        from .cookie_vault import registered_session_data_dir
         import cdp_helper
-        profile_dir = Path(_current_data_dir()) / "private" / "profiles" / "douyin-readonly"
+        profile_dir = registered_session_data_dir() / "private" / "profiles" / "douyin-readonly"
         if not cdp_helper.registered_cdp_browser_for_port(
                 9225, str(profile_dir), headless=True):
             raise RuntimeError("READONLY_WORKER_PROFILE_MODE_OR_KERNEL_UNAVAILABLE")
@@ -665,10 +665,10 @@ class DouyinAdapter(BaseAdapter):
                     author=u.get("nickname", ""),
                     author_id=str(u.get("uid") or u.get("short_id") or ""),
                     publish_date="",
-                    likes=self._to_int(u.get("total_favorited")),
-                    comments=0,
-                    collects=0,
-                    shares=self._to_int(u.get("aweme_count")),
+                    likes=None,
+                    comments=None,
+                    collects=None,
+                    shares=None,
                     cover="",
                     source_platform=self.platform_name,
                     raw_data={
@@ -676,6 +676,8 @@ class DouyinAdapter(BaseAdapter):
                         "sec_uid": sec_uid,
                         "follower_count": u.get("follower_count"),
                         "following_count": u.get("following_count"),
+                        'content_count':u.get('aweme_count'), 'received_likes_count':u.get('total_favorited'),
+                        'source_observation':u,
                         "type": "creator",
                     },
                 )

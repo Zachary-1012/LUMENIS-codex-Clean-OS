@@ -453,6 +453,103 @@ def update_conversation(actor, conversation_id, *, expected_revision, title=None
     return read_conversation(actor, conversation_id)
 
 
+def update_context(actor, conversation_id, *, value, idempotency_key, expected_revision, source_references=None):
+    """Save an explicit human correction; retain every original conversation turn.
+
+    Source bodies and executed effects cannot be authored here. References
+    reopen their original owner and grant no model use. Forgetting excludes user
+    text from future model context; it does not delete the original transcript.
+    """
+    from .context_pack import validate_state
+    value = validate_state(value)
+    content = {'schema': 'conversation-human-context/v1', 'value': value,
+               'truth_kind': 'user_authored', 'source_policy': 'source_free_conversation'}
+    if source_references is not None:
+        if type(source_references) is not list or len(source_references) > 100:
+            raise ValueError('CONVERSATION_SOURCE_REFERENCES_INVALID')
+        content['source_references'] = source_references
+    digest = _sha(content)
+    with _write(conversation_id, actor) as (con, row):
+        old = _existing(con, conversation_id, idempotency_key, digest)
+        if old:
+            return {'turn': _public_turn(old), 'revision': row['revision'], 'idempotent_hit': True}
+        if source_references is None:
+            latest = con.execute("SELECT content_json FROM ai_conversation_turns WHERE conversation_id=? "
+                "AND origin_kind='system_status' AND state='recorded' "
+                "AND json_extract(content_json,'$.schema')='conversation-human-context/v1' "
+                "ORDER BY sequence DESC LIMIT 1", (conversation_id,)).fetchone()
+            references = json.loads(latest[0]).get('source_references', []) if latest else []
+        else:
+            from agent_memory.semantic import read_source_reference
+            references = json.loads(_json(source_references))
+            if len({_sha(reference) for reference in references}) != len(references):
+                raise ValueError('CONVERSATION_SOURCE_REFERENCES_INVALID')
+            for reference in references:
+                read_source_reference(reference, actor=actor, scope=_SCOPE, connection=con)
+        if references or source_references is not None:
+            content['source_references_schema'] = 'conversation-source-references/v1'
+            content['source_references'] = references
+        for identity in value['excluded_turn_ids']:
+            source = con.execute('SELECT origin_kind FROM ai_conversation_turns WHERE conversation_id=? AND turn_id=?',
+                                 (conversation_id, identity)).fetchone()
+            if source is None or source['origin_kind'] != 'user_input':
+                raise ValueError('CONVERSATION_CONTEXT_EXCLUSION_USER_TURN_REQUIRED')
+        _advance(con, row, expected_revision)
+        made = _insert_turn(con, row, key=idempotency_key, digest=digest, role='user', origin='system_status',
+                            content=content, state='recorded')
+        if source_references is not None:
+            for reference in references:
+                read_source_reference(reference, actor=actor, scope=_SCOPE, connection=con)
+        return {'turn': _public_turn(made), 'revision': row['revision'] + 1, 'idempotent_hit': False}
+
+
+def read_context(actor, conversation_id, *, query=None, limit=30, offset=0, expected_snapshot=None, source_reference=None):
+    """Reopen current human context with the same actor/workspace read gate."""
+    con = _connect()
+    try:
+        row = _authorize(con, conversation_id, actor)
+        latest = con.execute("SELECT * FROM ai_conversation_turns WHERE conversation_id=? AND origin_kind='system_status' "
+            "AND state='recorded' AND json_extract(content_json,'$.schema')='conversation-human-context/v1' "
+            "ORDER BY sequence DESC LIMIT 1", (conversation_id,)).fetchone()
+        result = {'conversation_id': conversation_id, 'revision': row['revision'],
+                'context': _public_turn(dict(latest)) if latest else None,
+                'training_admission': 'NOT_GRANTED', 'effect_permission': 'NOT_GRANTED',
+                'source_references_schema': 'conversation-source-references/v1', 'source_references': []}
+        from agent_memory.semantic import (
+            read_source_reference,
+            search_authorized_sources,
+        )
+        references = json.loads(latest['content_json']).get('source_references', []) if latest else []
+        for reference in references:
+            try:
+                projected = read_source_reference(reference, actor=actor, scope=_SCOPE, connection=con)
+            except (ValueError, PermissionError, RuntimeError):
+                projected = {'reference': reference, 'state': 'source_access_unavailable',
+                             'model_source_use': 'NOT_GRANTED', 'training_admission': 'NOT_GRANTED'}
+            result['source_references'].append(projected)
+        if query is not None:
+            result['search'] = search_authorized_sources(query, actor=actor, scope=_SCOPE, connection=con,
+                limit=limit, offset=offset, expected_snapshot=expected_snapshot)
+        if source_reference is not None:
+            result['source_preview'] = read_source_reference(source_reference, actor=actor, scope=_SCOPE, connection=con)
+        # Searching may be slow: a source projected before that work must still
+        # be readable when the response leaves its conversation owner.
+        for index, projected in enumerate(result['source_references']):
+            if projected['state'] != 'available':
+                continue
+            try:
+                result['source_references'][index] = read_source_reference(projected['reference'],
+                    actor=actor, scope=_SCOPE, connection=con)
+            except (ValueError, PermissionError, RuntimeError):
+                result['source_references'][index] = {'reference': projected['reference'],
+                    'state': 'source_access_unavailable', 'model_source_use': 'NOT_GRANTED',
+                    'training_admission': 'NOT_GRANTED'}
+        _authorize(con, conversation_id, actor)
+        return result
+    finally:
+        con.close()
+
+
 def _response_context(connection, conversation_id, user_turn_id):
     target = connection.execute('SELECT * FROM ai_conversation_turns WHERE conversation_id=? AND turn_id=?',
         (conversation_id, user_turn_id)).fetchone()
@@ -465,19 +562,155 @@ def _response_context(connection, conversation_id, user_turn_id):
         raise PermissionError('CONVERSATION_HISTORY_TYPED_SOURCE_USE_REQUIRED')
     predicate = "conversation_id=? AND sequence<? AND (origin_kind='user_input' OR (origin_kind='model_output' AND state='completed'))"
     params = (conversation_id, target['sequence'])
-    total = connection.execute('SELECT COUNT(*) FROM ai_conversation_turns WHERE ' + predicate, params).fetchone()[0]
-    chosen = connection.execute("SELECT origin_kind,substr(json_extract(content_json,'$.text'),1,800) AS excerpt,"
-        "length(json_extract(content_json,'$.text')) AS text_length FROM ai_conversation_turns WHERE " + predicate +
-        " ORDER BY sequence DESC LIMIT 6", params).fetchall()
-    chosen = list(reversed(chosen))
-    truncated = sum(max(0, row['text_length']-800) for row in chosen)
-    history = [{'role': 'user' if row['origin_kind']=='user_input' else 'assistant', 'content': row['excerpt']} for row in chosen]
-    accounting = {'history_turns_total': total, 'history_turns_included': len(history),
-        'history_turns_omitted': total-len(history), 'history_characters_omitted': truncated,
-        'user_turn_complete': True, 'stored_history_complete': True,
-        'context_policy': 'existing_chat_last_6_turns_800_characters_each',
-        'token_budget_verified': False}
+    chosen = [dict(row) for row in connection.execute('SELECT * FROM ai_conversation_turns WHERE ' +
+        predicate + ' ORDER BY sequence', params)]
+    latest = connection.execute("SELECT * FROM ai_conversation_turns WHERE conversation_id=? AND origin_kind='system_status' "
+        "AND state='recorded' AND json_extract(content_json,'$.schema')='conversation-human-context/v1' "
+        "ORDER BY sequence DESC LIMIT 1", (conversation_id,)).fetchone()
+    latest = dict(latest) if latest else None
+    for row in chosen:
+        row['content'] = json.loads(row['content_json'])
+    if latest:
+        latest['content'] = json.loads(latest['content_json'])
+        if user_turn_id in latest['content']['value']['excluded_turn_ids']:
+            raise ValueError('CONVERSATION_RESPONSE_INPUT_EXCLUDED')
+    from .context_pack import conversation_pack
+    history, accounting = conversation_pack(chosen, context_turn=latest)
     return json.loads(target['content_json'])['text'], history, accounting
+
+
+def task_working_context(connection, conversation_id, actor):
+    """Reopen original conversation input for an explicitly linked Task.
+
+    Task projections and source-bearing responses are references, not permission
+    to read or send their bodies to a model. Keep the full source-free transcript
+    and latest human correction, including the exclusion/dependency ledger.
+    """
+    from .context_pack import conversation_pack
+    row = _authorize(connection, conversation_id, actor)
+    turns = connection.execute('SELECT * FROM ai_conversation_turns WHERE conversation_id=? ORDER BY sequence',
+                               (conversation_id,)).fetchall()
+    chosen, omitted, latest = [], [], None
+    for turn in turns:
+        content = json.loads(turn['content_json'])
+        if (turn['origin_kind'] == 'system_status' and turn['state'] == 'recorded'
+                and content.get('schema') == 'conversation-human-context/v1'):
+            latest = {**dict(turn), 'content': content}
+        elif (turn['origin_kind'] == 'user_input' and turn['state'] == 'recorded'
+                or turn['origin_kind'] == 'model_output' and turn['state'] == 'completed'
+                and content.get('source_policy') == 'source_free_conversation'):
+            chosen.append({**dict(turn), 'content': content})
+        else:
+            omitted.append({'turn_id': turn['turn_id'], 'revision': turn['revision'],
+                'origin_kind': turn['origin_kind'], 'state': turn['state'],
+                'reason': 'source_use_not_granted' if turn['origin_kind'] == 'task_projection'
+                          or turn['state'] == 'completed' else 'not_completed_source_free_text'})
+    history, accounting = conversation_pack(chosen, context_turn=latest)
+    _authorize(connection, conversation_id, actor)
+    return {'conversation_id': row['conversation_id'], 'state': row['state'],
+            'context_turn_id': latest['turn_id'] if latest else None,
+            'context_revision': latest['revision'] if latest else None,
+            'human_state': latest['content']['value'] if latest else None,
+            'history': history, 'context_accounting': accounting,
+            'omitted_reference_turns': omitted,
+            'source_policy': 'source_free_conversation', 'permission_grant': False}
+
+
+def conversation_source_use_policy():
+    descriptor = {'version': 'conversation-user-context/v1', 'operation': 'source_free_conversation',
+        'scope': 'shared_workspace:v1', 'input': 'original_user_turns_and_explicit_human_state',
+        'history': 'completed_source_free_outputs_with_exclusion_lineage',
+        'external_sources': 'NOT_READ', 'task_source_permission': 'NOT_GRANTED',
+        'effects': 'NOT_GRANTED', 'training': 'NOT_GRANTED', 'max_output_tokens': 1200}
+    return {**descriptor, 'sha256': _sha(descriptor)}
+
+
+def _conversation_owned_material(actor, conversation_id, response_turn_id):
+    """Reopen the original owner's pending response; no Task or Source bodies."""
+    con = _connect()
+    try:
+        conversation = _authorize(con, conversation_id, actor, 'write')
+        turn = con.execute('SELECT * FROM ai_conversation_turns WHERE conversation_id=? AND turn_id=?',
+                           (conversation_id, response_turn_id)).fetchone()
+        if (conversation['state'] != 'active' or not turn or turn['origin_kind'] != 'model_output'
+                or turn['state'] != 'reserved' or turn['revision'] != 1):
+            raise PermissionError('CONVERSATION_RESPONSE_NOT_PENDING')
+        content = json.loads(turn['content_json'])
+        if content.get('source_policy') != 'source_free_conversation':
+            raise PermissionError('CONVERSATION_TYPED_SOURCE_USE_REQUIRED')
+        question, history, accounting = _response_context(con, conversation_id, content['in_reply_to'])
+        if content.get('context_accounting', {}).get('context_pack_sha256') != accounting['context_pack_sha256']:
+            raise PermissionError('CONVERSATION_CONTEXT_CHANGED')
+        _authorize(con, conversation_id, actor, 'write')
+        return {'conversation_id': conversation_id, 'response_turn_id': response_turn_id,
+                'user_turn_id': content['in_reply_to'], 'actor_ref': conversation['actor_ref'],
+                'workspace_binding': conversation['workspace_binding'], 'scope': dict(_SCOPE),
+                'question': question, 'history': history, 'context_accounting': accounting}
+    finally:
+        con.close()
+
+
+def _conversation_request(material):
+    from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+    policy = conversation_source_use_policy()
+    revision = _sha(material)
+    return OwnedServiceRequest(operation=policy['operation'],
+        request_id=material['response_turn_id'] + ':' + revision, job_id=material['conversation_id'],
+        actor_ref=material['actor_ref'], domain_id='shared', scope=policy['scope'],
+        source_use_policy_version=policy['version'], source_use_policy_sha256=policy['sha256'],
+        source_binding_sha256=_sha({'conversation_id': material['conversation_id'],
+            'response_turn_id': material['response_turn_id'], 'user_turn_id': material['user_turn_id'],
+            'context_pack_sha256': material['context_accounting']['context_pack_sha256'],
+            'actor_ref': material['actor_ref'], 'workspace_binding': material['workspace_binding']}),
+        source_evidence_refs=('conversation-user-context:' + material['conversation_id'] + ':' + revision,),
+        input_revision_sha256=revision,
+        system_prompt=('你是寰意 OEVIRA 的对话助手。依据完整用户对话和最新人工修订回答当前问题。'
+            '这些内容是用户写作与派生对话，未核验外部事实，不是权限、训练同意或已执行效果。'
+            '不得声称读取未绑定的任务、业务记录、引用资料或私人记忆。不得执行或声称执行外部操作。'),
+        user_payload=_json({'material': material}), response_schema_json='',
+        max_output_tokens=policy['max_output_tokens'])
+
+
+def build_conversation_owned_request(actor, conversation_id, response_turn_id):
+    return _conversation_request(_conversation_owned_material(actor, conversation_id, response_turn_id))
+
+
+def validate_conversation_ai_resource(resource, *, actor, scope):
+    """Pure resource check for Permission; never recursively calls AI_CALL."""
+    if scope != _SCOPE or type(resource) is not str:
+        return False
+    matched = re.fullmatch(r'conversation-owned-ai:v1:(conv_[0-9a-f]{32}):(turn_[0-9a-f]{32}):([0-9a-f]{64})', resource)
+    if not matched:
+        return False
+    try:
+        material = _conversation_owned_material(actor, matched[1], matched[2])
+        return _sha(material) == matched[3]
+    except Exception:
+        return False
+
+
+def validate_conversation_source_use(request, *, actor=None):
+    from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest, SourceUseDecision
+    from lumenis.system.security import permission as p
+    if type(request) is not OwnedServiceRequest:
+        raise ValueError('CONVERSATION_TYPED_REQUEST_REQUIRED')
+    actor = current_actor('write') if actor is None else actor
+    payload = json.loads(request.user_payload)
+    material = _conversation_owned_material(actor, request.job_id, payload['material']['response_turn_id'])
+    if request != _conversation_request(material):
+        raise PermissionError('CONVERSATION_INPUT_OR_POLICY_CHANGED')
+    _, scope_audit = p.authorize_shared_workspace(actor, _SCOPE, module='conversation', action='write', _return_audit=True)
+    resource = ('conversation-owned-ai:v1:' + material['conversation_id'] + ':'
+                + material['response_turn_id'] + ':' + request.input_revision_sha256)
+    effect = p.check_shared_workspace_effect(actor, _SCOPE, p.OperationType.AI_CALL, resource,
+                                            module='conversation', action='write')
+    if p.is_testing_bypass_enabled() or not effect.allowed or not effect.audit_id:
+        raise PermissionError('CONVERSATION_AI_PERMISSION_DENIED')
+    if request != build_conversation_owned_request(actor, material['conversation_id'], material['response_turn_id']):
+        raise PermissionError('CONVERSATION_INPUT_CHANGED_DURING_PERMISSION')
+    return SourceUseDecision(True, 'USER_AUTHORED_CONVERSATION_VERIFIED', request.actor_ref,
+        request.domain_id, request.scope, request.source_use_policy_version, request.source_use_policy_sha256,
+        request.source_binding_sha256, request.source_evidence_refs, scope_audit, effect.audit_id)
 
 
 def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_revision, retry_confirmed=False, external_approval=None):
@@ -526,11 +759,29 @@ def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_r
         kwargs = {'history': history, 'source_scope': None}
         if external_approval is not None:
             kwargs['external_approval'] = external_approval
+        else:
+            from lumenis.system.ai_gateway import user_api_adapter
+            if not user_api_adapter.is_selected():
+                owned_request = build_conversation_owned_request(actor, conversation_id, reserved['turn_id'])
+                resource = ('conversation-owned-ai:v1:' + conversation_id + ':' + reserved['turn_id']
+                            + ':' + owned_request.input_revision_sha256)
+                kwargs['_owned_request'] = owned_request
+                kwargs['is_cancelled'] = lambda: not validate_conversation_ai_resource(resource, actor=actor, scope=_SCOPE)
         outcome = service.chat(question, **kwargs)
+        if type(outcome.get('context_accounting')) is dict:
+            accounting = {**accounting, 'transport': outcome['context_accounting']}
+        if type(outcome.get('model_budget')) is dict:
+            accounting = {**accounting, 'model_budget': outcome['model_budget']}
+            measured = outcome['model_budget'].get('measurement', {})
+            if measured.get('ok') is True and measured.get('fits') is True:
+                accounting['token_budget_verified'] = True
+                accounting['token_count_status'] = 'ADMITTED_RUNTIME_TOKENIZER'
         if outcome.get('ok') is True and isinstance(outcome.get('reply'), str) and outcome['reply'].strip():
             content = {'text': outcome['reply'], 'in_reply_to': user_turn_id,
                 'source_policy': 'source_free_conversation', 'context_accounting': accounting,
                 'provider': outcome.get('provider'), 'model': outcome.get('model')}
+            if type(outcome.get('owned_provenance')) is dict:
+                content['owned_provenance'] = outcome['owned_provenance']
             _safe_content(content)
             state = 'completed'
         else:
@@ -558,7 +809,20 @@ def respond(actor, conversation_id, user_turn_id, *, idempotency_key, expected_r
         if current['state'] != 'active':
             raise RuntimeError('CONVERSATION_RESPONSE_INTERRUPTED')
         # Authorization, membership and revision are checked again after inference.
-        _response_context(con, conversation_id, user_turn_id)
+        try:
+            _, _, current_accounting = _response_context(con, conversation_id, user_turn_id)
+            context_changed = current_accounting['context_pack_sha256'] != accounting['context_pack_sha256']
+        except ValueError as exc:
+            if str(exc) != 'CONVERSATION_RESPONSE_INPUT_EXCLUDED':
+                raise
+            context_changed = True
+        if context_changed:
+            content = {'in_reply_to': user_turn_id, 'source_policy': 'source_free_conversation',
+                       'context_accounting': accounting, 'code': 'CONVERSATION_CONTEXT_CHANGED_NO_RESULT_ADOPTED',
+                       'recovery': 'REVIEW_CURRENT_CONTEXT_AND_CONFIRM_NEW_ATTEMPT'}
+            raw = _safe_content(content)
+            state = 'interrupted'
+            approval_request = None
         size = con.execute('SELECT COALESCE(SUM(length(CAST(content_json AS BLOB))),0) FROM ai_conversation_turns WHERE conversation_id=? AND turn_id<>?',
             (conversation_id, reserved['turn_id'])).fetchone()[0]
         if size + len(raw.encode()) > CONVERSATION_MAX_BYTES:

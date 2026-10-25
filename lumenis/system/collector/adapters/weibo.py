@@ -70,6 +70,7 @@ class WeiboAdapter(BasePlatformAdapter):
                 "comments": getattr(n, "comments", None),
                 "collects": getattr(n, "collects", None),
                 "shares": getattr(n, "shares", None),
+                'cover':getattr(n,'cover',None),
                 "raw": raw,
             }))
         return items
@@ -78,10 +79,12 @@ class WeiboAdapter(BasePlatformAdapter):
         try:
             backend = self._load_backend()
             max_results = int(kwargs.get("max_results", 20))
+            cursor_options = {'native_cursor':kwargs['cursor']} if kwargs.get('cursor') is not None else {}
             if hasattr(backend, "breaker") and callable(getattr(backend, "safe_collect", None)):
-                result = backend.safe_collect(keyword, max_results=max_results, allow_fallback=False)
+                result = backend.safe_collect(keyword, max_results=max_results, allow_fallback=False,**cursor_options)
             else:
-                result = backend.search(keyword, max_results=max_results)
+                result = backend.search(keyword, max_results=max_results,
+                    **({'cursor':kwargs['cursor']} if kwargs.get('cursor') is not None else {}))
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             items = self._v4_notes_to_items(result.notes)
             return CollectionResult(
@@ -91,7 +94,8 @@ class WeiboAdapter(BasePlatformAdapter):
                 raw_count=result.raw_count,
                 new_count=len(items),
                 message=result.error or "",
-                metadata={"engine": "v4_weibo_mobile_api", "provider": "weibo_first_party_read_api",
+                metadata={**(getattr(result,'metadata',None) or {}),
+                          "engine": "v4_weibo_mobile_api", "provider": "weibo_first_party_read_api",
                           "duration_s": result.duration_seconds},
             )
         except Exception as exc:
@@ -122,7 +126,8 @@ class WeiboAdapter(BasePlatformAdapter):
                 status=status, platform=self.platform, items=items, comments=comments,
                 raw_count=result.raw_count, new_count=len(comments) if method == "comments" else len(items),
                 message=result.error or "",
-                metadata={"engine": f"v4_weibo_{method}", "provider": "weibo_first_party_read_api",
+                metadata={**(result.metadata if isinstance(getattr(result, "metadata", None), dict) else {}),
+                          "engine": f"v4_weibo_{method}", "provider": "weibo_first_party_read_api",
                           "duration_s": result.duration_seconds},
             )
         except Exception as exc:
@@ -136,10 +141,19 @@ class WeiboAdapter(BasePlatformAdapter):
         return self._delegate_v4("detail", mid=content_id)
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
-        return self._delegate_v4("comments", mid=content_id, max_comments=kwargs.get("max_comments", 20))
+        options = {}
+        if kwargs.get('cursor') is not None:
+            options['cursor'] = kwargs['cursor']
+        if include_replies:
+            options['include_replies'] = True
+        return self._delegate_v4("comments", mid=content_id, max_comments=kwargs.get("max_comments", 20), **options)
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("creator", uid=creator_id)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._delegate_v4('author_posts',author_id,max_results=kwargs.get('max_results',20),
+                                 **({'cursor':kwargs['cursor']} if kwargs.get('cursor') is not None else {}))
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         from lumenis.adapters.cookie_vault import check_cookie_status

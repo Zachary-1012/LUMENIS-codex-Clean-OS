@@ -16,7 +16,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass, field
-from typing import List, Optional, Callable, Tuple
+from typing import Any, List, Optional, Callable, Tuple
 from ..config import ADAPTER_CONFIG
 
 logger = logging.getLogger(__name__)
@@ -24,12 +24,13 @@ logger = logging.getLogger(__name__)
 
 def optional_int(value):
     """Convert an observed count without turning absence into a measured zero."""
-    if value is None or (isinstance(value, str) and not value.strip()):
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError, OverflowError):
-        return None
+    if type(value) is int:
+        return value if value >= 0 else None
+    if isinstance(value,str):
+        text = value.strip()
+        if text.isascii() and text.isdigit():
+            return int(text)
+    return None
 
 
 @dataclass
@@ -60,6 +61,7 @@ class AdapterResult:
     raw_count: int = 0
     duration_seconds: float = 0
     diagnostics: dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -249,7 +251,8 @@ class BaseAdapter(ABC):
 
     def collect(self, keyword: str, max_results: int = 20, *,
                 allow_fallback: bool = True,
-                cache_context: Optional[AdapterCacheContext] = None) -> AdapterResult:
+                cache_context: Optional[AdapterCacheContext] = None,
+                native_cursor: Any = None) -> AdapterResult:
         """
         采集入口（带熔断器+重试+限流）
         外部调用此方法，不要直接调search
@@ -258,7 +261,7 @@ class BaseAdapter(ABC):
         start = time.time()
         cache_key = (
             cache_context.cache_key(keyword, max_results)
-            if isinstance(cache_context, AdapterCacheContext) else None
+            if isinstance(cache_context, AdapterCacheContext) and native_cursor is None else None
         )
 
         # 限流检查
@@ -297,7 +300,8 @@ class BaseAdapter(ABC):
         last_error = ""
         for attempt in range(self.config["max_retries"]):
             try:
-                result = self.search(keyword, max_results)
+                result = (self.search(keyword, max_results, cursor=native_cursor)
+                          if native_cursor is not None else self.search(keyword, max_results))
                 if result.success:
                     self.breaker.record_success()
                     self._breaker_last_failure_error = ""
@@ -357,7 +361,8 @@ class BaseAdapter(ABC):
 
     def safe_collect(self, keyword: str, max_results: int = 20, *,
                      allow_fallback: bool = True,
-                     cache_context: Optional[AdapterCacheContext] = None) -> AdapterResult:
+                     cache_context: Optional[AdapterCacheContext] = None,
+                     native_cursor: Any = None) -> AdapterResult:
         """
         安全采集入口：永不抛异常，失败时返回失败结果而非异常
         适用于批量采集场景，单个适配器失败不影响整体
@@ -365,7 +370,7 @@ class BaseAdapter(ABC):
         try:
             return self.collect(
                 keyword, max_results, allow_fallback=allow_fallback,
-                cache_context=cache_context,
+                cache_context=cache_context, native_cursor=native_cursor,
             )
         except Exception as e:
             logger.error("[%s] safe_collect error_type=%s", self.platform_name, type(e).__name__)

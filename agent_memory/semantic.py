@@ -14,6 +14,164 @@ from typing import Any, Dict, List, Optional, Tuple
 from .base import BaseMemoryLayer, MemoryRecord, get_db_connection
 
 
+def _source_context(actor, scope, connection):
+    from lumenis.shared.reporting import saved_work
+    try:
+        return saved_work.authorize_saved_work(actor, scope, action='read', connection=connection)
+    except saved_work.SavedWorkError as exc:
+        raise PermissionError('MEMORY_SOURCE_ACCESS_DENIED') from exc
+
+
+def _reference_fields(reference):
+    common = {'type', 'sha256', 'version', 'start', 'end'}
+    kinds = {'evidence': {'evidence_id', 'integrity_digest'},
+             'private_document': {'artifact_id', 'source_sha256', 'text_sha256'},
+             'saved_work': {'artifact_id'}}
+    if (type(reference) is not dict or type(reference.get('type')) is not str
+            or reference['type'] not in kinds):
+        raise ValueError('MEMORY_REFERENCE_INVALID')
+    if set(reference) != common | kinds[reference['type']]:
+        raise ValueError('MEMORY_REFERENCE_INVALID')
+    for key in ('sha256', 'integrity_digest', 'source_sha256', 'text_sha256'):
+        if key in reference and (type(reference[key]) is not str or not re.fullmatch(r'[0-9a-f]{64}', reference[key])):
+            raise ValueError('MEMORY_REFERENCE_INVALID')
+    if (any(type(reference[key]) is not int for key in ('start', 'end'))
+            or not 0 <= reference['start'] < reference['end']
+            or reference['end'] - reference['start'] > 64000):
+        raise ValueError('MEMORY_REFERENCE_RANGE_INVALID')
+    if reference['type'] == 'evidence':
+        if (type(reference['evidence_id']) is not int or reference['evidence_id'] <= 0
+                or type(reference['version']) is not str or not reference['version']
+                or len(reference['version']) > 256):
+            raise ValueError('MEMORY_REFERENCE_INVALID')
+    elif (type(reference['artifact_id']) is not str or not re.fullmatch(r'ART-[0-9a-f]{16}', reference['artifact_id'])
+            or type(reference['version']) is not int or reference['version'] < 1):
+        raise ValueError('MEMORY_REFERENCE_INVALID')
+
+
+def _workspace_work_source(item, *, actor, scope, connection):
+    from lumenis.importer.documents import _read_private_document_material
+    document, artifact = item['document'], item['artifact']
+    reference = {'type': 'saved_work', 'artifact_id': artifact['artifact_id'],
+                 'sha256': artifact['sha256'], 'version': document['version']}
+    text, basis = document['markdown'], 'saved_document_markdown'
+    if 'source_material' in document['payload']:
+        record, parsed = _read_private_document_material(artifact['artifact_id'], actor=actor,
+                                                        scope=scope, connection=connection)
+        reference.update(type='private_document', source_sha256=record['source_fingerprint'],
+                         text_sha256=record['content_hash'])
+        text, basis = parsed.text, 'retained_original_parsed_text'
+    return {'title': document['title'], 'text': text, 'reference': reference,
+            'text_basis': basis, 'fact_verification': 'NOT_VERIFIED', 'truth_kind': 'source_reference'}
+
+
+def read_source_reference(reference, *, actor, scope, connection):
+    """Reopen exact original bytes; this reference grants no model or effect use."""
+    from intelligence_library_api import verified_research_source
+    from lumenis.shared.reporting import saved_work
+    _reference_fields(reference)
+    context = _source_context(actor, scope, connection)
+    snapshot = (connection.execute('PRAGMA data_version').fetchone()[0], connection.total_changes)
+    try:
+        if reference['type'] == 'evidence':
+            source = verified_research_source(connection, reference['evidence_id'], actor=actor, context=context)
+            expected = {'type': 'evidence', 'evidence_id': source['evidence_id'], 'sha256': source['content_hash'],
+                        'integrity_digest': source['integrity_digest'], 'version': source['version']}
+            item = {'title': source['title'], 'text': source['text'], 'reference': expected,
+                    'text_basis': 'signed_source_parsed_text', 'fact_verification': 'NOT_VERIFIED',
+                    'truth_kind': 'source_reference'}
+        else:
+            work = saved_work.read_committed_work(reference['artifact_id'], actor=actor, scope=scope, connection=connection)
+            versions = saved_work._versions(connection, work['document']['work_id'], context, actor)
+            if not versions or versions[-1]['artifact']['artifact_id'] != reference['artifact_id']:
+                raise RuntimeError('MEMORY_REFERENCE_CHANGED')
+            item = _workspace_work_source(work, actor=actor, scope=scope, connection=connection)
+            expected = item['reference']
+        if (expected != {key: value for key, value in reference.items() if key not in {'start', 'end'}}
+                or reference['end'] > len(item['text']) or not item['text'][reference['start']:reference['end']].strip()):
+            raise RuntimeError('MEMORY_REFERENCE_CHANGED')
+    except (saved_work.SavedWorkError, PermissionError, OSError, ValueError) as exc:
+        if isinstance(exc, PermissionError) or any(word in str(exc) for word in ('PERMISSION', 'RIGHTS', 'AUTHORIZATION')):
+            raise PermissionError('MEMORY_SOURCE_ACCESS_DENIED') from exc
+        raise RuntimeError('MEMORY_REFERENCE_CHANGED') from exc
+    _source_context(actor, scope, connection)
+    if snapshot != (connection.execute('PRAGMA data_version').fetchone()[0], connection.total_changes):
+        raise RuntimeError('MEMORY_REFERENCE_CHANGED')
+    return {**item, 'reference': dict(reference), 'text': item['text'][reference['start']:reference['end']],
+            'character_count': len(item['text']), 'state': 'available', 'offset_unit': 'unicode_codepoint',
+            'model_source_use': 'NOT_GRANTED', 'training_admission': 'NOT_GRANTED'}
+
+
+def search_authorized_sources(query, *, actor, scope, connection, limit=30, offset=0, expected_snapshot=None):
+    """Normal workspace search without manufacturing a Task or a second library."""
+    from intelligence_library_api import discover_research_sources
+    from lumenis.shared.reporting import saved_work
+
+    from .retrieval import lexical_search, original_passage
+    if (type(query) is not str or not query.strip() or len(query) > 2000
+            or type(limit) is not int or not 1 <= limit <= 50
+            or type(offset) is not int or offset < 0):
+        raise ValueError('MEMORY_SEARCH_INVALID')
+    if expected_snapshot is not None and (type(expected_snapshot) is not str
+            or not re.fullmatch(r'[0-9a-f]{64}', expected_snapshot)):
+        raise ValueError('MEMORY_SEARCH_INVALID')
+    if offset and expected_snapshot is None:
+        raise RuntimeError('MEMORY_SEARCH_SNAPSHOT_REQUIRED')
+    _source_context(actor, scope, connection)
+    snapshot = (connection.execute('PRAGMA data_version').fetchone()[0], connection.total_changes)
+    candidates, complete, total_bytes, cursor = [], True, 0, None
+    while True:
+        page = saved_work.search_work(actor=actor, scope=scope, limit=100, cursor=cursor, latest_only=True)
+        complete = complete and page['verification_complete']
+        for work in page['items']:
+            try:
+                candidate = _workspace_work_source(work, actor=actor, scope=scope, connection=connection)
+            except (saved_work.SavedWorkError, PermissionError, OSError, ValueError):
+                complete = False
+                continue
+            candidates.append(candidate)
+            total_bytes += len(candidate['text'].encode('utf-8'))
+        if total_bytes > 64 * 1024 * 1024:
+            raise RuntimeError('MEMORY_SEARCH_CAPACITY_EXCEEDED')
+        if not page['has_more']:
+            break
+        cursor = page['next_cursor']
+    position = 0
+    while True:
+        page = discover_research_sources(connection, actor=actor, scope=scope, limit=100, offset=position)
+        complete = complete and page['verification_complete']
+        for source in page['records']:
+            candidates.append({'title': source['title'], 'text': source['text'],
+                'reference': {'type': 'evidence', 'evidence_id': source['evidence_id'], 'sha256': source['content_hash'],
+                    'integrity_digest': source['integrity_digest'], 'version': source['version']},
+                'text_basis': 'signed_source_parsed_text', 'fact_verification': 'NOT_VERIFIED', 'truth_kind': 'source_reference'})
+            total_bytes += len(source['text'].encode('utf-8'))
+        if total_bytes > 64 * 1024 * 1024:
+            raise RuntimeError('MEMORY_SEARCH_CAPACITY_EXCEEDED')
+        if not page['has_more']:
+            break
+        position = page['next_offset']
+    ranked, report = lexical_search(query, candidates, limit=len(candidates))
+    if expected_snapshot is not None and report['source_snapshot_sha256'] != expected_snapshot:
+        raise RuntimeError('MEMORY_SEARCH_SNAPSHOT_CHANGED')
+    selected = ranked[offset:offset + limit]
+    result = []
+    for candidate in selected:
+        passage = original_passage(query, candidate['text'])
+        if passage and candidate['text'][passage['start']:passage['end']].strip():
+            source = read_source_reference({**candidate['reference'], 'start': passage['start'], 'end': passage['end']},
+                actor=actor, scope=scope, connection=connection)
+            result.append({**source, 'passage': passage})
+    _source_context(actor, scope, connection)
+    if snapshot != (connection.execute('PRAGMA data_version').fetchone()[0], connection.total_changes):
+        raise RuntimeError('MEMORY_SEARCH_SNAPSHOT_CHANGED')
+    more = offset + limit < len(ranked)
+    report['preview_policy'] = 'ranked_original_passage/v1'
+    return {'records': result, 'retrieval': report, 'verification_complete': complete,
+            'has_more': more, 'next_offset': offset + limit if more else None,
+            'offset': offset, 'limit': limit, 'model_execution': 'NOT_RUN'}
+
+
 class SemanticMemory(BaseMemoryLayer):
     """语义记忆：品牌知识库 + 规则版本库。
 
@@ -149,13 +307,13 @@ class SemanticMemory(BaseMemoryLayer):
             conn.close()
 
     def search_assets(self, query, sub_library=None, tags=None, limit=30):
+        self.last_search_report = {'mode': 'NOT_RUN', 'neural_retrieval_performed': False}
         if type(limit) is not int or not 1 <= limit <= 200 or not isinstance(query, str):
             raise ValueError("MEMORY_SEARCH_INVALID")
         if tags is not None and (type(tags) is not list or any(type(tag) is not str for tag in tags)):
             raise ValueError("MEMORY_TAGS_INVALID")
         if not self._available():
             return []
-        tokens = [token for token in re.split(r"[\s,，。！？、/|:：;；]+", query.casefold()) if token]
         # Search all authorized candidates before ranking/limit. A relevant old
         # source must not vanish behind 100 newer unrelated records.
         conn = get_db_connection(self.db_path)
@@ -187,19 +345,37 @@ class SemanticMemory(BaseMemoryLayer):
             self._binding_context(conn)
             if snapshot != (conn.execute("PRAGMA data_version").fetchone()[0], conn.total_changes):
                 raise PermissionError("MEMORY_SOURCE_CHANGED")
+            rows = [row for row in rows if (not sub_library or row.get('sub_library') == sub_library)
+                    and (not tags or all(tag in (row.get('tags') or []) for tag in tags))]
+            from .retrieval import lexical_search
+            result, self.last_search_report = lexical_search(query, rows, limit=limit)
+            selected_sources = [row for row in result if 'evidence_id' in row
+                                or row.get('truth_kind') == 'source_reference']
+            if selected_sources:
+                from intelligence_library_api import verified_research_source
+                from lumenis.shared.reporting.saved_work import (
+                    SavedWorkError,
+                    authorize_saved_work,
+                )
+                actor, scope = self._research_actor_scope(conn)
+                context = authorize_saved_work(actor, scope, action="read", connection=conn)
+                for previous in selected_sources:
+                    try:
+                        reference = previous.get('evidence_id', previous.get('scope_evidence_ref'))
+                        current = verified_research_source(conn, int(reference), actor=actor,
+                                                           context=context, facts_only=True)
+                        matches = (current == previous if 'evidence_id' in previous else
+                            not current['catalog_bound'] and current['source_id'] == previous['source_id']
+                            and current['title'] == previous['title'] and current['text'] == previous['content'])
+                        if not matches:
+                            raise PermissionError("MEMORY_SOURCE_CHANGED")
+                    except (SavedWorkError, ValueError, PermissionError) as exc:
+                        raise PermissionError("MEMORY_SOURCE_CHANGED") from exc
+            self._binding_context(conn)
+            if snapshot != (conn.execute("PRAGMA data_version").fetchone()[0], conn.total_changes):
+                raise PermissionError("MEMORY_SOURCE_CHANGED")
         finally:
             conn.close()
-        scored = []
-        for row in rows:
-            if sub_library and row.get("sub_library") != sub_library:
-                continue
-            if tags and not all(tag in (row.get("tags") or []) for tag in tags):
-                continue
-            text = "\n".join(str(row.get(key) or "") for key in ("title", "summary", "content", "text", "tags")).casefold()
-            score = sum(token in text for token in tokens)
-            if score or not tokens:
-                scored.append((score, row))
-        result = [row for _, row in sorted(scored, key=lambda value: value[0], reverse=True)][:limit]
         if self.last_read_status != "partial":
             self.last_read_status = "ready" if result else "empty"
         return result

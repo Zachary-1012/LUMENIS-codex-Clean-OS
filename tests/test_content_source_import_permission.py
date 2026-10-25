@@ -191,7 +191,7 @@ def test_cth_scope_receipt_cannot_authorize_bmp_upload(boundary):
 
 @pytest.mark.parametrize("change", [
     {"actor_id": True}, {"size_bytes": True}, {"size_bytes": 0},
-    {"size_bytes": 128 * 1024 * 1024 + 1}, {"body_sha256": "a" * 63},
+    {"size_bytes": 1 << 53}, {"size_bytes": -1}, {"body_sha256": "a" * 63},
     {"body_sha256": "A" * 64}, {"filename": "../source.mp4"},
     {"filename": "C:\\source.mp4"}, {"filename": "source.mp4:stream"},
     {"filename": " source.mp4"}, {"filename": "source.mp4."},

@@ -2,6 +2,9 @@
 import { copy, locales, type Locale } from "../i18n";
 import { publicDestinations } from "../site-config.mjs";
 import CreativePaths from "./CreativePaths.astro";
+import PixelPlant from "./PixelPlant.astro";
+import PublicNavigation from "./PublicNavigation.astro";
+import { publicCopy, productGuideIds, localPath } from "../public-content";
 import "../styles/site.css";
 
 interface Props {
@@ -10,6 +13,7 @@ interface Props {
 
 const { locale } = Astro.props;
 const c = copy[locale];
+const publicText = publicCopy[locale];
 const localePath: Record<Locale, string> = {
   "zh-CN": "/",
   en: "/en/",
@@ -58,7 +62,7 @@ const accessItems = [
     key: "help",
     title: c.access.help.title,
     action: c.access.help.action,
-    href: publicDestinations.help,
+    href: publicDestinations.help ?? localPath(locale, "help"),
     statusId: c.access.helpStateId,
   },
   {
@@ -80,7 +84,7 @@ const workflows = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f7f6f1" />
+    <meta name="theme-color" content="#edf0df" />
     <meta name="description" content={c.metadata.description} />
     <meta name="robots" content={isIndexableBuild ? "index,follow" : "noindex,nofollow"} />
     <title>{c.metadata.title}</title>
@@ -104,13 +108,7 @@ const workflows = [
     <header class="site-header">
       <div class="site-header__top wrap">
         <a class="wordmark" href={localePath[locale]} aria-label={c.productName}>
-          <svg class="wordmark__mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-            <path d="M20 4v13m0 0 11 7M20 17 9 25m11-8v19" />
-            <circle cx="20" cy="5" r="2.5" />
-            <circle cx="9" cy="25" r="2.5" />
-            <circle cx="31" cy="24" r="2.5" />
-            <circle cx="20" cy="35" r="2.5" />
-          </svg>
+          <PixelPlant class="wordmark__mark" />
           <span>{c.productName}</span>
         </a>
         <nav class="language-nav" aria-label={c.languageNavigationLabel}>
@@ -127,10 +125,7 @@ const workflows = [
         </nav>
       </div>
       <div class="site-header__bottom wrap">
-        <nav class="primary-nav" aria-label={c.primaryNavigationLabel}>
-          {c.navigation.map((item) => <a href={item.href}>{item.label}</a>)}
-        </nav>
-        <span class="header-note">{c.headerNote}</span>
+        <PublicNavigation locale={locale} collapsible />
       </div>
     </header>
 
@@ -160,30 +155,15 @@ const workflows = [
             </p>
           </div>
 
-          <figure class="hero-field" data-optical-field aria-labelledby="hero-visual-caption">
-            <div class="hero-field__stage" aria-hidden="true">
-              <div class="hero-field__contour hero-field__contour--one"></div>
-              <div class="hero-field__contour hero-field__contour--two"></div>
-              <div class="hero-field__glass">
-                <span class="hero-field__lens"></span>
-                <svg class="hero-field__trace" viewBox="0 0 440 360" fill="none">
-                  <path d="M57 252C105 252 102 102 177 102S235 252 299 252 337 118 391 118" />
-                  <path d="M58 269C127 269 126 122 178 122S235 269 298 269 345 138 391 138" />
-                  <circle cx="58" cy="260" r="11" />
-                  <circle cx="177" cy="112" r="15" />
-                  <circle cx="299" cy="260" r="11" />
-                  <circle cx="391" cy="128" r="8" />
-                </svg>
-                <span class="hero-field__label hero-field__label--source">{c.hero.flowLabels.material}</span>
-                <span class="hero-field__label hero-field__label--trace">{c.hero.flowLabels.delivery}</span>
-                <span class="hero-field__label hero-field__label--return">{c.hero.flowLabels.feedback}</span>
-              </div>
-              <span class="hero-field__trail hero-field__trail--one"></span>
-              <span class="hero-field__trail hero-field__trail--two"></span>
-              <span class="hero-field__glint"></span>
-            </div>
-            <figcaption id="hero-visual-caption">{c.hero.diagramLabel}</figcaption>
-          </figure>
+          <div class="botanical-portal" data-optical-field aria-hidden="true">
+            <div class="portal-orbit portal-orbit--outer"></div>
+            <div class="portal-orbit portal-orbit--inner"></div>
+            <div class="portal-window"><div class="portal-horizon"></div><div class="portal-sun"></div></div>
+            <PixelPlant class="portal-plant portal-plant--left" />
+            <PixelPlant class="portal-plant portal-plant--right" />
+            <PixelPlant kind="jasmine" class="portal-plant portal-plant--small" />
+            <span class="portal-coordinate">O / E / V / I / R / A</span>
+          </div>
         </div>
       </section>
 
@@ -214,13 +194,13 @@ const workflows = [
 
           <div class="domain-split">
             <article class="domain domain--commerce" aria-labelledby="commerce-title">
-              <span class="domain__orb" aria-hidden="true"></span>
+              <PixelPlant kind="orchid" class="domain__plant" />
               <h3 id="commerce-title">{c.structure.commerce.title}</h3>
               <p>{c.structure.commerce.description}</p>
               <p class="domain__lens">{c.structure.commerce.lens}</p>
             </article>
             <article class="domain domain--brand" aria-labelledby="brand-title">
-              <span class="domain__orb" aria-hidden="true"></span>
+              <PixelPlant kind="lily" class="domain__plant" />
               <h3 id="brand-title">{c.structure.brand.title}</h3>
               <p>{c.structure.brand.description}</p>
               <p class="domain__lens">{c.structure.brand.lens}</p>
@@ -241,6 +221,12 @@ const workflows = [
       </section>
 
       <CreativePaths locale={locale} />
+
+      <section class="botanical-roles wrap" aria-label={locale === 'zh-CN' ? '工作伙伴' : locale === 'ko' ? '작업 동반자' : 'Work companions'}>
+        {(['orchid','lily','palm','grape','jasmine'] as const).map((kind, i) => <div>
+          <PixelPlant kind={kind} /><strong>{['Pim','Bram','Ness','Jas','Aris'][i]}</strong>
+        </div>)}
+      </section>
 
       <section class="scenarios-section section-pad" id="scenarios" aria-labelledby="scenarios-title">
         <div class="wrap">
@@ -354,91 +340,18 @@ const workflows = [
         </div>
       </section>
 
-      <section class="demo-section section-pad" id="demo" aria-labelledby="demo-title">
+      <section class="home-guides section-pad" id="demo" aria-labelledby="home-guides-title">
         <div class="wrap">
-          <div class="section-heading section-heading--demo">
-            <h2 id="demo-title">{c.demo.title}</h2>
-            <p>{c.demo.intro}</p>
+          <div class="section-heading">
+            <h2 id="home-guides-title">{publicText.titles.help}</h2>
+            <p>{publicText.scope}</p>
           </div>
-
-          <div class="demo-workbench" data-chain-root>
-            <aside class="demo-context" id="demo-source" aria-labelledby="demo-source-title">
-              <p class="demo-context__label">{c.demo.contextLabel}</p>
-              <h3 id="demo-source-title" data-chain-source-heading tabindex="-1">{c.scenarios.commerce.title}</h3>
-              <blockquote>{c.scenarios.commerce.question}</blockquote>
-              <p class="demo-context__copy">{c.scenarios.commerce.description}</p>
-              <span class="demo-status">{c.demo.illustrativeLabel}</span>
-            </aside>
-
-            <div class="demo-timeline">
-              <h3 class="demo-timeline__heading">{c.demo.timelineHeading}</h3>
-              <div class="demo-mode-toggle" role="group" aria-label={c.demo.viewModeLabel} data-chain-view-toggle hidden>
-                <button type="button" data-chain-view-option="linear" aria-pressed="true">{c.demo.linearView}</button>
-                <button type="button" data-chain-view-option="orbit" aria-pressed="false">{c.demo.orbitView}</button>
-              </div>
-              <div class="demo-map" data-chain-map>
-                <nav aria-label={c.demo.timelineLabel}>
-                  <ol class="chain-track">
-                    {c.demo.steps.map((step, index) => (
-                      <li>
-                        <a
-                          class="chain-step"
-                          href={`#demo-step-${step.id}`}
-                          data-chain-step
-                          data-index={index}
-                          data-label={step.label}
-                          data-summary={step.title}
-                          aria-label={step.label}
-                          aria-current={index === 0 ? "step" : undefined}
-                        >
-                          <span class="chain-step__index" aria-hidden="true">0{index + 1}</span>
-                          <span class="chain-step__label">{step.label}</span>
-                        </a>
-                      </li>
-                    ))}
-                  </ol>
-                </nav>
-                <div class="demo-map__hub" aria-hidden="true">
-                  <span>{c.demo.focusLabel}</span>
-                  <strong data-chain-center>{c.demo.steps[0].label}</strong>
-                </div>
-              </div>
-              <div class="demo-scrubber" data-chain-controls hidden>
-                <div class="demo-scrubber__labels">
-                  <label for="trace-range">{c.demo.scrubberLabel}</label>
-                  <output for="trace-range" data-chain-output>{c.demo.steps[0].label}</output>
-                </div>
-                <input
-                  id="trace-range"
-                  type="range"
-                  min="0"
-                  max={c.demo.steps.length - 1}
-                  step="1"
-                  value="0"
-                  aria-valuetext={c.demo.steps[0].label}
-                  aria-describedby="trace-range-help"
-                  data-chain-range
-                />
-                <p id="trace-range-help">{c.demo.scrubberHelp}</p>
-              </div>
-            </div>
-
-            <aside class="demo-inspector" aria-label={c.demo.focusLabel}>
-              <p class="demo-inspector__label">{c.demo.focusLabel}</p>
-              {c.demo.steps.map((step, index) => (
-                <article class="demo-detail" id={`demo-step-${step.id}`} data-chain-panel data-index={index}>
-                  <p class="demo-detail__type">{step.label}</p>
-                  <h3 data-chain-heading tabindex="-1">{step.title}</h3>
-                  <p>{step.body}</p>
-                  <a class="return-link" href="#demo-source" data-chain-return>
-                    <span class="return-link__icon" aria-hidden="true"></span>{c.demo.returnAction}
-                  </a>
-                </article>
-              ))}
-              <p class="visually-hidden" data-chain-status aria-live="polite" aria-atomic="true"></p>
-            </aside>
-          </div>
-          <p class="demo-return-note">{c.demo.returnNote}</p>
+          <ol class="home-guide-list">
+            {publicText.guides.filter((guide) => productGuideIds.includes(guide.id as typeof productGuideIds[number])).map((guide) => <li>
+              <a href={`${localPath(locale, 'help')}#${guide.id}`}><strong>{guide.name}</strong><span>{guide.steps[0]}</span><span aria-hidden="true">↗</span></a>
+            </li>)}
+          </ol>
+          <p class="public-state">{publicText.noVideo}</p>
         </div>
       </section>
 
@@ -476,7 +389,7 @@ const workflows = [
                 <h3>{item.title}</h3>
                 <p class="access-item__state">
                   <span class:list={["status-dot", { "status-dot--configured": Boolean(item.href) }]} aria-hidden="true"></span>
-                  {item.href ? c.access.configured : c.access.unconfigured}
+                  {item.key === "help" && !publicDestinations.help ? publicText.guide : item.href ? c.access.configured : c.access.unconfigured}
                 </p>
                 {item.href ? (
                   <a class="action-link action-link--access" data-magnetic href={item.href} aria-describedby={`${item.statusId}-description`}>
@@ -488,7 +401,7 @@ const workflows = [
                   </span>
                 )}
                 <span id={`${item.statusId}-description`} class="visually-hidden">
-                  {item.href ? c.access.configured : c.access.unconfigured}
+                  {item.key === "help" && !publicDestinations.help ? publicText.guide : item.href ? c.access.configured : c.access.unconfigured}
                 </span>
               </li>
             ))}
@@ -501,11 +414,7 @@ const workflows = [
       <div class="wrap site-footer__inner">
         <div>
           <a class="wordmark wordmark--footer" href={localePath[locale]}>
-            <svg class="wordmark__mark" viewBox="0 0 40 40" aria-hidden="true" focusable="false">
-              <path d="M20 4v13m0 0 11 7M20 17 9 25m11-8v19" />
-              <circle cx="20" cy="5" r="2.5" /><circle cx="9" cy="25" r="2.5" />
-              <circle cx="31" cy="24" r="2.5" /><circle cx="20" cy="35" r="2.5" />
-            </svg>
+            <PixelPlant class="wordmark__mark" />
             <span>{c.footer.product}</span>
           </a>
           <p>{c.footer.note}</p>
@@ -513,6 +422,9 @@ const workflows = [
         <nav class="footer-nav" aria-label={c.footer.navigationLabel}>
           {c.navigation.map((item) => <a href={item.href}>{item.label}</a>)}
           <a href="#access">{c.access.workspace.title}</a>
+          <a href={localPath(locale, 'terms')}>{publicText.labels.terms}</a>
+          <a href={localPath(locale, 'privacy')}>{publicText.labels.privacy}</a>
+          <a href={localPath(locale, 'license')}>{publicText.labels.license}</a>
         </nav>
       </div>
     </footer>

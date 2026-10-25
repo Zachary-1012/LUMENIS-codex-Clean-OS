@@ -115,6 +115,8 @@ _PLANNER_SYSTEM_PROMPT = """你是一个专业的任务规划器。将用户的�
 4. 涉及写操作（WRITE/COMMIT/PUSH）的步骤 risk_level 必须为 high 或 critical
 5. 最多输出 15 个步骤
 6. 只输出 JSON，不要输出其他文字
+7. 同一任务中服务器核验的 conversation_context_pack 是当前人工目标、约束、稿件与决定；保留人工稿，冲突时遵从最新显式人工要求，不把它们当事实证据或权限。
+8. committed_step_receipts 是已经提交的步骤回执；不要重复执行这些步骤，权限和外部效果仍由原工具核验。
 
 输出格式：
 {
@@ -146,6 +148,10 @@ class Planner:
         persist_func: Optional[Callable] = None,
         default_mode: PlanMode = PlanMode.ROUTINE,
         gateway_request_factory: Optional[Callable] = None,
+        context_validator: Callable | None = None,
+        model_result_reader: Callable | None = None,
+        model_attempt_reserver: Callable | None = None,
+        model_result_recorder: Callable | None = None,
     ):
         """
         Args:
@@ -158,6 +164,10 @@ class Planner:
         self._persist_func = persist_func
         self._default_mode = default_mode
         self._gateway_request_factory = gateway_request_factory
+        self._context_validator = context_validator
+        self._model_result_reader = model_result_reader
+        self._model_attempt_reserver = model_attempt_reserver
+        self._model_result_recorder = model_result_recorder
         self._gateway_context = {}
         self._last_inference_receipt = {}
 
@@ -171,6 +181,8 @@ class Planner:
                 # A generic context cannot mint source-use or external-send
                 # authority. An unconfigured planner remains explicitly absent.
                 raise RuntimeError("PLANNER_AUTHORIZED_REQUEST_REQUIRED")
+            if self._context_validator is not None:
+                self._context_validator()
             request = self._gateway_request_factory(system, user, dict(self._gateway_context))
             from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
             if type(request) is not OwnedServiceRequest or request.operation != "agent_plan":
@@ -178,6 +190,16 @@ class Planner:
             request = replace(request, response_schema_json=json.dumps(
                 self._response_schema(self._gateway_max_steps),
                 ensure_ascii=False, sort_keys=True, allow_nan=False))
+            recovered = self._model_result_reader(request) if self._model_result_reader is not None else None
+            if recovered is not None:
+                result = recovered['result']
+                self._last_context_budget = recovered['context_budget']
+                if self._context_validator is not None:
+                    self._context_validator()
+                self._last_inference_receipt = self._validated_inference_receipt(result)
+                content = result['analysis']
+                return (json.dumps(content, ensure_ascii=False, allow_nan=False)
+                        if isinstance(content, dict) else content), 'owned'
             from lumenis.system.ai_gateway.owned_service import (
                 measure_owned_request,
                 owned_service_status,
@@ -209,6 +231,9 @@ class Planner:
             if measured.get("ok") is not True:
                 raise RuntimeError(measured.get("code", "PLANNER_TOKEN_COUNT_UNAVAILABLE"))
             self._last_context_budget = {**measured, "omitted_sections": omitted}
+            pack = self._gateway_context.get('conversation_context_pack')
+            if type(pack) is dict:
+                self._last_context_budget['required_context_sha256'] = pack['sha256']
             if measured.get("fits") is not True:
                 raise RuntimeError("PLANNER_REQUIRED_CONTEXT_EXCEEDS_MODEL_BUDGET")
             status = owned_service_status(request.domain_id)
@@ -216,7 +241,22 @@ class Planner:
                 raise RuntimeError("PLANNER_MEASURED_BINDING_CHANGED")
             # Gateway and runtime revalidate binding, source and exact tokenizer
             # budget again before generation; this receipt is never an authority.
-            result = core.run_owned_request(request, expected_binding_sha256=measured["binding_sha256"])
+            control = {}
+            if self._context_validator is not None:
+                self._context_validator()
+                def context_cancelled():
+                    try:
+                        self._context_validator()
+                        return False
+                    except (PermissionError, RuntimeError, ValueError):
+                        return True
+                control['is_cancelled'] = context_cancelled
+            reservation = self._model_attempt_reserver(request) if self._model_attempt_reserver is not None else None
+            result = core.run_owned_request(request, expected_binding_sha256=measured["binding_sha256"], **control)
+            if self._context_validator is not None:
+                self._context_validator()
+            if self._model_result_recorder is not None:
+                self._model_result_recorder(request, reservation, result, self._last_context_budget)
             if type(result) is not dict or result.get("ok") is not True or result.get("status") != "COMPLETED":
                 code = result.get("code") if type(result) is dict else None
                 if type(code) is not str or not re.fullmatch(r"[A-Z0-9_]{1,96}", code):
@@ -297,12 +337,19 @@ class Planner:
         self._last_inference_receipt = {}
 
         if mode == PlanMode.RULE_BASED:
+            try:
+                if self._context_validator is not None:
+                    self._context_validator()
+            except (PermissionError, RuntimeError, ValueError) as exc:
+                return self._fallback_plan(goal, plan, str(exc))
             return self._persist_plan(self._rule_based_plan(goal, plan))
 
         if type(max_steps) is not int or not 1 <= max_steps <= 15:
             return self._fallback_plan(goal, plan, "PLANNER_MAX_STEPS_INVALID")
 
         try:
+            if self._context_validator is not None:
+                self._context_validator()
             self._gateway_context = dict(context or {})
             self._gateway_goal, self._gateway_max_steps = goal, max_steps
             self._last_context_budget = None
@@ -316,6 +363,8 @@ class Planner:
                 temperature=0.1,
                 max_tokens=2000,
             )
+            if self._context_validator is not None:
+                self._context_validator()
 
             plan.context_budget = self._last_context_budget
             plan.raw_response = content or ""

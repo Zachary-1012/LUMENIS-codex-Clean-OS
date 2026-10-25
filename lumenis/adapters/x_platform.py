@@ -77,10 +77,10 @@ def _configured_browser_worker_url() -> str:
         raise RuntimeError("X_WORKER_FAILURE:NOT_CONFIGURED")
 
     from pathlib import Path
-    from .cookie_vault import _current_data_dir
+    from .cookie_vault import registered_session_data_dir
     import cdp_helper
 
-    profile_dir = Path(_current_data_dir()) / "private" / "profiles" / "x-readonly"
+    profile_dir = registered_session_data_dir() / "private" / "profiles" / "x-readonly"
     if not cdp_helper.is_cdp_profile_running(9226, str(profile_dir)):
         raise RuntimeError("X_WORKER_FAILURE:NOT_CONFIGURED")
     return _X_READONLY_CDP_URL

@@ -253,6 +253,98 @@ class Ai01ConversationMutation {
   }
 }
 
+class Ai01ConversationContext {
+  const Ai01ConversationContext({
+    required this.conversationId,
+    required this.revision,
+    required this.value,
+    this.turn,
+    this.sourceReferences = const [],
+  });
+
+  final String conversationId;
+  final int revision;
+  final Map<String, dynamic> value;
+  final Ai01ConversationTurn? turn;
+  final List<Map<String, dynamic>> sourceReferences;
+
+  factory Ai01ConversationContext.fromResponse(
+    Map<String, dynamic> response,
+    String expectedId,
+  ) {
+    final revision = response['revision'];
+    final raw = response['context'];
+    if (response['ok'] != true ||
+        response['conversation_id'] != expectedId ||
+        revision is! int ||
+        revision < 1 ||
+        response['training_admission'] != 'NOT_GRANTED' ||
+        response['effect_permission'] != 'NOT_GRANTED') {
+      throw const FormatException('Conversation work details are invalid.');
+    }
+    final rawTurn = _objectMap(raw);
+    final turn = raw == null
+        ? null
+        : rawTurn == null
+        ? throw const FormatException('Conversation work details are invalid.')
+        : Ai01ConversationTurn.fromJson(rawTurn);
+    final value = turn == null
+        ? <String, dynamic>{
+            'goal': '',
+            'constraints': <String>[],
+            'draft': '',
+            'decisions': <String>[],
+            'excluded_turn_ids': <String>[],
+          }
+        : _objectMap(turn.content['value']);
+    if ((turn != null &&
+            (turn.conversationId != expectedId ||
+                turn.originKind != 'system_status' ||
+                turn.content['schema'] != 'conversation-human-context/v1')) ||
+        value == null ||
+        value.length != 5 ||
+        value['goal'] is! String ||
+        value['draft'] is! String ||
+        ['constraints', 'decisions', 'excluded_turn_ids'].any(
+          (key) =>
+              value[key] is! List ||
+              (value[key] as List).any((item) => item is! String),
+        )) {
+      throw const FormatException('Conversation work details are invalid.');
+    }
+    return Ai01ConversationContext(
+      conversationId: expectedId,
+      revision: revision,
+      value: Map<String, dynamic>.from(value),
+      turn: turn,
+      sourceReferences: _sourceProjections(response['source_references']),
+    );
+  }
+}
+
+List<Map<String, dynamic>> _sourceProjections(dynamic raw) {
+  if (raw == null) return const [];
+  if (raw is! List) throw const FormatException('Invalid references.');
+  return raw
+      .map((item) {
+        final projection = _objectMap(item);
+        if (projection == null ||
+            _objectMap(projection['reference']) == null ||
+            projection['state'] is! String) {
+          throw const FormatException('Invalid reference identity.');
+        }
+        return projection;
+      })
+      .toList(growable: false);
+}
+
+abstract interface class Ai01ConversationSources {
+  Future<Map<String, dynamic>> sourceQuery(
+    String conversationId,
+    Map<String, String> query,
+  );
+}
+
 class _PendingConversationAppend {
   const _PendingConversationAppend({
     required this.text,
@@ -280,6 +372,16 @@ class Ai01ConversationListPage {
 }
 
 abstract interface class Ai01ConversationRepository {
+  Future<Ai01ConversationContext> readContext(String conversationId);
+
+  Future<Ai01ConversationMutation> updateContext({
+    required String conversationId,
+    required Map<String, dynamic> value,
+    required String idempotencyKey,
+    required int expectedRevision,
+    List<Map<String, dynamic>>? sourceReferences,
+  });
+
   Future<Ai01ConversationListPage> list({
     required int limit,
     required int offset,
@@ -322,10 +424,45 @@ abstract interface class Ai01ConversationRepository {
   });
 }
 
-class CoreAi01ConversationRepository implements Ai01ConversationRepository {
+class CoreAi01ConversationRepository
+    implements Ai01ConversationRepository, Ai01ConversationSources {
   CoreAi01ConversationRepository({required this._client});
 
   final LumenisCoreClient _client;
+
+  @override
+  Future<Map<String, dynamic>> sourceQuery(
+    String conversationId,
+    Map<String, String> query,
+  ) => _client.readAiConversationContext(conversationId, query: query);
+
+  @override
+  Future<Ai01ConversationContext> readContext(String conversationId) async =>
+      Ai01ConversationContext.fromResponse(
+        await _client.readAiConversationContext(conversationId),
+        conversationId,
+      );
+
+  @override
+  Future<Ai01ConversationMutation> updateContext({
+    required String conversationId,
+    required Map<String, dynamic> value,
+    required String idempotencyKey,
+    required int expectedRevision,
+    List<Map<String, dynamic>>? sourceReferences,
+  }) async => _validateMutation(
+    Ai01ConversationMutation.fromResponse(
+      await _client.updateAiConversationContext(
+        conversationId: conversationId,
+        value: value,
+        idempotencyKey: idempotencyKey,
+        expectedRevision: expectedRevision,
+        sourceReferences: sourceReferences,
+      ),
+    ),
+    conversationId,
+    expectedRevision,
+  );
 
   @override
   Future<Ai01ConversationListPage> list({
@@ -488,6 +625,13 @@ class Ai01ConversationViewModel extends ChangeNotifier {
   Ai01ConversationViewModel({required this.repository});
 
   final Ai01ConversationRepository repository;
+
+  void applyContextMutation(Ai01ConversationMutation mutation) {
+    if (!_disposed && mutation.turn.originKind == 'system_status') {
+      _applyMutation(mutation.turn.conversationId, mutation);
+    }
+  }
+
   static const int pageSize = 30;
 
   List<Ai01ConversationSummary> conversations = const [];

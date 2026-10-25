@@ -84,8 +84,9 @@ class _ReadyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 980;
-      final inset = constraints.maxWidth < 680 ? 18.0 : 34.0;
+      final inset = constraints.maxWidth < 680
+          ? LumenisSpace.control
+          : LumenisSpace.gutter;
       final guard = _GuardPanel(snapshot: snapshot);
       final recovery = _RecoveryPanel(
         snapshot: snapshot,
@@ -97,34 +98,18 @@ class _ReadyState extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(inset, 26, inset, 40),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1180),
+            constraints: const BoxConstraints(maxWidth: 720),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _Heading(
                   title: context.lumenisL10n.text('screen.ACC-04'),
-                  subtitle: _copy(
-                    context,
-                    zh: '说明当前被阻挡的步骤与真实恢复路径，不创建虚假的凭据或授权。',
-                    en: 'Explain the blocked step and real recovery path without inventing credentials or access.',
-                    ko: '차단된 단계와 실제 복구 경로를 설명하며 가짜 자격 증명이나 접근 권한을 만들지 않습니다.',
-                  ),
+                  subtitle: _copy(context, zh: '', en: '', ko: ''),
                 ),
                 const SizedBox(height: 20),
-                if (wide)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 7, child: guard),
-                      const SizedBox(width: 18),
-                      Expanded(flex: 5, child: recovery),
-                    ],
-                  )
-                else ...[
-                  guard,
-                  const SizedBox(height: 14),
-                  recovery,
-                ],
+                guard,
+                const SizedBox(height: LumenisSpace.section),
+                recovery,
               ],
             ),
           ),
@@ -144,9 +129,9 @@ class _GuardPanel extends StatelessWidget {
       Acc04GuardState.available => (
         title: _copy(
           context,
-          zh: '访问步骤已返回',
-          en: 'Access step returned',
-          ko: '접근 단계 반환됨',
+          zh: '访问状态已更新',
+          en: 'Access status updated',
+          ko: '접근 상태가 업데이트되었습니다',
         ),
         color: LumenisTheme.of(context).positive,
       ),
@@ -162,9 +147,9 @@ class _GuardPanel extends StatelessWidget {
       Acc04GuardState.unavailable => (
         title: _copy(
           context,
-          zh: '恢复步骤尚未接入',
-          en: 'Recovery step is not bound',
-          ko: '복구 단계 연결 안 됨',
+          zh: '暂时无法恢复',
+          en: 'Recovery is unavailable',
+          ko: '지금은 복구할 수 없습니다',
         ),
         color: LumenisTheme.of(context).quiet,
       ),
@@ -200,35 +185,13 @@ class _GuardPanel extends StatelessWidget {
             snapshot.reason ??
                 _copy(
                   context,
-                  zh: '服务器没有返回可核实的恢复说明，页面不会猜测缺少的步骤。',
-                  en: 'The server did not return a verifiable recovery explanation, so the page does not guess the missing step.',
-                  ko: '서버가 확인 가능한 복구 설명을 반환하지 않아 페이지가 누락된 단계를 추측하지 않습니다.',
+                  zh: '暂时无法确认访问状态，请重试或返回工作。',
+                  en: 'Access could not be confirmed. Retry or return to your work.',
+                  ko: '접근 상태를 확인할 수 없습니다. 다시 시도하거나 작업으로 돌아가세요.',
                 ),
             style: TextStyle(
               color: LumenisTheme.of(context).muted,
               height: 1.55,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: visual.color.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: visual.color.withValues(alpha: 0.26)),
-            ),
-            child: Text(
-              _copy(
-                context,
-                zh: '产品账号仍在内部 Beta 之后接入；当前页面不会把恢复步骤伪装成客户账号登录。',
-                en: 'The product account remains planned after internal beta; this page does not turn recovery into customer-account sign-in.',
-                ko: '제품 계정은 내부 베타 이후 도입될 예정이며, 이 페이지는 복구 단계를 고객 계정 로그인으로 가장하지 않습니다.',
-              ),
-              style: TextStyle(
-                color: LumenisTheme.of(context).muted,
-                height: 1.45,
-              ),
             ),
           ),
         ],
@@ -419,12 +382,8 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: LumenisTheme.of(context).surface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: LumenisTheme.of(context).line),
-    ),
+    padding: const EdgeInsets.all(LumenisSpace.section),
+    decoration: LumenisTheme.paper(LumenisTheme.of(context)),
     child: child,
   );
 }
@@ -445,11 +404,13 @@ class _Heading extends StatelessWidget {
           letterSpacing: -0.6,
         ),
       ),
-      const SizedBox(height: 8),
-      Text(
-        subtitle,
-        style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
-      ),
+      if (subtitle.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Text(
+          subtitle,
+          style: TextStyle(color: LumenisTheme.of(context).muted, height: 1.5),
+        ),
+      ],
     ],
   );
 }
@@ -509,9 +470,9 @@ class _FailureState extends StatelessWidget {
             Text(
               _copy(
                 context,
-                zh: '页面保留阻挡状态，不会将失败变成已恢复。',
-                en: 'The blocked state is preserved; failure is never presented as recovery.',
-                ko: '차단 상태를 유지하며 실패를 복구로 표시하지 않습니다.',
+                zh: '请重试，或从导航返回工作。',
+                en: 'Retry, or return to your work using navigation.',
+                ko: '다시 시도하거나 탐색 메뉴에서 작업으로 돌아가세요.',
               ),
               style: TextStyle(color: LumenisTheme.of(context).muted),
             ),

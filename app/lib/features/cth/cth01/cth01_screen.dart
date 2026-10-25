@@ -48,39 +48,45 @@ class _Cth01ScreenState extends State<Cth01Screen> {
     return ColoredBox(
       color: LumenisTheme.of(context).canvas,
       child: SafeArea(
-        child: AnimatedBuilder(
-          animation: _viewModel,
-          builder: (context, _) {
-            final copy = context.lumenisL10n;
-            return switch (_viewModel.status) {
-              Cth01LoadStatus.loading => const _LoadingState(),
-              Cth01LoadStatus.blocked => _UnavailableState(
-                title: copy.text('cth01.subject_unavailable'),
-                detail: copy.text(
-                  _viewModel.message == Cth01LoadMessage.pageNotBound
-                      ? 'context.screen_binding_unavailable'
-                      : 'cth01.context_unavailable',
-                ),
-                actionLabel: copy.text('cth01.retry'),
-                onAction: _viewModel.load,
-                onNavigate: widget.onNavigate,
+        child: Column(
+          children: [
+            if (widget.onNavigate != null)
+              _OperationsEntries(onNavigate: widget.onNavigate!),
+            Expanded(
+              child: AnimatedBuilder(
+                animation: _viewModel,
+                builder: (context, _) {
+                  final copy = context.lumenisL10n;
+                  return switch (_viewModel.status) {
+                    Cth01LoadStatus.loading => const _LoadingState(),
+                    Cth01LoadStatus.blocked => _UnavailableState(
+                      title: copy.text('cth01.subject_unavailable'),
+                      detail: copy.text(
+                        _viewModel.message == Cth01LoadMessage.pageNotBound
+                            ? 'context.screen_binding_unavailable'
+                            : 'cth01.context_unavailable',
+                      ),
+                      actionLabel: copy.text('cth01.retry'),
+                      onAction: _viewModel.load,
+                    ),
+                    Cth01LoadStatus.failed => _UnavailableState(
+                      title: copy.text('cth01.operation_unavailable'),
+                      detail: copy.text(_failureCopyKey(_viewModel.message)),
+                      actionLabel: copy.text('cth01.retry'),
+                      onAction: _viewModel.load,
+                    ),
+                    Cth01LoadStatus.loaded => _Cth01Workspace(
+                      data: _viewModel.data!,
+                      selectedSignalIndex: _viewModel.selectedSignalIndex,
+                      onSelectSignal: _viewModel.selectSignal,
+                      onReturnToSignals: _viewModel.returnToSignals,
+                      onRetry: _viewModel.load,
+                    ),
+                  };
+                },
               ),
-              Cth01LoadStatus.failed => _UnavailableState(
-                title: copy.text('cth01.operation_unavailable'),
-                detail: copy.text(_failureCopyKey(_viewModel.message)),
-                actionLabel: copy.text('cth01.retry'),
-                onAction: _viewModel.load,
-                onNavigate: widget.onNavigate,
-              ),
-              Cth01LoadStatus.loaded => _Cth01Workspace(
-                data: _viewModel.data!,
-                selectedSignalIndex: _viewModel.selectedSignalIndex,
-                onSelectSignal: _viewModel.selectSignal,
-                onReturnToSignals: _viewModel.returnToSignals,
-                onRetry: _viewModel.load,
-              ),
-            };
-          },
+            ),
+          ],
         ),
       ),
     );
@@ -163,14 +169,12 @@ class _UnavailableState extends StatelessWidget {
     required this.detail,
     required this.actionLabel,
     required this.onAction,
-    this.onNavigate,
   });
 
   final String title;
   final String detail;
   final String actionLabel;
   final VoidCallback onAction;
-  final ValueChanged<String>? onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -185,19 +189,6 @@ class _UnavailableState extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (onNavigate != null) ...[
-                  Text(
-                    context.lumenisL10n.text('workflow.observe'),
-                    style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  _OperationsEntries(onNavigate: onNavigate!),
-                  const SizedBox(height: 32),
-                  const Divider(),
-                  const SizedBox(height: 20),
-                ],
                 Text(
                   title,
                   style: TextStyle(
@@ -230,36 +221,38 @@ class _OperationsEntries extends StatelessWidget {
   final ValueChanged<String> onNavigate;
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      for (final entry in const [
-        ('workflow.observe', 'CTH-03', Icons.radar_rounded),
-        ('workflow.resolve', 'CTH-04', Icons.view_timeline_outlined),
-        ('workflow.plan', 'CTH-10', Icons.article_outlined),
-      ])
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Material(
-            color: LumenisTheme.of(context).surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(color: LumenisTheme.of(context).line),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('cth01-work-entries'),
+    padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
+    decoration: LumenisTheme.chassis(LumenisTheme.of(context)).copyWith(
+      border: Border(bottom: BorderSide(color: LumenisTheme.of(context).line)),
+    ),
+    child: SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final entry in const [
+            ('workflow.observe', 'CTH-03', Icons.radar_rounded),
+            ('workflow.resolve', 'CTH-04', Icons.view_timeline_outlined),
+            ('workflow.plan', 'CTH-10', Icons.article_outlined),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                key: ValueKey('cth01-open-${entry.$2}'),
+                onPressed: () => onNavigate(entry.$2),
+                icon: LumenisIcon(
+                  entry.$3,
+                  color: LumenisTheme.of(context).cth,
+                  size: 19,
+                ),
+                label: Text(context.lumenisL10n.text('screen.${entry.$2}')),
+                style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
               ),
-              leading: Icon(entry.$3, color: LumenisTheme.of(context).cth),
-              title: Text(context.lumenisL10n.text(entry.$1)),
-              subtitle: Text(context.lumenisL10n.text('screen.${entry.$2}')),
-              trailing: const LumenisIcon(Icons.arrow_outward_rounded, size: 18),
-              onTap: () => onNavigate(entry.$2),
             ),
-          ),
-        ),
-    ],
+        ],
+      ),
+    ),
   );
 }
 

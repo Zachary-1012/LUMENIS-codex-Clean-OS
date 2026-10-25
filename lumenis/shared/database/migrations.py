@@ -11,12 +11,17 @@ LUMENIS Shared Database - canonical migration engine
 """
 
 import builtins
+import hashlib
+import hmac
+import json
 import os
+import shutil
 import sys
 import sqlite3
 import tempfile
+from contextlib import closing
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional, List, Dict, Any
 
 
@@ -155,6 +160,127 @@ def _validate_backup_snapshot(connection: sqlite3.Connection) -> None:
         raise sqlite3.DatabaseError(f"备份完整性校验失败: {results!r}")
 
 
+def _snapshot_signing_identity(snapshot_path, keys=None):
+    from lumenis.shared.evidence import signing_config, store
+    uri = Path(snapshot_path).resolve().as_uri() + '?mode=ro&immutable=1'
+    signed_rows = 0
+    with closing(sqlite3.connect(uri, uri=True)) as snapshot:
+        columns = {row[1] for row in snapshot.execute('PRAGMA table_info(app_evidence_records)')}
+        signature_fields = ('integrity_version', 'integrity_algorithm', 'integrity_digest', 'integrity_key_id')
+        signed = ' OR '.join(f"COALESCE({field}, '') <> ''" for field in signature_fields)
+        if not set(signature_fields) <= columns:
+            if columns.intersection(signature_fields):
+                raise signing_config.WorkspaceSigningError('WORKSPACE_SIGNING_SCHEMA_RECOVERY_REQUIRED')
+            required_ids = set()
+        else:
+            required_ids = {str(row[0] or '') for row in snapshot.execute(
+                'SELECT DISTINCT integrity_key_id FROM app_evidence_records WHERE ' + signed)}
+        if keys is not None:
+            if not required_ids <= keys.keys():
+                raise signing_config.WorkspaceSigningError('WORKSPACE_SIGNING_KEY_RECOVERY_REQUIRED')
+            if required_ids:
+                snapshot.row_factory = sqlite3.Row
+                for row in snapshot.execute('SELECT * FROM app_evidence_records WHERE ' + signed):
+                    record = dict(row)
+                    try:
+                        digest = hmac.new(keys[record['integrity_key_id']].encode('utf-8'),
+                                          store._integrity_payload(record), hashlib.sha256).hexdigest()
+                        valid = (record.get('integrity_version') == store.EVIDENCE_INTEGRITY_VERSION
+                                 and record.get('integrity_algorithm') == store.EVIDENCE_INTEGRITY_ALGORITHM
+                                 and hmac.compare_digest(digest, record['integrity_digest']))
+                    except (KeyError, TypeError, ValueError):
+                        valid = False
+                    if not valid:
+                        raise signing_config.WorkspaceSigningError('BACKUP_EVIDENCE_SIGNATURE_INVALID')
+                    signed_rows += 1
+    return required_ids, signed_rows
+
+
+def _backup_manifest_digest(manifest, key):
+    payload = {name: value for name, value in manifest.items() if name != 'integrity'}
+    schema = manifest['schema']
+    raw = schema.encode('utf-8') + b'\0' + json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    if key is None:
+        if schema != 'lumenis.database-backup-keyless/v1':
+            raise ValueError('BACKUP_MANIFEST_AUTHENTICATION_REQUIRED')
+        # An unsigned backup has integrity checking, never signer authentication.
+        return hashlib.sha256(raw).hexdigest()
+    return hmac.new(key.encode('utf-8'), raw, hashlib.sha256).hexdigest()
+
+
+def _backup_signing_companions(snapshot_path: str, db_path: str, backup_path: str):
+    from lumenis.shared.evidence import signing_config
+
+    database = Path(db_path).resolve()
+    root = Path(os.environ.get('ZBC_DATA_DIR') or database.parent).absolute()
+    if not database.is_relative_to(root.resolve()):
+        root = database.parent
+    signing_config._assert_regular_path(root)
+    root = root.resolve()
+    file = root / 'security' / ('evidence-signing.dpapi' if os.name == 'nt' else 'evidence-signing.json')
+    signing_config._assert_regular_path(file)
+    required_ids, _ = _snapshot_signing_identity(snapshot_path)
+    keyless = not file.exists()
+    if keyless:
+        if required_ids:
+            raise signing_config.WorkspaceSigningError('WORKSPACE_SIGNING_KEY_RECOVERY_REQUIRED')
+        if any(os.path.lexists(backup_path + suffix) for suffix in ('.evidence-signing.dpapi', '.evidence-signing.json')):
+            raise FileExistsError('BACKUP_KEYLESS_SIGNING_COMPANION_CONFLICT')
+        protected, keys, active, signed_rows = None, {}, None, 0
+    else:
+        with file.open('rb') as source:
+            protected = source.read(65537)
+        # A vanished file must fail instead of making activation initialize a new key.
+        loaded = {'LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID': 'backup-read-only-no-create'}
+        activated = signing_config.activate_workspace_signing(str(root), str(database), loaded)
+        signing_config._assert_regular_path(activated)
+        if activated != file or len(protected) > 65536 or activated.read_bytes() != protected:
+            raise signing_config.WorkspaceSigningError('BACKUP_SIGNING_CONFIGURATION_CHANGED')
+        keys = json.loads(loaded['LUMENIS_EVIDENCE_HMAC_KEY_RING'])
+        active = loaded['LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID']
+        required_ids, signed_rows = _snapshot_signing_identity(snapshot_path, keys)
+    digest = hashlib.sha256()
+    with open(snapshot_path, 'rb') as snapshot:
+        for chunk in iter(lambda: snapshot.read(1024 * 1024), b''):
+            digest.update(chunk)
+    blob_path = Path(backup_path + '.' + file.name)
+    manifest_path = Path(backup_path + '.signing-manifest.json')
+    manifest = {'schema': 'lumenis.database-backup-keyless/v1' if keyless else 'lumenis.database-backup-signing/v1',
+                'database': {'name': Path(backup_path).name, 'sha256': digest.hexdigest(),
+                             'restore_relative_path': database.relative_to(root.resolve()).as_posix()},
+                'signing': {'name': None if keyless else blob_path.name,
+                            'sha256': None if keyless else hashlib.sha256(protected).hexdigest(),
+                            'restore_relative_path': None if keyless else file.relative_to(root).as_posix(),
+                            'active_key_id': active, 'required_key_ids': sorted(required_ids),
+                            **({'state': 'NOT_REQUIRED_NO_SIGNED_EVIDENCE'} if keyless else {})},
+                'verification': {'sqlite_integrity': 'VERIFIED', 'signed_evidence_rows': signed_rows,
+                                 'evidence_signatures': 'VERIFIED' if signed_rows else 'NO_SIGNED_EVIDENCE_ROWS'},
+                'recovery': {'protection': 'NO_SIGNING_CONFIGURATION' if keyless else
+                                          'WINDOWS_CURRENT_USER_DPAPI' if os.name == 'nt' else 'POSIX_MODE_0600',
+                             'requires_original_windows_user_profile': not keyless and os.name == 'nt'}}
+    manifest['integrity'] = {'algorithm': 'sha256' if keyless else 'hmac-sha256', 'key_id': active,
+                             'digest': _backup_manifest_digest(manifest, None if keyless else keys[active])}
+    raw_manifest = json.dumps(manifest, sort_keys=True, ensure_ascii=False).encode('utf-8')
+    if len(raw_manifest) > 65536:
+        raise ValueError('BACKUP_SIGNING_MANIFEST_TOO_LARGE')
+    return ([] if keyless else [(str(blob_path), protected)]) + [(str(manifest_path), raw_manifest)]
+
+
+def _publish_backup_companion(path, raw, created):
+    fd, temporary = tempfile.mkstemp(prefix='.' + Path(path).name + '.', suffix='.tmp', dir=Path(path).parent)
+    try:
+        with os.fdopen(fd, 'wb') as output:
+            output.write(raw)
+            output.flush()
+            os.fsync(output.fileno())
+        os.chmod(temporary, 0o600)
+        os.link(temporary, path)
+        stat = os.stat(temporary, follow_symlinks=False)
+        created.append((path, stat.st_dev, stat.st_ino))
+    finally:
+        os.unlink(temporary)
+
+
 def _backup_database_to_path(destination_path: os.PathLike | str, db_path: str) -> str:
     """Create and atomically publish a validated snapshot at an explicit path.
 
@@ -193,6 +319,7 @@ def _backup_database_to_path(destination_path: os.PathLike | str, db_path: str) 
     os.makedirs(backup_dir, exist_ok=True)
     temp_path = None
     published = False
+    created = []
     try:
         fd, temp_path = tempfile.mkstemp(
             prefix=f".{os.path.basename(backup_path)}.",
@@ -215,12 +342,28 @@ def _backup_database_to_path(destination_path: os.PathLike | str, db_path: str) 
         finally:
             source.close()
 
+        companions = _backup_signing_companions(temp_path, db_path, backup_path)
+        for path, _raw in companions:
+            if os.path.lexists(path):
+                raise FileExistsError(f"拒绝覆盖已有签名备份目标: {path}")
         # os.link publishes the fully closed snapshot atomically and fails if
         # another caller created the destination after the preflight check.
         os.link(temp_path, backup_path)
+        stat = os.stat(temp_path, follow_symlinks=False)
+        created.append((backup_path, stat.st_dev, stat.st_ino))
+        for path, raw in companions:
+            _publish_backup_companion(path, raw, created)
         published = True
         return backup_path
     finally:
+        if not published:
+            for path, device, inode in reversed(created):
+                try:
+                    stat = os.stat(path, follow_symlinks=False)
+                    if (stat.st_dev, stat.st_ino) == (device, inode):
+                        os.unlink(path)
+                except FileNotFoundError:
+                    pass
         if temp_path and os.path.lexists(temp_path):
             try:
                 os.unlink(temp_path)
@@ -231,8 +374,206 @@ def _backup_database_to_path(destination_path: os.PathLike | str, db_path: str) 
 
 
 def backup_database_to_path(destination_path: os.PathLike | str) -> str:
-    """Snapshot the call-time canonical database to an explicit destination."""
+    """Snapshot the database and its existing signer; publish its manifest last."""
     return _backup_database_to_path(destination_path, get_db_path())
+
+
+def _restore_manifest(path, backup):
+    from lumenis.shared.evidence import signing_config
+    signing_config._assert_regular_path(path)
+    def unique_pairs(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError('RESTORE_MANIFEST_INVALID')
+            value[key] = item
+        return value
+    try:
+        with path.open('rb') as source:
+            raw = source.read(65537)
+        if len(raw) > 65536:
+            raise ValueError('manifest too large')
+        value = json.loads(raw.decode('utf-8'), object_pairs_hook=unique_pairs)
+        if (type(value) is not dict or set(value) != {'schema', 'database', 'signing', 'verification', 'recovery', 'integrity'}
+                or value['schema'] not in {'lumenis.database-backup-signing/v1', 'lumenis.database-backup-keyless/v1'}
+                or any(type(value[key]) is not dict for key in ('database', 'signing', 'verification', 'recovery', 'integrity'))):
+            raise ValueError('invalid manifest')
+        db, signing, verification = value['database'], value['signing'], value['verification']
+        keyless = value['schema'] == 'lumenis.database-backup-keyless/v1'
+        suffix = 'dpapi' if os.name == 'nt' else 'json'
+        if (set(db) != {'name', 'sha256', 'restore_relative_path'}
+                or set(verification) != {'sqlite_integrity', 'signed_evidence_rows', 'evidence_signatures'}
+                or db['name'] != backup.name
+                or type(verification['signed_evidence_rows']) is not int or verification['signed_evidence_rows'] < 0
+                or verification['sqlite_integrity'] != 'VERIFIED'
+                or verification['evidence_signatures'] != ('VERIFIED' if verification['signed_evidence_rows'] else 'NO_SIGNED_EVIDENCE_ROWS')):
+            raise ValueError('invalid manifest')
+        if keyless:
+            if (signing != {'name': None, 'sha256': None, 'restore_relative_path': None, 'active_key_id': None,
+                           'required_key_ids': [], 'state': 'NOT_REQUIRED_NO_SIGNED_EVIDENCE'}
+                    or verification['signed_evidence_rows'] != 0
+                    or value['recovery'] != {'protection': 'NO_SIGNING_CONFIGURATION',
+                                             'requires_original_windows_user_profile': False}):
+                raise ValueError('invalid keyless identity')
+        elif (set(signing) != {'name', 'sha256', 'restore_relative_path', 'active_key_id', 'required_key_ids'}
+                or signing['name'] != backup.name + '.evidence-signing.' + suffix
+                or signing['restore_relative_path'] != 'security/evidence-signing.' + suffix
+                or type(signing['active_key_id']) is not str or not signing['active_key_id']
+                or type(signing['required_key_ids']) is not list
+                or any(type(key) is not str or not key for key in signing['required_key_ids'])
+                or len(set(signing['required_key_ids'])) != len(signing['required_key_ids'])
+                or value['recovery'] != {'protection': 'WINDOWS_CURRENT_USER_DPAPI' if os.name == 'nt' else 'POSIX_MODE_0600',
+                                         'requires_original_windows_user_profile': os.name == 'nt'}):
+            raise ValueError('invalid signing identity')
+        for item in (db,) if keyless else (db, signing):
+            if type(item['sha256']) is not str or len(item['sha256']) != 64 or any(char not in '0123456789abcdef' for char in item['sha256']):
+                raise ValueError('invalid hash')
+        integrity = value['integrity']
+        if (set(integrity) != {'algorithm', 'key_id', 'digest'}
+                or integrity['algorithm'] != ('sha256' if keyless else 'hmac-sha256')
+                or integrity['key_id'] != signing['active_key_id'] or type(integrity['digest']) is not str
+                or len(integrity['digest']) != 64 or any(char not in '0123456789abcdef' for char in integrity['digest'])):
+            raise ValueError('invalid manifest authentication')
+        relative = db['restore_relative_path']
+        reserved = {'CON', 'PRN', 'AUX', 'NUL', *(f'COM{i}' for i in range(1, 10)), *(f'LPT{i}' for i in range(1, 10))}
+        if (type(relative) is not str or not relative or len(relative) > 500 or '\\' in relative or ':' in relative
+                or PurePosixPath(relative).is_absolute() or any(part in {'', '.', '..'} or part.endswith(('.', ' '))
+                    or part.split('.', 1)[0].upper() in reserved
+                    or any(ord(char) < 32 or char in '<>"|?*' for char in part) for part in relative.split('/'))):
+            raise ValueError('invalid relative path')
+    except (OSError, ValueError, TypeError, KeyError):
+        raise ValueError('RESTORE_MANIFEST_INVALID_OR_MISSING') from None
+    return value
+
+
+def _copy_restore_file(source, destination, expected_sha256):
+    destination.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    digest = hashlib.sha256()
+    with source.open('rb') as original, destination.open('xb') as output:
+        for chunk in iter(lambda: original.read(1024 * 1024), b''):
+            output.write(chunk)
+            digest.update(chunk)
+        output.flush()
+        os.fsync(output.fileno())
+    destination.chmod(0o600)
+    if digest.hexdigest() != expected_sha256:
+        raise ValueError('RESTORE_BACKUP_HASH_MISMATCH')
+
+
+def _publish_restore_directory(staging, destination):
+    if os.name == 'nt':
+        os.rename(staging, destination)
+        return
+    import ctypes
+    library = ctypes.CDLL(None, use_errno=True)
+    rename = getattr(library, 'renameat2', None)
+    if rename is None:
+        raise RuntimeError('RESTORE_ATOMIC_PUBLICATION_UNAVAILABLE')
+    rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
+    rename.restype = ctypes.c_int
+    if rename(-100, os.fsencode(staging), -100, os.fsencode(destination), 1):
+        code = ctypes.get_errno()
+        raise OSError(code, os.strerror(code), str(destination))
+
+
+def restore_database_to_directory(backup_path, target_root):
+    """Verify a paired backup in private staging and publish one new directory.
+
+    This never replaces an existing database, starts a service, imports keys into
+    the current process, or changes the call-time canonical database selection.
+    """
+    from lumenis.shared.database.connection import connect_sqlite
+    from lumenis.shared.evidence import signing_config
+    backup, target = Path(backup_path).absolute(), Path(target_root).absolute()
+    for path in (backup, target):
+        if path.drive.startswith('\\\\'):
+            raise ValueError('RESTORE_LOCAL_STORAGE_REQUIRED')
+        signing_config._assert_regular_path(path)
+    if os.path.lexists(target):
+        raise FileExistsError('RESTORE_TARGET_EXISTS_ONLINE_OVERWRITE_DENIED')
+    with closing(connect_sqlite(str(backup), read_only=True, immutable=True, wal=False)) as snapshot:
+        _validate_backup_snapshot(snapshot)
+    manifest = _restore_manifest(Path(str(backup) + '.signing-manifest.json'), backup)
+    keyless = manifest['schema'] == 'lumenis.database-backup-keyless/v1'
+    if keyless:
+        if any(os.path.lexists(str(backup) + suffix) for suffix in ('.evidence-signing.dpapi', '.evidence-signing.json')):
+            raise ValueError('RESTORE_KEYLESS_SIGNING_COMPANION_CONFLICT')
+        blob = None
+    else:
+        blob = backup.parent / manifest['signing']['name']
+        signing_config._assert_regular_path(blob)
+        if not blob.is_file() or not 0 < blob.stat().st_size <= 65536:
+            raise ValueError('RESTORE_SIGNING_CONFIGURATION_MISSING')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    signing_config._assert_regular_path(target.parent)
+    target = target.parent.resolve() / target.name
+    staging = Path(tempfile.mkdtemp(prefix='.' + target.name + '.restore-', dir=target.parent))
+    identity = staging.stat()
+    try:
+        signing_config._private_directory(staging)
+        database = staging / manifest['database']['restore_relative_path']
+        key = staging / 'security' / ('evidence-signing.dpapi' if os.name == 'nt' else 'evidence-signing.json')
+        report = staging / 'restore-verification.json'
+        if database == key or database in key.parents or key in database.parents or database == report or report in database.parents:
+            raise ValueError('RESTORE_RELATIVE_PATH_COLLISION')
+        _copy_restore_file(backup, database, manifest['database']['sha256'])
+        if not keyless:
+            _copy_restore_file(blob, key, manifest['signing']['sha256'])
+        with closing(connect_sqlite(str(database), read_only=True, immutable=True, wal=False)) as snapshot:
+            _validate_backup_snapshot(snapshot)
+        loaded = {}
+        if not keyless:
+            loaded['LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID'] = 'restore-read-only-no-create'
+            activated = signing_config.activate_workspace_signing(str(staging), str(database), loaded)
+            if activated != key:
+                raise ValueError('RESTORE_SIGNING_CONFIGURATION_MISMATCH')
+        # Only the closed, private staging reader can have made these empty sidecars.
+        for suffix in ('-wal', '-shm', '-journal'):
+            sidecar = Path(str(database) + suffix)
+            if sidecar.exists():
+                if suffix != '-shm' and sidecar.stat().st_size:
+                    raise ValueError('RESTORE_STAGING_DATABASE_CHANGED')
+                sidecar.unlink()
+        if keyless:
+            required, _ = _snapshot_signing_identity(database)
+            if required:
+                raise ValueError('RESTORE_KEYLESS_SIGNED_EVIDENCE_FORBIDDEN')
+            if not hmac.compare_digest(_backup_manifest_digest(manifest, None), manifest['integrity']['digest']):
+                raise ValueError('RESTORE_MANIFEST_INTEGRITY_FAILED')
+            count = 0
+        else:
+            keys = json.loads(loaded['LUMENIS_EVIDENCE_HMAC_KEY_RING'])
+            active = loaded['LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID']
+            if not hmac.compare_digest(_backup_manifest_digest(manifest, keys[active]), manifest['integrity']['digest']):
+                raise ValueError('RESTORE_MANIFEST_AUTHENTICATION_FAILED')
+            required, count = _snapshot_signing_identity(database, keys)
+            if (sorted(required) != manifest['signing']['required_key_ids']
+                    or count != manifest['verification']['signed_evidence_rows']
+                    or loaded['LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID'] != manifest['signing']['active_key_id']):
+                raise ValueError('RESTORE_SIGNING_IDENTITY_MISMATCH')
+        result = {'schema': 'lumenis.database-restore/v1', 'status': 'RESTORED_TO_NEW_DIRECTORY',
+                  'target_root': str(target), 'database_path': str(target / database.relative_to(staging)),
+                  'database_sha256': manifest['database']['sha256'], 'signing_sha256': manifest['signing']['sha256'],
+                  'active_key_id': manifest['signing']['active_key_id'], 'required_key_ids': sorted(required),
+                  'signed_evidence_rows': count, 'evidence_signatures': manifest['verification']['evidence_signatures'],
+                  'signing_mode': 'KEYLESS_NO_SIGNED_EVIDENCE' if keyless else 'SIGNED_CONFIGURATION_VERIFIED',
+                  'manifest_authentication': 'UNAVAILABLE_UNSIGNED_BACKUP' if keyless else 'HMAC_VERIFIED',
+                  'canonical_database_changed': False, 'service_started': False}
+        with report.open('x', encoding='utf-8') as output:
+            json.dump(result, output, sort_keys=True)
+            output.flush()
+            os.fsync(output.fileno())
+        signing_config._assert_regular_path(target)
+        _publish_restore_directory(staging, target)
+        return result
+    finally:
+        if staging.exists():
+            signing_config._assert_regular_path(staging)
+            stat = staging.stat()
+            if (staging.resolve().parent != target.parent or
+                    (stat.st_dev, stat.st_ino) != (identity.st_dev, identity.st_ino)):
+                raise RuntimeError('RESTORE_STAGING_IDENTITY_CHANGED')
+            shutil.rmtree(staging)
 
 
 def _read_current_version_for_backup(db_path: str) -> int:

@@ -665,6 +665,10 @@ class InstagramAdapter(BasePlatformAdapter):
             )
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
+        if kwargs.get('cursor') is not None:
+            return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
+                metadata={'error_type': 'NATIVE_COMMENT_CURSOR_NOT_OBSERVED'},
+                message='当前浏览器评论来源未提供可核验的原生分页游标')
         route = resolve_capability_route("instagram", "comments", request_value=content_id)
         if route is None:
             return CollectionResult(
@@ -696,6 +700,7 @@ class InstagramAdapter(BasePlatformAdapter):
                 new_count=len(comments_list),
                 message=safe_error,
                 metadata={
+                    **(result.metadata if isinstance(getattr(result, 'metadata', None), dict) else {}),
                     "engine": "v4_instagram",
                     "shortcode": content_id,
                     "include_replies": include_replies,

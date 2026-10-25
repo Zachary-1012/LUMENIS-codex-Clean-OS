@@ -101,10 +101,14 @@ def test_primary_xhs_status_is_a_separate_read_only_projection(monkeypatch):
     assert health_calls == [row["platform"] for row in result["platforms"]]
     assert primary["platform"] == "xiaohongshu"
     assert primary["region"] == "hk_international"
-    assert primary["status"] == "READY"
+    assert primary["status"] == "NOT_CONFIGURED"
+    assert primary['runtime']['status'] == 'READY'
+    assert primary['status_source'] == 'registered_adapter_health'
     assert primary["last_run"]["fetched"] == 4
     assert primary["last_run"]["accepted"] is None
-    assert primary["form_selectable"] is False
+    assert primary["form_selectable"] is True
+    assert primary['capabilities']['detail'] == 'IMPLEMENTED'
+    assert primary['capabilities']['native_comment_pagination'] == 'NOT_VERIFIED'
     assert primary["parallel_collector_added"] is False
     assert not any(secret in str(primary).lower() for secret in ("cookie", "token", "password"))
 

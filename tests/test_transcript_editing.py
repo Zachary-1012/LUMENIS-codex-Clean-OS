@@ -98,3 +98,63 @@ def test_no_word_times_cannot_be_successful_empty_match(sample):
  from lumenis.shared.content_creation.transcript_editing import filler_word_deletion_candidate
  t,r=sample;r=copy.deepcopy(r);r['transcript']['segments'][0]['words']=[]
  with pytest.raises(VideoEditingError,match='WORD_TIMES_REQUIRED'):filler_word_deletion_candidate(t,r,filler_terms=['um'],transcript_artifact_id='ART-test',transcript_sha256='a'*64)
+
+
+def test_repeated_source_requires_occurrence_selection_and_preserves_other_use(sample):
+ t,r=sample;a=t.assets[0]
+ t=t.add_clip(a.asset_id,track_id='voice',source_out=.5,timeline_start=2)
+ with pytest.raises(VideoEditingError,match='CLIP_SELECTION_REQUIRED'):candidate(t,r,['0:1'])
+ first=t.tracks[-1].clips[0]
+ out=word_deletion_candidate(t,r,word_ids=['0:1'],clip_ids=[first.clip_id],
+     transcript_artifact_id='ART-test',transcript_sha256='a'*64)
+ revised=_apply_edl_operations(t,_parse_content_edl(out['edl']))
+ retained=[c for c in revised.tracks[-1].clips if c.source_in==0 and c.source_out==.5]
+ assert len(retained)==1 and retained[0].timeline_start==pytest.approx(1.9)
+ assert out['word_mappings'][0]['clip_id']==first.clip_id
+
+
+def test_nonzero_speed_source_samples_synchronize_secondary_track_and_captions(sample):
+ t,r=sample;a=t.assets[0]
+ t=t.move_audio_clip(t.tracks[-1].clips[0].clip_id,timeline_start=1)
+ t=t.set_playback_rate(t.tracks[-1].clips[0].clip_id,playback_rate=2)
+ t=t.add_audio_track('music',audio_role='bgm').add_clip(a.asset_id,track_id='music',source_out=.5,timeline_start=1)
+ t=t.add_caption(1,1.25,'Caption wording is independent')
+ r=copy.deepcopy(r);r['audio_normalization']={'source_clock':{'source_sample_rate':48000}}
+ out=word_deletion_candidate(t,r,word_ids=['0:1'],clip_ids=[t.tracks[1].clips[0].clip_id],
+     transcript_artifact_id='ART-test',transcript_sha256='a'*64)
+ assert out['word_mappings'][0]['timeline_start']==pytest.approx(1.05)
+ assert out['word_mappings'][0]['timeline_end_exact']=={'numerator':11,'denominator':10}
+ assert out['word_mappings'][0]['source_start_sample']==4800
+ assert len(out['affected_clip_ids'])==2 and len(out['affected_caption_ids'])==1
+ revised=_apply_edl_operations(t,_parse_content_edl(out['edl']))
+ assert revised.version==t.version+1
+ assert revised.undo().to_dict()['tracks']==t.to_dict()['tracks']
+ assert revised.overlays[-1].end_sec==pytest.approx(1.2)
+ assert all(c.playback_rate==2 for c in revised.tracks[1].clips)
+ assert out['transcript_text_modified'] is False and out['redub_performed'] is False
+ assert Timeline.from_dict(revised.to_dict(),assets=[a]).to_dict()==revised.to_dict()
+
+
+def test_short_word_boundaries_and_large_batch_are_not_frame_rounded(sample):
+ t,r=sample
+ r=copy.deepcopy(r);r['transcript']['segments'][0]['words']=[
+   {'word':str(i),'start':i/1000,'end':i/1000+.0004} for i in range(150)]
+ out=candidate(t,r,[f'0:{i}' for i in range(150)])
+ assert len(out['edl']['decisions'])==1 and len(out['word_mappings'])==150
+ revised=_apply_edl_operations(t,_parse_content_edl(out['edl']))
+ assert revised.duration_sec==pytest.approx(.44)
+ assert len(revised.tracks[-1].clips)==150
+
+
+def test_speed_word_cut_renders_actual_audio_and_reopens(sample,tmp_path):
+ from lumenis.shared.content_creation.rendering import render_timeline
+ t,r=sample
+ t=t.set_playback_rate(t.tracks[-1].clips[0].clip_id,playback_rate=2)
+ out=candidate(t,r,['0:1'])
+ revised=_apply_edl_operations(t,_parse_content_edl(out['edl']))
+ reopened=Timeline.from_dict(revised.to_dict(),assets=list(t.assets))
+ result=render_timeline(reopened,tmp_path/'speed-word-cut.wav',output_kind='audio')
+ assert result['state']=='rendered_verified'
+ import wave
+ with wave.open(str(tmp_path/'speed-word-cut.wav')) as audio:
+  assert audio.getnframes()==9600 and audio.getframerate()==48000

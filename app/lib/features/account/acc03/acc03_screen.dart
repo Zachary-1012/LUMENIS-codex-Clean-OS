@@ -3,6 +3,7 @@ import 'package:lumenis_app/core/lumenis_icon.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_theme.dart';
+import '../../../core/lumenis_work_object.dart';
 import '../../../l10n/lumenis_localizations.dart';
 import '../../../features/ai01/ai01_conversation_panel.dart';
 import '../../../features/ai01/ai01_conversations.dart';
@@ -94,11 +95,11 @@ class _Acc03ScreenState extends State<Acc03Screen> {
     final lastPage = _safeLastOpenedScreenId;
 
     return DecoratedBox(
-      decoration: LumenisTheme.chassis(LumenisTheme.of(context)),
+      decoration: const BoxDecoration(),
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 920),
+            constraints: const BoxConstraints(maxWidth: 1028),
             child: Ai01ConversationPanel(
               key: ObjectKey(_conversations),
               viewModel: _conversations,
@@ -111,70 +112,83 @@ class _Acc03ScreenState extends State<Acc03Screen> {
               startActions: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    alignment: WrapAlignment.start,
-                    children: [
-                      _StartWork(
-                        id: 'research',
-                        label: _copy(
-                          context,
-                          zh: '研究',
-                          en: 'Research',
-                          ko: '리서치',
-                        ),
-                        icon: Icons.auto_stories_outlined,
-                        color: LumenisTheme.of(context).shared,
-                        onPressed: widget.onOpen == null
-                            ? null
-                            : () => widget.onOpen!(Acc03Destination.research),
-                      ),
-                      for (final (id, zh, en, ko, icon) in const [
-                        (
-                          'manuscript',
-                          '文稿提案',
-                          'Write',
-                          '글과 제안서',
-                          Icons.edit_note_rounded,
-                        ),
-                        (
-                          'video',
-                          '视频',
-                          'Video',
-                          '영상',
-                          Icons.movie_creation_outlined,
-                        ),
-                        (
-                          'audio',
-                          '播客',
-                          'Podcast',
-                          '팟캐스트',
-                          Icons.mic_none_rounded,
-                        ),
-                      ])
-                        _StartWork(
-                          id: id,
-                          label: _copy(context, zh: zh, en: en, ko: ko),
-                          icon: icon,
-                          color: switch (id) {
-                            'manuscript' => LumenisTheme.of(context).cth,
-                            'video' => LumenisTheme.of(context).bmp,
-                            _ => LumenisTheme.of(context).ai,
-                          },
-                          onPressed: widget.onStartCreation == null
-                              ? null
-                              : () => widget.onStartCreation!(id),
-                        ),
-                    ],
+                  LayoutBuilder(
+                    builder: (context, box) {
+                      final columns = box.maxWidth < 480 ? 2 : 4;
+                      final width =
+                          (box.maxWidth - (columns - 1) * 8) / columns;
+                      return Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _StartWork(
+                            id: 'research',
+                            width: width,
+                            object: LumenisWorkObject.book,
+                            label: _copy(
+                              context,
+                              zh: '研究',
+                              en: 'Research',
+                              ko: '리서치',
+                            ),
+                            icon: Icons.auto_stories_outlined,
+                            color: LumenisTheme.of(context).shared,
+                            onPressed: widget.onOpen == null
+                                ? null
+                                : () =>
+                                      widget.onOpen!(Acc03Destination.research),
+                          ),
+                          for (final (id, zh, en, ko, icon) in const [
+                            (
+                              'manuscript',
+                              '文稿提案',
+                              'Write',
+                              '글과 제안서',
+                              Icons.edit_note_rounded,
+                            ),
+                            (
+                              'video',
+                              '视频',
+                              'Video',
+                              '영상',
+                              Icons.movie_creation_outlined,
+                            ),
+                            (
+                              'audio',
+                              '播客',
+                              'Podcast',
+                              '팟캐스트',
+                              Icons.mic_none_rounded,
+                            ),
+                          ])
+                            _StartWork(
+                              id: id,
+                              width: width,
+                              object: switch (id) {
+                                'manuscript' => LumenisWorkObject.paper,
+                                'video' => LumenisWorkObject.film,
+                                _ => LumenisWorkObject.microphone,
+                              },
+                              label: _copy(context, zh: zh, en: en, ko: ko),
+                              icon: icon,
+                              color: LumenisTheme.of(context).accentStrong,
+                              onPressed: widget.onStartCreation == null
+                                  ? null
+                                  : () => widget.onStartCreation!(id),
+                            ),
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 4,
                     runSpacing: 4,
                     children: [
                       for (final destination in acc03HomeDestinations.where(
-                        (item) => item.destination != Acc03Destination.research,
+                        (item) =>
+                            item.destination == Acc03Destination.commerce ||
+                            item.destination == Acc03Destination.brand,
                       ))
                         _BusinessDestination(
                           destination: destination,
@@ -206,7 +220,7 @@ class _Acc03ScreenState extends State<Acc03Screen> {
                       onOpen: () => widget.onOpenScreenId!(lastPage),
                     ),
                   ],
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 22),
                   Acc03RecentWork(
                     client: widget.client,
                     onOpen: widget.onOpenWork,
@@ -228,61 +242,27 @@ class _StartWork extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onPressed,
+    required this.width,
+    required this.object,
   });
-
   final String id, label;
   final IconData icon;
   final Color color;
   final VoidCallback? onPressed;
-
+  final double width;
+  final LumenisWorkObject object;
   @override
-  Widget build(BuildContext context) {
-    final palette = LumenisTheme.of(context);
-    return DecoratedBox(
-      decoration: LumenisTheme.panel(palette, radius: 10),
-      child: OutlinedButton.icon(
-        key: ValueKey(
-          id == 'research' ? 'acc03-destination-SH-02' : 'acc03-start-$id',
-        ),
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size(140, 64),
-          foregroundColor: palette.foreground,
-          padding: const EdgeInsets.fromLTRB(12, 8, 16, 8),
-          side: BorderSide.none,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        icon: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color.lerp(color, palette.surface, .86)!,
-                Color.lerp(color, palette.surface, .62)!,
-              ],
-            ),
-            border: Border.all(color: color.withValues(alpha: .3)),
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: palette.foreground.withValues(alpha: .12),
-                offset: const Offset(0, 2),
-                blurRadius: 2,
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(9),
-            child: LumenisIcon(icon, size: 22, color: color),
-          ),
-        ),
-        label: Text(label),
+  Widget build(BuildContext context) => SizedBox(
+    width: width,
+    child: LumenisWorkObjectAction(
+      key: ValueKey(
+        id == 'research' ? 'acc03-destination-SH-02' : 'acc03-start-$id',
       ),
-    );
-  }
+      object: object,
+      label: label,
+      onPressed: onPressed,
+    ),
+  );
 }
 
 class _BusinessDestination extends StatelessWidget {
@@ -328,7 +308,7 @@ class _BusinessDestination extends StatelessWidget {
         minimumSize: const Size(48, 48),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         foregroundColor: LumenisTheme.of(context).foreground,
-        shape: const StadiumBorder(),
+        shape: const LumenisPixelBorder(step: 2),
       ),
       icon: LumenisIcon(icon, size: 18, color: LumenisTheme.of(context).muted),
       label: Text(label),

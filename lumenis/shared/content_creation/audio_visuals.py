@@ -8,14 +8,17 @@ from __future__ import annotations
 
 from array import array
 import hashlib
+import base64
 import io
 import json
 import math
+import re
 from pathlib import Path
 import sys
 import tempfile
 import unicodedata
 import wave
+from copy import deepcopy
 from typing import Any, Callable
 
 from . import rendering
@@ -23,6 +26,243 @@ from .video_editing import (
     MEDIA_INPUT_DEMUXERS, MediaAsset, VideoEditingError, _ffprobe_path,
     fingerprint_local_media,
 )
+
+
+def validate_visual_document(value, *, previous=None):
+    """Editable user material in the original SavedWork, never external Evidence.
+
+    Embedded raster originals remain byte-identical in JSON. Exports decode and
+    re-encode them locally; SVG/script/URL inputs are not an image source.
+    """
+    from PIL import Image
+    if (type(value) is not dict or set(value) != {'schema','canvas','assets','layers'}
+            or value['schema'] != 'lumenis.visual-document/v1'):
+        raise VideoEditingError('VISUAL_DOCUMENT_INVALID')
+    canvas = value['canvas']
+    if (type(canvas) is not dict or set(canvas) != {'width','height','background'}
+            or any(type(canvas[k]) is not int or not 16 <= canvas[k] <= 8192 for k in ('width','height'))
+            or canvas['width'] * canvas['height'] > 32_000_000):
+        raise VideoEditingError('VISUAL_CANVAS_INVALID')
+    color = lambda item: isinstance(item,str) and re.fullmatch(r'#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?',item)
+    if not color(canvas['background']):
+        raise VideoEditingError('VISUAL_COLOR_INVALID')
+    assets = value['assets']
+    if type(assets) is not list or len(assets) > 64:
+        raise VideoEditingError('VISUAL_ASSETS_INVALID')
+    asset_ids = set(); total = 0
+    for asset in assets:
+        if (type(asset) is not dict or set(asset) != {'id','media_type','sha256','data_base64'}
+                or not isinstance(asset['id'],str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',asset['id'])
+                or asset['id'] in asset_ids or not isinstance(asset['media_type'],str)
+                or asset['media_type'] not in {'image/png','image/jpeg','image/webp'}
+                or not isinstance(asset['data_base64'],str) or len(asset['data_base64']) > 8*1024*1024):
+            raise VideoEditingError('VISUAL_ASSET_INVALID')
+        try:
+            raw = base64.b64decode(asset['data_base64'],validate=True); total += len(raw)
+            if not raw or total > 6*1024*1024 or hashlib.sha256(raw).hexdigest() != asset['sha256']:
+                raise ValueError('original bytes')
+            with Image.open(io.BytesIO(raw)) as image:
+                if (image.format != {'image/png':'PNG','image/jpeg':'JPEG','image/webp':'WEBP'}[asset['media_type']]
+                        or image.width*image.height > 32_000_000 or getattr(image,'n_frames',1) != 1):
+                    raise ValueError('static bounded raster required')
+                image.verify()
+        except (ValueError,TypeError,OSError,Image.DecompressionBombError) as exc:
+            raise VideoEditingError('VISUAL_ASSET_INTEGRITY_FAILED') from exc
+        asset_ids.add(asset['id'])
+    if type(value['layers']) is not list or not 1 <= len(value['layers']) <= 256:
+        raise VideoEditingError('VISUAL_LAYERS_INVALID')
+    common = {'id','kind','name','x','y','width','height','rotation','opacity','visible','locked'}
+    specifics = {'text':{'text','font_size','color','align','line_height'},
+                 'rectangle':{'fill','stroke','stroke_width'},'ellipse':{'fill','stroke','stroke_width'},
+                 'image':{'asset_id','fit'}}
+    ids = set()
+    for layer in value['layers']:
+        if (type(layer) is not dict or not isinstance(layer.get('kind'),str) or layer['kind'] not in specifics
+                or set(layer) != common|specifics[layer['kind']]
+                or not isinstance(layer['id'],str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',layer['id']) or layer['id'] in ids
+                or not isinstance(layer['name'],str) or len(layer['name']) > 160
+                or type(layer['visible']) is not bool or type(layer['locked']) is not bool):
+            raise VideoEditingError('VISUAL_LAYER_INVALID')
+        for key,minimum,maximum in [('x',-16384,16384),('y',-16384,16384),('width',1,16384),
+                                    ('height',1,16384),('rotation',-360,360),('opacity',0,1)]:
+            number = layer[key]
+            if type(number) not in (int,float) or not math.isfinite(number) or not minimum <= number <= maximum:
+                raise VideoEditingError('VISUAL_GEOMETRY_INVALID')
+        # A single off-canvas tile must not evade the canvas memory budget.
+        if layer['width']*layer['height'] > 32_000_000:
+            raise VideoEditingError('VISUAL_LAYER_RESOURCE_BUDGET')
+        if layer['kind'] == 'text':
+            _copy_text(layer['text'],64000)
+            if (type(layer['font_size']) not in (int,float) or not 1 <= layer['font_size'] <= 1024
+                    or type(layer['line_height']) not in (int,float) or not 1 <= layer['line_height'] <= 3
+                    or not isinstance(layer['align'],str) or layer['align'] not in {'left','center','right'} or not color(layer['color'])):
+                raise VideoEditingError('VISUAL_TYPOGRAPHY_INVALID')
+        elif layer['kind'] == 'image':
+            if (not isinstance(layer['asset_id'],str) or layer['asset_id'] not in asset_ids
+                    or not isinstance(layer['fit'],str) or layer['fit'] not in {'contain','cover','stretch'}):
+                raise VideoEditingError('VISUAL_IMAGE_BINDING_INVALID')
+        elif (not color(layer['fill']) or not color(layer['stroke'])
+              or type(layer['stroke_width']) not in (int,float) or not 0 <= layer['stroke_width'] <= 256):
+            raise VideoEditingError('VISUAL_SHAPE_STYLE_INVALID')
+        ids.add(layer['id'])
+    if previous is not None:
+        validate_visual_document(previous)
+        current = {item['id']:item for item in value['layers']}
+        current_assets = {item['id']:item['sha256'] for item in assets}
+        old_assets = {item['id']:item['sha256'] for item in previous['assets']}
+        for index,old in enumerate(previous['layers']):
+            new = current.get(old['id'])
+            if old['locked'] and (new is None or new['locked'] and (
+                    new != old or value['layers'].index(new) != index
+                    or old['kind'] == 'image' and current_assets.get(old['asset_id']) != old_assets[old['asset_id']])):
+                raise VideoEditingError('VISUAL_LAYER_LOCKED')
+    return deepcopy(value)
+
+
+def visual_document_markdown(value):
+    value = validate_visual_document(value)
+    return ('Editable visual document · user-authored, source rights not independently verified\n\n'
+            + '\n\n'.join(layer['text'] for layer in value['layers'] if layer['kind'] == 'text'))
+
+
+def export_visual_document(value, *, format, check_cancel=None):
+    """Local, literal PNG/SVG/PDF/PPTX; editable JSON remains the master."""
+    from PIL import Image, ImageDraw, ImageFont, ImageOps
+    from xml.etree import ElementTree as ET
+    value = validate_visual_document(value)
+    if format not in {'png','svg','pdf','pptx'}:
+        raise VideoEditingError('VISUAL_EXPORT_FORMAT_INVALID')
+    width,height = value['canvas']['width'],value['canvas']['height']
+    if not rendering.CAPTION_FONT.is_file():
+        raise VideoEditingError('VISUAL_FONT_UNAVAILABLE')
+    font_hash = hashlib.sha256(rendering.CAPTION_FONT.read_bytes()).hexdigest()
+    canvas = Image.new('RGBA',(width,height),value['canvas']['background'])
+    assets = {item['id']:item for item in value['assets']}
+    namespace = 'http://www.w3.org/2000/svg'
+    ET.register_namespace('',namespace)
+    tag = lambda name:'{'+namespace+'}'+name
+    svg = ET.Element(tag('svg'),{'width':str(width),'height':str(height),'viewBox':f'0 0 {width} {height}',
+        'version':'1.1'})
+    ET.SubElement(svg,tag('title')).text = 'Editable user-authored visual; rights and claims require review'
+    def rgba(value):
+        from PIL.ImageColor import getcolor
+        return getcolor(value,'RGBA')
+    def svg_color(value):
+        r,g,b,a = rgba(value)
+        return f'#{r:02x}{g:02x}{b:02x}',str(a/255)
+    bg,alpha = svg_color(value['canvas']['background'])
+    ET.SubElement(svg,tag('rect'),{'width':str(width),'height':str(height),'fill':bg,'fill-opacity':alpha})
+    pptx_layers = []
+    for layer in value['layers']:
+        _check(check_cancel)
+        w,h = max(1,round(layer['width'])),max(1,round(layer['height']))
+        tile = Image.new('RGBA',(w,h));draw = ImageDraw.Draw(tile)
+        group = ET.SubElement(svg,tag('g'),{'id':layer['id'],'data-name':layer['name'],
+            'data-locked':str(layer['locked']).lower(),'opacity':str(layer['opacity']),
+            'display':'inline' if layer['visible'] else 'none',
+            'transform':f"translate({layer['x']} {layer['y']}) rotate({layer['rotation']} {layer['width']/2} {layer['height']/2})"})
+        lines = None; canonical_image = None
+        if layer['kind'] == 'text':
+            rendering._verify_caption_glyphs(layer['text'])
+            font = ImageFont.truetype(str(rendering.CAPTION_FONT),max(1,round(layer['font_size'])))
+            lines = _wrap_copy(draw,layer['text'],font,w).split('\n')
+            ascent,descent = font.getmetrics(); step = (ascent+descent)*layer['line_height']
+            if len(lines)*step > h:
+                raise VideoEditingError('VISUAL_TEXT_OVERFLOW_REQUIRES_EDIT')
+            for index,line in enumerate(lines):
+                bounds = draw.textbbox((0,0),line,font=font)
+                text_width = bounds[2]-bounds[0]
+                if text_width > w:
+                    raise VideoEditingError('VISUAL_TEXT_OVERFLOW_REQUIRES_EDIT')
+                x = 0 if layer['align'] == 'left' else (w-text_width)/2 if layer['align'] == 'center' else w-text_width
+                draw.text((x,index*step-bounds[1]),line,font=font,fill=layer['color'])
+                fill,opacity = svg_color(layer['color'])
+                ET.SubElement(group,tag('text'),{'x':str(x),'y':str(index*step+ascent),
+                    'font-size':str(layer['font_size']),'font-family':font.getname()[0],
+                    'fill':fill,'fill-opacity':opacity,'xml:space':'preserve'}).text = line
+        elif layer['kind'] in {'rectangle','ellipse'}:
+            shape = draw.rectangle if layer['kind'] == 'rectangle' else draw.ellipse
+            stroke = round(layer['stroke_width'])
+            shape((0,0,w-1,h-1),fill=layer['fill'],outline=layer['stroke'] if stroke else None,width=max(1,stroke))
+            fill,fill_alpha = svg_color(layer['fill']);stroke_color,stroke_alpha = svg_color(layer['stroke'])
+            geometry = ({'x':'0','y':'0','width':str(layer['width']),'height':str(layer['height'])}
+                        if layer['kind'] == 'rectangle' else
+                        {'cx':str(layer['width']/2),'cy':str(layer['height']/2),'rx':str(layer['width']/2),'ry':str(layer['height']/2)})
+            ET.SubElement(group,tag('rect' if layer['kind'] == 'rectangle' else 'ellipse'),
+                {**geometry,'fill':fill,'fill-opacity':fill_alpha,'stroke':stroke_color,
+                 'stroke-opacity':stroke_alpha,'stroke-width':str(layer['stroke_width'])})
+        else:
+            raw = base64.b64decode(assets[layer['asset_id']]['data_base64'],validate=True)
+            with Image.open(io.BytesIO(raw)) as original:
+                original = ImageOps.exif_transpose(original).convert('RGBA')
+                image = (ImageOps.fit(original,(w,h),method=Image.Resampling.LANCZOS) if layer['fit'] == 'cover' else
+                         ImageOps.contain(original,(w,h),method=Image.Resampling.LANCZOS) if layer['fit'] == 'contain' else
+                         original.resize((w,h),Image.Resampling.LANCZOS))
+                tile.alpha_composite(image,((w-image.width)//2,(h-image.height)//2))
+            buffer = io.BytesIO();tile.save(buffer,format='PNG');canonical_image = buffer.getvalue()
+            ET.SubElement(group,tag('image'),{'width':str(layer['width']),'height':str(layer['height']),
+                'href':'data:image/png;base64,'+base64.b64encode(canonical_image).decode('ascii')})
+        pptx_layers.append((layer,lines,canonical_image))
+        if not layer['visible']:
+            continue
+        if layer['opacity'] != 1:
+            tile.putalpha(tile.getchannel('A').point(lambda number:round(number*layer['opacity'])))
+        rotated = tile.rotate(-layer['rotation'],resample=Image.Resampling.BICUBIC,expand=True)
+        canvas.alpha_composite(rotated,(round(layer['x']+(w-rotated.width)/2),round(layer['y']+(h-rotated.height)/2)))
+    _check(check_cancel)
+    if hashlib.sha256(rendering.CAPTION_FONT.read_bytes()).hexdigest() != font_hash:
+        raise VideoEditingError('VISUAL_FONT_CHANGED')
+    if format == 'svg':
+        return ET.tostring(svg,encoding='utf-8',xml_declaration=True)
+    output = io.BytesIO()
+    if format == 'pptx':
+        from pptx import Presentation
+        from pptx.util import Emu,Pt
+        from pptx.enum.shapes import MSO_SHAPE
+        from pptx.enum.text import PP_ALIGN,MSO_AUTO_SIZE
+        from pptx.dml.color import RGBColor
+        from pptx.oxml.xmlchemy import OxmlElement
+        presentation = Presentation();presentation.slide_width = Emu(width*9525);presentation.slide_height = Emu(height*9525)
+        slide = presentation.slides.add_slide(presentation.slide_layouts[6])
+        slide.background.fill.solid();slide.background.fill.fore_color.rgb = RGBColor.from_string(bg[1:])
+        def set_color(color_format,color_value,opacity):
+            red,green,blue,alpha = rgba(color_value);color_format.rgb = RGBColor(red,green,blue)
+            element = color_format._xFill.srgbClr
+            alpha_element = OxmlElement('a:alpha');alpha_element.set('val',str(round(alpha/255*opacity*100000)))
+            element.append(alpha_element)
+        for layer,lines,image in pptx_layers:
+            left,top,w,h = [Emu(round(layer[key]*9525)) for key in ('x','y','width','height')]
+            if layer['kind'] == 'image':
+                shape = slide.shapes.add_picture(io.BytesIO(image),left,top,width=w,height=h)
+                alpha = OxmlElement('a:alphaModFix');alpha.set('amt',str(round(layer['opacity']*100000)))
+                shape._element.blipFill.blip.append(alpha)
+            elif layer['kind'] == 'text':
+                shape = slide.shapes.add_textbox(left,top,w,h);text_frame = shape.text_frame
+                text_frame.auto_size = MSO_AUTO_SIZE.NONE;text_frame.word_wrap = False
+                text_frame.margin_left = text_frame.margin_right = text_frame.margin_top = text_frame.margin_bottom = 0
+                for index,line in enumerate(lines):
+                    paragraph = text_frame.paragraphs[0] if index == 0 else text_frame.add_paragraph()
+                    paragraph.text = line;paragraph.font.name = font.getname()[0]
+                    paragraph.font.size = Pt(layer['font_size']*.75)
+                    paragraph.line_spacing = layer['line_height'];paragraph.space_after = Pt(0)
+                    paragraph.alignment = {'left':PP_ALIGN.LEFT,'center':PP_ALIGN.CENTER,'right':PP_ALIGN.RIGHT}[layer['align']]
+                    set_color(paragraph.font.color,layer['color'],layer['opacity'])
+            else:
+                shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE if layer['kind'] == 'rectangle' else MSO_SHAPE.OVAL,left,top,w,h)
+                shape.fill.solid();set_color(shape.fill.fore_color,layer['fill'],layer['opacity'])
+                if layer['stroke_width']:
+                    shape.line.width = Pt(layer['stroke_width']*.75);set_color(shape.line.color,layer['stroke'],layer['opacity'])
+                else:
+                    shape.line.fill.background()
+            shape.name = layer['name'];shape.rotation = layer['rotation']%360
+            shape._element.nvSpPr.cNvPr.set('hidden','1' if not layer['visible'] else '0') if layer['kind'] != 'image' else shape._element.nvPicPr.cNvPr.set('hidden','1' if not layer['visible'] else '0')
+        presentation.save(output)
+    elif format == 'png':
+        canvas.save(output,format='PNG')
+    else:
+        flattened = Image.new('RGB',canvas.size,'white');flattened.paste(canvas,mask=canvas.getchannel('A'))
+        flattened.save(output,format='PDF',resolution=96,title='User-authored visual document')
+    return output.getvalue()
 
 
 MAX_EXCERPT_SECONDS = 180.0

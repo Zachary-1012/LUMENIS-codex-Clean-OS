@@ -10,6 +10,26 @@ import 'package:lumenis_app/features/bmp01/bmp01_snapshot.dart';
 
 void main() {
   testWidgets(
+    'brand work navigation remains usable when market data is unavailable',
+    (tester) async {
+      final repository = _FakeRepository(_notCollectedSnapshot);
+      final opened = <String>[];
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(repository, onNavigate: opened.add));
+      await tester.pumpAndSettle();
+      for (final screen in ['BMP-02', 'BMP-06', 'BMP-08', 'BMP-09']) {
+        await tester.tap(find.byKey(ValueKey('bmp01-open-$screen')));
+        await tester.pump();
+      }
+      expect(opened, ['BMP-02', 'BMP-06', 'BMP-08', 'BMP-09']);
+      expect(repository.calls, 1);
+      expect(find.text('99999'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'desktop keeps brand context beside market information and hides unscoped aggregates',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1440, 1000));
@@ -421,6 +441,7 @@ void _expectNoAuthOrNetworkAdvice(
 Widget _app(
   Bmp01Repository repository, {
   Locale locale = const Locale('zh', 'CN'),
+  ValueChanged<String>? onNavigate,
 }) {
   return MaterialApp(
     theme: LumenisTheme.dark,
@@ -433,7 +454,11 @@ Widget _app(
       GlobalCupertinoLocalizations.delegate,
     ],
     home: Scaffold(
-      body: Bmp01Screen(client: LumenisCoreClient(), repository: repository),
+      body: Bmp01Screen(
+        client: LumenisCoreClient(),
+        repository: repository,
+        onNavigate: onNavigate,
+      ),
     ),
   );
 }

@@ -224,36 +224,64 @@ class _ReadAloudActionState extends State<ReadAloudAction>
             children: [
               Text(labels['title']!),
               Text(labels['locale']!),
-              DropdownButton<ReadAloudLocale>(
-                key: const ValueKey('read-aloud/locale'),
-                value: _locale,
-                onChanged: (value) {
-                  if (value != null) unawaited(_selectLocale(value));
-                },
-                items: ReadAloudLocale.values
-                    .map(
-                      (locale) => DropdownMenuItem(
-                        value: locale,
-                        child: Text(labels['locale.${locale.name}']!),
-                      ),
-                    )
-                    .toList(growable: false),
+              SizedBox(
+                width: 220,
+                child: DropdownButton<ReadAloudLocale>(
+                  key: const ValueKey('read-aloud/locale'),
+                  isExpanded: true,
+                  itemHeight: null,
+                  value: _locale,
+                  selectedItemBuilder: (_) => ReadAloudLocale.values
+                      .map(
+                        (locale) => Text(
+                          labels['locale.${locale.name}']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    if (value != null) unawaited(_selectLocale(value));
+                  },
+                  items: ReadAloudLocale.values
+                      .map(
+                        (locale) => DropdownMenuItem(
+                          value: locale,
+                          child: Text(labels['locale.${locale.name}']!),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
               ),
               Text(labels['rate']!),
-              DropdownButton<ReadAloudRate>(
-                key: const ValueKey('read-aloud/rate'),
-                value: _rate,
-                onChanged: (value) {
-                  if (value != null) unawaited(_selectRate(value));
-                },
-                items: ReadAloudRate.values
-                    .map(
-                      (rate) => DropdownMenuItem(
-                        value: rate,
-                        child: Text(labels['rate.${rate.name}']!),
-                      ),
-                    )
-                    .toList(growable: false),
+              SizedBox(
+                width: 140,
+                child: DropdownButton<ReadAloudRate>(
+                  key: const ValueKey('read-aloud/rate'),
+                  isExpanded: true,
+                  itemHeight: null,
+                  value: _rate,
+                  selectedItemBuilder: (_) => ReadAloudRate.values
+                      .map(
+                        (rate) => Text(
+                          labels['rate.${rate.name}']!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: (value) {
+                    if (value != null) unawaited(_selectRate(value));
+                  },
+                  items: ReadAloudRate.values
+                      .map(
+                        (rate) => DropdownMenuItem(
+                          value: rate,
+                          child: Text(labels['rate.${rate.name}']!),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
               ),
               TextButton.icon(
                 key: const ValueKey('read-aloud/toggle'),

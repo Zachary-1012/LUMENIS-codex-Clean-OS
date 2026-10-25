@@ -51,6 +51,53 @@ class AuditInventoryTests(unittest.TestCase):
         for path in paths:
             self.assertTrue(database.find_direct_sqlite_calls(path.read_text(), str(path)))
 
+    def test_only_root_flutter_build_output_is_pruned_before_descent(self):
+        generated = self.root / "app/build"
+        self.write("app/build/native-bundle-runtime-deps/third_party/runtime.py", "not Python")
+        self.write("app/build/distribution/runtime.py", "not Python")
+        included = [self.write(name) for name in (
+            "app/tool/package_runtime.py", "app/tool/build/runtime.py",
+            "lumenis/build/runtime.py", "build/runtime.py",
+            "nested/app/build/runtime.py", "app/building/runtime.py",
+        )]
+        real_scandir = product.os.scandir
+
+        def scoped_scandir(path):
+            if Path(path) == generated or generated in Path(path).parents:
+                self.fail("generated Flutter output was traversed")
+            return real_scandir(path)
+
+        with patch.object(product.os, "scandir", scoped_scandir):
+            self.assertEqual(set(product.production_python_files(self.root)), set(included))
+
+    def test_tracked_python_cannot_hide_in_generated_flutter_output(self):
+        for path in ("app/build/owner.py", "app\\build\\distribution\\owner.py"):
+            with self.subTest(path=path):
+                self.assertTrue(any(
+                    "tracked Python source in generated app/build" in error
+                    for error in product.tracked_path_errors([path])
+                ))
+        self.assertEqual(product.tracked_path_errors([
+            "app/tool/build/owner.py", "lumenis/build/owner.py",
+            "nested/app/build/owner.py", "app/building/owner.py",
+        ]), [])
+
+    def test_flutter_tool_and_nested_build_access_errors_stay_blocking(self):
+        included_dirs = (self.root / "app/tool", self.root / "lumenis/build")
+        for directory in included_dirs:
+            self.write(f"{directory.relative_to(self.root).as_posix()}/runtime.py")
+        real_scandir = product.os.scandir
+        for denied in included_dirs:
+            def denied_scandir(path, denied=denied):
+                if Path(path) == denied:
+                    raise PermissionError("included path unreadable")
+                return real_scandir(path)
+
+            with self.subTest(path=denied), patch.object(
+                product.os, "scandir", denied_scandir
+            ), self.assertRaises(PermissionError):
+                product.production_python_files(self.root)
+
     def test_real_duplicate_contract_remains_blocking_even_under_nested_work(self):
         canonical = self.write("00-GOVERNANCE/" + governance.CONTRACT_BASENAME, "{}")
         self.write("work/candidate/00-GOVERNANCE/" + governance.CONTRACT_BASENAME, "{}")

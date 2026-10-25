@@ -684,6 +684,7 @@ final class _PitchClient extends LumenisCoreClient {
     required InternalPitchManuscript manuscript,
     required String requestId,
     InternalPitchRevision? revision,
+    List<Map<String, dynamic>> citations = const [],
   }) async {
     final call = _PrepareCall(
       scope: scope,

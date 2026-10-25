@@ -54,7 +54,7 @@ def build_cover_files(asset: MediaAsset, *, audience: str, industry: str, visual
         scene_log = _run([ffmpeg, '-v', 'info', '-nostdin', '-threads', '1',
             '-protocol_whitelist', 'file', '-format_whitelist', MEDIA_INPUT_DEMUXERS,
             '-i', asset.path, '-t', str(scan_duration), '-an', '-vf',
-            "scale=160:90,select='gt(scene,0.25)',showinfo", '-vsync', 'vfr',
+            "scale=160:90,select='gt(scene,0.25)',showinfo", '-fps_mode', 'vfr',
             '-frames:v', '24', '-f', 'null', '-'], cwd=work, timeout=60, check_continue=check_cancel)
         scene_times = sorted({float(x) for x in re.findall(r'pts_time:([0-9.eE+-]+)', scene_log)
                               if 0 <= float(x) < scan_duration})

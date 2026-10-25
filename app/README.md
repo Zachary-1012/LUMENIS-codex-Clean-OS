@@ -153,17 +153,14 @@ user workflows require their own environment-specific verification.
 
 ### Windows build path｜Windows 构建路径
 
-If the local MSVC/Flutter toolchain cannot handle the Unicode checkout path,
-use an unused, verified `subst` drive mapped to this same checkout, then build
-from its `app/` directory. Do not overwrite an existing mapping or create a
-second repository/data directory. CMake caches retain their path; re-establish
-the same mapping for a later incremental build. Build output remains under the
-canonical checkout's `app/build/` directory.
+Use the existing [`tool/build_windows.ps1`](tool/build_windows.ps1) entry and
+the Windows instructions below. Its verified ASCII junction addresses Unicode
+compiler paths while keeping the same checkout and data ownership. Build output
+remains under the canonical checkout's `app/build/` directory.
 
-如果本机 MSVC/Flutter 工具链无法处理 Unicode 仓库路径，可使用一个未占用且核验
-过的 `subst` 驱动器映射到同一仓库，再从映射下的 `app/` 目录构建。不得覆盖已有
-映射，也不得创建第二份仓库或数据目录。CMake 缓存会保留构建路径，后续增量构建
-须重新建立同一映射。构建产物仍位于规范仓库的 `app/build/` 下。
+使用既有 [`tool/build_windows.ps1`](tool/build_windows.ps1) 入口和下方 Windows
+说明。入口通过经校验的英文目录联接处理编译器的 Unicode 路径问题，保留同一份
+仓库和数据归属。构建产物仍位于规范仓库的 `app/build/` 下。
 
 ## Shared media playback｜Shared 媒体播放
 
@@ -248,13 +245,42 @@ macOS，原生移动目标为 iOS。浏览器访问不受客户端操作系统�
 ### Windows paths｜Windows 中文路径构建
 
 From the repository root, use PowerShell 7.2+ and the installed, version-matched
-Flutter SDK in an ASCII path:
+Flutter SDK in an ASCII path. For a Windows portable bundle, build Web first,
+then Windows, using the same explicit authorized loopback Core URL and Python
+executable. Replace the SDK path and choose the authorized port for the bundle:
 
 ```powershell
-pwsh -NoProfile -File app/tool/build_windows.ps1 -FlutterSdk '<installed Flutter SDK>'
+$flutterSdk = '<installed Flutter SDK>'
+$python = (Resolve-Path .venv/Scripts/python.exe).Path
+$coreUrl = 'http://127.0.0.1:58724'
+$projectAlias = '<existing verified ASCII app path>'
+
+pwsh -NoProfile -File app/tool/build_windows.ps1 -BuildWeb `
+  -FlutterSdk $flutterSdk -PythonExecutable $python -CoreBaseUrl $coreUrl `
+  -ProjectAlias $projectAlias
+
+pwsh -NoProfile -File app/tool/build_windows.ps1 `
+  -FlutterSdk $flutterSdk -PythonExecutable $python `
+  -CoreBaseUrl $coreUrl -AppCoreBaseUrl $coreUrl -ProjectAlias $projectAlias
 ```
 
-This entry builds the same `app/` through a verified ASCII directory junction
+`-BuildWeb` invokes `flutter build web --release --no-pub`; the Windows entry
+invokes `flutter build windows --release --no-pub`. Both pass the explicit
+`LUMENIS_CORE_BASE_URL` Dart define. Build one target at a time. These commands
+compile files; they do not start or reuse a running Core.
+
+Both successful builds write `verified-web.json` and `verified-windows.json`
+under `app/build/native-build-receipts/`. The receipts bind the actual build
+arguments, shared app sources, locked dependency inputs, Flutter toolchain and
+complete output hashes. Bundle assembly requires matching source snapshots and
+Core endpoints and rechecks both outputs. Matching version numbers alone do not
+qualify; a raw `flutter build` does not create these bundle receipts. Rebuild
+through this entry after changing app sources, dependencies or build settings.
+Backend-only or governance changes do not change the shared app source identity.
+Asset and font manifests, declared assets, custom fonts and Material Icons must
+also exist with valid bundled bytes before a verified receipt can be issued.
+
+The Windows entry builds the same `app/` through a verified ASCII directory junction
 under the current user's local application data. It prevents narrow-argument
 encoding failures in `gen_snapshot` without relocating source or changing the
 SDK, Windows language, drive mappings or user environment. `-AliasRoot` can
@@ -263,18 +289,79 @@ refused. Use this entry consistently and do not run concurrent Flutter builds
 against the same app. Required dependencies must already be installed; the
 command uses `--no-pub`.
 
+If the toolchain needs an already mapped ASCII app path for native plugin
+links, pass `-ProjectAlias '<existing mapped app path>'`. Directory-handle
+identity must match this exact checkout; an identical source copy is refused.
+The helper neither creates nor removes drive mappings.
+Use the same alias for Web and Windows. If no existing mapped path is needed,
+omit `-ProjectAlias` from both commands to use the same default junction. When
+the Web output spelling changes, only the generated last-build marker is
+archived; source assets and prior build outputs are not deleted by the helper.
+
 When the build path changes, only generated CMake cache metadata and Flutter's
 last-output marker are archived. Logs, actual exit codes, archived paths and
 the executable hash are saved in ignored `build/native-build-receipts/`.
 The executable remains `build/windows/x64/runner/Release/lumenis_app.exe`.
 Preserve its neighboring DLLs and `data/` when running or packaging it.
 
-在仓库根目录使用上述入口，并指定版本匹配且位于英文路径的 Flutter SDK。
+制作 Windows 可移植包时，在仓库根目录依次执行上述 Web、Windows 构建命令，
+指定同一个获准的 loopback Core 地址、Python 和版本匹配且位于英文路径的
+Flutter SDK。示例中的 SDK 路径和端口须按实际授权配置替换。两个目标均使用
+release、`--no-pub` 和显式 `LUMENIS_CORE_BASE_URL`，不可并发构建；命令只编译
+文件，不启动或复用运行中的 Core。
+
+构建成功后，`app/build/native-build-receipts/` 中生成 `verified-web.json` 和
+`verified-windows.json`，绑定实际构建参数、共享应用源码、锁定依赖输入、Flutter
+工具链和完整产物哈希。组装时须满足同源码快照、同 Core 地址，并重新核对两套
+产物；版本号相同不能代替这些核对。直接运行 `flutter build` 不生成这类打包
+收据。应用源码、依赖或构建配置改变后，须通过此入口重新构建；仅后端或治理
+文件改变不会改变共享应用源码身份。
+签发收据前还会核对资产与字体清单、声明的素材、自定义字体和 Material Icons
+实际存在且包内字节有效，缺资源不能仅凭编译退出码记为构建有效。
+
 入口通过经校验的英文目录联接访问同一份源码，处理原生编译器的中文参数转码
 问题；不会迁移工程或修改 SDK、系统语言、盘符映射和用户环境变量。
 构建路径变化时，仅归档生成缓存和上次输出标记；日志、真实退出码和产物哈希
 保存在 `build/native-build-receipts/`。同一应用不可并发构建。
 构建成功与实际界面、业务流程验收分别记录。
+
+如原生插件链接要求使用已有英文映射路径，可传入
+`-ProjectAlias '<已有映射中的 app 路径>'`。入口通过目录句柄核对它确实指向同一份
+工程，拒绝内容相同的另一份源码副本；不会创建、删除或更改盘符映射。
+Web 和 Windows 必须使用同一映射路径；无需显式映射时，从两条命令同时省略
+`-ProjectAlias`，使用相同的默认联接。Web 输出路径写法改变时，只归档生成的
+上次构建标记；入口不删除源码素材或已有构建产物。
+
+After both receipts are valid, the same entry's `-BundleOnly` mode assembles the
+existing build without invoking Flutter. Supply an explicit new `-BundleOutput`,
+the same `-CoreBaseUrl` and `-AppCoreBaseUrl`, and the selected installed
+`-PythonExecutable`, `-PythonSitePackages`, `-MediaDirectory`, `-MediaNotices`,
+`-VCRuntimeDirectory` and `-VCRuntimeNotices`. An in-project output must be a new
+ignored `app/build/distribution/OEVIRA-<version>` directory. Existing output is
+refused. The package includes Core, Web, the Windows runner, Python and selected
+dependencies, FFmpeg, the release CRT and their recorded notices; it is a portable
+bundle, not an installer or a redistribution-clearance decision.
+
+Launch the package with `Start-OEVIRA.cmd`. To select a data root explicitly, use
+its `core/scripts/start_production.ps1 -DesktopBundle -DataRoot <absolute-path>`.
+The default is `%LOCALAPPDATA%/OEVIRA/UserData`, outside the package. An existing
+nonempty unmarked root requires deliberate `-AdoptExistingDataRoot` adoption;
+initialization preserves existing databases. No developer database, credential
+or personal configuration is included. Startup refuses an occupied bundle port.
+
+两份收据有效后，使用同一入口的 `-BundleOnly` 组装现有产物，不再调用 Flutter。
+须显式提供新的 `-BundleOutput`、相同的 `-CoreBaseUrl` 与 `-AppCoreBaseUrl`，以及
+选定的已安装 Python、依赖目录、媒体目录、发行版 CRT 和各自许可原文，对应参数
+为上文列出的 `-PythonExecutable` 至 `-VCRuntimeNotices`。项目内输出只允许新的、
+已忽略的 `app/build/distribution/OEVIRA-<version>` 目录，拒绝覆盖已有输出。包内
+包含 Core、Web、Windows 程序、Python 与选定依赖、FFmpeg、发行版 CRT 及许可
+记录；这是可移植包，不是安装器，也不代表已获公开再分发许可。
+
+使用包内 `Start-OEVIRA.cmd` 启动；显式选数据根时，使用包内
+`core/scripts/start_production.ps1 -DesktopBundle -DataRoot <绝对路径>`。默认数据
+根为包外 `%LOCALAPPDATA%/OEVIRA/UserData`。已有非空且无归属标记的数据根须
+明确使用 `-AdoptExistingDataRoot` 接管，初始化保留已有数据库。包内不携带开发者
+数据库、凭据或个人配置；启动时若指定端口已被占用，会拒绝启动。
 
 ## External references and license boundaries｜外部参考与许可边界
 

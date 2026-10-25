@@ -200,4 +200,113 @@ def test_business_work_http_permission_mapping_keeps_shared_save_at_data_export(
     work_id = "work-" + "a" * 64
     assert resolve(f"{BUSINESS}/{work_id}/save-request", "POST") == OperationType.DATA_EXPORT
     assert resolve(f"{BUSINESS}/{work_id}/save", "POST") == OperationType.DATA_EXPORT
+    assert resolve(f"{BUSINESS}/{work_id}/save-confirm", "POST") == OperationType.DATA_EXPORT
     assert resolve(f"{BUSINESS}/{work_id}/adopt", "POST") == OperationType.REPORT_REVIEW
+    assert resolve(f"{BUSINESS}/{work_id}/manual_action", "POST") == OperationType.REPORT_REVIEW
+    assert resolve(f"{BUSINESS}/{work_id}/observation", "POST") == OperationType.REPORT_REVIEW
+
+
+def test_business_index_and_exact_user_save_confirmation(owners):
+    from lumenis.system.security import permission
+    ws = owners
+    current = prepare_business(ws)
+    current = advance(ws, current, "choose", {"option_id": "A", "reason": "Review the original source.",
+        "owner": "Consenting operator", "review_at": "2026-10-25T12:00:00+08:00"}, "choose-ui-save-01")
+    listed = ws["api"].get(BUSINESS, headers=ws["headers"])
+    assert listed.status_code == 200
+    assert listed.get_json()["result"]["items"][0]["work_id"] == current["work_id"]
+    citations = [item["citation"] for item in current["citation_candidates"]["items"]]
+    body = {"request_id": "business-ui-save-01", "expected_revision": current["revision"], "citations": citations}
+    path = BUSINESS + "/" + current["work_id"]
+    prepared = ws["api"].post(path + "/save-request", headers=ws["headers"], json=body)
+    assert prepared.status_code == 200, prepared.get_json()
+    resource = prepared.get_json()["result"]["resource"]
+    ws["gate"].grant_permission(permission.PermissionLevel.HUMAN_APPROVAL)
+    assert ws["api"].post(path + "/save-confirm", headers=ws["headers"], json={**body,
+        "confirm": True, "confirmed_resource": resource + "-changed"}).status_code == 403
+    assert ws["api"].post(path + "/save-confirm", headers={**ws["headers"], "Origin": "https://foreign.invalid"},
+        json={**body, "confirm": True, "confirmed_resource": resource}).status_code == 403
+    confirmed = {**body, "confirm": True, "confirmed_resource": resource}
+    saved = ws["api"].post(path + "/save-confirm", headers=ws["headers"], json=confirmed)
+    assert saved.status_code == 200, saved.get_json()
+    artifact = saved.get_json()["result"]["saved_work"]["artifact"]
+    replay = ws["api"].post(path + "/save-confirm", headers=ws["headers"], json=confirmed)
+    assert replay.status_code == 200, replay.get_json()
+    assert replay.get_json()["result"]["saved_work"]["artifact"] == artifact
+    reopened = ws["api"].get(path, headers=ws["headers"])
+    assert reopened.get_json()["result"]["saved_results"]["latest"]["artifact_id"] == artifact["artifact_id"]
+    assert ws["api"].get(BUSINESS, headers=GLOBAL).status_code == 403
+
+
+def test_actual_source_rights_withdrawal_forbids_read_decision_and_save_request(owners):
+    from lumenis.shared.database import get_repository
+    from tests.test_business_domain_analysis_candidate import (
+        _revoke_current_source_rights,
+    )
+
+    ws = owners
+    current = prepare_business(ws)
+    current = advance(ws, current, "choose", {
+        "option_id": "A", "reason": "Review the permitted source first.",
+        "owner": "Consenting operator", "review_at": "2026-10-25T12:00:00+08:00",
+    }, "choose-before-rights-withdrawal")
+    path = BUSINESS + "/" + current["work_id"]
+    citations = [item["citation"] for item in current["citation_candidates"]["items"]]
+    assert ws["api"].get(path, headers=ws["headers"]).status_code == 200
+    with sqlite3.connect(ws["db"]) as connection:
+        before = connection.execute(
+            "SELECT COUNT(*) FROM app_evidence_records WHERE feature_id='CTH_BMP_DECISION_WORK'",
+        ).fetchone()[0]
+    # Reuse the domain regression's real, re-signed Evidence rights revocation.
+    # No exception/route/authorization owner is mocked by this test.
+    _revoke_current_source_rights({"repo": get_repository()}, {
+        "content_evidence_id": citations[0]["evidence_id"],
+    })
+    responses = [
+        ws["api"].get(path, headers=ws["headers"]),
+        ws["api"].post(path + "/choose", headers=ws["headers"], json={
+            "submission_id": "choose-after-rights-withdrawal", "expected_revision": current["revision"],
+            "payload": {"option_id": "B", "reason": "Cannot reuse a withdrawn source.",
+                        "owner": "Consenting operator", "review_at": "2026-10-25T12:00:00+08:00"},
+        }),
+        ws["api"].post(path + "/save-request", headers=ws["headers"], json={
+            "request_id": "save-after-rights-withdrawal", "expected_revision": current["revision"],
+            "citations": citations,
+        }),
+    ]
+    for response in responses:
+        assert response.status_code == 403, response.get_json()
+        assert response.get_json() == {
+            "ok": False, "code": "WORK_SOURCE_RIGHTS_UNVERIFIED", "publish_status": "not_performed",
+        }
+        assert response.headers["Cache-Control"] == "no-store"
+    with sqlite3.connect(ws["db"]) as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM app_evidence_records WHERE feature_id='CTH_BMP_DECISION_WORK'",
+        ).fetchone()[0] == before
+
+
+@pytest.mark.parametrize(("code", "expected_status"), [
+    ("WORK_PERMISSION_DENIED", 403),
+    ("WORK_PERMISSION_UNVERIFIED", 403),
+    ("WORK_EFFECT_PERMISSION_DENIED", 403),
+    ("WORK_SOURCE_AUTHORIZATION_REQUIRED", 403),
+    ("WORK_SOURCE_RIGHTS_UNVERIFIED", 403),
+    ("WORK_SOURCE_ADOPTION_INVALID", 400),
+    ("WORK_SOURCE_ADOPTION_REQUIRED", 400),
+    ("BUSINESS_WORK_SOURCE_MATERIAL_REQUIRED", 400),
+])
+def test_business_error_mapping_distinguishes_permission_from_source_input(code, expected_status):
+    from flask import Flask
+
+    from lumenis.shared.reporting.saved_work import SavedWorkError
+    from lumenis_app_api import _business_work_response
+
+    def fail():
+        raise SavedWorkError(code)
+
+    with Flask(__name__).app_context():
+        response, status = _business_work_response(fail)
+    assert status == expected_status
+    assert response.get_json()["code"] == code
+    assert response.headers["Cache-Control"] == "no-store"

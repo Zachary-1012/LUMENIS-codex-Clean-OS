@@ -13,6 +13,7 @@ Future<LumenisTransportResponse> sendLumenisHttpRequest(
   LumenisTransportRequest request,
 ) async {
   request.validateBody();
+  if (request.upload != null) return _sendFile(request);
   final client = http.Client();
   try {
     final outgoing = http.Request(request.method, request.uri)
@@ -37,6 +38,61 @@ Future<LumenisTransportResponse> sendLumenisHttpRequest(
     throw LumenisTransportException(error.toString());
   } finally {
     client.close();
+  }
+}
+
+Future<LumenisTransportResponse> _sendFile(
+  LumenisTransportRequest request,
+) async {
+  final upload = request.upload!;
+  final uri = upload.browserBlobUri;
+  if (uri == null ||
+      uri.scheme != 'blob' ||
+      !uri.toString().startsWith('blob:${web.window.location.origin}/')) {
+    throw const LumenisTransportException(
+      'The selected browser file is unavailable.',
+    );
+  }
+  final abort = web.AbortController();
+  final timer = Timer(request.connectionTimeout, () => abort.abort());
+  try {
+    final local = await web.window
+        .fetch(uri.toString().toJS, web.RequestInit(signal: abort.signal))
+        .toDart;
+    if (!local.ok) {
+      throw const LumenisTransportException(
+        'The selected file could not be read.',
+      );
+    }
+    final blob = await local.blob().toDart;
+    if (blob.size != upload.length) {
+      throw const LumenisTransportException('The selected file changed.');
+    }
+    final headers = web.Headers();
+    request.headers.forEach((name, value) => headers.set(name, value));
+    final response = await web.window
+        .fetch(
+          request.uri.toString().toJS,
+          web.RequestInit(
+            method: request.method,
+            headers: headers,
+            body: blob,
+            redirect: 'error',
+            credentials: 'same-origin',
+            signal: abort.signal,
+          ),
+        )
+        .toDart;
+    return LumenisTransportResponse(
+      statusCode: response.status,
+      body: await response.text().toDart.then((value) => value.toDart),
+    );
+  } catch (_) {
+    throw const LumenisTransportException(
+      'File transfer interrupted; completion is unknown.',
+    );
+  } finally {
+    timer.cancel();
   }
 }
 

@@ -1,16 +1,121 @@
 """Bounded renderer contracts; synthetic timing checks are not user E2E."""
 import array
-from dataclasses import replace
 import json
-from pathlib import Path
 import struct
 import subprocess
 import sys
+from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
 from lumenis.shared.content_creation import rendering, video_editing
-from lumenis.shared.content_creation.video_editing import AudioMix, Timeline, VideoEditingError
+from lumenis.shared.content_creation.video_editing import (
+    AudioMix,
+    Timeline,
+    VideoEditingError,
+)
+
+
+@pytest.mark.parametrize("opacity", [1.0, .5])
+def test_real_layer_composite_retains_positions_alpha_and_gap(tmp_path, monkeypatch, opacity):
+    from lumenis.shared.content_creation.video_editing import VideoPlacement
+    from shared_artifacts import _ffmpeg_path
+
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg or not video_editing._ffprobe_path():
+        pytest.skip("layer pixel contract requires installed encoders")
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(tmp_path))
+    assets = []
+    for color in ("red", "blue"):
+        source = tmp_path / f"{color}.mp4"
+        subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-n", "-f", "lavfi", "-i",
+                        f"color=c={color}:s=160x90:r=30:d=5", "-c:v", "libx264", "-threads:v", "1",
+                        "-pix_fmt", "yuv420p", str(source)], check=True, capture_output=True, timeout=15)
+        assets.append(video_editing.fingerprint_local_media(str(source)))
+    timeline = Timeline.from_assets(assets, "16:9").add_clip(assets[0].asset_id, source_out=4, audio_role="muted")
+    timeline = timeline.add_video_track("inset").add_clip(assets[1].asset_id, track_id="inset",
+               source_out=2, timeline_start=1, audio_role="muted")
+    clip = timeline.tracks[-1].clips[0]
+    timeline = timeline.set_video_placement(clip.clip_id, VideoPlacement(.25, .25, .5, .5, opacity))
+    timeline = timeline.add_clip(assets[1].asset_id, track_id="inset", source_out=.5,
+                                  timeline_start=4.5, audio_role="muted")
+    reopened = Timeline.from_dict(timeline.to_dict(), assets=assets)
+    assert reopened.to_dict() == timeline.to_dict()
+    result = rendering.render_timeline(reopened, tmp_path / "layers.mp4")
+    assert result["measurement"]["video_frames"] == 150
+    assert result["composition"]["video_layers"] == 2
+    frames = subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-i", str(tmp_path / "layers.mp4"),
+        "-vf", "select='eq(n,15)+eq(n,45)+eq(n,105)+eq(n,130)+eq(n,145)',crop=16:16:(iw-16)/2:(ih-16)/2,scale=1:1",
+        "-fps_mode", "vfr", "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"],
+        capture_output=True, check=True, timeout=20).stdout
+    assert len(frames) == 15
+    before, during, after, gap, tail = [tuple(frames[i:i+3]) for i in range(0, 15, 3)]
+    assert before[0] > 220 and after[0] > 220 and before[2] < 20 and after[2] < 20
+    if opacity == 1:
+        assert during[2] > 220 and during[0] < 20
+    else:
+        assert 100 < during[0] < 155 and 100 < during[2] < 155
+    assert max(gap) < 15 and tail[2] > 220 and tail[0] < 20
+    assert not list(tmp_path.glob("timeline-render-*"))
+
+
+def test_free_layer_edit_keeps_source_positions_and_placement(media):
+    from lumenis.shared.content_creation.video_editing import VideoPlacement
+
+    timeline = Timeline.from_assets((media,)).add_video_track("detail")
+    timeline = timeline.add_clip(media.asset_id, source_in=2, source_out=5, track_id="detail",
+                                  timeline_start=3, audio_role="muted")
+    clip = timeline.tracks[-1].clips[0]
+    placed = timeline.set_video_placement(clip.clip_id, VideoPlacement(.1, .1, .5, .5, .8))
+    trimmed = placed.trim(clip.clip_id, source_in=2, source_out=4)
+    assert trimmed.tracks[-1].clips[0].timeline_start == 3
+    split = trimmed.split(clip.clip_id, at_sec=3)
+    assert [c.timeline_start for c in split.tracks[-1].clips] == [3, 4]
+    assert all(c.video_placement == placed.tracks[-1].clips[0].video_placement for c in split.tracks[-1].clips)
+    moved = split.move_video_clip(split.tracks[-1].clips[-1].clip_id, timeline_start=5)
+    assert [c.timeline_start for c in moved.tracks[-1].clips] == [3, 5]
+    assert moved.undo().tracks == split.tracks
+    with pytest.raises(VideoEditingError, match="VIDEO_PLACEMENT"):
+        VideoPlacement(.8, 0, .5, .5)
+
+
+@pytest.mark.parametrize("opacity", [1.0, .5])
+def test_real_transition_between_separate_placements_preserves_alpha(tmp_path, monkeypatch, opacity):
+    from lumenis.shared.content_creation.video_editing import VideoPlacement
+    from shared_artifacts import _ffmpeg_path
+
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg or not video_editing._ffprobe_path():
+        pytest.skip("transition pixels require installed encoders")
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(tmp_path))
+    monkeypatch.setitem(rendering.FRAME_SIZES, "16:9", (160, 90))
+    assets = []
+    for color in ("green", "red", "blue"):
+        source = tmp_path / f"{color}.mp4"
+        subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-n", "-f", "lavfi", "-i",
+                        f"color=c={color}:s=160x90:r=30:d=5", "-c:v", "libx264", "-threads:v", "1",
+                        "-pix_fmt", "yuv420p", str(source)], check=True, capture_output=True, timeout=15)
+        assets.append(video_editing.fingerprint_local_media(str(source)))
+    timeline = Timeline.from_assets(assets, "16:9").add_clip(assets[0].asset_id, source_out=4, audio_role="muted")
+    timeline = timeline.add_video_track("foreground")
+    for index, asset in enumerate(assets[1:]):
+        timeline = timeline.add_clip(asset.asset_id, track_id="foreground", source_in=1, source_out=3,
+                                     timeline_start=index * 2, audio_role="muted")
+        timeline = timeline.set_video_placement(timeline.tracks[-1].clips[-1].clip_id,
+            VideoPlacement(index * .5, .25, .5, .5, opacity))
+    first, second = timeline.tracks[-1].clips
+    timeline = timeline.add_transition(first.clip_id, second.clip_id, duration_sec=1, reason="spatial dissolve")
+    output = tmp_path / "transition.mp4"
+    rendering.render_timeline(timeline, output)
+    for x, channel in ((32, 0), (112, 2)):
+        pixel = subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-i", str(output), "-vf",
+            f"select='eq(n,60)',crop=16:16:{x}:36,scale=1:1", "-frames:v", "1", "-pix_fmt", "rgb24",
+            "-f", "rawvideo", "pipe:1"], check=True, capture_output=True, timeout=15).stdout
+        assert len(pixel) == 3
+        assert abs(pixel[channel] - 127 * opacity) < 22
+        assert abs(pixel[1] - 128 * (1 - opacity / 2)) < 22
+        assert pixel[2 - channel] < 22
 
 
 @pytest.fixture
@@ -61,14 +166,19 @@ def render_calls(monkeypatch, tmp_path):
 def test_long_video_encoder_has_programme_budget_and_keeps_cancel_callback(media, render_calls, tmp_path, monkeypatch):
     fixture_run = rendering._run
     final_calls = []
+    segment_calls = []
     def record_run(command, **kwargs):
         if Path(command[-1]).name == "media.mp4":
             final_calls.append(kwargs)
+        if Path(command[-1]).name.startswith("clip-"):
+            segment_calls.append((int(command[command.index("-frames:v") + 1]), kwargs))
         return fixture_run(command, **kwargs)
     monkeypatch.setattr(rendering, "_run", record_run)
+    monkeypatch.setattr(video_editing, "_probe_media_info", lambda _: video_editing._MediaProbe(600, True, 2))
+    media = video_editing.fingerprint_local_media(media.path)
     timeline = Timeline.from_assets((media,), "16:9")
-    for _ in range(6):
-        timeline = timeline.add_clip(media.asset_id, source_in=0, source_out=12, audio_role="muted")
+    for _ in range(2):
+        timeline = timeline.add_clip(media.asset_id, source_in=0, source_out=600, audio_role="muted")
     checks = []
     def check_continue():
         checks.append(True)
@@ -76,6 +186,10 @@ def test_long_video_encoder_has_programme_budget_and_keeps_cancel_callback(media
     assert len(final_calls) == 1 and checks
     assert timeline.duration_sec <= final_calls[0]["timeout"] <= timeline.duration_sec * 8
     assert final_calls[0]["check_continue"] is check_continue
+    assert len(segment_calls) == 2
+    for frames, options in segment_calls:
+        assert options["timeout"] == frames / rendering.FRAME_RATE * 4
+        assert options["check_continue"] is check_continue
 
 
 def test_trim_selected_audio_gain_fades_and_fixed_decoder_arguments(media, render_calls, tmp_path):
@@ -425,7 +539,7 @@ def test_caption_and_text_follow_concat_without_changing_muted_audio(media, rend
     assert result["overlay_processing"]["count"] == 2
     assert result["overlay_processing"]["profile"] == "literal-cjk-installed-font-v2"
     assert len(result["overlay_processing"]["font_sha256"]) == 64
-    assert result["renderer"] == "lumenis-timeline-4"
+    assert result["renderer"] == "lumenis-timeline-5"
 
 
 @pytest.mark.parametrize("failure", ["timeout", "nonzero"])
@@ -553,7 +667,17 @@ def test_output_probe_rejects_unverified_media(tmp_path, monkeypatch, mutation):
     elif mutation == "audio":
         probe["streams"].append({"codec_type": "audio", "codec_name": "aac", "sample_rate": "44100",
                                  "channels": 2, "start_time": "0"})
-    monkeypatch.setattr(rendering.subprocess, "run", lambda *a, **k: type("Probe", (), {"stdout": json.dumps(probe)})())
+    class Probe:
+        returncode = 0
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+        def communicate(self, timeout=None):
+            return json.dumps(probe), ""
+        def kill(self):
+            pytest.fail("completed probe must not be killed")
+    monkeypatch.setattr(rendering.subprocess, "Popen", lambda *a, **k: Probe())
     with pytest.raises(VideoEditingError, match="RENDER_OUTPUT_VERIFICATION_FAILED"):
         rendering._probe_output(tmp_path / "candidate.mp4", "ffprobe", output_kind="video", duration=1,
                                 has_audio=mutation == "audio")
@@ -802,7 +926,8 @@ def test_transition_preflight_failure_starts_no_encoder_and_preserves_old_output
 
 
 @pytest.mark.parametrize("boundaries", [(0,), (1,), (0, 1)])
-def test_real_dissolve_blends_frames_without_shortening_mixed_cut_sequence(tmp_path, monkeypatch, boundaries):
+@pytest.mark.parametrize("layered", [False, True])
+def test_real_dissolve_blends_frames_without_shortening_mixed_cut_sequence(tmp_path, monkeypatch, boundaries, layered):
     from shared_artifacts import _ffmpeg_path
     ffmpeg = _ffmpeg_path()
     probe = video_editing._ffprobe_path()
@@ -823,6 +948,13 @@ def test_real_dissolve_blends_frames_without_shortening_mixed_cut_sequence(tmp_p
     for index in boundaries:
         timeline = timeline.add_transition(clips[index].clip_id, clips[index + 1].clip_id,
                                            duration_sec=.4, reason="synthetic frame contract")
+    if layered:
+        from lumenis.shared.content_creation.video_editing import VideoPlacement
+        timeline = timeline.add_video_track("second-layer").add_clip(
+            assets[0].asset_id, track_id="second-layer", source_out=3,
+            timeline_start=0, audio_role="muted")
+        timeline = timeline.set_video_placement(
+            timeline.tracks[-1].clips[0].clip_id, VideoPlacement(opacity=0))
     output = tmp_path / "blend.mp4"
     result = rendering.render_timeline(timeline, output)
     assert result["measurement"]["video_frames"] == 90
@@ -960,3 +1092,127 @@ def test_caption_measurement_accepts_actual_ffmpeg_log_styles(tmp_path, monkeypa
     report = "\n".join(prefix + value for value in ["140.000000", "34.000000", "140.000000"])
     monkeypatch.setattr(rendering, "_run", lambda *a, **k: report)
     assert rendering._measure_caption_box("ffmpeg", work=tmp_path, filename="caption.txt", font="fixed") == (140, 34)
+
+
+def test_thousand_clip_plan_uses_bounded_encoder_inputs(media, render_calls, tmp_path):
+    timeline = Timeline.from_assets((media,), "16:9").add_clip(
+        media.asset_id, source_out=.1, audio_stream_index=0)
+    track = timeline.tracks[0]
+    clip = track.clips[0]
+    clips = tuple(replace(clip, clip_id=f"long-{i}", timeline_start=i / 10)
+                  for i in range(1000))
+    timeline = replace(timeline, tracks=(replace(track, clips=clips),))
+    timeline.validate()
+    before = timeline.to_dict()
+    result = rendering.render_timeline(timeline, tmp_path / "long.mp4")
+    assert max(command.count("-i") for command, _ in render_calls) <= 16
+    assert result["composition"]["video_layers"] == 1
+    assert timeline.to_dict() == before
+    assert not list(tmp_path.glob("timeline-render-*"))
+
+
+def test_many_simultaneous_layers_keep_encoder_fan_in_bounded(media, render_calls, tmp_path):
+    timeline = Timeline.from_assets((media,), "16:9").add_clip(media.asset_id, source_out=1, audio_role="muted")
+    first = timeline.tracks[0]
+    timeline = replace(timeline, tracks=tuple(replace(first, track_id=f"layer-{i}", clips=(
+        replace(first.clips[0], clip_id=f"layer-clip-{i}", track_id=f"layer-{i}"),)) for i in range(33)))
+    timeline.validate()
+    result = rendering.render_timeline(timeline, tmp_path / "many-layers.mp4")
+    assert result["composition"]["maximum_active_video_inputs"] == 33
+    assert result["composition"]["maximum_encoder_inputs"] == 16
+    assert result["composition"]["composition_passes"] == 3
+    assert max(command.count("-i") for command, _ in render_calls) <= 16
+    assert not list(tmp_path.glob("timeline-render-*"))
+
+
+def test_real_seventeen_layer_batches_preserve_alpha_order_and_frames(tmp_path, monkeypatch):
+    from lumenis.shared.content_creation.video_editing import VideoPlacement
+    from shared_artifacts import _ffmpeg_path
+
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg or not video_editing._ffprobe_path():
+        pytest.skip("layer batch contract requires installed encoders")
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(tmp_path))
+    monkeypatch.setitem(rendering.FRAME_SIZES, "16:9", (160, 90))
+    assets = []
+    for color in ("red", "blue"):
+        path = tmp_path / f"{color}.mp4"
+        subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-n", "-f", "lavfi", "-i",
+                        f"color=c={color}:s=160x90:r=30:d=0.2", "-c:v", "libx264", "-threads:v", "1",
+                        "-pix_fmt", "yuv420p", str(path)], capture_output=True, check=True, timeout=15)
+        assets.append(video_editing.fingerprint_local_media(str(path)))
+    timeline = Timeline.from_assets(assets, "16:9").add_clip(assets[0].asset_id, audio_role="muted")
+    for i in range(16):
+        timeline = timeline.add_video_track(f"inset-{i}").add_clip(
+            assets[1].asset_id, track_id=f"inset-{i}", audio_role="muted")
+        timeline = timeline.set_video_placement(timeline.tracks[-1].clips[0].clip_id,
+            VideoPlacement(.25, .25, .5, .5, .5 if i == 15 else 0))
+    output = tmp_path / "composite.mp4"
+    result = rendering.render_timeline(timeline, output)
+    assert result["measurement"]["video_frames"] == 6
+    assert result["composition"]["composition_passes"] == 2
+    assert result["composition"]["maximum_encoder_inputs"] == 16
+    raw = subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-i", str(output), "-vf",
+                          "crop=16:16:(iw-16)/2:(ih-16)/2,scale=1:1", "-frames:v", "1",
+                          "-pix_fmt", "rgb24", "-f", "rawvideo", "pipe:1"],
+                         capture_output=True, check=True, timeout=15).stdout
+    assert len(raw) == 3 and 100 < raw[0] < 155 and 100 < raw[2] < 155 and raw[1] < 20
+    assert not list(tmp_path.glob("timeline-render-*"))
+
+
+@pytest.mark.parametrize("ducking", [False, True])
+def test_real_batched_audio_retains_samples_gain_and_sidechain(tmp_path, monkeypatch, ducking):
+    from shared_artifacts import _ffmpeg_path
+
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg or not video_editing._ffprobe_path():
+        pytest.skip("audio batch contract requires installed encoders")
+    monkeypatch.setenv("LUMENIS_LOCAL_ASSET_DIR", str(tmp_path))
+    source = tmp_path / "tone.wav"
+    subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-n", "-f", "lavfi", "-i",
+                    "sine=frequency=440:sample_rate=48000:duration=1", "-c:a", "pcm_s24le", str(source)],
+                   check=True, capture_output=True, timeout=15)
+    asset = video_editing.fingerprint_local_media(str(source))
+    timeline = Timeline.from_assets((asset,)).add_audio_track("voice", audio_role="voiceover")
+    timeline = timeline.add_clip(asset.asset_id, track_id="voice", source_out=.04, timeline_start=.1)
+    track = timeline.tracks[-1]
+    clip = replace(track.clips[0], audio_mix=AudioMix(volume=.2, fade_in_sec=.005, fade_out_sec=.005))
+    clips = tuple(replace(clip, clip_id=f"word-{i}", timeline_start=.1 + i / 20) for i in range(129))
+    timeline = replace(timeline, tracks=(*timeline.tracks[:-1], replace(track, clips=clips)))
+    if ducking:
+        timeline = timeline.add_audio_track("music", audio_role="bgm")
+        for i in range(7):
+            timeline = timeline.add_clip(asset.asset_id, track_id="music", source_out=.95, timeline_start=i)
+        bgm = timeline.tracks[-1]
+        timeline = replace(timeline, tracks=(*timeline.tracks[:-1], replace(bgm, clips=tuple(
+            replace(c, audio_mix=AudioMix(volume=.1, ducking=True)) for c in bgm.clips))))
+    timeline.validate()
+    duration = timeline.duration_sec
+    calls = []
+    original_run = rendering._run
+    def record(command, **kwargs):
+        calls.append(command)
+        return original_run(command, **kwargs)
+    monkeypatch.setattr(rendering, "_run", record)
+    batched_dir = tmp_path / "batched"
+    batched_dir.mkdir()
+    batched = rendering._render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=batched_dir)
+    assert max(command.count("-i") for command in calls) <= 16
+    assert not list(batched_dir.glob("audio-stem-*.wav"))
+    # Compare the same edit using bounded three-input groups, not a second DSP recipe.
+    monkeypatch.setattr(rendering, "RENDER_INPUT_BATCH_SIZE", 3)
+    small_dir = tmp_path / "smaller-batches"
+    small_dir.mkdir()
+    small = rendering._render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=small_dir)
+    samples = []
+    for output in (batched, small):
+        raw = subprocess.run([ffmpeg, "-v", "error", "-i", str(output), "-f", "f32le", "pipe:1"],
+                             capture_output=True, check=True, timeout=15).stdout
+        signal = array.array("f")
+        signal.frombytes(raw)
+        samples.append(signal)
+    assert len(samples[0]) == len(samples[1]) == round(duration * 48000) * 2
+    assert max(abs(a - b) for a, b in zip(*samples)) < 1e-5
+    assert max(abs(v) for v in samples[0]) > .001
+    if not ducking:
+        assert max(abs(v) for v in samples[0][:round(.09 * 48000) * 2]) < 1e-6

@@ -223,7 +223,7 @@ def test_scan_byte_budget_advances_after_verified_project(store, monkeypatch):
         first, _ = _write_project(store, actor, scope=scope, artifact_id="ART-0000000000000071")
         second, _ = _write_project(store, actor, scope=scope, artifact_id="ART-0000000000000072")
         monkeypatch.setattr(
-            artifacts, "_MAX_CONTENT_PROJECT_BYTES",
+            artifacts, "_CONTENT_PROJECT_LIST_VERIFY_BYTES",
             first["size_bytes"] + second["size_bytes"] - 1,
         )
         page1 = _list(store, actor, scope, limit=2)

@@ -214,6 +214,26 @@ def test_typed_request_routes_only_after_explicit_hermetic_binding(monkeypatch):
     assert result["source_evidence_refs"] == ["evidence:1"]
 
 
+def test_independent_shared_request_needs_its_own_scoped_binding(monkeypatch):
+    request = _request(domain_id='shared', scope='shared_workspace:v1', operation='professional_creation')
+    unavailable = owned_service.run_owned_request(request)
+    assert unavailable['code'] == 'OWNED_SERVICE_EXECUTOR_NOT_BOUND'
+    business, business_runtime = _binding(monkeypatch)
+    owned_service.bind_owned_service(business)
+    assert owned_service.run_owned_request(request)['code'] == 'OWNED_SERVICE_EXECUTOR_NOT_BOUND'
+    assert business_runtime.generated == 0
+    admitted = replace(_admission_request(domain='shared'), scopes=('shared_workspace:v1',),
+                       allowed_operations=('professional_creation',))
+    shared, runtime = _binding(monkeypatch, admitted)
+    owned_service.bind_owned_service(shared)
+    result = owned_service.run_owned_request(request)
+    assert result['ok'] is True and runtime.generated == 1
+    assert result['operation'] == 'professional_creation'
+    assert business_runtime.generated == 0
+    assert owned_service.run_owned_request(replace(request, scope='GLOBAL / ALL'))['code'] == 'OWNED_SERVICE_SCOPE_INVALID'
+    assert owned_service.run_owned_request(replace(request, actor_ref='other-actor'))['code'] == 'OWNED_SERVICE_ACTOR_MISMATCH'
+
+
 def test_actor_and_cancel_mismatch_fail_without_generation(monkeypatch):
     request = _request()
     binding, runtime = _binding(monkeypatch, caller="different-actor")

@@ -471,6 +471,14 @@ def to_canonical_record(raw_record: Dict[str, Any], platform: Optional[str] = No
             out["content_id"] = _exact_nonempty_text(raw_record.get("shortcode"))
         if plat == "bilibili":
             out["published_at"] = _normalize_bilibili_publication(out["published_at"])
+        if plat == 'zhihu':
+            kind = raw_record.get('object_type')
+            if kind in {'article','question'}:
+                native_id = normalize_content_id('zhihu',raw_record.get(kind+'_id'))
+                out['content_id'] = f'zhihu:{kind}:{native_id}' if native_id else None
+            if out['author_id'] is None:
+                out['author_id'] = _normalize_author_identity(raw_record.get('author_id'))
+            out['content_type'] = kind or out['content_type']
     return out
 
 
@@ -813,6 +821,17 @@ def map_raw_to_normalized(raw_record: Dict[str, Any], platform: Optional[str] = 
         normalized["author_id"] = _normalize_author_identity(normalized["author_id"])
         if plat == "instagram" and normalized["platform_content_id"] in (None, ""):
             normalized["platform_content_id"] = _exact_nonempty_text(raw_record.get("shortcode"))
+        canonical = to_canonical_record(raw_record,plat)
+        if plat == 'zhihu':
+            normalized['platform_content_id'] = normalize_content_id(plat,canonical['content_id'])
+            normalized['content_type'] = canonical['content_type']
+        for key in ('author_id','published_at'):
+            if normalized[key] is None:
+                normalized[key] = canonical[key]
+        for key,source in (('title','title'),('content','content'),('url','url'),
+                           ('author_name','author_nickname'),('collected_at','captured_at')):
+            if normalized[key] is None and source in raw_record:
+                normalized[key] = raw_record[source]
     return normalized
 
 

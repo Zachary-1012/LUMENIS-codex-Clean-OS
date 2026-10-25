@@ -925,6 +925,7 @@ def authorize_local_agent_root_request():
             'api_ai_tasks_evidence': ('/api/ai/tasks/<task_id>/evidence', {'GET'}),
             'api_ai_task_memory': ('/api/ai/tasks/<task_id>/memory', {'GET', 'POST', 'DELETE'}),
             'api_ai_task_learning': ('/api/ai/tasks/<task_id>/learning', {'GET', 'POST'}),
+            'api_ai_task_context': ('/api/ai/tasks/<task_id>/context', {'GET'}),
         }
         entry = routes.get((request.endpoint or '').removeprefix('ai_api.'))
         if (not request.endpoint or not request.endpoint.startswith('ai_api.') or not entry
@@ -1245,6 +1246,48 @@ def _agent_runtime_create(data):
         return jsonify({'ok': False, 'code': str(exc)}), 400
 
 
+@bp.route('/api/ai/tasks/<task_id>/context', methods=['GET'])
+def api_ai_task_context(task_id):
+    """Current, actor-scoped model context coverage; never an inference action."""
+    try:
+        if request.args:
+            raise ValueError('AGENT_CONTEXT_FIELDS_INVALID')
+        from lumenis.auth.service import get_current_user
+        from agent_runtime.task_binding import (authorized_context, _conversation_snapshot,
+                                                _committed_step_receipts)
+        from lumenis.system.ai_gateway.core import owned_retrieval_status, owned_service_observation
+        task = _get_engine().get_task(task_id)
+        if not task or not _task_row_read_allowed(task):
+            raise PermissionError('TASK_ACCESS_DENIED')
+        current = authorized_context(task, get_current_user(read_only=True))
+        snapshot = _conversation_snapshot(task, current)
+        sources = []
+        for item in snapshot['conversations'] if snapshot else []:
+            sources.append({key: value for key, value in item.items() if key != 'history'})
+            sources[-1]['transcript_ref'] = '/v4/ai/conversations/' + item['conversation_id']
+        receipts = _committed_step_receipts(task, current)
+        fresh = _get_engine().get_task(task_id)
+        repeated = _conversation_snapshot(fresh, authorized_context(fresh, current['actor']))
+        if repeated != snapshot:
+            raise RuntimeError('AGENT_CONVERSATION_CONTEXT_CHANGED')
+        return jsonify({'ok': True, 'task_id': task_id, 'task_status': fresh['status'],
+            'original_user_input': task['user_input'], 'conversations': sources,
+            'context_snapshot_sha256': snapshot['sha256'] if snapshot else None,
+            'committed_step_receipts': receipts, 'truth_kind': 'explicit_human_task_input',
+            'external_source_content': 'NOT_READ', 'model_source_use': 'EXACT_TASK_REQUEST_REQUIRED',
+            'effect_permission': 'NOT_GRANTED', 'training_admission': 'NOT_GRANTED',
+            'model_execution': 'NOT_RUN', 'retrieval': owned_retrieval_status(),
+            'owned_runtime': owned_service_observation('cth' if current['domain_id'] == 'cth' else 'bmp')})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 403
+    except (ValueError, TypeError):
+        return jsonify({'ok': False, 'code': 'AGENT_CONTEXT_FIELDS_INVALID'}), 400
+    except RuntimeError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 409
+    except Exception:
+        return jsonify({'ok': False, 'code': 'AGENT_CONTEXT_UNAVAILABLE'}), 503
+
+
 @bp.route('/api/ai/tasks/<task_id>/memory', methods=['GET', 'POST', 'DELETE'])
 def api_ai_task_memory(task_id):
     """Scoped derived memory; corrections never mutate Source or audit evidence."""
@@ -1265,6 +1308,26 @@ def api_ai_task_memory(task_id):
             return jsonify({'ok': False, 'code': 'MEMORY_LAYER_INVALID'}), 400
         memory = classes[layer](db_path=main_db_path(), enabled=True).bind_task(task_id, actor['id'] if isinstance(actor, dict) else None)
         if request.method == 'GET':
+            if 'query' in data:
+                allowed = {'layer', 'query', 'limit', 'sub_library', 'tag'}
+                query = data.get('query')
+                library = data.get('sub_library')
+                tags = data.getlist('tag')
+                if (layer != 'semantic' or set(data) - allowed
+                        or any(len(data.getlist(key)) != 1 for key in set(data) - {'tag'})
+                        or not isinstance(query, str) or not query.strip() or len(query) > 4000
+                        or library is not None and (not library.strip() or len(library) > 256)
+                        or len(tags) > 100 or any(not tag.strip() or len(tag) > 256 for tag in tags)):
+                    raise ValueError('MEMORY_SEARCH_INVALID')
+                try:
+                    limit = int(data.get('limit', '30'))
+                except (TypeError, ValueError) as exc:
+                    raise ValueError('MEMORY_SEARCH_INVALID') from exc
+                records = memory.search_assets(query, sub_library=library, tags=tags, limit=limit)
+                if not _task_row_read_allowed(_get_engine().get_task(task_id)):
+                    raise PermissionError('TASK_ACCESS_DENIED')
+                return jsonify({'ok': True, 'records': records, 'truth_kind': 'source_reference',
+                                'read_state': memory.last_read_status, 'retrieval': memory.last_search_report})
             key = data.get('key')
             records = [memory.retrieve(key)] if key else memory.query(limit=50)
             return jsonify({'ok': True, 'records': [r.to_dict() for r in records if r],

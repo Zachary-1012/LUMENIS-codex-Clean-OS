@@ -1,3 +1,5 @@
+import '../core/lumenis_botanical.dart';
+import 'lumenis_workspace_frame.dart';
 import 'dart:async';
 import 'package:lumenis_app/core/lumenis_icon.dart';
 import 'package:flutter/material.dart';
@@ -127,7 +129,7 @@ Widget buildLumenisWorkspaceScreen({
     'CTH-08' => Cth08Screen(client: client),
     'CTH-09' => Cth09Screen(client: client),
     'CTH-10' => Cth10Screen(client: client),
-    'BMP-01' => Bmp01Screen(client: client),
+    'BMP-01' => Bmp01Screen(client: client, onNavigate: onNavigate),
     'BMP-02' => Bmp02Screen(client: client),
     'BMP-03' => Bmp03Screen(client: client),
     'BMP-04' => Bmp04Screen(client: client),
@@ -163,7 +165,11 @@ Widget buildLumenisWorkspaceScreen({
     'SYS-02' => Sys02Screen(client: client),
     'SYS-03' => Sys03Screen(client: client),
     'SYS-04' => Sys04Screen(client: client),
-    'SYS-05' => Sys05Screen(client: client),
+    'SYS-05' => Sys05Screen(
+      client: client,
+      onOpenSubjects: onNavigate == null ? null : () => onNavigate('ACC-02'),
+      onNavigate: onNavigate,
+    ),
     'SYS-06' => Sys06Screen(client: client),
     'SYS-07' => Sys07Screen(client: client),
     'SYS-08' => Sys08Screen(client: client),
@@ -229,6 +235,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   final _scopeDrafts = <String, TextEditingController>{};
   String _taskDraftScope = 'GLOBAL_ALL::';
   bool _inspectorVisible = false;
+  bool _navigationOpen = false;
 
   LumenisLeaveGuard get _leaveGuard =>
       LumenisLeaveScope.maybeOf(context) ?? _localLeaveGuard;
@@ -372,25 +379,66 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
 
   @override
   Widget build(BuildContext context) {
-    final layout = LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 768) {
-          return _buildPhone(context);
-        }
-        if (constraints.maxWidth < 1080 ||
-            _activeScreen.value == 'SYS-06' ||
-            _activeScreen.value == 'SH-01') {
-          return _buildCompactWorkspace(context);
-        }
-        return _buildWideWorkspace(
-          context,
-          showInspector: constraints.maxWidth >= 1720,
-        );
-      },
+    final layout = LumenisWorkspaceFrame(
+      title: _isHome
+          ? _shellCopy(context, zh: '开始工作', en: 'Start work', ko: '작업 시작')
+          : context.lumenisL10n.text('screen.${_activeScreen.value}'),
+      scope: _contextLabel(),
+      destinations: _workDestinations(),
+      onHome: _goHome,
+      onSearch: _openNavigation,
+      onScope: _openContextPicker,
+      onTasks: () => _activateScreen('AI-02'),
+      onNotifications: () => _activateScreen('SH-06'),
+      onSettings: () => _activateScreen('SYS-05'),
+      onTools: _openPhoneTools,
+      tools: [
+        if (_activeScreen.value == 'CTH-02')
+          IconButton(
+            tooltip: context.lumenisL10n.text('shell.return_to_overview'),
+            onPressed: _returnFromCth02,
+            icon: const LumenisIcon(Icons.arrow_back, size: 20),
+          ),
+        if (widget.onLocaleChanged != null)
+          _LocaleSwitcher(onLocaleChanged: widget.onLocaleChanged!),
+        const Sys05AppearanceButton(),
+        if (!_isHome)
+          IconButton(
+            tooltip: _shellCopy(
+              context,
+              zh: '工作详情',
+              en: 'Work details',
+              ko: '작업 세부 정보',
+            ),
+            onPressed: _toggleWorkDetails,
+            icon: LumenisIcon(
+              _inspectorVisible ? Icons.close : Icons.info_outline,
+              size: 20,
+            ),
+          ),
+      ],
+      inspector: _inspectorVisible && !_isHome && _activeScreen.value != 'AI-01'
+          ? _ContextInspector(
+              destination: _selectedDestination,
+              contextLabel: _contextLabel(),
+              selectionContext: _contextMap,
+              contextUnavailable: _contextEnvelope == null,
+            )
+          : null,
+      child: _screenTransition(),
     );
-    return LumenisLeaveScope.maybeOf(context) == null
+    final guarded = LumenisLeaveScope.maybeOf(context) == null
         ? LumenisLeaveScope(guard: _localLeaveGuard, child: layout)
         : layout;
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            _openNavigation,
+        const SingleActivator(LogicalKeyboardKey.keyK, meta: true):
+            _openNavigation,
+      },
+      child: guarded,
+    );
   }
 
   bool get _isHome =>
@@ -407,11 +455,6 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   // therefore falls back to the first business destination for shell chrome.
   _WorkspaceDestination get _selectedDestination =>
       _destinations[_selectedIndex < 0 ? 0 : _selectedIndex];
-
-  void _select(int index) {
-    if (index < 0 || index >= _destinations.length) return;
-    _activateScreen(_destinations[index].id);
-  }
 
   Future<void> _activateScreen(
     String screenId, {
@@ -516,9 +559,7 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
   Widget _screenTransition() {
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final duration = reduceMotion
-        ? Duration.zero
-        : const Duration(milliseconds: 180);
+    final duration = reduceMotion ? Duration.zero : LumenisMotion.panel;
 
     return AnimatedSwitcher(
       key: _screenHostKey,
@@ -547,192 +588,37 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     );
   }
 
-  Widget _buildPhone(BuildContext context) {
-    return Scaffold(
-      backgroundColor: LumenisTheme.of(context).canvas,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _PhoneHeader(
-              screenId: _activeScreen.value,
-              contextLabel: _contextLabel(),
-              onOpenContextPicker: _openContextPicker,
-              onOpenPages: _openPhonePages,
-              onOpenTools: _openPhoneTools,
-              onHome: _goHome,
-              isHome: _isHome,
-              onReturnToCth: _returnFromCth02,
-              isCth02: _activeScreen.value == 'CTH-02',
-            ),
-            Expanded(child: _screenTransition()),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _isHome
-          ? null
-          : NavigationBar(
-              height: 68,
-              elevation: 0,
-              surfaceTintColor: Colors.transparent,
-              shadowColor: Colors.transparent,
-              selectedIndex: _selectedIndex < 0 ? 0 : _selectedIndex,
-              onDestinationSelected: _select,
-              backgroundColor: LumenisTheme.of(
-                context,
-              ).surface.withValues(alpha: .94),
-              indicatorColor: Colors.transparent,
-              labelTextStyle: WidgetStateProperty.resolveWith(
-                (states) => TextStyle(
-                  fontSize: 12,
-                  height: 1.3,
-                  fontWeight: states.contains(WidgetState.selected)
-                      ? FontWeight.w700
-                      : FontWeight.w400,
-                  color: LumenisTheme.of(context).foreground,
-                ),
-              ),
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: [
-                for (final item in _destinations)
-                  NavigationDestination(
-                    icon: LumenisIcon(item.icon),
-                    selectedIcon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        LumenisIcon(
-                          item.icon,
-                          color: LumenisTheme.of(
-                            context,
-                          ).resolveSemantic(item.color),
-                        ),
-                        Positioned(
-                          bottom: -5,
-                          left: 8,
-                          right: 8,
-                          child: Container(
-                            height: 2,
-                            color: LumenisTheme.of(context).foreground,
-                          ),
-                        ),
-                      ],
-                    ),
-                    label: context.lumenisL10n.text(item.mobileLabelKey),
-                    tooltip: context.lumenisL10n.text(item.labelKey),
-                  ),
-              ],
-            ),
-    );
-  }
-
   Future<void> _openNavigation() async {
+    if (_navigationOpen) return;
+    _navigationOpen = true;
     final reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final selected = await showDialog<String>(
-      context: context,
-      animationStyle: reduceMotion
-          ? AnimationStyle.noAnimation
-          : const AnimationStyle(
-              duration: Duration(milliseconds: 180),
-              reverseDuration: Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeOutCubic,
-            ),
-      builder: (dialogContext) => CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () =>
-              Navigator.of(dialogContext).pop(),
-        },
-        child: _WorkspaceNavigationDialog(
-          destinations: _destinations,
-          activeScreenId: _activeScreen.value,
-        ),
-      ),
-    );
-    if (mounted && selected != null) _activateScreen(selected);
-  }
-
-  Future<void> _openPhonePages() async {
-    final copy = context.lumenisL10n;
-    final groups = _activeGroup == 'ACC'
-        ? LumenisWorkspaceRoutes.workflowsByGroup.entries
-              .where((entry) => entry.key != 'ACC')
-              .toList()
-        : [
-            MapEntry(
-              _activeGroup,
-              LumenisWorkspaceRoutes.workflowsByGroup[_activeGroup]!,
-            ),
-          ];
-    final groupLabelKeys = const {
-      'CTH': 'navgroup.cth',
-      'BMP': 'navgroup.bmp',
-      'AI': 'navgroup.ai',
-      'SH': 'navgroup.shared',
-      'SYS': 'navgroup.system',
-    };
-    final selected = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      constraints: const BoxConstraints(maxWidth: 620),
-      builder: (sheetContext) => SafeArea(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.sizeOf(sheetContext).height * .75,
-          ),
-          child: _PhoneSheet(
-            title: _activeGroup == 'ACC'
-                ? _shellCopy(context, zh: '全部工作', en: 'All work', ko: '모든 작업')
-                : copy.text(_selectedDestination.labelKey),
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              children: [
-                for (final group in groups) ...[
-                  if (groups.length > 1)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 20, bottom: 4),
-                      child: Text(
-                        copy.text(groupLabelKeys[group.key]!),
-                        style: Theme.of(sheetContext).textTheme.titleSmall,
-                      ),
-                    ),
-                  for (final workflow in group.value.entries) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16, bottom: 6),
-                      child: Text(
-                        copy.text(workflow.key),
-                        style: Theme.of(sheetContext).textTheme.labelMedium,
-                      ),
-                    ),
-                    for (final screenId in workflow.value)
-                      ListTile(
-                        key: ValueKey('workspace-nav-$screenId'),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                        ),
-                        title: Text(copy.text('screen.$screenId')),
-                        selected: screenId == _activeScreen.value,
-                        trailing: screenId == _activeScreen.value
-                            ? const LumenisIcon(Icons.check_rounded, size: 20)
-                            : LumenisWorkspaceRoutes.unavailableScreenIds
-                                  .contains(screenId)
-                            ? const LumenisIcon(
-                                Icons.info_outline_rounded,
-                                size: 20,
-                              )
-                            : null,
-                        onTap: () => Navigator.of(sheetContext).pop(screenId),
-                      ),
-                  ],
-                ],
-              ],
-            ),
+    String? selected;
+    try {
+      selected = await showDialog<String>(
+        context: context,
+        animationStyle: reduceMotion
+            ? AnimationStyle.noAnimation
+            : const AnimationStyle(
+                duration: LumenisMotion.panel,
+                reverseDuration: LumenisMotion.exit,
+                curve: Curves.easeOutCubic,
+                reverseCurve: Curves.easeOutCubic,
+              ),
+        builder: (dialogContext) => CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): () =>
+                Navigator.of(dialogContext).pop(),
+          },
+          child: _WorkspaceNavigationDialog(
+            destinations: _destinations,
+            activeScreenId: _activeScreen.value,
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      _navigationOpen = false;
+    }
     if (mounted && selected != null) _activateScreen(selected);
   }
 
@@ -818,254 +704,97 @@ class _LumenisWorkspaceShellState extends State<LumenisWorkspaceShell>
     }
   }
 
-  Widget _buildCompactWorkspace(BuildContext context) {
-    final destination = _selectedDestination;
-    return Scaffold(
-      backgroundColor: LumenisTheme.of(context).canvas,
-      body: Column(
-        children: [
-          _WorkspaceHeader(
-            destination: destination,
-            activeScreenId: _activeScreen.value,
+  void _toggleWorkDetails() {
+    if (MediaQuery.sizeOf(context).width >= 1500) {
+      setState(() => _inspectorVisible = !_inspectorVisible);
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .7,
+          child: _ContextInspector(
+            destination: _selectedDestination,
             contextLabel: _contextLabel(),
-            coreLabel: _coreLabel,
-            onRetryRuntime: widget.onRetryRuntime,
-            onOpenNavigation: _openNavigation,
-            onOpenContextPicker: _openContextPicker,
-            onLocaleChanged: widget.onLocaleChanged,
-            compact: true,
-            onOpenCth02: _openCth02,
-            onReturnToCth: _returnFromCth02,
-            onHome: _goHome,
-            isHome: _isHome,
-            isCth02: _activeScreen.value == 'CTH-02',
-          ),
-          Expanded(child: _screenTransition()),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWideWorkspace(
-    BuildContext context, {
-    required bool showInspector,
-  }) {
-    final destination = _selectedDestination;
-    return Scaffold(
-      backgroundColor: LumenisTheme.of(context).canvas,
-      body: Row(
-        children: [
-          Container(
-            width: 224,
-            decoration: LumenisTheme.panel(LumenisTheme.of(context), radius: 0),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 22, 12, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8, bottom: 32),
-                      child: _LumenisMark(),
-                    ),
-                    Expanded(
-                      child: ListView(
-                        key: const ValueKey('workspace-work-rail'),
-                        children: [
-                          _workRailEntry(
-                            'ACC-03',
-                            Icons.chat_bubble_outline_rounded,
-                            _shellCopy(
-                              context,
-                              zh: '开始工作',
-                              en: 'Start work',
-                              ko: '작업 시작',
-                            ),
-                          ),
-                          const Divider(height: 32, indent: 12, endIndent: 12),
-                          _workRailEntry(
-                            'CTH-01',
-                            Icons.timeline_rounded,
-                            _shellCopy(
-                              context,
-                              zh: '商业运营',
-                              en: 'Commerce',
-                              ko: '커머스 운영',
-                            ),
-                          ),
-                          _workRailEntry(
-                            'BMP-01',
-                            Icons.hub_outlined,
-                            _shellCopy(
-                              context,
-                              zh: '品牌与市场',
-                              en: 'Brand & market',
-                              ko: '브랜드 & 마켓',
-                            ),
-                          ),
-                          const Divider(height: 32, indent: 12, endIndent: 12),
-                          _workRailEntry(
-                            'SH-02',
-                            Icons.library_books_outlined,
-                            _shellCopy(
-                              context,
-                              zh: '研究与资料',
-                              en: 'Research',
-                              ko: '리서치',
-                            ),
-                          ),
-                          _workRailEntry(
-                            'SH-01',
-                            Icons.edit_note_rounded,
-                            _shellCopy(
-                              context,
-                              zh: '创作与作品',
-                              en: 'Create & works',
-                              ko: '창작과 작품',
-                            ),
-                          ),
-                          _workRailEntry(
-                            'SYS-06',
-                            Icons.language_rounded,
-                            _shellCopy(
-                              context,
-                              zh: '浏览器',
-                              en: 'Browser',
-                              ko: '브라우저',
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          TextButton.icon(
-                            key: const ValueKey('workspace-rail-all'),
-                            onPressed: _openNavigation,
-                            icon: const LumenisIcon(
-                              Icons.grid_view_rounded,
-                              size: 18,
-                            ),
-                            label: Text(
-                              _shellCopy(
-                                context,
-                                zh: '全部工作',
-                                en: 'All work',
-                                ko: '모든 작업',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (showInspector &&
-                        !_isHome &&
-                        _activeScreen.value != 'AI-01')
-                      TextButton.icon(
-                        key: const ValueKey('workspace-details-toggle'),
-                        onPressed: () => setState(
-                          () => _inspectorVisible = !_inspectorVisible,
-                        ),
-                        icon: LumenisIcon(
-                          _inspectorVisible
-                              ? Icons.close_rounded
-                              : Icons.info_outline_rounded,
-                          size: 18,
-                        ),
-                        label: Text(
-                          _shellCopy(
-                            context,
-                            zh: '工作详情',
-                            en: 'Work details',
-                            ko: '작업 세부 정보',
-                          ),
-                        ),
-                      ),
-                    _workRailEntry(
-                      'SYS-05',
-                      Icons.tune_rounded,
-                      _shellCopy(
-                        context,
-                        zh: '偏好设置',
-                        en: 'Preferences',
-                        ko: '환경설정',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          VerticalDivider(width: 1, color: LumenisTheme.of(context).line),
-          Expanded(
-            child: Column(
-              children: [
-                _WorkspaceHeader(
-                  railVisible: true,
-                  destination: destination,
-                  activeScreenId: _activeScreen.value,
-                  contextLabel: _contextLabel(),
-                  coreLabel: _coreLabel,
-                  onRetryRuntime: widget.onRetryRuntime,
-                  onOpenNavigation: _openNavigation,
-                  onOpenContextPicker: _openContextPicker,
-                  onLocaleChanged: widget.onLocaleChanged,
-                  onOpenCth02: _openCth02,
-                  onReturnToCth: _returnFromCth02,
-                  onHome: _goHome,
-                  isHome: _isHome,
-                  isCth02: _activeScreen.value == 'CTH-02',
-                ),
-                Expanded(child: _screenTransition()),
-              ],
-            ),
-          ),
-          if (showInspector &&
-              _inspectorVisible &&
-              !_isHome &&
-              _activeScreen.value != 'AI-01') ...[
-            const VerticalDivider(width: 1, thickness: 1),
-            _ContextInspector(
-              destination: destination,
-              contextLabel: _contextLabel(),
-              selectionContext: _contextMap,
-              contextUnavailable: _contextEnvelope == null,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _workRailEntry(String screen, IconData icon, String label) {
-    final theme = LumenisTheme.of(context);
-    final selected =
-        _activeScreen.value == screen ||
-        (screen == 'CTH-01' && _activeScreen.value.startsWith('CTH-')) ||
-        (screen == 'BMP-01' && _activeScreen.value.startsWith('BMP-'));
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: DecoratedBox(
-        decoration: selected
-            ? LumenisTheme.panel(theme, radius: 9, recessed: true)
-            : const BoxDecoration(),
-        child: Semantics(
-          selected: selected,
-          child: TextButton.icon(
-            key: ValueKey('workspace-rail-$screen'),
-            onPressed: () => _activateScreen(screen),
-            style: TextButton.styleFrom(
-              foregroundColor: selected ? theme.foreground : theme.muted,
-              backgroundColor: Colors.transparent,
-              alignment: Alignment.centerLeft,
-              minimumSize: const Size(48, 48),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            icon: LumenisIcon(icon, size: 19),
-            label: Text(label, maxLines: 2, overflow: TextOverflow.ellipsis),
+            selectionContext: _contextMap,
+            contextUnavailable: _contextEnvelope == null,
           ),
         ),
       ),
     );
+  }
+
+  List<LumenisWorkDestination> _workDestinations() {
+    final entries = <LumenisWorkDestination>[];
+    for (final (id, icon, zh, en, ko, separate) in const [
+      (
+        'ACC-03',
+        Icons.chat_bubble_outline,
+        '开始工作',
+        'Start work',
+        '작업 시작',
+        false,
+      ),
+      ('CTH-01', Icons.timeline, '商业运营', 'Commerce', '커머스 운영', true),
+      (
+        'BMP-01',
+        Icons.hub_outlined,
+        '品牌与市场',
+        'Brand & market',
+        '브랜드와 시장',
+        false,
+      ),
+      (
+        'SH-02',
+        Icons.auto_stories_outlined,
+        '研究与资料',
+        'Research',
+        '리서치와 자료',
+        true,
+      ),
+      ('SH-01', Icons.edit_note, '创作与作品', 'Studio', '창작 스튜디오', false),
+      ('SYS-06', Icons.language, '浏览器', 'Browser', '브라우저', true),
+      ('AI-02', Icons.checklist, '任务', 'Tasks', '작업', false),
+      ('SH-06', Icons.notifications_none, '通知', 'Notifications', '알림', false),
+    ]) {
+      entries.add(
+        LumenisWorkDestination(
+          id: id,
+          label: _shellCopy(context, zh: zh, en: en, ko: ko),
+          icon: icon,
+          selected:
+              _activeScreen.value == id ||
+              (id == 'CTH-01' && _activeGroup == 'CTH') ||
+              (id == 'BMP-01' && _activeGroup == 'BMP'),
+          separate: separate,
+          onOpen: () => _activateScreen(id),
+        ),
+      );
+      if (id == 'SH-01' && widget.onStartCreation != null) {
+        for (final (kind, icon, zh, en, ko) in const [
+          ('manuscript', Icons.notes, '文稿与提案', 'Writing & proposals', '글과 제안서'),
+          ('video', Icons.movie_outlined, '视频', 'Video', '영상'),
+          ('audio', Icons.graphic_eq, '播客', 'Podcast', '팟캐스트'),
+        ]) {
+          entries.add(
+            LumenisWorkDestination(
+              id: 'create-$kind',
+              label: _shellCopy(context, zh: zh, en: en, ko: ko),
+              icon: icon,
+              selected:
+                  _activeScreen.value == 'SH-01' &&
+                  widget.initialWorkspaceEntry == kind,
+              nested: true,
+              onOpen: () => widget.onStartCreation!(kind),
+            ),
+          );
+        }
+      }
+    }
+    return entries;
   }
 
   String get _coreLabel =>
@@ -1325,13 +1054,15 @@ class _NavigationTree extends StatelessWidget {
                     color: screenId == activeScreenId
                         ? LumenisTheme.of(context).surfaceRaised
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
+                    shape: const LumenisPixelBorder(step: 2),
                     child: InkWell(
                       key: ValueKey('workspace-nav-$screenId'),
                       onTap: () => onSelected(screenId),
-                      borderRadius: BorderRadius.circular(8),
+                      customBorder: const LumenisPixelBorder(step: 2),
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 44),
+                        constraints: const BoxConstraints(
+                          minHeight: LumenisSpace.touchTarget,
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -1400,10 +1131,10 @@ class _WideDestinationRow extends StatelessWidget {
         color: selected
             ? LumenisTheme.of(context).surfaceRaised
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        shape: const LumenisPixelBorder(step: 2),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          customBorder: const LumenisPixelBorder(step: 2),
           child: Semantics(
             button: true,
             selected: selected,
@@ -1418,7 +1149,11 @@ class _WideDestinationRow extends StatelessWidget {
                 ),
                 child: Row(
                   children: [
-                    LumenisIcon(destination.icon, size: 20, color: foreground),
+                    LumenisDomainGlyph(
+                      domain: destination.id,
+                      fallback: destination.icon,
+                      color: foreground,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -1472,6 +1207,33 @@ class _WorkspaceNavigationDialog extends StatefulWidget {
 
 class _WorkspaceNavigationDialogState
     extends State<_WorkspaceNavigationDialog> {
+  final _search = TextEditingController();
+  final _resultKeys = <String, GlobalKey>{};
+  int _highlighted = 0;
+
+  void _moveResult(int step, List<String> matches) {
+    if (matches.isEmpty) return;
+    setState(() => _highlighted = (_highlighted + step) % matches.length);
+    final targetId = matches[_highlighted];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final target = _resultKeys[targetId]?.currentContext;
+      if (target != null) {
+        Scrollable.ensureVisible(
+          target,
+          duration: LumenisMotion.of(context, LumenisMotion.feedback),
+          alignment: .5,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   late String _previewGroup = LumenisWorkspaceRoutes.groupForScreen(
     widget.activeScreenId,
   );
@@ -1488,56 +1250,167 @@ class _WorkspaceNavigationDialogState
   Widget build(BuildContext context) {
     final copy = context.lumenisL10n;
     final theme = LumenisTheme.of(context);
+    final query = _search.text.trim().toLowerCase();
+    final matches =
+        LumenisWorkspaceRoutes.workspaceScreenIds.where((id) {
+          final title = copy.text('screen.$id').toLowerCase();
+          final group = LumenisWorkspaceRoutes.groupForScreen(id);
+          final destination = widget.destinations
+              .where((entry) => entry.id.startsWith('$group-'))
+              .firstOrNull;
+          final groupName = destination == null
+              ? ''
+              : copy.text(destination.labelKey).toLowerCase();
+          return title.contains(query) || groupName.contains(query);
+        }).toList()..sort((a, b) {
+          int rank(String id) {
+            final title = copy.text('screen.$id').toLowerCase();
+            if (title == query) return 0;
+            if (title.startsWith(query)) return 1;
+            if (title.contains(query)) return 2;
+            return 3;
+          }
 
-    return Dialog(
-      key: const ValueKey('workspace-navigation-dialog'),
-      backgroundColor: theme.surface.withValues(alpha: 1),
-      surfaceTintColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(20),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: 600,
-          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 8, 10),
-              child: Row(
-                children: [
-                  const Expanded(child: _LumenisMark()),
-                  IconButton(
-                    key: const ValueKey('workspace-navigation-close'),
-                    autofocus: true,
-                    tooltip: copy.text('common.close'),
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const LumenisIcon(Icons.close_rounded),
-                  ),
-                ],
+          final priority = rank(a).compareTo(rank(b));
+          return priority != 0 ? priority : a.compareTo(b);
+        });
+
+    return CallbackShortcuts(
+      bindings: query.isEmpty
+          ? const {}
+          : {
+              const SingleActivator(LogicalKeyboardKey.arrowDown): () =>
+                  _moveResult(1, matches),
+              const SingleActivator(LogicalKeyboardKey.arrowUp): () =>
+                  _moveResult(-1, matches),
+            },
+      child: Dialog(
+        key: const ValueKey('workspace-navigation-dialog'),
+        backgroundColor: theme.surface.withValues(alpha: 1),
+        surfaceTintColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: 600,
+            maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 8, 10),
+                child: Row(
+                  children: [
+                    const Expanded(child: _LumenisMark()),
+                    IconButton(
+                      key: const ValueKey('workspace-navigation-close'),
+                      tooltip: copy.text('common.close'),
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const LumenisIcon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Divider(height: 1, color: theme.line),
-            Flexible(
-              child: SingleChildScrollView(
-                key: const ValueKey('workspace-navigation-list'),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      for (final destination in widget.destinations) ...[
-                        _domainRow(destination),
-                        if (_previewGroup == destination.id.split('-').first)
-                          _navigationTree(),
-                      ],
-                    ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+                child: TextField(
+                  key: const ValueKey('workspace-navigation-search'),
+                  controller: _search,
+                  autofocus: true,
+                  onChanged: (_) => setState(() => _highlighted = 0),
+                  onSubmitted: (_) {
+                    if (query.isNotEmpty && matches.isNotEmpty) {
+                      Navigator.of(
+                        context,
+                      ).pop(matches[_highlighted.clamp(0, matches.length - 1)]);
+                    }
+                  },
+                  decoration: InputDecoration(
+                    hintText: _shellCopy(
+                      context,
+                      zh: '查找工作',
+                      en: 'Find a workspace',
+                      ko: '작업 찾기',
+                    ),
+                    prefixIcon: const LumenisIcon(Icons.search_rounded),
+                    suffixIcon: query.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: _shellCopy(
+                              context,
+                              zh: '清除',
+                              en: 'Clear',
+                              ko: '지우기',
+                            ),
+                            onPressed: () => setState(() {
+                              _search.clear();
+                              _highlighted = 0;
+                            }),
+                            icon: const LumenisIcon(Icons.close_rounded),
+                          ),
                   ),
                 ),
               ),
-            ),
-          ],
+              Divider(height: 1, color: theme.line),
+              Flexible(
+                child: query.isNotEmpty
+                    ? matches.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(28),
+                              child: Text(
+                                _shellCopy(
+                                  context,
+                                  zh: '没有匹配的工作',
+                                  en: 'No matching workspace',
+                                  ko: '일치하는 작업 없음',
+                                ),
+                              ),
+                            )
+                          : ListView(
+                              shrinkWrap: true,
+                              padding: const EdgeInsets.all(8),
+                              children: [
+                                for (final (index, id) in matches.indexed)
+                                  KeyedSubtree(
+                                    key: _resultKeys.putIfAbsent(
+                                      id,
+                                      GlobalKey.new,
+                                    ),
+                                    child: ListTile(
+                                      key: ValueKey('workspace-search-$id'),
+                                      selected: index == _highlighted,
+                                      title: Text(copy.text('screen.$id')),
+                                      trailing: const LumenisIcon(
+                                        Icons.north_east_rounded,
+                                      ),
+                                      onTap: () =>
+                                          Navigator.of(context).pop(id),
+                                    ),
+                                  ),
+                              ],
+                            )
+                    : SingleChildScrollView(
+                        key: const ValueKey('workspace-navigation-list'),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              for (final destination
+                                  in widget.destinations) ...[
+                                _domainRow(destination),
+                                if (_previewGroup ==
+                                    destination.id.split('-').first)
+                                  _navigationTree(),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1557,156 +1430,6 @@ class _WorkspaceNavigationDialogState
     activeScreenId: _previewScreenId,
     onSelected: (screenId) => Navigator.of(context).pop(screenId),
   );
-}
-
-class _WorkspaceHeader extends StatelessWidget {
-  const _WorkspaceHeader({
-    required this.destination,
-    required this.activeScreenId,
-    required this.contextLabel,
-    required this.coreLabel,
-    this.onRetryRuntime,
-    required this.onOpenNavigation,
-    required this.onOpenContextPicker,
-    required this.onLocaleChanged,
-    required this.onOpenCth02,
-    required this.onReturnToCth,
-    required this.onHome,
-    required this.isHome,
-    required this.isCth02,
-    this.compact = false,
-    this.railVisible = false,
-  });
-
-  final _WorkspaceDestination destination;
-  final String activeScreenId;
-  final String contextLabel;
-  final String coreLabel;
-  final VoidCallback? onRetryRuntime;
-  final VoidCallback onOpenNavigation;
-  final VoidCallback onOpenContextPicker;
-  final ValueChanged<Locale?>? onLocaleChanged;
-  final VoidCallback onOpenCth02;
-  final VoidCallback onReturnToCth;
-  final VoidCallback onHome;
-  final bool isHome;
-  final bool isCth02;
-  final bool compact;
-  final bool railVisible;
-
-  @override
-  Widget build(BuildContext context) {
-    final copy = context.lumenisL10n;
-    final theme = LumenisTheme.of(context);
-    return Container(
-      height: 64,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 20 : 26),
-      decoration: LumenisTheme.chassis(theme).copyWith(
-        border: Border(bottom: BorderSide(color: theme.line)),
-        boxShadow: [
-          BoxShadow(
-            color: theme.foreground.withValues(alpha: .055),
-            offset: const Offset(0, 2),
-            blurRadius: 3,
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            key: const ValueKey('workspace-navigation-open'),
-            tooltip: copy.text('shell.pages'),
-            onPressed: onOpenNavigation,
-            icon: const LumenisIcon(Icons.grid_view_rounded),
-          ),
-          IconButton(
-            key: const ValueKey('workspace-home'),
-            tooltip: _shellCopy(context, zh: '首页', en: 'Home', ko: '홈'),
-            onPressed: onHome,
-            icon: railVisible
-                ? const LumenisIcon(Icons.home_outlined)
-                : CustomPaint(
-                    size: const Size(24, 24),
-                    painter: _OpenContoursMark(theme.muted),
-                  ),
-          ),
-          Expanded(
-            child: Text(
-              isHome && railVisible
-                  ? _shellCopy(context, zh: '首页', en: 'Home', ko: '홈')
-                  : copy.text(
-                      isHome ? 'product.name' : 'screen.$activeScreenId',
-                    ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: theme.foreground,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (onRetryRuntime != null ||
-              coreLabel != copy.text('shell.connected')) ...[
-            const SizedBox(width: 14),
-            if (onRetryRuntime != null)
-              Tooltip(
-                message: copy.text('launch.retry'),
-                child: TextButton(
-                  key: const ValueKey('workspace-runtime-retry'),
-                  onPressed: onRetryRuntime,
-                  style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
-                  child: _StatusPill(label: coreLabel),
-                ),
-              )
-            else
-              _StatusPill(label: coreLabel),
-            const SizedBox(width: 14),
-          ],
-          if (compact)
-            IconButton(
-              tooltip: '${copy.text('context.selector.open')} · $contextLabel',
-              onPressed: onOpenContextPicker,
-              icon: const LumenisIcon(Icons.tune_rounded),
-              color: theme.muted,
-            )
-          else
-            Flexible(
-              flex: 2,
-              child: Tooltip(
-                message: copy.text('context.selector.open'),
-                child: TextButton.icon(
-                  onPressed: onOpenContextPicker,
-                  icon: const LumenisIcon(Icons.expand_more_rounded, size: 18),
-                  label: Text(
-                    contextLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-            ),
-          if (onLocaleChanged != null)
-            _LocaleSwitcher(onLocaleChanged: onLocaleChanged!),
-          const Sys05AppearanceButton(),
-          if (isCth02)
-            IconButton(
-              tooltip: copy.text('shell.return_to_overview'),
-              onPressed: onReturnToCth,
-              icon: const LumenisIcon(Icons.arrow_back_rounded),
-              color: theme.muted,
-            )
-          else if (!isHome && destination.id == 'CTH-01')
-            IconButton(
-              tooltip: copy.text('shell.open_subject_directory'),
-              onPressed: onOpenCth02,
-              icon: const LumenisIcon(Icons.account_tree_outlined),
-              color: theme.muted,
-            ),
-        ],
-      ),
-    );
-  }
 }
 
 class _PhoneSheet extends StatelessWidget {
@@ -1738,148 +1461,6 @@ class _PhoneSheet extends StatelessWidget {
       Flexible(child: child),
     ],
   );
-}
-
-class _PhoneHeader extends StatelessWidget {
-  const _PhoneHeader({
-    required this.screenId,
-    required this.contextLabel,
-    required this.onOpenContextPicker,
-    required this.onOpenPages,
-    required this.onOpenTools,
-    required this.onHome,
-    required this.isHome,
-    required this.onReturnToCth,
-    required this.isCth02,
-  });
-
-  final String screenId;
-  final String contextLabel;
-  final VoidCallback onOpenContextPicker;
-  final VoidCallback onOpenPages;
-  final VoidCallback onOpenTools;
-  final VoidCallback onHome;
-  final bool isHome;
-  final VoidCallback onReturnToCth;
-  final bool isCth02;
-
-  @override
-  Widget build(BuildContext context) {
-    final copy = context.lumenisL10n;
-    final theme = LumenisTheme.of(context);
-    final homeLabel = _shellCopy(context, zh: '首页', en: 'Home', ko: '홈');
-    return Container(
-      key: const ValueKey('workspace-phone-header'),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: theme.surface,
-        border: Border(bottom: BorderSide(color: theme.line)),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            key: const ValueKey('workspace-phone-pages'),
-            tooltip: copy.text('shell.pages'),
-            onPressed: onOpenPages,
-            icon: const LumenisIcon(Icons.menu_rounded, size: 20),
-          ),
-          IconButton(
-            key: const ValueKey('workspace-home'),
-            tooltip: homeLabel,
-            onPressed: onHome,
-            icon: CustomPaint(
-              size: const Size(22, 22),
-              painter: _OpenContoursMark(theme.muted),
-            ),
-          ),
-          Expanded(
-            child: isHome
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      copy.text('product.name'),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: theme.foreground,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  )
-                : Tooltip(
-                    message: copy.text('context.selector.open'),
-                    child: InkWell(
-                      onTap: onOpenContextPicker,
-                      borderRadius: BorderRadius.circular(8),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(minHeight: 48),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                copy.text('screen.$screenId'),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: theme.foreground,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      contextLabel,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        color: theme.muted,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  LumenisIcon(
-                                    Icons.expand_more_rounded,
-                                    size: 14,
-                                    color: theme.muted,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
-          const Sys05AppearanceButton(),
-          if (isCth02)
-            IconButton(
-              tooltip: copy.text('shell.return_to_overview'),
-              onPressed: onReturnToCth,
-              icon: const LumenisIcon(Icons.arrow_back_rounded, size: 20),
-              color: theme.muted,
-            ),
-          IconButton(
-            key: const ValueKey('workspace-phone-tools'),
-            tooltip: copy.text('common.more'),
-            onPressed: onOpenTools,
-            icon: const LumenisIcon(Icons.more_horiz_rounded, size: 20),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _ContextInspector extends StatelessWidget {
@@ -1924,10 +1505,11 @@ class _ContextInspector extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
+              decoration: ShapeDecoration(
                 color: LumenisTheme.of(context).surface,
-                border: Border.all(color: LumenisTheme.of(context).line),
-                borderRadius: BorderRadius.circular(12),
+                shape: LumenisPixelBorder(
+                  side: BorderSide(color: LumenisTheme.of(context).line),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2346,13 +1928,13 @@ class _ContextPickerDialogState extends State<_ContextPickerDialog> {
                       filled: true,
                       fillColor: LumenisTheme.of(context).canvas,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.zero,
                         borderSide: BorderSide(
                           color: LumenisTheme.of(context).line,
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.zero,
                         borderSide: BorderSide(
                           color: LumenisTheme.of(context).line,
                         ),
@@ -2570,18 +2152,16 @@ class _LumenisMark extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CustomPaint(
-              size: const Size(30, 30),
-              painter: _OpenContoursMark(theme.muted),
-            ),
+            const LumenisBotanical(size: 38, monochrome: true),
             const SizedBox(width: 10),
             Flexible(
               child: Text(
-                '寰意 / OEVIRA',
+                'OEVIRA',
                 style: TextStyle(
                   color: theme.foreground,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  letterSpacing: 2.5,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -2590,47 +2170,6 @@ class _LumenisMark extends StatelessWidget {
       ),
     );
   }
-}
-
-class _OpenContoursMark extends CustomPainter {
-  const _OpenContoursMark(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.35
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: 11),
-      0.55,
-      5.15,
-      false,
-      stroke,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: 7),
-      0.95,
-      4.9,
-      false,
-      stroke,
-    );
-    canvas.drawCircle(
-      center,
-      1.5,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.fill,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _OpenContoursMark oldDelegate) =>
-      oldDelegate.color != color;
 }
 
 class _SectionLabel extends StatelessWidget {
@@ -2647,44 +2186,6 @@ class _SectionLabel extends StatelessWidget {
         fontSize: 12,
         letterSpacing: 0,
         fontWeight: FontWeight.w600,
-      ),
-    );
-  }
-}
-
-class _StatusPill extends StatelessWidget {
-  const _StatusPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: LumenisTheme.of(context).quiet.withValues(alpha: 0.08),
-        border: Border.all(
-          color: LumenisTheme.of(context).quiet.withValues(alpha: 0.22),
-        ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          LumenisIcon(
-            Icons.circle,
-            color: LumenisTheme.of(context).quiet,
-            size: 6,
-          ),
-          const SizedBox(width: 7),
-          Text(
-            label,
-            style: TextStyle(
-              color: LumenisTheme.of(context).muted,
-              fontSize: 12,
-            ),
-          ),
-        ],
       ),
     );
   }

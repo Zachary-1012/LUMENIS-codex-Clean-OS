@@ -171,7 +171,7 @@ def api_internal_pitch_prepare():
         from lumenis.shared.content_creation.internal_pitch import prepare_internal_pitch
         data = _internal_pitch_body()
         allowed = {"scope", "manuscript", "shot_plan", "request_id", "citations", "work_id",
-                   "previous_artifact_id", "expected_draft_digest", "profile", "input_manifest", "upstream_ref"}
+                   "previous_artifact_id", "expected_draft_digest", "profile", "input_manifest", "upstream_ref", "generation"}
         required = {"scope", "manuscript", "request_id"}
         if "profile" not in data:
             required.add("shot_plan")
@@ -241,7 +241,7 @@ def _business_work_binding(operation):
     scope = _scope_material(**material)
     if scope["global"]:
         raise PermissionError("BUSINESS_WORK_FOCUS_REQUIRED")
-    service = BusinessDecisionWorkflow(internal_action_reader=read_internal_pitch, action_actor=actor)
+    service = BusinessDecisionWorkflow(internal_action_reader=read_internal_pitch, action_actor=actor, source_actor=actor)
     authorize = lambda selected: authorize_business_work_request(
         selected, actor_ref=actor_ref, scope=scope,
     )
@@ -254,6 +254,8 @@ def _business_work_local_access_allowed():
     expected = {
         "domain_api.api_business_work_prepare": "POST",
         "domain_api.api_business_work_read": "GET",
+        "domain_api.api_business_work_list": "GET",
+        "domain_api.api_business_work_sources": "GET",
         "domain_api.api_business_work_advance": "POST",
     }
     if expected.get(request.endpoint) != request.method:
@@ -281,7 +283,11 @@ def _business_work_response(call):
         if re.fullmatch(r"[A-Z_0-9]{1,100}", code) is None:
             code = "BUSINESS_WORK_UNAVAILABLE"
         status = 401 if code == "AUTH_REQUIRED" else 403 if (
-            isinstance(exc, PermissionError) or code == "CONTENT_SCOPE_DENIED"
+            isinstance(exc, PermissionError) or code in {
+                "CONTENT_SCOPE_DENIED", "WORK_PERMISSION_DENIED", "WORK_PERMISSION_UNVERIFIED",
+                "WORK_EFFECT_PERMISSION_DENIED", "WORK_SOURCE_AUTHORIZATION_REQUIRED",
+                "WORK_SOURCE_RIGHTS_UNVERIFIED",
+            }
         ) else (
             404 if isinstance(exc, LookupError) else 409 if code in {
                 "BUSINESS_WORK_REVISION_CONFLICT", "BUSINESS_WORK_SUBMISSION_CONFLICT",
@@ -327,15 +333,40 @@ def api_business_work_read(work_id):
     return _business_work_response(execute)
 
 
+@domain_api_bp.get("/api/experience/business-works")
+def api_business_work_list():
+    def execute():
+        if request.args:
+            raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+        service, actor_ref, scope, authorize = _business_work_binding("read")
+        return service.list_recent(actor_ref=actor_ref, scope=scope, authorize=authorize)
+    return _business_work_response(execute)
+
+
+@domain_api_bp.get("/api/experience/business-works/sources")
+def api_business_work_sources():
+    def execute():
+        if (set(request.args) - {"cursor"}
+                or any(len(request.args.getlist(key)) != 1 for key in request.args)
+                or ("cursor" in request.args and not request.args["cursor"])):
+            raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+        service, actor_ref, scope, authorize = _business_work_binding("read")
+        return service.available_sources(actor_ref=actor_ref, scope=scope, authorize=authorize,
+                                         limit=10, cursor=request.args.get("cursor"))
+    return _business_work_response(execute)
+
+
 @domain_api_bp.post("/api/experience/business-works/<work_id>/<operation>")
 def api_business_work_advance(work_id, operation):
     def execute():
         if operation not in {"choose", "adopt", "cancel", "interrupt", "resume", "action", "outcome", "outcome_unknown",
-                             "save-request", "save", "restore", "review"}:
+                             "save-request", "save", "save-confirm", "restore", "review", "manual_action", "observation"}:
             raise LookupError("BUSINESS_WORK_OPERATION_NOT_FOUND")
         data = _business_work_body()
-        if operation in {"save-request", "save"}:
+        if operation in {"save-request", "save", "save-confirm"}:
             required = {"request_id", "expected_revision", "citations"}
+            if operation == "save-confirm":
+                required |= {"confirm", "confirmed_resource"}
             optional = {"previous_artifact_id", "expected_draft_digest"}
             if (not required.issubset(data) or set(data) - required - optional
                     or (("previous_artifact_id" in data) != ("expected_draft_digest" in data))
@@ -344,6 +375,45 @@ def api_business_work_advance(work_id, operation):
                     or not isinstance(data["citations"], list)):
                 raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
             service, actor_ref, scope, authorize = _business_work_binding("save")
+            if operation == "save-confirm":
+                from experience_runtime import (
+                    _content_source_same_origin,
+                    _source_brief_context,
+                )
+                from lumenis.shared.reporting.saved_work import authorize_saved_work
+                from lumenis.system.security.permission import (
+                    OperationType,
+                    PermissionLevel,
+                    get_permission_gate,
+                )
+                if not _content_source_same_origin() or data.pop("confirm") is not True:
+                    raise PermissionError("BUSINESS_WORK_SAVE_CONFIRMATION_REQUIRED")
+                confirmed_resource = data.pop("confirmed_resource")
+                prepared = service.save_result_request(work_id, actor_ref=actor_ref, scope=scope,
+                                                       authorize=authorize, **data)
+                if confirmed_resource != prepared["resource"]:
+                    raise PermissionError("BUSINESS_WORK_SAVE_CONFIRMATION_MISMATCH")
+                gate = get_permission_gate()
+                if (not gate.has_permission(PermissionLevel.HUMAN_APPROVAL)
+                        or not gate.has_permission(PermissionLevel.COMMIT)):
+                    raise PermissionError("BUSINESS_WORK_SAVE_MANUAL_AUTHORITY_REQUIRED")
+                current_ref, _audit, _material, actor = _source_brief_context("write", include_actor=True)
+                context = authorize_saved_work(actor, service._action_scope(scope), action="write")
+                caller = context.get("principal_ref") or "actor:" + str(context["actor_id"])
+                if current_ref != actor_ref or caller != actor_ref:
+                    raise PermissionError("BUSINESS_WORK_SAVE_ACTOR_MISMATCH")
+                resource = prepared["resource"]
+                token = gate.get_valid_approval_token(OperationType.DATA_EXPORT.value, resource, exact=True)
+                created = token is None
+                if created:
+                    token = gate.grant_approval(OperationType.DATA_EXPORT.value, resource=resource,
+                                                duration_minutes=5, granted_by=caller)
+                try:
+                    return service.save_result(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
+                except Exception:
+                    if created:
+                        gate.revoke_approval(token)
+                    raise
             save = service.save_result_request if operation == "save-request" else service.save_result
             return save(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize, **data)
         if set(data) != {"submission_id", "payload", "expected_revision"}:

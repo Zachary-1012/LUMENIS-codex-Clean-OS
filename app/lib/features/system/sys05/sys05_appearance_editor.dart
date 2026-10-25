@@ -2,6 +2,8 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../../../core/lumenis_icon.dart';
+import '../../../core/lumenis_botanical.dart';
+import '../../../core/lumenis_theme.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../../l10n/lumenis_localizations.dart';
@@ -25,6 +27,14 @@ class Sys05AppearanceButton extends StatelessWidget {
           showDialog<void>(
             context: context,
             barrierColor: Colors.black.withValues(alpha: .12),
+            animationStyle: MediaQuery.disableAnimationsOf(context)
+                ? AnimationStyle.noAnimation
+                : const AnimationStyle(
+                    duration: LumenisMotion.panel,
+                    reverseDuration: LumenisMotion.exit,
+                    curve: Curves.easeOutCubic,
+                    reverseCurve: Curves.easeInCubic,
+                  ),
             builder: (context) => Dialog(
               key: const ValueKey('appearance/desktop-panel'),
               alignment: Alignment.centerRight,
@@ -49,6 +59,12 @@ class Sys05AppearanceButton extends StatelessWidget {
         }
         showModalBottomSheet<void>(
           context: context,
+          sheetAnimationStyle: MediaQuery.disableAnimationsOf(context)
+              ? AnimationStyle.noAnimation
+              : const AnimationStyle(
+                  duration: LumenisMotion.page,
+                  reverseDuration: LumenisMotion.exit,
+                ),
           isScrollControlled: true,
           useSafeArea: true,
           showDragHandle: false,
@@ -78,10 +94,12 @@ class Sys05AppearanceEditor extends StatefulWidget {
   const Sys05AppearanceEditor({
     required this.controller,
     this.onClose,
+    this.embedded = false,
     super.key,
   });
   final Sys05AppearanceController controller;
   final VoidCallback? onClose;
+  final bool embedded;
   @override
   State<Sys05AppearanceEditor> createState() => _Sys05AppearanceEditorState();
 }
@@ -176,11 +194,14 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
         );
       }
       final scheme = Theme.of(context).colorScheme;
+      final palette = LumenisTheme.of(context);
       String copy(String key, {Map<String, Object?> values = const {}}) =>
           context.lumenisL10n.text(key, values: values);
       final error = _localError ?? c.errorKey;
       final compact = MediaQuery.sizeOf(context).width < 480;
-      final horizontalPadding = compact ? 18.0 : 24.0;
+      final horizontalPadding = compact
+          ? LumenisSpace.control
+          : LumenisSpace.section;
       final heading = Row(
         children: [
           Expanded(
@@ -199,10 +220,12 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
         ],
       );
       final content = SingleChildScrollView(
+        primary: widget.embedded ? false : null,
+        physics: widget.embedded ? const NeverScrollableScrollPhysics() : null,
         padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
+          widget.embedded ? 0 : horizontalPadding,
           6,
-          horizontalPadding,
+          widget.embedded ? 0 : horizontalPadding,
           28,
         ),
         child: Column(
@@ -215,50 +238,38 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 24),
-            ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: SingleChildScrollView(
-                key: const ValueKey('appearance/modes-scroll'),
-                scrollDirection: Axis.horizontal,
-                child: Row(
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final columns = constraints.maxWidth >= 580 ? 3 : 2;
+                final width =
+                    (constraints.maxWidth - (columns - 1) * 12) / columns;
+                return Wrap(
+                  key: const ValueKey('appearance/modes-scroll'),
+                  spacing: 12,
+                  runSpacing: 12,
                   children: [
                     for (final mode in WorkspaceBackdrop.values)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Semantics(
+                      SizedBox(
+                        width: width,
+                        child: _AppearanceChoice(
+                          key: ValueKey('appearance/${mode.name}'),
+                          mode: mode,
+                          label: copy('appearance.mode.${mode.name}'),
                           selected: c.mode == mode,
-                          child: ChoiceChip(
-                            key: ValueKey('appearance/${mode.name}'),
-                            label: Text(copy('appearance.mode.${mode.name}')),
-                            selected: c.mode == mode,
-                            avatar: LumenisIcon(switch (mode) {
-                              WorkspaceBackdrop.frosted => Icons.blur_on,
-                              WorkspaceBackdrop.wallpaper =>
-                                Icons.image_outlined,
-                              WorkspaceBackdrop.desktop =>
-                                Icons.desktop_windows_outlined,
-                              WorkspaceBackdrop.white =>
-                                Icons.light_mode_outlined,
-                              WorkspaceBackdrop.black =>
-                                Icons.dark_mode_outlined,
-                              WorkspaceBackdrop.solid =>
-                                Icons.color_lens_outlined,
-                            }, size: 18),
-                            onSelected:
-                                _choosing ||
-                                    c.resetting ||
-                                    (mode == WorkspaceBackdrop.desktop &&
-                                        !LumenisWindowMaterial.supported)
-                                ? null
-                                : (selected) {
-                                    if (selected) _selectMode(mode);
-                                  },
-                          ),
+                          palette: palette,
+                          customColor: c.solidColor,
+                          onPressed:
+                              _choosing ||
+                                  c.resetting ||
+                                  (mode == WorkspaceBackdrop.desktop &&
+                                      !LumenisWindowMaterial.supported)
+                              ? null
+                              : () => _selectMode(mode),
                         ),
                       ),
                   ],
-                ),
-              ),
+                );
+              },
             ),
             if (!LumenisWindowMaterial.supported) ...[
               const SizedBox(height: 12),
@@ -304,15 +315,15 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                             padding: const EdgeInsets.all(8),
                             minimumSize: const Size(0, 48),
                             tapTargetSize: MaterialTapTargetSize.padded,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+                            shape: const LumenisPixelBorder(step: 3),
                           ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                              ClipPath(
+                                clipper: const ShapeBorderClipper(
+                                  shape: LumenisPixelBorder(step: 2),
+                                ),
                                 child: Image.asset(
                                   assetPath,
                                   width: tileWidth - 16,
@@ -348,8 +359,10 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
             if (c.mode == WorkspaceBackdrop.wallpaper) ...[
               const SizedBox(height: 18),
               if (c.wallpaper != null)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                ClipPath(
+                  clipper: const ShapeBorderClipper(
+                    shape: LumenisPixelBorder(step: 3),
+                  ),
                   child: Image.memory(
                     key: const ValueKey('appearance/wallpaper-preview'),
                     c.wallpaper!,
@@ -412,14 +425,16 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                                     .toUpperCase();
                                 c.update(solidColor: color);
                               },
-                        borderRadius: BorderRadius.circular(24),
+                        customBorder: const LumenisPixelBorder(step: 3),
                         child: Container(
-                          width: 46,
-                          height: 46,
-                          decoration: BoxDecoration(
+                          width: LumenisSpace.touchTarget,
+                          height: LumenisSpace.touchTarget,
+                          decoration: ShapeDecoration(
                             color: color,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: scheme.outline),
+                            shape: LumenisPixelBorder(
+                              step: 3,
+                              side: BorderSide(color: scheme.outline),
+                            ),
                           ),
                         ),
                       ),
@@ -572,6 +587,48 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
             ),
             const Divider(height: 1),
             SwitchListTile.adaptive(
+              key: const ValueKey('appearance/botanicalRoles'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(copy('appearance.botanicalRoles')),
+              value: c.botanicalRoles,
+              onChanged: c.resetting
+                  ? null
+                  : (value) => c.update(botanicalRoles: value),
+            ),
+            if (c.botanicalRoles)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    for (final (name, plant) in const [
+                      ('Pim', LumenisPlant.orchid),
+                      ('Bram', LumenisPlant.spiderLily),
+                      ('Ness', LumenisPlant.palm),
+                      ('Jas', LumenisPlant.grape),
+                      ('Aris', LumenisPlant.jasmine),
+                    ])
+                      Semantics(
+                        label: name,
+                        image: true,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            LumenisBotanical(plant: plant, size: 56),
+                            const SizedBox(height: 4),
+                            Text(
+                              name,
+                              style: Theme.of(context).textTheme.labelMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            const Divider(height: 1),
+            SwitchListTile.adaptive(
               key: const ValueKey('appearance/reduceMotion'),
               contentPadding: EdgeInsets.zero,
               title: Text(copy('appearance.reduceMotion')),
@@ -589,12 +646,25 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
                   Text(SysSystemCopy.text(context, 'sys.waiting.preference')),
                   Wrap(
                     spacing: 8,
-                    children: WaitingTone.values.map((tone) => ChoiceChip(
-                      key: ValueKey('appearance/waitingTone/${tone.name}'),
-                      label: Text(SysSystemCopy.text(context, 'sys.waiting.${tone.name}')),
-                      selected: c.waitingTone == tone,
-                      onSelected: c.resetting ? null : (_) => c.update(waitingTone: tone),
-                    )).toList(),
+                    children: WaitingTone.values
+                        .map(
+                          (tone) => ChoiceChip(
+                            key: ValueKey(
+                              'appearance/waitingTone/${tone.name}',
+                            ),
+                            label: Text(
+                              SysSystemCopy.text(
+                                context,
+                                'sys.waiting.${tone.name}',
+                              ),
+                            ),
+                            selected: c.waitingTone == tone,
+                            onSelected: c.resetting
+                                ? null
+                                : (_) => c.update(waitingTone: tone),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ],
               ),
@@ -668,4 +738,144 @@ class _Sys05AppearanceEditorState extends State<Sys05AppearanceEditor> {
       );
     },
   );
+}
+
+class _AppearanceChoice extends StatelessWidget {
+  const _AppearanceChoice({
+    super.key,
+    required this.mode,
+    required this.label,
+    required this.selected,
+    required this.palette,
+    required this.customColor,
+    required this.onPressed,
+  });
+
+  final WorkspaceBackdrop mode;
+  final String label;
+  final bool selected;
+  final LumenisPalette palette;
+  final Color customColor;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final background = switch (mode) {
+      WorkspaceBackdrop.white => Colors.white,
+      WorkspaceBackdrop.black => Colors.black,
+      WorkspaceBackdrop.solid => customColor,
+      _ =>
+        palette.brightness == Brightness.dark
+            ? LumenisTheme.darkPalette.canvas
+            : LumenisTheme.canvas,
+    };
+    final dark = background.computeLuminance() < .179;
+    final line = (dark ? Colors.white : Colors.black).withValues(alpha: .24);
+    final sheet = dark
+        ? LumenisTheme.darkPalette.surface
+        : LumenisTheme.surface;
+    return Semantics(
+      selected: selected,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.all(10),
+          side: BorderSide(
+            color: selected ? palette.accentStrong : palette.line,
+            width: selected ? 2 : 1,
+          ),
+          backgroundColor: selected ? palette.surfaceRaised : palette.surface,
+          shape: const LumenisPixelBorder(step: 3),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ExcludeSemantics(
+              child: SizedBox(
+                height: 72,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: background,
+                    border: Border.all(color: line),
+                  ),
+                  child: Stack(
+                    children: [
+                      if (mode == WorkspaceBackdrop.wallpaper)
+                        Positioned.fill(
+                          child: Image.asset(
+                            'assets/wallpapers/cobalt-dusk.jpg',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      Positioned(
+                        left: 8,
+                        top: 8,
+                        bottom: 8,
+                        width: 18,
+                        child: ColoredBox(color: sheet.withValues(alpha: .8)),
+                      ),
+                      Positioned(
+                        left: 34,
+                        right: 8,
+                        top: 8,
+                        height: 8,
+                        child: ColoredBox(color: line),
+                      ),
+                      Positioned(
+                        left: 34,
+                        right: 8,
+                        top: 24,
+                        bottom: 8,
+                        child: ColoredBox(
+                          color: sheet.withValues(alpha: .8),
+                          child: Theme(
+                            data: LumenisTheme.forPalette(
+                              dark
+                                  ? LumenisTheme.darkPalette
+                                  : LumenisTheme.lightPalette,
+                            ),
+                            child: const Center(
+                              child: LumenisBotanical(
+                                size: 28,
+                                monochrome: true,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (mode == WorkspaceBackdrop.desktop)
+                        Center(
+                          child: LumenisIcon(
+                            Icons.desktop_windows_outlined,
+                            size: 22,
+                            color: dark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                ),
+                if (selected)
+                  LumenisIcon(
+                    Icons.check,
+                    size: 16,
+                    color: palette.accentStrong,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

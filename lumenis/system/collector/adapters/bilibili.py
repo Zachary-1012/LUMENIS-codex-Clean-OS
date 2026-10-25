@@ -30,7 +30,7 @@ class BilibiliAdapter(BasePlatformAdapter):
             return self.backend
         try:
             from lumenis.adapters.bilibili import BilibiliAdapter as V4BilibiliAdapter
-            self.backend = V4BilibiliAdapter()
+            self.backend = V4BilibiliAdapter(public_read_only=True)
             return self.backend
         except Exception as exc:
             raise RuntimeError(f"无法加载 v4 B站采集引擎: {exc}") from exc
@@ -54,6 +54,17 @@ class BilibiliAdapter(BasePlatformAdapter):
             return CollectionStatus.PROVIDER_UNAVAILABLE
         return CollectionStatus.COLLECT_ERROR
 
+    @classmethod
+    def _observed_status(cls,result):
+        failure = (getattr(result,'metadata',None) or {}).get('failure_class')
+        observed = {'AUTH_REQUIRED':CollectionStatus.SESSION_EXPIRED,
+            'VERIFICATION_REQUIRED':CollectionStatus.NEED_VERIFY,'ACCESS_BLOCKED':CollectionStatus.BLOCKED,
+            'RATE_LIMITED':CollectionStatus.COOLING_DOWN,'CONTENT_UNAVAILABLE':CollectionStatus.PROVIDER_UNAVAILABLE,
+            'CONNECTIVITY_FAILURE':CollectionStatus.PROVIDER_UNAVAILABLE,
+            'SOURCE_PARSE_ERROR':CollectionStatus.COLLECT_ERROR,'SOURCE_PROTOCOL_ERROR':CollectionStatus.COLLECT_ERROR,
+            'PROVIDER_UNAVAILABLE':CollectionStatus.PROVIDER_UNAVAILABLE,'PROVIDER_REJECTED':CollectionStatus.COLLECT_ERROR}
+        return observed.get(failure) or cls._v4_status_to_main(result.success,result.notes,result.error)
+
     def _v4_notes_to_items(self, notes: list) -> list[dict]:
         items = []
         for n in notes or []:
@@ -70,6 +81,7 @@ class BilibiliAdapter(BasePlatformAdapter):
                 "comments": getattr(n, "comments", None),
                 "collects": getattr(n, "collects", None),
                 "shares": getattr(n, "shares", None),
+                'cover':getattr(n,'cover',None),
                 "raw": raw,
             }))
         return items
@@ -79,10 +91,12 @@ class BilibiliAdapter(BasePlatformAdapter):
             backend = self._load_backend()
             max_results = int(kwargs.get("max_results", 20))
             if hasattr(backend, "breaker") and callable(getattr(backend, "safe_collect", None)):
-                result = backend.safe_collect(keyword, max_results=max_results, allow_fallback=False)
+                result = backend.safe_collect(keyword, max_results=max_results, allow_fallback=False,
+                    **({'native_cursor': kwargs['cursor']} if kwargs.get('cursor') is not None else {}))
             else:
-                result = backend.search(keyword, max_results=max_results)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+                result = backend.search(keyword, max_results=max_results,
+                    **({'cursor': kwargs['cursor']} if kwargs.get('cursor') is not None else {}))
+            status = self._observed_status(result)
             items = self._v4_notes_to_items(result.notes)
             return CollectionResult(
                 status=status,
@@ -92,7 +106,7 @@ class BilibiliAdapter(BasePlatformAdapter):
                 new_count=len(items),
                 message=result.error or "",
                 metadata={"engine": "v4_bilibili_api", "provider": "bilibili_first_party_read_api",
-                          "duration_s": result.duration_seconds},
+                          "duration_s": result.duration_seconds, **(result.metadata or {})},
             )
         except Exception as exc:
             logger.error("B站主链路采集异常 error_type=%s", type(exc).__name__)
@@ -116,14 +130,15 @@ class BilibiliAdapter(BasePlatformAdapter):
                     metadata={"provider": "bilibili_first_party_read_api", "capability": method},
                 )
             result = fn(*args, **kwargs)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            status = self._observed_status(result)
             comments = map_v4_comments(result.notes) if method == "comments" else []
             items = [] if method == "comments" else self._v4_notes_to_items(result.notes)
             return CollectionResult(
                 status=status, platform=self.platform, items=items, comments=comments,
                 raw_count=result.raw_count, new_count=len(comments) if method == "comments" else len(items),
                 message=result.error or "",
-                metadata={"engine": f"v4_bilibili_{method}", "provider": "bilibili_first_party_read_api",
+                metadata={**(result.metadata if isinstance(getattr(result, "metadata", None), dict) else {}),
+                          "engine": f"v4_bilibili_{method}", "provider": "bilibili_first_party_read_api",
                           "duration_s": result.duration_seconds},
             )
         except Exception as exc:
@@ -137,10 +152,19 @@ class BilibiliAdapter(BasePlatformAdapter):
         return self._delegate_v4("detail", bvid=content_id)
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
-        return self._delegate_v4("comments", bvid=content_id, max_comments=kwargs.get("max_comments", 20))
+        options = {}
+        if kwargs.get('cursor') is not None:
+            options['cursor'] = kwargs['cursor']
+        if include_replies:
+            options['include_replies'] = True
+        return self._delegate_v4("comments", bvid=content_id, max_comments=kwargs.get("max_comments", 20), **options)
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("creator", mid=creator_id)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._delegate_v4('author_posts', author_id, max_results=kwargs.get('max_results',20),
+                                 cursor=kwargs.get('cursor'))
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         from lumenis.adapters.cookie_vault import check_cookie_status
@@ -152,7 +176,7 @@ class BilibiliAdapter(BasePlatformAdapter):
             engine_ok = False
         if not engine_ok:
             status = CollectionStatus.PROVIDER_UNAVAILABLE
-        elif session_state != "ACTIVE":
+        elif session_state != "ACTIVE" and getattr(backend, 'public_read_only', False) is not True:
             status = CollectionStatus.NOT_CONFIGURED
         else:
             # File-level auth presence is not proof that the remote session is valid.
@@ -160,10 +184,11 @@ class BilibiliAdapter(BasePlatformAdapter):
         return CollectionResult(
             status=status,
             platform=self.platform,
-            message="B站授权态仅在本次人工请求中验证",
+            message="B站公开只读接口或既有授权态在本次人工请求中验证",
             metadata={"provider": "bilibili_first_party_read_api",
                       "session_state": "configured_unverified" if session_state == "ACTIVE" else "not_configured",
-                      "healthcheck_scope": "local_configuration", "engine_ok": engine_ok},
+                       "healthcheck_scope": "local_configuration", "engine_ok": engine_ok,
+                       "access_mode": 'public_read_only' if getattr(backend, 'public_read_only', False) else 'authorized_session'},
         )
 
 

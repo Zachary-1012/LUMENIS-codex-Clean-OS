@@ -376,7 +376,8 @@ class DouyinAdapter(BasePlatformAdapter):
                 status=status, platform=self.platform, items=items, comments=comments,
                 raw_count=result.raw_count, new_count=len(comments) if method == "comments" else len(items),
                 message=result.error or "",
-                metadata={"engine": f"v4_douyin_{method}", "provider": "authorized_browser_worker",
+                metadata={**(result.metadata if isinstance(getattr(result, "metadata", None), dict) else {}),
+                          "engine": f"v4_douyin_{method}", "provider": "authorized_browser_worker",
                           "duration_s": result.duration_seconds},
             )
         except Exception as exc:
@@ -390,7 +391,12 @@ class DouyinAdapter(BasePlatformAdapter):
         return self._delegate_v4("detail", aweme_id=content_id)
 
     def comments(self, content_id: str, *, include_replies: bool = False, **kwargs: Any) -> CollectionResult:
-        return self._delegate_v4("comments", aweme_id=content_id, max_comments=kwargs.get("max_comments", 20))
+        options = {}
+        if kwargs.get('cursor') is not None:
+            options['cursor'] = kwargs['cursor']
+        if include_replies:
+            options['include_replies'] = True
+        return self._delegate_v4("comments", aweme_id=content_id, max_comments=kwargs.get("max_comments", 20), **options)
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("creator", sec_uid=creator_id)

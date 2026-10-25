@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../../../core/lumenis_split_handle.dart';
 
 import '../../../core/lumenis_core_client.dart';
 import '../../../core/lumenis_icon.dart';
@@ -9,6 +10,7 @@ import '../../../core/lumenis_theme.dart';
 import '../../../navigation/lumenis_leave_guard.dart';
 import '../read_aloud_action.dart';
 import 'manuscript_controller.dart';
+import 'creation_brief_dialog.dart';
 import 'manuscript_draft_files.dart';
 import 'media_project_files.dart';
 
@@ -48,6 +50,7 @@ class _SectionDraft {
       body = TextEditingController(text: body);
   final TextEditingController heading;
   final TextEditingController body;
+  final anchor = GlobalKey();
   void dispose() {
     heading.dispose();
     body.dispose();
@@ -66,6 +69,7 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
   int _revision = 0;
   bool _preview = false;
   bool _outlineVisible = false;
+  double _outlineWidth = 208;
   bool _fileBusy = false;
   bool _loadingDraft = false;
   String _language = 'zh';
@@ -75,6 +79,8 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
   String? _appliedArtifact;
   _SectionDraft? _removed;
   int? _removedAt;
+  Map<String, dynamic> _creationBrief = {};
+  String? _generationStartingDraft;
 
   String _t(String zh, String en, String ko) =>
       switch (Localizations.localeOf(context).languageCode) {
@@ -306,6 +312,79 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
     _acceptSaved(sent);
   }
 
+  Future<void> _createWithAi() async {
+    if (!_controller.canGenerate || _busy) return;
+    final hasWriting =
+        _summary.text.trim().isNotEmpty ||
+        _sections.any(
+          (s) =>
+              s.body.text.trim().isNotEmpty || s.heading.text.trim().isNotEmpty,
+        );
+    if (_dirty && hasWriting) {
+      if (!_valid) {
+        setState(
+          () => _notice = _t(
+            '请先补全标题和文稿，再保存当前版本。',
+            'Complete and save the current draft first.',
+            '현재 초안을 완성하고 먼저 저장하세요.',
+          ),
+        );
+        return;
+      }
+      await _save();
+      if (!mounted || _controller.errorCode != null || _dirty) return;
+    }
+    var saved = _controller.savedWork;
+    if (saved != null && saved.revisionSections.isEmpty) {
+      await _controller.reopen(saved.artifactId);
+      if (!mounted || _controller.errorCode != null) return;
+      saved = _controller.savedWork;
+      if (saved == null || saved.revisionSections.isEmpty) {
+        setState(
+          () => _notice = _t(
+            '当前版本的段落尚未读回，请重新打开作品。',
+            'Reopen this version to load its editable sections.',
+            '수정 가능한 문단을 불러오려면 이 버전을 다시 여세요.',
+          ),
+        );
+        return;
+      }
+    }
+    final brief = await showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => CreationBriefDialog(
+        initialTitle: _title.text,
+        language: _language,
+        initial: _creationBrief,
+        client: _controller.scope is SharedWorkspaceScope
+            ? widget.client
+            : null,
+        sections: saved?.revisionSections ?? const [],
+        onCreate: (input) async {
+          _creationBrief = Map<String, dynamic>.from(input['brief'] as Map);
+          final starting = jsonEncode(_draft);
+          _generationStartingDraft = starting;
+          await _controller.generate(input);
+          if (!mounted) return 'Closed';
+          _acceptSaved(starting);
+          if (_controller.hasUnresolvedSave) return null;
+          if (_controller.errorCode != null) {
+            return _errorText();
+          }
+          return _controller.taskState == 'succeeded'
+              ? null
+              : _t(
+                  '创作未完成，要求已保留。',
+                  'Creation did not finish. Your brief is retained.',
+                  '창작이 완료되지 않았습니다. 요청은 유지됩니다.',
+                );
+        },
+      ),
+    );
+    if (brief != null) _creationBrief = brief;
+  }
+
   void _acceptSaved(String sent) {
     final saved = _controller.savedWork;
     if (_controller.errorCode != null ||
@@ -316,6 +395,21 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
       return;
     }
     _appliedArtifact = saved.artifactId;
+    if (_controller.generatedAttempt &&
+        _generationStartingDraft != null &&
+        jsonEncode(_draft) == _generationStartingDraft) {
+      _adopt(saved.manuscript);
+      _generationStartingDraft = null;
+      widget.onSaved?.call(saved.artifactId);
+      setState(
+        () => _notice = _t(
+          '已生成并保存新版本，请审阅内容。',
+          'A new version is saved and ready for your review.',
+          '새 버전이 저장되었습니다. 내용을 검토하세요.',
+        ),
+      );
+      return;
+    }
     // Network completion must never replace typing made after its snapshot.
     final accepted = jsonEncode(saved.manuscript.toJson());
     if (jsonEncode(_draft) == accepted && sent == accepted) {
@@ -643,6 +737,41 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
       _preview = false;
     });
     _edit();
+    _revealSection(_selected);
+  }
+
+  void _revealSection(int index) {
+    if (index < 0 || index >= _sections.length) return;
+    final section = _sections[index];
+    setState(() {
+      _selected = index;
+      _preview = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_sections.contains(section)) return;
+      final target = section.anchor.currentContext;
+      if (target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        alignment: .08,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+      );
+    });
+  }
+
+  void _reorder(int from, int to) {
+    if (_busy) return;
+    final selected = _sections[_selected];
+    if (from == to) return;
+    setState(() {
+      _sections.insert(to, _sections.removeAt(from));
+      _selected = _sections.indexOf(selected);
+    });
+    _edit();
+    _revealSection(_selected);
   }
 
   void _move(int delta) {
@@ -654,6 +783,7 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
       _selected = destination;
     });
     _edit();
+    _revealSection(_selected);
   }
 
   void _remove() {
@@ -809,8 +939,30 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             if (_outlineVisible) ...[
-                              SizedBox(width: 208, child: _outline()),
-                              const VerticalDivider(width: 1),
+                              SizedBox(
+                                width: _outlineWidth,
+                                child: DecoratedBox(
+                                  decoration: LumenisTheme.chassis(colors),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: _outline(),
+                                  ),
+                                ),
+                              ),
+                              LumenisSplitHandle(
+                                key: const Key('manuscript-outline-resize'),
+                                label: _t(
+                                  '调整目录宽度',
+                                  'Resize outline',
+                                  '목차 너비 조절',
+                                ),
+                                onDelta: (delta) => setState(
+                                  () => _outlineWidth = (_outlineWidth + delta)
+                                      .clamp(176, 300),
+                                ),
+                                onReset: () =>
+                                    setState(() => _outlineWidth = 208),
+                              ),
                             ],
                             Expanded(child: _writingSurface()),
                           ],
@@ -893,8 +1045,9 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
     );
     final save = _busy || !_valid || !_controller.canSave ? null : _save;
     final open = _busy || _controller.scope == null ? null : _library;
-    return Padding(
+    return Container(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      decoration: LumenisTheme.chassis(LumenisTheme.of(context)),
       child: wide
           ? Row(
               children: [
@@ -940,6 +1093,17 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                TextButton.icon(
+                  key: const Key('manuscript-ai-create'),
+                  onPressed: _controller.canGenerate && !_busy
+                      ? _createWithAi
+                      : null,
+                  icon: const LumenisIcon(
+                    Icons.auto_awesome_outlined,
+                    size: 18,
+                  ),
+                  label: Text(_t('创作助手', 'Writing assistant', '창작 도우미')),
+                ),
                 FilledButton(
                   key: const Key('manuscript-save'),
                   onPressed: save,
@@ -968,6 +1132,17 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                   tooltip: _t('打开保存的文稿', 'Open saved writing', '저장한 문서 열기'),
                   onPressed: open,
                   icon: const LumenisIcon(Icons.folder_open_outlined, size: 20),
+                ),
+                IconButton(
+                  key: const Key('manuscript-ai-create'),
+                  tooltip: _t('创作助手', 'Writing assistant', '창작 도우미'),
+                  onPressed: _controller.canGenerate && !_busy
+                      ? _createWithAi
+                      : null,
+                  icon: const LumenisIcon(
+                    Icons.auto_awesome_outlined,
+                    size: 20,
+                  ),
                 ),
                 IconButton(
                   key: const Key('manuscript-save'),
@@ -1008,10 +1183,13 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
         ),
       ),
       Expanded(
-        child: ListView(
+        child: ReorderableListView(
+          buildDefaultDragHandles: false,
+          onReorderItem: _reorder,
           children: [
             for (var i = 0; i < _sections.length; i++)
               ListTile(
+                key: ObjectKey(_sections[i]),
                 selected: _selected == i,
                 leading: Text('${i + 1}'.padLeft(2, '0')),
                 title: Text(
@@ -1021,12 +1199,25 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                onTap: () => setState(() => _selected = i),
+                trailing: ReorderableDragStartListener(
+                  index: i,
+                  enabled: !_busy,
+                  child: Semantics(
+                    label: _t('拖动排序', 'Drag to reorder', '드래그하여 순서 변경'),
+                    child: const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: LumenisIcon(Icons.drag_indicator, size: 18),
+                    ),
+                  ),
+                ),
+                onTap: () => _revealSection(i),
               ),
           ],
         ),
       ),
       TextButton.icon(
+        key: const Key('manuscript-outline-add'),
         onPressed: _busy || _sectionLimitReached ? null : _addSection,
         icon: const LumenisIcon(Icons.add, size: 18),
         label: Text(_t('添加段落', 'Add section', '문단 추가')),
@@ -1037,26 +1228,13 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
   Widget _writingSurface() {
     final palette = LumenisTheme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      padding: const EdgeInsets.fromLTRB(28, 24, 28, 20),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 860),
           child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: palette.surface,
-              border: Border.all(color: palette.line),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(4),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: palette.foreground.withValues(alpha: 0.035),
-                  blurRadius: 28,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
+            decoration: LumenisTheme.paper(palette, radius: 5),
             child: _preview ? _document() : _editor(compact: !_outlineVisible),
           ),
         ),
@@ -1076,164 +1254,195 @@ class _ManuscriptEditorState extends State<ManuscriptEditor> {
         isDense: true,
       );
 
-  Widget _editor({bool compact = false}) => ListView(
+  Widget _editor({bool compact = false}) => SingleChildScrollView(
     padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 600 ? 20 : 44),
-    children: [
-      Semantics(
-        label: _t('标题', 'Title', '제목'),
-        child: TextField(
-          key: const Key('manuscript-title'),
-          controller: _title,
-          readOnly: _busy,
-          maxLines: null,
-          decoration: _writingField(
-            _t('标题', 'Title', '제목'),
-            error: _title.text.trim().runes.length > 300
-                ? _t(
-                    '标题最多 300 字符；内容未截断。',
-                    'Title limit is 300 characters; nothing was truncated.',
-                    '제목은 300자까지입니다. 입력 내용은 잘리지 않았습니다.',
-                  )
-                : null,
-          ),
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 30,
-            fontWeight: FontWeight.w600,
-            height: 1.45,
-          ),
-        ),
-      ),
-      const SizedBox(height: 16),
-      Semantics(
-        label: _t('概要', 'Summary', '개요'),
-        child: TextField(
-          key: const Key('manuscript-summary'),
-          controller: _summary,
-          readOnly: _busy,
-          minLines: 2,
-          maxLines: 5,
-          decoration: _writingField(_t('概要', 'Summary', '개요')),
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: LumenisTheme.of(context).muted,
-            height: 1.8,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          label: _t('标题', 'Title', '제목'),
+          child: TextField(
+            key: const Key('manuscript-title'),
+            controller: _title,
+            readOnly: _busy,
+            maxLines: null,
+            decoration: _writingField(
+              _t('标题', 'Title', '제목'),
+              error: _title.text.trim().runes.length > 300
+                  ? _t(
+                      '标题最多 300 字符；内容未截断。',
+                      'Title limit is 300 characters; nothing was truncated.',
+                      '제목은 300자까지입니다. 입력 내용은 잘리지 않았습니다.',
+                    )
+                  : null,
+            ),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontSize: 30,
+              fontWeight: FontWeight.w600,
+              height: 1.45,
+            ),
           ),
         ),
-      ),
-      const SizedBox(height: 16),
-      if (compact)
-        DropdownButtonFormField<int>(
-          key: ValueKey('manuscript-section-$_selected-${_sections.length}'),
-          initialValue: _selected,
-          isExpanded: true,
-          decoration: InputDecoration(
-            labelText: _t('当前段落', 'Current section', '현재 문단'),
+        const SizedBox(height: 16),
+        Semantics(
+          label: _t('概要', 'Summary', '개요'),
+          child: TextField(
+            key: const Key('manuscript-summary'),
+            controller: _summary,
+            readOnly: _busy,
+            minLines: 2,
+            maxLines: 5,
+            decoration: _writingField(_t('概要', 'Summary', '개요')),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: LumenisTheme.of(context).muted,
+              height: 1.8,
+            ),
           ),
-          items: [
-            for (var i = 0; i < _sections.length; i++)
-              DropdownMenuItem(
-                value: i,
-                child: Text(
-                  '${i + 1}. ${_sections[i].heading.text.isEmpty ? _t('未命名段落', 'Untitled section', '제목 없는 문단') : _sections[i].heading.text}',
-                  overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 16),
+        if (compact)
+          DropdownButtonFormField<int>(
+            key: ValueKey('manuscript-section-$_selected-${_sections.length}'),
+            initialValue: _selected,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: _t('当前段落', 'Current section', '현재 문단'),
+            ),
+            items: [
+              for (var i = 0; i < _sections.length; i++)
+                DropdownMenuItem(
+                  value: i,
+                  child: Text(
+                    '${i + 1}. ${_sections[i].heading.text.isEmpty ? _t('未命名段落', 'Untitled section', '제목 없는 문단') : _sections[i].heading.text}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
+            ],
+            onChanged: (value) {
+              if (value != null) _revealSection(value);
+            },
+          ),
+        const SizedBox(height: 12),
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 4,
+          children: [
+            Text(
+              _t(
+                '第 ${_selected + 1} 段',
+                'Section ${_selected + 1}',
+                '${_selected + 1}번째 문단',
+              ),
+            ),
+            IconButton(
+              tooltip: _t('向前移动', 'Move up', '위로 이동'),
+              onPressed: _busy || _selected == 0 ? null : () => _move(-1),
+              icon: const LumenisIcon(Icons.arrow_upward, size: 18),
+            ),
+            IconButton(
+              tooltip: _t('向后移动', 'Move down', '아래로 이동'),
+              onPressed: _busy || _selected == _sections.length - 1
+                  ? null
+                  : () => _move(1),
+              icon: const LumenisIcon(Icons.arrow_downward, size: 18),
+            ),
+            IconButton(
+              tooltip: _t('移除段落', 'Remove section', '문단 삭제'),
+              onPressed: _busy || _sections.length == 1 ? null : _remove,
+              icon: const LumenisIcon(Icons.delete_outline, size: 18),
+            ),
+            if (compact)
+              IconButton(
+                tooltip: _t('添加段落', 'Add section', '문단 추가'),
+                onPressed: _busy || _sectionLimitReached ? null : _addSection,
+                icon: const LumenisIcon(Icons.add, size: 18),
+              ),
+            if (_removed != null)
+              TextButton(
+                onPressed: _busy ? null : _undoRemove,
+                child: Text(_t('撤销移除', 'Undo removal', '삭제 취소')),
               ),
           ],
-          onChanged: (value) {
-            if (value != null) setState(() => _selected = value);
-          },
         ),
-      const SizedBox(height: 12),
-      Wrap(
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 4,
-        children: [
-          Text(
-            _t(
-              '第 ${_selected + 1} 段',
-              'Section ${_selected + 1}',
-              '${_selected + 1}번째 문단',
-            ),
-          ),
-          IconButton(
-            tooltip: _t('向前移动', 'Move up', '위로 이동'),
-            onPressed: _busy || _selected == 0 ? null : () => _move(-1),
-            icon: const LumenisIcon(Icons.arrow_upward, size: 18),
-          ),
-          IconButton(
-            tooltip: _t('向后移动', 'Move down', '아래로 이동'),
-            onPressed: _busy || _selected == _sections.length - 1
-                ? null
-                : () => _move(1),
-            icon: const LumenisIcon(Icons.arrow_downward, size: 18),
-          ),
-          IconButton(
-            tooltip: _t('移除段落', 'Remove section', '문단 삭제'),
-            onPressed: _busy || _sections.length == 1 ? null : _remove,
-            icon: const LumenisIcon(Icons.delete_outline, size: 18),
-          ),
-          if (compact)
-            IconButton(
-              tooltip: _t('添加段落', 'Add section', '문단 추가'),
-              onPressed: _busy || _sectionLimitReached ? null : _addSection,
-              icon: const LumenisIcon(Icons.add, size: 18),
-            ),
-          if (_removed != null)
-            TextButton(
-              onPressed: _busy ? null : _undoRemove,
-              child: Text(_t('撤销移除', 'Undo removal', '삭제 취소')),
-            ),
+        for (var index = 0; index < _sections.length; index++) ...[
+          if (index > 0) const Divider(height: 32),
+          _sectionEditor(index),
         ],
-      ),
-      Semantics(
-        label: _t('段落标题', 'Section heading', '문단 제목'),
-        child: TextField(
-          key: ValueKey('manuscript-heading-$_selected'),
-          controller: _sections[_selected].heading,
-          readOnly: _busy,
-          decoration: _writingField(_t('段落标题', 'Section heading', '문단 제목')),
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontSize: 21,
-            fontWeight: FontWeight.w500,
-            height: 1.6,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const Key('manuscript-append-section'),
+            onPressed: _busy || _sectionLimitReached ? null : _addSection,
+            icon: const LumenisIcon(Icons.add, size: 18),
+            label: Text(_t('添加段落', 'Add section', '문단 추가')),
           ),
         ),
-      ),
-      const SizedBox(height: 12),
-      Semantics(
-        label: _t('正文', 'Body', '본문'),
-        child: TextField(
-          key: ValueKey('manuscript-body-$_selected'),
-          controller: _sections[_selected].body,
-          readOnly: _busy,
-          textAlignVertical: TextAlignVertical.top,
-          minLines: 10,
-          maxLines: null,
-          decoration: _writingField(_t('正文', 'Body', '본문')),
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.9),
+        const SizedBox(height: 20),
+        DropdownButtonFormField<String>(
+          isExpanded: true,
+          initialValue: _language,
+          key: ValueKey('manuscript-language-$_language'),
+          decoration: InputDecoration(
+            labelText: _t('文稿语言', 'Writing language', '문서 언어'),
+          ),
+          items: [
+            for (final language in creationLanguages.entries)
+              DropdownMenuItem(
+                value: language.key,
+                child: Text(language.value),
+              ),
+          ],
+          onChanged: _busy
+              ? null
+              : (value) {
+                  if (value != null) {
+                    _language = value;
+                    _edit();
+                  }
+                },
         ),
-      ),
-      const SizedBox(height: 20),
-      DropdownButtonFormField<String>(
-        initialValue: _language,
-        key: ValueKey('manuscript-language-$_language'),
-        decoration: InputDecoration(
-          labelText: _t('文稿语言', 'Writing language', '문서 언어'),
+      ],
+    ),
+  );
+
+  Widget _sectionEditor(int index) => Padding(
+    key: _sections[index].anchor,
+    padding: const EdgeInsets.only(top: 20, bottom: 20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Semantics(
+          label: _t('段落标题', 'Section heading', '문단 제목'),
+          child: TextField(
+            key: ValueKey('manuscript-heading-$index'),
+            controller: _sections[index].heading,
+            readOnly: _busy,
+            onTap: () => setState(() => _selected = index),
+            decoration: _writingField(_t('段落标题', 'Section heading', '문단 제목')),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontSize: 21,
+              fontWeight: FontWeight.w500,
+              height: 1.6,
+            ),
+          ),
         ),
-        items: const [
-          DropdownMenuItem(value: 'zh', child: Text('中文')),
-          DropdownMenuItem(value: 'en', child: Text('English')),
-          DropdownMenuItem(value: 'ko', child: Text('한국어')),
-        ],
-        onChanged: _busy
-            ? null
-            : (value) {
-                if (value != null) {
-                  _language = value;
-                  _edit();
-                }
-              },
-      ),
-    ],
+        const SizedBox(height: 12),
+        Semantics(
+          label: _t('正文', 'Body', '본문'),
+          child: TextField(
+            key: ValueKey('manuscript-body-$index'),
+            controller: _sections[index].body,
+            readOnly: _busy,
+            onTap: () => setState(() => _selected = index),
+            textAlignVertical: TextAlignVertical.top,
+            minLines: 3,
+            maxLines: null,
+            decoration: _writingField(_t('正文', 'Body', '본문')),
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.9),
+          ),
+        ),
+      ],
+    ),
   );
 
   Widget _document() {

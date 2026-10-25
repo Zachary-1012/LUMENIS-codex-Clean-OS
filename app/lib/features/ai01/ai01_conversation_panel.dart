@@ -1,10 +1,16 @@
+import '../../core/lumenis_botanical.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/lumenis_icon.dart';
+import '../../core/lumenis_core_client.dart';
 import '../../core/lumenis_theme.dart';
 import '../../l10n/lumenis_localizations.dart';
 import '../../navigation/lumenis_leave_guard.dart';
 import 'ai01_conversations.dart';
+import 'ai01_source_picker.dart';
 import 'ai01_draft_actions.dart';
 import 'ai01_workspace_draft.dart';
 
@@ -224,6 +230,31 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
     await model.createConversation(
       acknowledgeUnresolvedPrevious: acknowledgeUnresolvedPrevious,
     );
+  }
+
+  Future<void> _editContext() async {
+    final model = widget.viewModel;
+    final id = model.selectedId;
+    if (id == null) return;
+    final navigator = Navigator.of(context);
+    final route = DialogRoute<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _ConversationContextEditor(
+        conversationId: id,
+        viewModel: model,
+        leaveGuard: LumenisLeaveScope.maybeOf(context),
+      ),
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
+      useSafeArea: true,
+      traversalEdgeBehavior: TraversalEdgeBehavior.closedLoop,
+    );
+    _ownedDialogs.add(route);
+    try {
+      await navigator.push(route);
+    } finally {
+      _ownedDialogs.remove(route);
+    }
   }
 
   Future<void> _confirmRetry(Ai01ConversationTurn userTurn) async {
@@ -455,49 +486,63 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
     final theme = LumenisTheme.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
+        final compact = constraints.maxWidth < 620;
+        final margin = compact ? 20.0 : 44.0;
         return SingleChildScrollView(
           key: const ValueKey('acc03-home-scroll'),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    switch (context.lumenisL10n.locale.languageCode) {
-                      'en' => 'What are we working on?',
-                      'ko' => '어떤 작업을 시작할까요?',
-                      _ => '今天要完成什么？',
-                    },
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: theme.foreground,
-                      fontWeight: FontWeight.w500,
-                      fontSize: MediaQuery.sizeOf(context).width < 600
-                          ? 28
-                          : 36,
-                      letterSpacing: -1,
-                      height: 1.4,
+          padding: EdgeInsets.fromLTRB(
+            margin,
+            constraints.maxHeight > 800 ? 56 : 16,
+            margin,
+            28,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 28),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        switch (context.lumenisL10n.locale.languageCode) {
+                          'en' => 'What are we working on?',
+                          'ko' => '어떤 작업을 시작할까요?',
+                          _ => '今天要完成什么？',
+                        },
+                        style: TextStyle(
+                          color: theme.foreground,
+                          fontSize: compact ? 29 : 40,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -.8,
+                          height: 1.25,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 28),
-                  if (model.issue != null)
-                    _ConversationNotice(
-                      issue: model.issue!,
-                      unknown: model.creatingUnknown,
-                      checkKey: 'ai01-conversation-start-retry',
-                      onCheck: () =>
-                          model.refreshList(selectFirstIfEmpty: false),
-                    ),
-                  _composer(context, newConversation: true),
-                  if (widget.startActions != null) ...[
-                    const SizedBox(height: 24),
-                    widget.startActions!,
+                    if (!compact)
+                      const Padding(
+                        padding: EdgeInsets.only(left: 24),
+                        child: LumenisBotanical(size: 64),
+                      ),
                   ],
-                ],
+                ),
               ),
-            ),
+              _composer(context, newConversation: true),
+              if (model.issue != null) ...[
+                const SizedBox(height: 12),
+                _ConversationNotice(
+                  issue: model.issue!,
+                  unknown: model.creatingUnknown,
+                  checkKey: 'ai01-conversation-start-retry',
+                  onCheck: () => model.refreshList(selectFirstIfEmpty: false),
+                ),
+              ],
+              if (widget.startActions != null) ...[
+                const SizedBox(height: 20),
+                widget.startActions!,
+              ],
+            ],
           ),
         );
       },
@@ -511,81 +556,133 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
     final canSend = newConversation
         ? !model.busy && !model.creatingUnknown && !model.outcomeUnknown
         : model.canSend;
-    return Container(
-      key: const ValueKey('ai01-conversation-composer'),
-      padding: const EdgeInsets.fromLTRB(22, 20, 14, 12),
-      decoration: LumenisTheme.panel(theme, radius: 14, recessed: true),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            key: const ValueKey('ai01-conversation-input'),
-            controller: widget.draftController,
-            enabled: !model.busy,
-            minLines: newConversation ? 3 : 1,
-            maxLines: 5,
-            maxLength: 4000,
-            onChanged: (_) => setState(() {}),
-            textInputAction: TextInputAction.newline,
-            decoration: InputDecoration(
-              hintText: copy.text('ai01.conversation.input_hint'),
-              counterText: '',
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              filled: false,
-              contentPadding: EdgeInsets.zero,
+    void submitShortcut() {
+      final value = widget.draftController.value;
+      if (canSend &&
+          value.text.trim().isNotEmpty &&
+          (!value.composing.isValid || value.composing.isCollapsed)) {
+        _send();
+      }
+    }
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter, control: true):
+            submitShortcut,
+        const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+            submitShortcut,
+      },
+      child: Container(
+        key: const ValueKey('ai01-conversation-composer'),
+        padding: const EdgeInsets.fromLTRB(22, 20, 14, 12),
+        decoration: ShapeDecoration(
+          color: theme.surface,
+          shape: LumenisPixelBorder(
+            step: 4,
+            side: BorderSide(color: theme.foreground, width: 1.2),
+          ),
+          shadows: [
+            BoxShadow(
+              color: theme.line.withValues(alpha: .5),
+              offset: const Offset(4, 4),
             ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              if (widget.onOpenMaterials != null)
-                IconButton(
-                  key: const ValueKey('ai01-conversation-materials'),
-                  tooltip: copy.text('screen.SH-02'),
-                  onPressed: widget.onOpenMaterials,
-                  icon: const LumenisIcon(Icons.attach_file_rounded, size: 20),
-                ),
-              IconButton(
-                key: const ValueKey('ai01-conversation-draft-actions'),
-                tooltip: switch (copy.locale.languageCode) {
-                  'en' => 'Draft',
-                  'ko' => '초안',
-                  _ => '草稿',
-                },
-                isSelected: _draftActionsVisible,
-                onPressed: () => setState(
-                  () => _draftActionsVisible = !_draftActionsVisible,
-                ),
-                icon: const LumenisIcon(Icons.more_horiz_rounded, size: 20),
-              ),
-              const Spacer(),
-              IconButton.filled(
-                key: const ValueKey('ai01-conversation-send'),
-                tooltip: copy.text('ai01.conversation.send'),
-                onPressed:
-                    canSend && widget.draftController.text.trim().isNotEmpty
-                    ? _send
-                    : null,
-                icon: model.busy
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const LumenisIcon(Icons.arrow_upward_rounded, size: 20),
-              ),
-            ],
-          ),
-          if (widget.draftController case final Ai01WorkspaceDraft draft)
-            Ai01DraftStatus(draft: draft),
-          if (_draftActionsVisible)
-            Ai01DraftActions(
-              key: ObjectKey(widget.draftController),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              key: const ValueKey('ai01-conversation-input'),
               controller: widget.draftController,
+              enabled: !model.busy,
+              minLines: newConversation ? 2 : 1,
+              maxLines: 5,
+              maxLength: 4000,
+              onChanged: (_) => setState(() {}),
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: copy.text('ai01.conversation.input_hint'),
+                counterText: '',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                contentPadding: EdgeInsets.zero,
+              ),
             ),
-        ],
+            const SizedBox(height: 12),
+            Divider(height: 1, color: theme.line.withValues(alpha: .55)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                if (widget.onOpenMaterials != null)
+                  IconButton(
+                    key: const ValueKey('ai01-conversation-materials'),
+                    tooltip: copy.text('screen.SH-02'),
+                    onPressed: widget.onOpenMaterials,
+                    icon: const LumenisIcon(
+                      Icons.attach_file_rounded,
+                      size: 20,
+                    ),
+                  ),
+                IconButton(
+                  key: const ValueKey('ai01-conversation-draft-actions'),
+                  tooltip: switch (copy.locale.languageCode) {
+                    'en' => 'Draft',
+                    'ko' => '초안',
+                    _ => '草稿',
+                  },
+                  isSelected: _draftActionsVisible,
+                  onPressed: () => setState(
+                    () => _draftActionsVisible = !_draftActionsVisible,
+                  ),
+                  icon: const LumenisIcon(Icons.more_horiz_rounded, size: 20),
+                ),
+                if (newConversation)
+                  IconButton(
+                    key: const ValueKey('ai01-conversation-new-context'),
+                    tooltip: copy.text('ai01.conversation.context.open'),
+                    onPressed: model.busy || model.outcomeUnknown
+                        ? null
+                        : () async {
+                            await _createConversation();
+                            if (mounted && model.selectedId != null) {
+                              await _editContext();
+                            }
+                          },
+                    icon: const LumenisIcon(Icons.tune_rounded, size: 20),
+                  ),
+                const Spacer(),
+                IconButton.filled(
+                  key: const ValueKey('ai01-conversation-send'),
+                  tooltip: copy.text('ai01.conversation.send'),
+                  style: IconButton.styleFrom(
+                    backgroundColor: theme.accentStrong,
+                    shape: const LumenisPixelBorder(step: 3),
+                  ),
+                  onPressed:
+                      canSend && widget.draftController.text.trim().isNotEmpty
+                      ? _send
+                      : null,
+                  icon: model.busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const LumenisIcon(Icons.arrow_upward_rounded, size: 20),
+                ),
+              ],
+            ),
+            if (widget.draftController case final Ai01WorkspaceDraft draft)
+              Ai01DraftStatus(draft: draft),
+            if (_draftActionsVisible)
+              Ai01DraftActions(
+                key: ObjectKey(widget.draftController),
+                controller: widget.draftController,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -671,6 +768,12 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
+              ),
+              IconButton(
+                key: const ValueKey('ai01-conversation-context-open'),
+                tooltip: copy.text('ai01.conversation.context.open'),
+                onPressed: detail.state == 'active' ? _editContext : null,
+                icon: const LumenisIcon(Icons.edit_note_rounded, size: 21),
               ),
               IconButton(
                 key: const ValueKey('ai01-conversation-refresh'),
@@ -826,6 +929,519 @@ class _Ai01ConversationPanelState extends State<Ai01ConversationPanel> {
       ],
     );
   }
+}
+
+class _ConversationContextEditor extends StatefulWidget {
+  const _ConversationContextEditor({
+    required this.conversationId,
+    required this.viewModel,
+    this.leaveGuard,
+  });
+
+  final String conversationId;
+  final Ai01ConversationViewModel viewModel;
+  final LumenisLeaveGuard? leaveGuard;
+
+  @override
+  State<_ConversationContextEditor> createState() =>
+      _ConversationContextEditorState();
+}
+
+class _ConversationContextEditorState
+    extends State<_ConversationContextEditor> {
+  final _goal = TextEditingController();
+  final _constraints = TextEditingController();
+  final _draft = TextEditingController();
+  final _decisions = TextEditingController();
+  final _excluded = <String>{};
+  List<Map<String, dynamic>> _sources = [];
+  Ai01ConversationContext? _saved;
+  Ai01ConversationContext? _remote;
+  bool _loading = true;
+  bool _saving = false;
+  String? _notice;
+
+  Map<String, dynamic> get _value => {
+    'goal': _goal.text,
+    'constraints': _lines(_constraints.text),
+    'draft': _draft.text,
+    'decisions': _lines(_decisions.text),
+    'excluded_turn_ids': _excluded.toList()..sort(),
+  };
+
+  static List<String> _lines(String text) => text
+      .split('\n')
+      .map((line) => line.trim())
+      .where((line) => line.isNotEmpty)
+      .toList();
+
+  static String _signature(Map<String, dynamic> value) => jsonEncode({
+    for (final key in ['goal', 'constraints', 'draft', 'decisions'])
+      key: value[key],
+    'excluded_turn_ids': List<String>.from(value['excluded_turn_ids'] as List)
+      ..sort(),
+  });
+
+  String _sourceSignature(List<Map<String, dynamic>> sources) =>
+      jsonEncode(sources.map((source) => source['reference']).toList());
+
+  bool get _dirty =>
+      _saved != null &&
+      (_signature(_value) != _signature(_saved!.value) ||
+          _sourceSignature(_sources) !=
+              _sourceSignature(_saved!.sourceReferences));
+
+  Future<void> _addSource() async {
+    final repository = widget.viewModel.repository;
+    if (repository is! Ai01ConversationSources || _saved == null) return;
+    final source = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => Ai01SourcePicker(
+        repository: repository as Ai01ConversationSources,
+        conversationId: widget.conversationId,
+      ),
+    );
+    if (!mounted || source == null) return;
+    final identity = jsonEncode(source['reference']);
+    if (!_sources.any((item) => jsonEncode(item['reference']) == identity)) {
+      setState(() => _sources = [..._sources, source]);
+      widget.leaveGuard?.refresh();
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    for (final controller in [_goal, _constraints, _draft, _decisions]) {
+      controller.addListener(_changed);
+    }
+    widget.viewModel.addListener(_changed);
+    widget.leaveGuard?.register(
+      this,
+      needsProtection: () => _dirty || _saving,
+      requestLeave: () async => false,
+    );
+    _load(replaceLocal: true);
+  }
+
+  void _changed() {
+    if (mounted && widget.viewModel.selectedId != widget.conversationId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).pop(false);
+      });
+      return;
+    }
+    if (mounted) setState(() {});
+    widget.leaveGuard?.refresh();
+  }
+
+  void _apply(Ai01ConversationContext saved) {
+    _saved = saved;
+    _sources = saved.sourceReferences
+        .map((source) => Map<String, dynamic>.from(source))
+        .toList();
+    _remote = null;
+    _goal.text = saved.value['goal'] as String;
+    _constraints.text = (saved.value['constraints'] as List).join('\n');
+    _draft.text = saved.value['draft'] as String;
+    _decisions.text = (saved.value['decisions'] as List).join('\n');
+    _excluded
+      ..clear()
+      ..addAll(List<String>.from(saved.value['excluded_turn_ids'] as List));
+    if (saved.turn case final Ai01ConversationTurn turn) {
+      widget.viewModel.applyContextMutation(
+        Ai01ConversationMutation(
+          turn: turn,
+          revision: saved.revision,
+          idempotentHit: true,
+        ),
+      );
+    }
+  }
+
+  static bool _readDenied(int? status) =>
+      const {401, 403, 404, 410}.contains(status);
+
+  Future<void> _clearRestricted(int? status) async {
+    _saved = null;
+    _remote = null;
+    _excluded.clear();
+    _sources = [];
+    _notice = status == 401 ? 'authentication' : 'permission';
+    for (final controller in [_goal, _constraints, _draft, _decisions]) {
+      controller.clear();
+    }
+    // The transcript shares this read gate. Reopen through its existing owner
+    // so the parent also drops its cached detail before any further display.
+    await widget.viewModel.open(widget.conversationId);
+  }
+
+  Future<void> _load({bool replaceLocal = false}) async {
+    setState(() => _loading = true);
+    try {
+      final saved = await widget.viewModel.repository.readContext(
+        widget.conversationId,
+      );
+      if (!mounted) return;
+      if (replaceLocal ||
+          _saved == null ||
+          (_signature(saved.value) == _signature(_value) &&
+              _sourceSignature(saved.sourceReferences) ==
+                  _sourceSignature(_sources))) {
+        _apply(saved);
+        _notice = replaceLocal ? null : 'saved';
+      } else {
+        _remote = saved;
+        _notice = 'conflict';
+      }
+    } on LumenisCoreException catch (error) {
+      if (!mounted) return;
+      if (_readDenied(error.statusCode)) {
+        await _clearRestricted(error.statusCode);
+      } else {
+        _notice = 'load_error';
+      }
+    } catch (_) {
+      if (!mounted) return;
+      _notice = 'load_error';
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _save({bool keepLocal = false}) async {
+    final saved = keepLocal ? _remote : _saved;
+    if (saved == null || _saving || _loading) return;
+    final value = _value;
+    final sources = _sources
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+    setState(() {
+      _saving = true;
+      _notice = null;
+    });
+    try {
+      final result = await widget.viewModel.repository.updateContext(
+        conversationId: widget.conversationId,
+        value: value,
+        idempotencyKey: 'context-${DateTime.now().microsecondsSinceEpoch}',
+        expectedRevision: saved.revision,
+        sourceReferences: sources
+            .map((item) => Map<String, dynamic>.from(item['reference'] as Map))
+            .toList(),
+      );
+      if (!mounted) return;
+      // Editing stays available during save; a receipt never overwrites text
+      // entered after the submitted snapshot.
+      _saved = Ai01ConversationContext(
+        conversationId: widget.conversationId,
+        revision: result.revision,
+        value: value,
+        turn: result.turn,
+        sourceReferences: sources,
+      );
+      _remote = null;
+      widget.viewModel.applyContextMutation(result);
+      _notice = _signature(value) == _signature(_value) ? 'saved' : null;
+    } on LumenisCoreException catch (error) {
+      if (!mounted) return;
+      if (error.statusCode == 409) {
+        await _load();
+        if (mounted && _remote != null) _notice = 'conflict';
+      } else if (_readDenied(error.statusCode)) {
+        // A denied write does not establish that reading was revoked. Keep
+        // permitted writing, but clear it if the independent read is denied.
+        await _load();
+        if (mounted && _saved != null && _notice != 'load_error') {
+          _notice = error.statusCode == 401 ? 'authentication' : 'permission';
+        }
+      } else {
+        _notice = switch (error.statusCode) {
+          400 => 'invalid',
+          _ => 'save_error',
+        };
+      }
+    } catch (_) {
+      if (!mounted) return;
+      _notice = 'save_error';
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.leaveGuard?.unregister(this);
+    widget.viewModel.removeListener(_changed);
+    for (final controller in [_goal, _constraints, _draft, _decisions]) {
+      controller.removeListener(_changed);
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = context.lumenisL10n;
+    final theme = LumenisTheme.of(context);
+    String text(String key) => copy.text('ai01.conversation.context.$key');
+    final turns =
+        _saved != null && widget.viewModel.detail?.id == widget.conversationId
+        ? widget.viewModel.detail!.turns
+              .where((turn) => turn.originKind == 'user_input')
+              .toList()
+        : <Ai01ConversationTurn>[];
+    return PopScope(
+      canPop: !_dirty && !_saving,
+      child: AlertDialog(
+        key: const ValueKey('ai01-conversation-context-editor'),
+        title: Text(text('title')),
+        content: SizedBox(
+          width: 640,
+          height: MediaQuery.sizeOf(context).height * .62,
+          child: _loading && _saved == null
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  children: [
+                    if (widget.viewModel.repository
+                        is Ai01ConversationSources) ...[
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _referenceText('参考资料', 'References', '참고 자료'),
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: _saved == null || _saving
+                                ? null
+                                : _addSource,
+                            icon: const Icon(Icons.add, size: 18),
+                            label: Text(_referenceText('添加', 'Add', '추가')),
+                          ),
+                        ],
+                      ),
+                      for (final source in _sources)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(
+                            source['state'] == 'available'
+                                ? Icons.description_outlined
+                                : Icons.link_off,
+                          ),
+                          title: Text(
+                            source['state'] == 'available'
+                                ? (source['title'] as String? ??
+                                      _referenceText(
+                                        '已选资料',
+                                        'Selected material',
+                                        '선택한 자료',
+                                      ))
+                                : _referenceText(
+                                    '资料不可用',
+                                    'Material unavailable',
+                                    '자료 사용 불가',
+                                  ),
+                            maxLines: 2,
+                          ),
+                          trailing: IconButton(
+                            onPressed: _saving
+                                ? null
+                                : () {
+                                    setState(() => _sources.remove(source));
+                                    widget.leaveGuard?.refresh();
+                                  },
+                            tooltip: _referenceText('移除', 'Remove', '제거'),
+                            icon: const Icon(Icons.close, size: 18),
+                          ),
+                        ),
+                      const Divider(height: 24),
+                    ],
+                    if (_notice case final String notice) ...[
+                      Text(
+                        const {
+                              'authentication',
+                              'permission',
+                              'invalid',
+                            }.contains(notice)
+                            ? copy.text('ai01.conversation.issue.$notice')
+                            : text(notice),
+                        key: const ValueKey('ai01-conversation-context-notice'),
+                        style: TextStyle(
+                          color: notice == 'saved'
+                              ? theme.muted
+                              : theme.caution,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    if (_remote != null) ...[
+                      ExpansionTile(
+                        key: const ValueKey(
+                          'ai01-conversation-context-remote-preview',
+                        ),
+                        title: Text(text('check')),
+                        children: [
+                          for (final key in [
+                            'goal',
+                            'constraints',
+                            'draft',
+                            'decisions',
+                          ])
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    text(key),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelMedium,
+                                  ),
+                                  SelectableText(
+                                    _remote!.value[key] is List
+                                        ? (_remote!.value[key] as List).join(
+                                            '\n',
+                                          )
+                                        : _remote!.value[key] as String,
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                      TextButton(
+                        key: const ValueKey(
+                          'ai01-conversation-context-use-saved',
+                        ),
+                        onPressed: _saving
+                            ? null
+                            : () => setState(() {
+                                _apply(_remote!);
+                                _notice = null;
+                              }),
+                        child: Text(text('use_saved')),
+                      ),
+                      TextButton(
+                        key: const ValueKey(
+                          'ai01-conversation-context-keep-local',
+                        ),
+                        onPressed: _saving
+                            ? null
+                            : () => _save(keepLocal: true),
+                        child: Text(text('keep_local')),
+                      ),
+                    ],
+                    for (final field in [
+                      (name: 'goal', controller: _goal, lines: 2),
+                      (name: 'constraints', controller: _constraints, lines: 3),
+                      (name: 'draft', controller: _draft, lines: 5),
+                      (name: 'decisions', controller: _decisions, lines: 3),
+                    ]) ...[
+                      TextField(
+                        key: ValueKey(
+                          'ai01-conversation-context-${field.name}',
+                        ),
+                        controller: field.controller,
+                        enabled: _saved != null,
+                        minLines: field.lines,
+                        maxLines: field.lines + 3,
+                        maxLength: 32000,
+                        decoration: InputDecoration(
+                          labelText: text(field.name),
+                          counterText: '',
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    Text(
+                      text('forget'),
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                    const SizedBox(height: 6),
+                    Text(text('forget_detail')),
+                    const SizedBox(height: 8),
+                    for (final turn in turns)
+                      ExpansionTile(
+                        title: Text(
+                          turn.text ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: Checkbox(
+                          key: ValueKey(
+                            'ai01-conversation-context-exclude-${turn.id}',
+                          ),
+                          semanticLabel: text('forget'),
+                          value: _excluded.contains(turn.id),
+                          onChanged: _saved == null
+                              ? null
+                              : (value) => setState(() {
+                                  value == true
+                                      ? _excluded.add(turn.id)
+                                      : _excluded.remove(turn.id);
+                                }),
+                        ),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: SelectableText(turn.text ?? ''),
+                          ),
+                        ],
+                      ),
+                    if (widget.viewModel.detail?.hasMore == true)
+                      TextButton(
+                        onPressed: widget.viewModel.detailLoading
+                            ? null
+                            : widget.viewModel.loadMoreTurns,
+                        child: Text(copy.text('ai01.conversation.load_more')),
+                      ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            key: const ValueKey('ai01-conversation-context-close'),
+            onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+            child: Text(copy.text(_dirty ? 'common.cancel' : 'common.close')),
+          ),
+          TextButton(
+            key: const ValueKey('ai01-conversation-context-check'),
+            onPressed: _saving || _loading ? null : _load,
+            child: Text(text('check')),
+          ),
+          FilledButton(
+            key: const ValueKey('ai01-conversation-context-save'),
+            onPressed:
+                _saving ||
+                    _loading ||
+                    _saved == null ||
+                    !_dirty ||
+                    _remote != null ||
+                    _notice == 'save_error'
+                ? null
+                : _save,
+            child: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(copy.text('common.save')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _referenceText(String zh, String en, String ko) =>
+      switch (context.lumenisL10n.locale.languageCode) {
+        'en' => en,
+        'ko' => ko,
+        _ => zh,
+      };
 }
 
 class _PanelHeader extends StatelessWidget {
@@ -1026,6 +1642,10 @@ class _TurnCard extends StatelessWidget {
           _ when turn.originKind == 'task_projection' => copy.text(
             'ai01.conversation.task_attached',
           ),
+          _
+              when turn.originKind == 'system_status' &&
+                  turn.content['schema'] == 'conversation-human-context/v1' =>
+            copy.text('ai01.conversation.context.saved'),
           _ => copy.text('ai01.conversation.content_unavailable'),
         };
     return Align(
@@ -1135,12 +1755,11 @@ class _ConversationNotice extends StatelessWidget {
     return Container(
       key: const ValueKey('ai01-conversation-notice'),
       width: double.infinity,
-      margin: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
       decoration: BoxDecoration(
         color: theme.caution.withValues(alpha: 0.08),
-        border: Border.all(color: theme.caution.withValues(alpha: 0.28)),
-        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: theme.caution, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
+from .base import BasePlatformAdapter, CollectionResult, CollectionStatus, map_v4_comments
 from .registry import register_adapter
 
 logger = logging.getLogger(__name__)
@@ -373,8 +373,12 @@ class FacebookAdapter(BasePlatformAdapter):
             result = getattr(backend, method)(*args, **kwargs)
             status = self._v4_status_to_main(result.success, result.notes, result.error)
             items = self._v4_notes_to_items(result.notes)
-            return CollectionResult(status=status, platform=self.platform, items=items,
+            comments = map_v4_comments(result.notes) if method == 'comments' else []
+            return CollectionResult(status=status, platform=self.platform, items=[] if method == 'comments' else items,
+                                    comments=comments,
                                     raw_count=result.raw_count,
+                                    metadata={**(getattr(result, 'metadata', None) or {}),
+                                              'provider': 'authorized_browser_worker'},
                                     message=(f"Facebook {method} state: {self._detail_failure_state(result.error)}"
                                              if result.error else ""))
         except Exception as exc:
