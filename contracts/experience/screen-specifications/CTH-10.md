@@ -1,5 +1,23 @@
 # CTH-10 — 报告与运营简报工作台
 
+## 2026-10-25 原来源简报的结构化阅读面
+
+初始资料简报消费原 screen response 的 `source_brief`，不把 Owner 为追溯生成的 Markdown/字典转储当业务正文。投影仍先经过本屏原 read policy、exact scope 与每条 Evidence 门禁，再核对 `source-brief:<content_hash>`、同报告的完整 source-brief block、scope/entity label、返回数量及每条 Evidence 引用；任何对应不符即不展示该简报，不退回诊断正文，也不松开已冻结的许可策略。
+
+宽屏以报告目录、纸面正文、来源依据三域组织，在 1280 窗口含侧栏时仍可同时查看；大字与窄屏按目录、正文、来源顺序堆叠。主体采用已选 context display name，全部范围采用三语“全部获准主体”。纸面正文显示本次实际资料、标题、发布时间/收录时间及来源可用状态；覆盖、时效、采集情况未知仍明确显示“尚未确认”，不能替换为零、已采集或业务结论。来源声明不等于被验证事实。
+
+来源名称与日期优先；原文链接未提供/被保留分别说明。引用编号保留在主动展开的来源详情，方法与范围保留候选/检查/未准入/保留项、截断和来源类型/平台样本计数，按三语普通产品语言逐项呈现，不显示 raw JSON。已有一般报告的正文、标题层级、列表、状态、选择/清除选择和 Trace/Return 继续保留。原 SourceBrief 真正整理入口继续工作；未接线的周期生成/导出仍 disabled，不因阅读面升级变可用。此项不新增分析、API、Evidence 或报告生成能力，实际 Web/Windows 运行与视觉验收由同版构建后独立留证。
+
+## 2026-10-24 真实 Domain 资料 → 简报 → 经营工作（源码接线）
+
+在已确认的 CTH Focus 内，“导入本范围资料”复用现有文件选择器与 `POST /api/experience/materials/documents`。用户选择原件，核对标题、实际来源 URL（原件可无 URL）、已知的原生发布时间（未知留空）、用途与权利说明；prepare 返回真实精确资源，再明确确认 import。请求使用当前 sealed domain context，不带 Shared workspace header。文件原件、派生来源与 SourceUse 留在既有 Importer/Evidence/Canonical owner；导入不验证材料声明，更不把未知客流、销售、费用补零。
+
+成功导入后仅将已选 `source_id` 传给既有 SourceBrief start，保留同一 `request_id`，随后由现有 ViewModel 独立读取 task/job；可核对结果才进入既有 BusinessWork 工作面。导入 ACK 未知时保留同字节/来源说明核对重试；已导入而任务 ACK 未知时继续同一任务请求，不重新导入。切换范围停止后续动作，401/403清除可展示的旧结果；原文用途/来源撤回仍由 owner 拒绝。新增消费者测试为 `source_brief_domain_import_test.dart`，既有 `source_brief_panel_test.dart` 保留。
+
+BusinessWork 的选择、修订、保存、历史重开、暂停/恢复沿原 Workflow；内部成果制作、人工执行声明和外部行动分账。人工声明保持未独立核实；观察保自己的窗口、指标定义、分子分母和来源。费用增量保留已有指标的独立来源/窗口，ESTIMATE、COMMITTED、ACTUAL、REFUND分开；同币种已报告费用可核预算，未换算币种/未知量不补齐。保存复用 Shared exact 许可与父 Artifact/hash/draft digest，并重开核对，不能冒称发布、经营增长或因果效果。
+
+完整期间/周报、专业方案资源与反证深度、实际处置、真实外发消费者、完整业务结果与全部原 coverage 继续保留。上述为源码接线和隔离回归范围；Web/Windows实际操作、其他计划表面和整屏/全产品验收分别留证，不自动修改旧 BLOCKED 或设计状态。
+
 ## 2026-10-11 业务报告优先；数学与分析归后端
 
 用户选择业务范围、期间和要解决的问题，打开的是已有结果或提交正常报告任务。后端 CTH/Shared 选用有真实输入与适用假设的方法，交付包含结论、证据、指标/比较、限制和行动建议的报告；来源样本统计只作为覆盖说明，不是报告本身。缺失资料仅限制相应结论，不阻断其他可完成部分。
@@ -36,8 +54,8 @@ approval_reference: M approved the bounded SourceBrief increment on 2026-10-02; 
 ## 2. Route, entry and return
 
 - **Entry:** nested CTH reporting workflow from the CTH work surface or a completed Case/Decision trace. Shared shell routing is outside this batch.
-- **Required read binding:** legacy report payload still requires valid context plus `binding.actor_scope=verified`, matching `context_mode`, `domain=CTH`, `evidence_lineage=verified`, and report-level `scope_verified=true`. SourceBrief instead uses the exact task/job contract below, with server-issued principal, exact registered scope and verified source snapshot. Focus mode must echo `subject_id`.
-- **Exit / Trace / Return:** select a report section or source locally; Return restores the storyboard page and selected source. No report write, export, file creation or share effect is enabled.
+- **Required read binding:** the report payload requires the server's `lumenis.scope-read-binding.v1` contract for `module=commercial_realtime_stream`, exact `local-workspace-read-v1` + `actor_scope=anonymous_read` or `actor-exact-scope-v1` + `actor_scope=authenticated` pairing, applied/read/scope verification, matching CTH product/domain and context/canonical scope, and verified Evidence lineage. Local GLOBAL reads retain `global_all_granted=false`; authenticated GLOBAL reads require `true`; FOCUS requires `false` and the exact selected `subject_id`. Unknown or mismatched policy/actor pairs, including a fabricated `actor_scope=verified`, are blocked. Individual report Evidence still requires canonical identity, current read permission, verified integrity/version and exact scope. SourceBrief separately uses the exact task/job contract below with server-issued principal and verified source snapshot; this read binding grants no save/export effect.
+- **Exit / Trace / Return:** select a report section or source locally; Return restores the storyboard page and selected source. The scoped SourceBrief and BusinessWork paths above use their actual import/save contracts; the legacy period/weekly report does not inherit those grants or claim an available export merely from this binding.
 
 ## 3. Verified data and callable bindings
 
@@ -301,6 +319,14 @@ POST `/api/experience/reports/source-brief/adopt-source`由`experience_runtime.a
 原frontmatter与真实绑定状态保持；下列完整终态不得缩成现有只读API，也不得以未接通按钮冒运行证据。仅使用服务端已准入字段/当前许可，具体接口沿本屏上文，所有新交互由本地原Owner接线。
 
 ### 研究采用、业务决策与实际复盘
+
+现有 `BusinessWorkPanel` 的业务工作子视图在宽屏采用三个独立滚动区域：左侧原研究依据，来源条目打开前重新读取同一业务 revision 并核对原文引用；中间纸面优先比较方案，保留报告回答、假设、未知、执行成果和版本阅读；右侧固定当前决定、负责人、复核时间、资源约束及执行/观察/费用入口。普通字号按扣除导航后的实际内容宽度 960px 起进入三域，保留来源 220px、方案 380px、决定 276px 的最低宽度和间距；1280×720 窗口保留原 224px 侧栏时三域同屏。所需宽度随实际文字缩放增加，超出空间或放大至 150% 以上时重排，不要求隐藏导航。方案与执行、版本分段沿原入口切换，不用整页长滚动寻找决定。窄屏或放大字体时按同一语义重排为单列，决定先于方案，来源可展开，全部内容与动作继续可达。
+
+问题在纸面顶部默认显示至两行，长问题可明确展开为完整可选择原文，再收起不改业务输入；核对资料保原动作与权限，移至分段工具栏。方案名称作为正文主标题，依据、核查动作、假设与未知以字号/行距/段间距区分，不再依靠一串相同卡片。外壳为连续底板，来源与决定为清楚分区的工具面，正文保持独立正视阅读层，统一采用当前像素植物视觉；不增加一层通用白色外卡。该呈现不替用户摘要或删改长问题。
+
+当前决定提供“修改决定”：沿原严格日期表单编辑决定原因、负责人和复核时间，并另填修订原因；通过既有 `adopt` 提交，保留原 `source_job_id/question/options`、所选方案与资源约束，使用原 `expected_revision` 和稳定提交身份。旧决定及已保存 Artifact 留在历史；冲突保留填写内容，撤权清除受限预览，当前新 revision 不沿用旧版“已保存”提示。本段记录现有消费者接线，不改变本屏原验收状态。
+
+业务“版本”中的已保存成果可在原阅读对话选择导出。沿既有 `GET /api/experience/saved-work/{artifact_id}/export`、当前精确 CTH 范围和 Shared SavedWork 导出 Owner，支持 DOCX/PDF/MD/TXT/XLSX/PPTX，默认交付文件，可明确选择归档副本；不把业务成果塞入独立 Shared workspace 范围。导出前重新读取所选 Artifact，核对 hash、版本、draft digest、业务工作与 revision，旧版与新版分别导出，不重存或覆盖。文件沿既有 `Sh04ExportFiles` 交给浏览器或用户所选位置；取消格式/目的地、撤权、来源或范围变化、空文件与错误响应不显示导出成功。短内容区或大字布局将原底部保存/恢复/中断/取消动作置于内容滚动末尾，避免固定动作挤掉正文，动作不删减。该入口不表示旧版周期/周报聚合导出已解锁。
 
 研究结果“采用到当前业务”先显示目标CTH主体或BMP品牌聚焦、原Shared来源/版本、当前可用权益与将创建的领域资料；资料权利确认只在实际跨用途/范围动作发生时要求，普通导入不附加通用权利表。缺目标范围时回现有范围选择，不能临时伪造主体。确认关闭回原Shared段落，批准导入与B业务方案采用为独立步骤，各自有真实读回。
 业务页宽屏左侧原研究依据，主区方案逐项比较（资源/约束/预期结果与未知并列），右侧当前决策与行动阶段。内部选择主按钮写“采用此方案”，不写“已经执行”；实际Action回执在独立阶段条，已有Task/Word/Artifact以可打开成果呈现。结果区分来源声称、实际产物、未知业务结果；评价区用当前真实口径，不把预计营收/任务完成换成增长。

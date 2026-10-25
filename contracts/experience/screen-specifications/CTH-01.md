@@ -165,3 +165,9 @@ All calls above are through the existing `LumenisCoreClient.runtimeIdentity()` a
 主体资料聚合阅读沿 `app/lib/features/cth/` 与现有CTH/Canonical Owner，不增加平台服务。平台切换与平台内内容切换分轴；手势先锁pointer/轴，未达阈值或取消不换对象，平台位置按稳定内容ID保留，范围变更重验。宽屏稳定扇面只作原创浏览候选；窄屏、密集正文、减弱动态用同一数据的平铺，探索随机序不叫排序推荐，22个fixture平台标签不等采集能力。
 
 分页绑定actor/范围/platform/opaque cursor，Owner前后权限有效才提交；换范围/平台、取消、撤权、dispose使旧响应与旧错误失效。坏页、重复ID、游标不推进、total小于已载量整页拒绝；未知total为null，失败保已核页与原cursor，仅重试失败页。实际Owner若用不同字段由现有repository映射，不能新造demo endpoint。验收用真实授权分页加乱序/撤权反例，纸面候选不更改本屏当前实现状态。
+
+## 2026-10-24 当前源码呈现接续（未提升验收状态）
+
+经营工作导航从聚合数据状态中独立：既有 CTH-03 观察、CTH-04 事件处理与 CTH-10 计划/成果入口始终在页内工具条直接可达。仅跳转原页面；所选范围、Permission与写入条件由目标Owner重新检查。原范围不可用/聚合失败时不读取或编造数据，也不让它阻挡独立准备工作；取消了错误页中重复的入口卡片。
+
+信号时间轴、范围、真实指标及来源缺口仍用原 ViewModel，0/未知/未采集继续区别。原返回与键盘操作不变。已增加隔离导航回归；真实经营结果、保存恢复与Web/Windows视觉证据须由整合运行提供，不据入口或测试判定用户工作完成。

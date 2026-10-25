@@ -1,5 +1,13 @@
 # ACC-02 — Subject and view-lens selection
 
+## 2026-10-24 目录首主体正常入口（已接线，实际设备验收独立）
+
+现有 ACC-02 增加经营主体 / 品牌目录切换与“添加主体”。填写中文名、英文名、可选行业/相关名称后，复用 `POST /api/settings/subjects/batch` 的 prepare → 展示服务端规范化身份 → 明确确认 apply → 目录刷新 → 现有 `PUT /api/settings/context` → 选择读回。主体身份登记不启动采集，不证明经营关系、来源事实或品牌覆盖，不改独立 Shared 工作的无主体入口。
+
+确认前取消不 apply；权限拒绝不显示登记成功；apply 回包丢失保留同一 normalized entries，再核对相同身份，服务端返回 EXISTING 时不重复创建。登记成功但目录或选择读回失败分别保留未确认状态。登记表单控制器在 DialogRoute 完整移除后释放，窄屏、三语、键盘与放大字体沿原工作面约束。隔离消费者回归见 `app/test/features/account/acc02/acc02_registration_test.dart` 和原 `acc02_feature_test.dart`；这些不是实际用户/设备 E2E。
+
+目录移除 / 归档 / 重新添加仍是未闭能力：当前注册 owner 没有相应 HTTP 生命周期合同，不以清除当前 Focus 冒充从目录移除。完整原 coverage、主体关系/来源权益与逐表面验收保持；本节不提升整屏为 ACCEPTED。
+
 ```yaml
 screen_id: ACC-02
 status: BLOCKED
@@ -28,7 +36,7 @@ approval_reference: existing R14-ACC02-LAYERED-SELECTION review; primary control
 ## 1. Routes and callable contract
 
 - Read current view: `GET /api/settings/context` via `settingsContext()`.
-- Read CTH directory: `GET /api/settings/subjects?domain_id=CTH` via `settingsSubjects(domainId: 'CTH')`.
+- Read the chosen CTH/BMP directory: `GET /api/settings/subjects?domain_id=<CTH|BMP>` via `settingsSubjects(domainId: ...)`.
 - Confirm focus: `PUT /api/settings/context` with `{mode: FOCUS, domain_id, subject_id}` via `selectContext()`; the server rechecks access and returns the context envelope.
 - Exit returns to the host shell with the server-confirmed selection. No local grant or direct business-data fetch is performed.
 
@@ -65,7 +73,7 @@ Paths, tokens, provider/model strings, raw errors and arbitrary domains are neve
 
 ## 5. Authorization, effects, and accessibility
 
-- In the existing selection slice, `PUT` confirms focus and the recovery `DELETE` clears focus; both remain Core/SYSTEM-owned and server-authorized. Registration is separately bounded by section 11 and its pending exact-write contract.
+- In the existing selection slice, `PUT` confirms focus and the recovery `DELETE` clears focus; both remain Core/SYSTEM-owned and server-authorized. Registration follows the existing batch prepare/exact-confirm/apply contract described above; clearing focus does not remove a directory identity.
 - Selection is not permission. Denied or pending responses do not update the UI to the requested Subject.
 - Announce list count, selected row and confirmation result; do not rely on color. Search and controls remain usable at enlarged text sizes.
 
