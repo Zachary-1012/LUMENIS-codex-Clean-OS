@@ -100,7 +100,7 @@ No migration, write, repair, pagination or Evidence emission contract is verifie
 
 ## 10. Cross-cutting gates and review
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none; schema/integrity state is infrastructure evidence and does not count Global Commercial, Brand or Guangzhou coverage.
+- SUBJECT SCOPE / TASK DATA QUALITY IMPACT: none; schema/integrity state is infrastructure evidence, not proof of current task-data completeness.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable; no entity rows are displayed, sample count zero.
 - CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: research complete; no justified upgrade beyond the canonical self-check binding. Recovery/migration requires a separate versioned contract and Permission/Evidence gate.
 - Decision: `DESIGN_EXPLORATION`; Sol review and runtime verification remain pending.

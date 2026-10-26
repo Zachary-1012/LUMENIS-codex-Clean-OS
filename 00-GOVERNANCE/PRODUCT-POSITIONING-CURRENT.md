@@ -29,7 +29,9 @@ OEVIRA 正从商业运营、品牌市场与研究创作的专业工作中建立�
 
 寰意是面向商业运营与品牌市场的证据驱动工作平台，保持 CTH/BMP/Shared/SYSTEM 与五轮架构。AI 在各领域增强理解、建议、生成和任务辅助，但普通业务无AI仍完成；第五轮是增强/模型/跨域终验收，不是AI首次进入产品。后端负责数据分析和数学方法，用户获得已分析报告与可操作成果，不承担论文算法配置。
 
-CTH/BMP是业务领域，Shared内容制作是独立可用的制作能力。用户可以直接创建和编辑提案/文稿、视频、播客，不必先完成业务分析或创建业务域任务；也可按需要采用业务/研究资料。共享表示统一复用能力，不表示依赖业务领域才能运行。
+CTH/BMP是业务领域。Shared的研究、原创创作和文档处理服务用户当前目标，视频与播客后期保留直接操作入口。研究与文稿不构成独立产品；用户无需在多个模块之间搬运结果。创作应形成新的方案与内容，业务判断应支持可执行决定。
+
+当前主体范围是现有目录中有依据确认正在中国境内经营的商业主体和品牌主体，包含在境内实际经营的国际品牌；不以国籍或名称判断，不做全球主体扩库。设置 → 主体目录统一管理添加、移除和重新添加，新增也须符合境内经营范围；证据不足的登记显示待核，不进入已确认的活动目录。目录移除停止该主体的新任务使用及关联监测，历史资料、报告、行动和版本仍按原权限保留。
 
 通用电脑/OS、任意安装应用及远程桌面控制已撤出产品要求，不列后置欠项、不记完成。产品内受控浏览器、后台采集、正常文件/媒体处理、权限与保存恢复继续保留；历史源码和研究不删除。具体计划只归 Product Architecture，呈现只归 Experience；窗口调度不属于产品定位；Public Website、Web Workspace、Windows/macOS Desktop与iOS Mobile保留完整角色，按当前PO设备范围建设、分别验收；一端未完成不阻止其他端独立工作。
 
@@ -39,7 +41,7 @@ CTH/BMP是业务领域，Shared内容制作是独立可用的制作能力。用�
 
 The final user-facing product is **one product with four coordinated experience surfaces**:
 
-- **Public Website** — commercial presentation, capabilities, scenarios, cases, demo, trial application, enterprise contact, help and the login/workspace entry. It never owns Production Truth.
+- **Public Website** — commercial presentation, capabilities, scenarios, cases, prepared demonstrations, enterprise contact, help, download and workspace links. It offers no embedded trial or product-function execution and never owns Production Truth.
 - **Web Workspace** — the primary browser work surface for Subject / BrandFocus selection, CTH / BMP / AI / Shared / SYSTEM workflows, Evidence Trace, Case / Insight / Decision / Action, report/export, collaboration and approval.
 - **Desktop App** — the Power User client for local Browser / CDP, Cookie / Session, Collector, long-running tasks, local files, approved owned AI capability, private deployment, Runtime, Recovery and advanced execution.
 - **Mobile Companion** — notification, event and AI-result review, approval, task status, report reading and bounded quick actions.

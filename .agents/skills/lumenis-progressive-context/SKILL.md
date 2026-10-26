@@ -61,8 +61,11 @@ Experience Constitution.
    Treat the locator output as a map, not as a replacement for source or
    runtime truth. If it fails closed, resolve the owner from the current
    Source Owner Index before editing.
-3. Read only the current rules and contracts named by the locator and the
-   active owner row. Include the relevant Permission, Evidence, data, runtime,
+3. Follow root AGENTS.md engineering conduct rule 9: understand the complete
+   current product plan and read the assigned capability's original requirements
+   and related contracts in full, including source_requirement, specific_changes,
+   deliverables and acceptance. Locator matches and owner rows are navigation,
+   not a complete scope inventory. Include the relevant Permission, Evidence, data, runtime,
    Experience, and real-user acceptance contract when that slice uses them.
    For Codex Cloud work, also follow the exact base-SHA, approved-input,
    protected-data and W6 patch-return rules in root `AGENTS.md`.
@@ -72,8 +75,11 @@ Experience Constitution.
    the source path, date/version if available, and whether it is `ADOPT`,
    `ADAPT`, `DEFER`, `REJECT`, or `REFERENCE_ONLY`. Do not import historical
    text into production truth just because it sounds authoritative.
-6. Stop loading context once the active owner, contract, implementation path,
-   acceptance evidence, and unresolved boundary are known. Do not run a repository-wide audit for a local gap, stale note, or runner failure.
+6. Reuse unchanged full-plan and original-requirement coverage after that reading
+   is complete and the active owner, contracts, consumers, acceptance evidence
+   and unresolved boundaries are known. Do not repeatedly audit the repository
+   for a local gap, stale note or runner failure; read changed requirements and
+   affected dependencies without reducing the complete assigned outcome.
 7. Before implementation or acceptance, write a bounded context manifest in
    the task artifact location or the owning evidence path. Do not add a new
    product registry solely for this manifest.
@@ -129,8 +135,9 @@ copying is necessary. Root AGENTS and native hook trust still apply.
 
 ## Loading and search limits
 
-- Prefer `rg` with a capability-specific path or term. Read the smallest useful
-  slice of a file, then expand only when a caller or contract requires it.
+- Prefer `rg` with a capability-specific path or term to locate implementation.
+  Small source slices can explain a defect, but do not replace complete planning
+  and original-requirement reading under root AGENTS.md engineering conduct rule 9.
 - Read current governance before historical documents when the two disagree.
 - Use the existing locator families and Source Owner Index. If no family fits,
   record the missing route and resolve it explicitly; do not invent a parallel

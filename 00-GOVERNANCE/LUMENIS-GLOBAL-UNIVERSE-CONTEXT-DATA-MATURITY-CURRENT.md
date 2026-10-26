@@ -1,255 +1,62 @@
-# LUMENIS Global Product Universe / Focus Context / Data Maturity — CURRENT
+# OEVIRA Subject Scope / Focus Context / Data Quality — CURRENT
 
-> Status: **CURRENT SUBORDINATE CONTEXT AND DATA-MATURITY CONTRACT**
->
-> Approved by Product Owner: 2026-09-21
->
-> Authority boundary: subordinate to the sole Product Architecture, Source Owner Index, Permission, Evidence, Database, Collector/Browser, AI Gateway and Experience Constitution owners. This contract defines shared semantics and acceptance; it does not create another Subject/BrandFocus, database, Evidence, Permission, collector, AI or UI owner.
-
-This contract governs exactly one internal full-universe edition: `ONE Product`, `ONE Repository`, `ONE Product Core`, `ONE Global Product Universe`, `ONE Canonical Data`, `ONE Evidence`, `ONE Permission`, `ONE Context Model` and `ONE Experience Ecosystem`. Its coverage rows are acceptance dimensions of the same product, never separate products, versions, repositories, entries, release tracks or truth stacks. Future customer/workspace/role/entitlement/source/compliance restrictions remain access policy over this same product truth.
+> Current subordinate contract, updated to direct PO correction on 2026-10-26.
+> Product Architecture owns scope; the existing registry, Permission, Source/Evidence and database owners remain unchanged. The retained filename is a compatibility path, not a worldwide data programme.
 
 ## 1. Canonical model
 
-```text
-GLOBAL PRODUCT UNIVERSE
-├─ global commercial-entity universe for CTH
-├─ global brand-entity universe for BMP
-├─ legally collected real signals, relationships and business-domain content
-└─ authorized on-demand capabilities and separately opted-in background work
-          ↓
-select Subject / BrandFocus
-          ↓
-change only the current focus context
-          ↓
-Visibility / Permission / Commercial Policy decides what is visible and actionable
-```
+当前主体范围是现有目录中有依据确认正在中国境内经营的商业主体和品牌主体，包含在境内实际经营的国际品牌；不以国籍或名称判断，不做全球主体扩库。设置 → 主体目录统一管理添加、移除和重新添加，新增也须符合境内经营范围；证据不足的登记显示待核，不进入已确认的活动目录。目录移除停止该主体的新任务使用及关联监测，历史资料、报告、行动和版本仍按原权限保留。
 
-The default product context is `GLOBAL / ALL`. It is neither a blank workspace nor a fixed Subject or BrandFocus. CTH and BMP share the Global Product Universe discovery/context foundation while retaining separate business semantics, metrics, relationships, workflows and owners.
+用户可直接开始问题或创作，不强迫先选主体。经营/品牌任务需要主体时，从当前任务复用，或识别后以可修正的明确名称显示；只有歧义才询问。未聚焦视图表示当前账号获准的境内经营目录，不表示全球主体。既有 `GLOBAL/ALL`、`GLOBAL_ALL` 等技术标识须按现有兼容入口解析，不作为跨范围权限或全球扩展指令；正式消费者在服务器端执行现行范围。
 
-Selection is not authorization and is not a runtime control. Selecting or clearing a Subject/BrandFocus must not start, stop or authorize Collector, Browser, AI, content, report or background-task execution. On-demand work runs only after its explicit request; any opted-in background work remains independent of focus and within its configured, source-authorized and permitted scope.
-
-### Collection mode — Product Owner correction, 2026-10-23
-
-Collection serves the user's work as a data source. The default is `MANUAL`: an explicit refresh or a request needing current webpage context starts only its bounded, permitted acquisition. Opening a page, selecting a subject, registering an entity or starting the product does not collect the whole registry. Existing due-only schedules remain a separate explicit opt-in, never an automatic prerequisite for using the product. Historical automatic-baseline approvals do not select today's operating mode or authorize a service change.
-
-Use already admitted data immediately for analysis, CTH/BMP and Shared results. An incomplete platform or global inventory limits that source's coverage claim, not independent useful work or the entire product's closure. Preserve actual source, freshness, last attempt, failure, cancellation and recovery; missing data remains unknown. Same-task browser context is the priority interactive path: user question → authorized current page → relevant captured context → grounded analysis/result with source and time. Capture alone is neither source admission nor a generated answer.
-
-Settings → 主体目录 is the single directory of all authorized subjects and brands. Users can add to/remove from their selection, re-add and register a new subject there. Initial discovery prioritizes evidenced operations in China, including international brands; a user's choices take precedence. Headquarters, name or language never proves operating market. Removal preserves existing sources, prior work and stable identities; irreversible deletion retains the owner's permission and recovery contract.
-
-Clearing focus returns to `GLOBAL / ALL`. Every result, Evidence reference, AI task, content/report artifact and consequential action must carry its actual scope. A client-supplied header, route parameter, selected card or local UI state never grants access.
-
-### GLOBAL work and product-owned acquisition — 2026-10-03
-
-No Subject/BrandFocus selection is required merely to enter work or submit a valid GLOBAL/ALL task. Resolve the actual actor and explicit global scope on the server, retain fresh permissions and each original source's exact entity/domain/market/purpose binding. Focus is an optional narrowing; Clear returns the active view to GLOBAL without rewriting saved task, result, Evidence or Artifact scopes. An unbound callable or source grant remains that specific gap, not a reason to invent a subject/login wall.
-
-SYSTEM Collector/Browser code owns search input, navigation, permitted scrolling, parsing and capture; SYSTEM Scheduler owns due-only maintenance, bounded retry and restart recovery. Development harness execution is CODE_EXECUTED_BY_DEVELOPER_TRIGGER, not unattended product operation. Assisted web discovery/import remains labelled assisted and cannot pass autonomous platform collection.
-
-For approved prelaunch public-baseline AUTO, prove an actual future due cycle with Codex/CUA/manual developer triggers absent: append/change/no-change semantics, Source/Evidence/Canonical lineage, last attempt/success/freshness, partial failure and recovery remain correct. Clock simulation/immediate replay proves technical behavior only; real elapsed scheduled operation is separate. Final-user AUTO remains explicit opt-in; MANUAL remains default. Login expiry requests a real human login through the existing session owner; it never accesses the protected Mainland personal account.
-
-Discovery uses authorized real observations: distinguish comparable measured trends, corpus-observed hotspots, an actual official platform rank and owned-AI suggestions. Preserve platform-specific fields, publication/capture/event/window/derivation times, sampling and coverage. Absent fields or unmeasured time buckets are unknown/unavailable, not zero or an invented trend. Related-work selection is not permission to reuse, export, publish or train.
+商业主体与品牌主体为两个目录分组。商业体/项目→场内门店/经营对象、品牌→境内网点，按已核关系展开；两种视角引用同一主体，禁止重复建库或凭名称推断隶属。城市、类型和经营状态用于筛选，不强迫用户逐级选择国家/地区/行业/品牌后才能提问。境内经营不是企业国籍或总部所在地；关闭/退出及未核状态须明确，不能自动当作当前经营。
 
 ## 2. Existing owners and compatibility boundary
 
-| Concern | Sole current owner | Contract boundary |
-| --- | --- | --- |
-| Product and domain meaning | `LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md` | CTH is Subject-first; BMP is Brand/Market-first; neither becomes the other. |
-| Context execution | current `subject_context.py` / domain context callers until explicitly converged by their scheduled owner round | Must evolve toward explicit `GLOBAL / ALL` and focused context without creating a second context service. |
-| Entity identity and discovery | existing `subject_registry.py` and scheduled canonical registry/database work | Directory membership or discovery is not Permission and does not prove collected data. |
-| Canonical persistence | `lumenis/shared/database/` and `data/monitor.db` contract | Global registry, focus keys and business data must not be faked through one default row or a second database. |
-| Source and Evidence | SYSTEM Collector/Browser plus `lumenis/shared/evidence/` | Source authorization, capture, Evidence and Canonical Data remain traceable and separate from focus selection. |
-| Permission | existing account/authorization and SYSTEM Permission owners | Internal Product Owner/Admin full audit and commercial-customer visibility require explicit, auditable policy; no hard-coded key or bypass. |
-| Surfaces | one Product Core/API/ViewModel consumed by approved Website/Web/Desktop/Mobile roles | Surfaces display and change focus; they do not own context, Permission or data truth. |
-
-`GUANGZHOU_TAIKOO_HUI / 广州太古汇` is the controlled depth-reference Subject across all relevant rounds. It is not the product default, not `GLOBAL / ALL`, not a substitute for the global universe, and not proof that global CTH or BMP data is mature.
-
-Current source still contains legacy CTH compatibility fallbacks to `GUANGZHOU_TAIKOO_HUI`. ROUND 02 classifies those values as protected compatibility behavior only. Consumers must not reinterpret them as the default product truth. Behavioral migration belongs to the scheduled database/context/permission/surface rounds and must preserve protected CTH behavior while removing implicit defaulting from global product entry.
+原 subject_registry、context、Permission、Source/Evidence/Canonical、数据库及Surface消费者继续为唯一Owner。目录是身份与范围，资料是输入，结果是派生内容，选择不产生授权。广州太古汇等案例不是默认主体。用户移除主体时停止该主体后续任务引用与关联监测，已执行外部效果不撤销；重新添加沿原稳定身份、权限与历史恢复，不重复创建记录。删除资料/账号另走原明确操作，不能用目录移除级联抹掉作品。
 
 ## 3. Honest states and add/search semantics
 
-Users may discover, search and add any commercial entity or brand entity supported by the product contract. Adding an entity means a controlled path through entity registration/identity resolution, source configuration and authorization, acquisition state, Evidence and Canonical Data. It never means generating synthetic content.
+主体目录提供搜索、添加、移除、重新添加和有据关系查看；默认仅现有且境内经营已核主体。新增信息先去重和核实，未知保留待核身份，不混入可确认经营名单，不自动采集。界面一次展示必要名称、类型、城市/经营范围及重名差异，已有字段不重复问。来源或经营状态更正传递到当前任务与监测，历史回执保留原时点事实。
 
-The Subject/BrandFocus selector serves the Global Product Universe, not a Guangzhou Taikoo Hui allowlist. CTH must support discovery/search/add/select for global commercial entities; BMP must support the same for global brand entities. A selectable identity carries a stable canonical ID plus sufficient type, region, industry and relationship metadata for disambiguation. Duplicate merge and identity-conflict handling remain explicit canonical-registry operations, never silent UI aliasing.
-
-Entities without usable data remain discoverable with an honest state:
-
-```text
-NOT_COLLECTED | COLLECTING | NOT_CONFIGURED | BLOCKED
-```
-
-Keep these distinct from `READY`, `0`, `NULL`, `UNKNOWN`, `NOT_AVAILABLE`, `STALE`, `OFFLINE` and `ERROR`. The `GLOBAL / ALL` entry may prioritize entities, signals and content that meet the applicable data-maturity gate; it must not imply that every world entity has complete data or mix immature entities into the same ready state.
-
-### Mandatory user-added Subject / BrandFocus path at closure
-
-`LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES` requires a real user-initiated add path for both a CTH Subject and a BMP BrandFocus. Each path must use the same canonical identity resolution, deduplication/conflict handling and region/industry/relationship metadata, then pass identity/source authorization and actor Permission before explicit manual acquisition or separately enabled scheduled acquisition, Capture, Evidence, Canonical Data binding, and a user-visible result/recovery path. Adding an identity does not grant Permission or silently start collection. A registration-only row, fixture, or selection-only test is not closure evidence.
-
-### Best-effort partial collection and time semantics
-
-Authorized collection may return a useful partial result, but it must identify each missing or failed source/entity/signal, its last attempt outcome, and whether a retry is `PENDING / SCHEDULED` with the existing next-attempt evidence or is not scheduled and why. Preserve the applicable `NOT_COLLECTED`, `NOT_CONFIGURED`, `BLOCKED`, `STALE`, `OFFLINE`, `ERROR` and retry states at their actual scope. Never represent an unavailable portion as zero, empty success or AI-filled fact; report real measured zero only when the source measured zero.
-
-Keep `captured_at` and `collected_at` according to their existing owner-specific meanings, distinct from `published_at` (source publication time), `occurred_at` (real-world event time), the metric/trend window, and `derived_at` (calculation time) throughout Evidence, Canonical Data, APIs, reports and acceptance evidence. Do not substitute one for another. If source time is absent, retain `NULL / UNKNOWN`; do not infer it from capture, collection, publication, current time or a neighboring event.
+`NOT_COLLECTED / NOT_CONFIGURED / BLOCKED / STALE / OFFLINE / ERROR / NULL` 与真实零分开。身份存在不证明数据齐全。添加/移除/恢复需要实际主体生命周期及读回证据，不能用清除筛选冒充移除。
 
 ## 4. DATA_MATURE minimum contract
 
-Record count, a non-empty page, a global directory, a few connected platforms or one successful Subject is never sufficient. For the active round and capability slice, `DATA_MATURE` requires auditable evidence that:
+数据质量面向当前任务：主体/关系无歧义；来源、许可、用途及原生时间可追溯；Source→Evidence→Canonical身份一致；指标口径/分母/窗口正确；来源缺失、失败、未知与零分开；材料能支持实际判断并说明不能得出的结论。记录数或国家/平台数量不作为质量替代。
 
-1. entity identity and relationships are disambiguated; Subject/Brand ID, name and business domain are traceable;
-2. source legality, authorized purpose, collection state and capture time are explicit;
-3. Raw Capture → Evidence → Canonical Data IDs, owner, timestamp and scope are traceable;
-4. freshness, coverage, missing/not-collected/failure and numeric zero are distinct;
-5. metric definition, denominator, time window, source and computation owner are explicit;
-6. at least one real user path uses the data to finish the round's job rather than only rendering cards;
-7. continuous operation, failure recovery, rollback and data-quality evidence meet the round's responsibility;
-8. fixtures, mocks, manual database injection and AI-invented content are not presented as mature production data.
+采集是取得当前任务所需事实的数据能力。优先复用合法且仍适用的已有资料，再按问题、主体、时间和缺口选择相关来源、搜索/详情/评论/分页/媒体或当前浏览器上下文。取得足以支持当前结论的材料并覆盖关键反证后结束本轮，不用主体数量、平台全覆盖或无限翻页代替准确性。舆情监控、活动及营销监控是固定用户功能；用户设定对象、目的、时间和频率后，沿同一采集器持续检查新增变化，可暂停、调整或结束。普通提问、刷新和监测都有明确边界，不因打开产品、选择主体或登记目录而自动扩库。
 
-Global maturity additionally requires an approved, auditable coverage matrix for regions, languages, industries and sources, freshness SLA, Evidence coverage, entity-disambiguation/relationship quality, data quality, continuous operation, recovery and an extensible add-entity path. Uncovered entities remain honest and enter the add/collection workflow; the product must never claim complete data for every world entity without executable evidence.
+默认按实际相关时间由近到远呈现，提供近一周、近一个月、近半年、近一年及自定义范围；明确用户日期优先。事件发生时间、原文发布时间、采集时间分列，不互相冒充；日期未知单列，历史类比与当前事件时间线分区。
 
-### Baseline inclusion and completion gate — acceptance specification v1.0.0
+## 5. SUBJECT SCOPE / TASK DATA QUALITY IMPACT
 
-Before either global coverage dimension may be `YES`, the existing canonical registry/Evidence owners must support a completed baseline inventory of globally influential brands (BMP) and major representative commercial venues (CTH), together with an immutable, Product-Owner-approved inclusion-rule version. The rule must define its declared regions, industries and venue classes; named source and edition/reference window for each population; measurable inclusion/exclusion and tie rules; identity, alias, relationship and deduplication handling; corroboration requirements; refresh/review cadence; and the applicable legal/commercial use boundary. The inventory must enumerate every qualifying entry under that rule with its canonical identity, region, industry/type, relationships, Source/Evidence provenance, observation time and honest collection/maturity state. It remains inside the existing canonical registry and Evidence owners; it does not create a second baseline store.
+| 核验对象 | 现行要求 |
+|---|---|
+| 主体范围 | 现有境内经营主体/品牌，来源可核；添加、移除和重加不重复身份或丢历史 |
+| 针对性数据 | 问题、对象、时间、来源和结果一致；不用无限采集或全球目录完成作为产品前提 |
+| 监控 | 用户明确范围与频率，真实新变化、失败/恢复、暂停/结束；不自动扩展到其他对象 |
+| 业务使用 | 实际分析、判断、方案及成果能定位来源、修改、重开和恢复 |
 
-An entity sample, random sample pass, fixture, or selected reference Subject validates only the sampled records against the declared baseline. It never defines or completes the baseline population, inclusion rule, or global coverage denominator. A missing source, unapproved threshold, incomplete region/category, unresolved duplicate or unverified list leaves the relevant global dimension `NO / NOT VERIFIED`. Here `v1.0.0` versions this acceptance specification only; no Product-Owner-approved entity inclusion-rule version or completed baseline inventory is asserted, and the current coverage values below remain unchanged.
-
-Product Owner 2026-09-29 adjustment supersedes the 2026-09-27 equal-country **50 distinct commercial Subjects and 50 distinct BrandFocus identities** expansion target: reconcile and finish the country candidates already produced, but prioritize excellent, regional, specialist and niche entities operating in China, with a disclosed global reference population. Preserve separate CTH/BMP navigation categories for China, South Korea, Japan, United Kingdom, France, United States, Canada, Australia, Malaysia, Singapore, Thailand, Brazil, Norway and `OTHER`; no silent loss of existing country research or identities. One entity may legitimately appear in multiple operating markets, but each country membership needs its own Evidence-backed relation; headquarters/origin, legal jurisdiction, operating market, marketing activity and venue location remain different roles. `OTHER` groups evidenced countries outside the 13 named categories and is never stored as an ISO country. Counts alone do not establish source rights, current operation, quality, freshness or Global coverage. The revised priority does not self-approve an inclusion-rule version, completed inventory or coverage PASS.
-
-Global baseline construction and real CTH/BMP jobs run concurrently. A job may proceed when its task-specific real data has clear provenance, correct scope and enough coverage to support the requested result; a complete country/global inventory is not its prerequisite. Guangzhou Taikoo Hui, Shenzhen Luohu MixC, Nike and Le Labo remain representative jobs, never substitute Global coverage. Each path verifies interruption, bounded retry, revocation, honest failure, result reopening and applicable restart recovery during its own implementation; ROUND 15 adds cumulative cross-system/cross-surface release recovery and rollback.
-
-For the Product Owner's own prelaunch Global public baseline, explicitly approved public sources may have an automatic, freshness-aware maintenance schedule through the existing SYSTEM Collector/Scheduler owners. This approval excludes account data, private Cookies/sessions and unapproved platforms; a source without explicit approval fails closed. Final-user collection continues to default to `MANUAL`, and `AUTO` requires that user's explicit opt-in. Focus selection never triggers either mode.
-
-### PRE-LAUNCH GLOBAL FOUNDATION
-
-The product begins with the existing real, traceable baseline and supports user-driven refresh and new-subject registration. Release requires useful operation on the admitted scope, not completion of a worldwide inventory. Global maturity remains separately measured against disclosed coverage. Preserve the approved inclusion rule and the following capabilities:
-
-- a continuously maintained canonical global commercial-entity and brand-entity registry/index with stable IDs, aliases, type, region, industry/domain, relationships and controlled deduplication/disambiguation;
-- authorized CTH/BMP sources, explicit manual acquisition, individually approved automatic maintenance for the product's own prelaunch public baseline, and only opted-in automatic schedules for final-user scopes, with Evidence lineage, freshness and quality states established before a customer arrives;
-- a `GLOBAL / ALL` entry with real, mature and traceable product content rather than a fixture, empty shell or wait-for-customer placeholder;
-- honest incremental onboarding/acquisition for new, long-tail or source-restricted entities as extension of the mature base, with real state and source limitations rather than an invented complete profile.
-
-Pre-closure data-source rule (PO approval PO-20261013-TKH-DIRECTORY-INGEST): before product loop closure the baseline data source is the PR #25 610 verified Subject seeds plus the PO-provided Guangzhou Taikoo Hui floor directory of 2026-10-13; after closure only new Subjects are added on top of it. A PO-provided file is an accepted Evidence source class `PO_PROVIDED_AUTHORITATIVE` only when its sha256, `po-provided://` URI, provision date and approval reference are pinned in a manifest and it is written through the existing note, Evidence, scope and relation Owners; its relations stay `UNREVIEWED` and it never substitutes for other sources' Evidence.
-
-Commercial customers later apply Workspace/Role/Entitlement/Source Authorization/Compliance visibility and action policy to this same mature product truth. They do not trigger or receive a second customer-specific data truth.
-
-### Measurable maturity matrix
-
-Every owning round defines and verifies thresholds appropriate to its slice from current source, real runtime and real data samples. At minimum the matrix reports `coverage`, `freshness`, `completeness`, `provenance/Evidence`, `deduplication/entity resolution`, `source authorization/compliance`, `failed/stale/blocked ratios` and `CTH/BMP workflow usability`. Counts, “many records”, HTTP 200 or page non-emptiness do not satisfy a threshold. Thresholds must state numerator, denominator, population/scope, window, source, owner, sample method and failure condition.
-
-## 5. ONE INTERNAL EDITION ACCEPTANCE MATRIX
-
-The following are three supporting coverage dimensions of one internal edition. They must be advanced and evaluated separately for diagnostic honesty, but they never become separate products, releases, databases, APIs, permissions, contexts, surfaces or delivery plans:
-
-| Gate | Required proof | Current baseline at ROUND 02 |
-| --- | --- | --- |
-| `Global Commercial Coverage` | Global commercial-entity universe, including the completed major-venue baseline under the approved versioned inclusion rule, relationships, industries/domains, legal sources, acquisition coverage, signals, Evidence, Canonical Data, freshness, quality, continuous operation, recovery and the mandatory user-added Subject path meet the approved delivery threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
-| `Global Brand Coverage` | Global brand universe, including the completed globally influential-brand baseline under the approved versioned inclusion rule, plus authorized market, competitor, creator, channel, content, propagation, campaign and evaluation data, and the mandatory user-added BrandFocus path, meet the same auditable threshold. | `NO / NOT YET VERIFIED`; ROUND 02 establishes authority and consumer semantics only. |
-| `Guangzhou Taikoo Hui Reference Coverage` | `GLOBAL / ALL` → locate/add/focus/clear → Source → Capture → Evidence → Canonical Data → applicable CTH/BMP workflow → AI/content/report/action → Outcome → Evaluation/Learning → Return, with other configured work continuing. | `NO / PARTIAL`; controlled test identity exists, but the complete loop is not implemented or accepted. |
-
-Only when all three coverage dimensions are `YES`, the approved rule and both baseline lists are complete, and the user-added Subject and BrandFocus paths pass the full real-data chain above, may Sol set the single top-level conclusion:
-
-```text
-LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES
-```
-
-If any dimension is `NO`, `PARTIAL`, `BLOCKED` or `LIVE_UNVERIFIED`, the single conclusion is `NO` and the exact blocker must be named. A single-subject E2E, non-empty UI or catalog presence cannot substitute for either global coverage dimension. This conclusion measures full-universe data maturity separately from the Real Delivery Overlay's product-operation gates; incomplete worldwide data does not block independent ready workflows. It does not create an eighth status or a second product release.
-
-The `YES` conclusion additionally requires cross-Subject selection/workflow validation and continuous refresh/recovery to pass on the same release candidate. “Global” means the approved and disclosed coverage scope backed by authorized sources and measurable evidence; it never means an unprovable claim that every entity in the world has complete data.
+全世界主体覆盖、国家配额、全球基线构建与全球全量成熟度不再属于本期目标或发布门槛。国外同类案例可作为当前任务的相关研究资料，不因此加入活动主体目录。已有境外历史资料和作品保留权限与原始身份，不迁移/删除生产数据以制造范围一致。
 
 ## 6. Per-round responsibility
 
-| Round | Required incremental responsibility |
-| --- | --- |
-| 02 | Fix this single semantic owner, consumer contract and compatibility routing. Classify Guangzhou Taikoo Hui fallback as compatibility, never global truth. Add the three-line impact to Charter/Delivery Card; do not claim data maturity. |
-| 03 | Separate Global entity registry, focused-context keys and canonical data/migration boundaries; no synthetic default record. Prove protected-data safety and rollback. |
-| 04 | Implement `GLOBAL / ALL` visibility, controlled internal audit, commercial customer scope, and strict separation of focus from Permission. |
-| 05 | Runtime and recovery remain independent of UI focus; runtime observations carry actual scope where applicable. |
-| 06 | Collector/Browser execute explicit authorized manual requests and separately opted-in automatic schedules independent of focus, closing Source → Capture → Evidence → Canonical Data for relevant global matrices and the reference Subject. |
-| 07 | AI/Agent/Shared outputs carry actual scope; no AI-created truth; evaluation/learning preserves lineage and Permission. |
-| 08 | Four-surface contract implements default `GLOBAL / ALL`, search/add/focus/clear/restore interactions without a hard-coded test Subject. |
-| 09 | Golden Pages execute Global → Focus → Return with honest data states and reference-Subject evidence on applicable surfaces. |
-| 10 | CTH monitoring/analysis advances global CTH coverage and the reference Subject's source-backed signal/Evidence path. |
-| 11 | CTH case/decision advances the reference loop through outcome, report/export and Return while preserving global CTH maturity evidence. |
-| 12 | BMP portfolio/market advances global BMP entity/relationship/market/competitor/creator maturity and applicable reference relationships. |
-| 13 | BMP content/campaign/evaluation advances authorized content, channel, propagation, campaign, outcome and learning maturity. |
-| 14 | Remaining ACC/AI/Shared/SYSTEM experiences preserve Global → Focus → Return, honest states, scope, manual-default control and independence of any opted-in background operation. |
-| 15 | Revalidate all three lines on the exact release SHA across promised surfaces and commercial/release gates; verify the approved versioned inclusion rule, completed brand/venue baseline inventories, and both formal user-added Subject and BrandFocus paths through identity/source authorization + actor Permission → explicit manual acquisition or separately opted-in scheduled acquisition → Capture → Evidence → Canonical Data → result/recovery. It may not implement accumulated obligations from prior rounds. |
+C1负责原主体/来源/采集链；C3负责CTH/BMP专业语义和消费者；C5负责资料、引用与成果；C2负责适用AI增强；F消费同一范围与结果合同；C6协调运行、数据库和集成。原Owner不增加，本文件不派工。改变范围时同步搜索、选择、导入、采集、监测、分析、导出、恢复与撤权消费者；本次规划校准不宣称代码或运行已更新。
 
 ## 7. Per-round acceptance block
 
-Every relevant Round Charter and `REAL DELIVERY CARD` includes `GLOBAL UNIVERSE / DATA MATURITY IMPACT` with:
-
-- `GLOBAL CTH maturity impact`;
-- `GLOBAL BMP maturity impact`;
-- `Guangzhou Taikoo Hui reference-loop impact`;
-- in-scope responsibility, verified evidence, still-immature facts, exact next owner/round and non-blocking unrelated work;
-- current values of the three supporting coverage dimensions and `LUMENIS_INTERNAL_FULL_UNIVERSE_READY`.
-
-The one-edition selector acceptance matrix is:
-
-| ID | Required acceptance |
-| --- | --- |
-| A | Global Subject/Brand discovery and selection works through the canonical owner. |
-| B | At least one non-Guangzhou-Taikoo-Hui commercial Subject and one non-Guangzhou-Taikoo-Hui brand Subject complete honest selection/state validation; uncollected entities enter onboarding/acquisition rather than receiving synthetic data. |
-| C | Guangzhou Taikoo Hui completes the deep reference workflow required by the active round. |
-| D | Clearing selection restores `GLOBAL / ALL` without starting or stopping any separately opted-in background capability. |
-
-If current source, fixtures, APIs, ViewModels or UI hard-code Guangzhou Taikoo Hui as the sole selectable/default Subject, the round records a real gap and assigns it to the owning scheduled round. A fixture pass is not global selector capability.
+已有交付卡记录实际目录范围、任务问题/时间、实际源、来源不足及影响、用户可用结果和恢复。沿原发布门禁，不另建全球验收体系。默认无聚焦与聚焦同一主体/多主体比较都按服务器权限和境内范围校验，不能从UI筛选推导权限。
 
 ## 8. RANDOM ENTITY DATA ACCEPTANCE
 
-Controlled prelaunch comparison identities are Guangzhou Taikoo Hui (deep CTH reference), 罗湖深圳万象城 / Luohu Shenzhen MixC (additional CTH venue), Nike and Le Labo (BMP brands). 深圳万象天地 is a different venue and must not substitute for 罗湖深圳万象城. These named exercises supplement the rotating, cross-region random sample; they neither define the approved global baseline nor prove its coverage. Record each identity, region/type, actual collection and Evidence state, Global → Focus → Clear behavior, and honest missing/failure/time semantics.
+抽样只针对已获准的境内经营目录及实际任务，包含商业体/门店/品牌和同名差异；样本不足如实记录。不能假定任一全球对象都有资料，也不能把没有数据填成零。验证目标是处理正确与真实可用，不是为凑样本扩大注册或采集。
 
-Every context/data/collector/AI/content/report/API/ViewModel/surface/workflow round performs a reproducible rotating sample from the canonical global registry. Sampling is stratified by region, industry, entity type and freshness; it includes Guangzhou Taikoo Hui as the fixed deep reference plus rotating non-reference commercial and brand Subjects and cross-region samples. Fixtures and a fixed all-Guangzhou set are forbidden as live acceptance.
+## 9. Baseline-source research
 
-For each sampled entity, the applicable real path is:
+原研究和原始材料按既有Evidence/采用记录用于开发校准。目录初始内容复用现有记录后核实境内经营与身份，不重新做全球清单研究；本文件不授权外部采集、训练或付费。历史全球覆盖研究不再作为当前执行指令。
 
-```text
-GLOBAL / ALL → search/discover → select Subject/BrandFocus
-→ page/ViewModel/API → Canonical Data → Evidence Trace
-→ the round's real business result
-```
-
-An entity already classified covered/mature must not produce silent blank, all-zero, missing→0, placeholder or invented content. Such a defect makes the relevant round `REWORK` or `BLOCKED` until fixed and resampled. A new, long-tail or restricted entity still returns real identity, stable ID, coverage/freshness, source/Permission limit, acquisition state and canonical onboarding path.
-
-Each round preserves a reproducible evidence record containing sampling seed, selection query/strata, sample IDs, timestamp, data/schema/capability version, request and applicable real-surface evidence, Evidence IDs, expected/actual result and failure reason. Samples rotate and cumulative coverage is reported. For a promised page, API 200 or fixture tests alone do not count.
-
-Every related Round report includes:
-
-```text
-RANDOM ENTITY DATA ACCEPTANCE
-sample seed / sample count / sample IDs
-non-empty valid result rate
-stale / blocked / failed rate
-Evidence trace rate
-empty-state defects
-maturity delta since prior round
-```
-
-If the canonical registry or required maturity fields do not yet exist, record `sample count = 0`, `NOT YET IMPLEMENTED` and the exact owning round. Never manufacture a sample or percentage. Report sample counts separately from the approved baseline's total and covered counts; passing a sample cannot satisfy the baseline inclusion or completeness gate. ROUND 15 expands and revalidates cumulative coverage; it is not the first random inspection.
-
-The round also evaluates, only where its owned slice can honestly do so:
-
-1. enter `GLOBAL / ALL` without fabricating worldwide completeness;
-2. search/add a Subject or BrandFocus through the canonical path;
-3. focus Guangzhou Taikoo Hui as the controlled reference path;
-4. prove correct scope on results, Evidence, AI tasks and reports;
-5. clear focus and return to `GLOBAL / ALL`;
-6. prove selection grants no Permission;
-7. distinguish no data, not collected, not configured, blocked and denied;
-8. prove manual collection requires an explicit click, automatic collection remains off until deliberately enabled, and any opted-in background work continues independently of focus.
-
-Unavailable later-round functionality must be recorded as `NOT IN ROUND / NOT YET IMPLEMENTED`, not simulated and not allowed to block unrelated work. A relevant round cannot claim its own contextual responsibility complete without its required proof.
-
-## 9. Baseline-source research — accessed 2026-09-26
-
-| Candidate | Version / maintenance evidence | License and service boundary | Decision and owner mapping |
-| --- | --- | --- | --- |
-| [Wikidata structured-data downloads](https://www.wikidata.org/wiki/Wikidata:Database_download) | Official download page, last edited 2026-04-09 (revision `oldid=2479770906`); JSON/RDF are documented stable interfaces; full JSON is weekly and add/change dumps cover the previous 24 hours. No specific dump snapshot is pinned here. | Main, Property, Lexeme and EntitySchema structured data are CC0 and may be used commercially and offline; other namespace text and media have separate terms/licenses. | `ADAPT` as a candidate identity cross-reference through the existing SYSTEM Collector → Source/Evidence → Canonical Data owners after snapshot/version and lineage review. Wikidata IDs do not establish brand influence, venue representativeness, or Production Truth; corroborate baseline claims with approved primary sources. |
-| [Wikidata Query Service User Manual](https://www.mediawiki.org/wiki/Wikidata_Query_Service/User_Manual) | Live official service documentation accessed 2026-09-26; no immutable service release or dump snapshot is pinned, and limits may change. | Public endpoint documents a 60-second query deadline, 60 seconds processing per 60 seconds per client, 30 error queries/minute, five parallel queries per IP, and HTTP 429 with `Retry-After`; a compliant identifying User-Agent is required. | `DEFER` as the required baseline acquisition path. If a bounded query is later justified, use the existing Collector with those limits, backoff, provenance and honest retry state; prefer versioned dumps for baseline population. |
-| [Wikidata Query RDF GitHub mirror](https://github.com/wikimedia/wikidata-query-rdf) | Accessed 2026-09-26; the repository identifies itself as a GitHub mirror and says the actual code is hosted on Gerrit. No immutable upstream commit/release was pinned in this review. | README identifies `blazegraph` and `war` as GPLv2, while `tools`, `common`, `testTools` and `dist` are Apache-licensed; this is not one uniform package license. | `DEFER` self-hosted WDQS as a product dependency. Dataset CC0 does not transfer to query-service software; any future self-hosting decision requires pinned upstream source, module-level license/security review and an approved SYSTEM deployment path. |
-| [OpenStreetMap Foundation Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/) | Live policy page accessed 2026-09-26; no fixed version is published and the policy may change without notice. | ODbL imposes attribution/share-alike obligations on adapted databases; the public service has a maximum of one request/second, requires an identifying User-Agent/Referer and attribution, discourages periodic/bulk use, and forbids systematic POI/list extraction. Commercial users must account for policy changes and service withdrawal. | `DEFER` as a global baseline source. It is not a complete venue inventory. Any bounded geocoding use must pass a deliberate commercial/license review and route through the existing acquisition owner with caching, rate limits and attribution. |
-
-Research adds no dependency or new owner. Source/service status, terms, and version pins must be rechecked when a source is actually selected; no source availability or baseline coverage is claimed by this table.
-
-
-## 10. Task-semantic vocabulary and continuous acquisition
+## 10. Task-semantic vocabulary and targeted acquisition
 
 Six primary platforms are Instagram, Facebook, WeChat Official Accounts,
 RedNote (HK/intl account), Douyin and X. Existing Collector owners implement all six
@@ -391,7 +198,7 @@ The 2026-09-03 TopicCampaign exception remains source-specific history and
 configuration: hours [9, 11, 13, 15, 17, 19], staggered execution, maximum eight
 runs including manual on its own counter. Retiring TWIN_EXECUTION_GATE does not
 change those code values or authorize unrestricted collection. These values do
-not impose a universal twice-daily limit on the current continuous multi-platform
+not impose a universal twice-daily limit on the explicitly opted-in, task-scoped multi-platform
 program. Current schedules require source identity, approved policy, bounded
 retry/cooldown, observable outcomes and recovery through the existing Scheduler.
 No new module starts collection implicitly; actual risk/authorization failures
@@ -407,24 +214,21 @@ Product Owner明确取消“所有数据必须采全”的要求。产品必须�
 
 成熟度分别记录能力状态、维度定义/展示覆盖、实际数据覆盖/时效和来源限制；不以100%非空为统一门槛，也不把允许缺失改成100%覆盖。保留真实分子/分母、受限/缺失/失败数和影响；业务问题所必需的证据不足时，相关结论仍未知或不可用，不能因为UI完整就通过业务结果。Global/Reference三项原验收维度采用已披露范围及可解释限制，不声称全球数据齐全。
 
-时间排序保留原始出版、事件、采集/刷新三类时间、时区与精度；按任务选择对应时间轴，同源同精度可比较。未知时间单列“日期未知”，不得补造；只有日期精度不伪造秒级先后。明确用户时间筛选时，无法确认落入范围的项单独提示，不算已覆盖。无全局硬起点不等于无范围、无节流或无限回溯；Scheduler沿现有预算、游标、水位与授权轮换持续运行。
+时间排序保留原始出版、事件、采集/刷新三类时间、时区与精度；按任务选择对应时间轴，同源同精度可比较。未知时间单列“日期未知”，不得补造；只有日期精度不伪造秒级先后。明确用户时间筛选时，无法确认落入范围的项单独提示，不算已覆盖。无全局硬起点不等于无范围、无节流或无限回溯；Scheduler仅在明确启用的监控范围内沿现有预算、游标、水位与授权运行。
 
 **源码责任与执行依据：** C1 保留采集及可选任务时间范围、Scope/授权、capture 上界与精度的源码责任；Core/runtime、Scheduler、Permission 依现有 Owner 和共享写入合同衔接。实际执行者和顺序由最新直接 PO 指令决定，本文不派工、暂停或恢复窗口。`2d0f8d61` 对 `acquisition_plan.py`、`adapters/scheduling/prelaunch_baseline.py` 硬编码起点的观察仅为历史定位，当前缺口以实际源码及执行回执核定。保留旧 plan/receipt、fingerprint 与历史失败；按根 AGENTS §14 运行适用的隔离回归，不删除断言或掩盖失败求绿。另以实际产品操作核验明确范围、未指定范围、未知日期、旧回执恢复、真实持久化与持续刷新；规则发布不等于运行通过。
 
-### 当前 C1 提速顺序 — 主体批量采集、后置分析与单封面
+### 当前采集顺序：问题优先、按需补足与明确监控
 
-2026-10-08 Product Owner 在 C1 原窗口的直接补充（消息
-`private-source-id-sha256-3691a5b0b8a33c327c810dc460c3375276a947c36fcf0b6361fb31e70be777be`）调整本轮处理顺序：根据主体大量采集相关发帖，返回后直接跑数据处理，关键词采回后分析；图片只处理一张封面。M 在当前窗口被明确要求优化、同步并回传 C1。它覆盖旧说明中与该顺序矛盾的前置词条完善或逐图处理，不扩大身份、权限、来源或费用。
+采集是取得当前任务所需事实的数据能力。优先复用合法且仍适用的已有资料，再按问题、主体、时间和缺口选择相关来源、搜索/详情/评论/分页/媒体或当前浏览器上下文。取得足以支持当前结论的材料并覆盖关键反证后结束本轮，不用主体数量、平台全覆盖或无限翻页代替准确性。舆情监控、活动及营销监控是固定用户功能；用户设定对象、目的、时间和频率后，沿同一采集器持续检查新增变化，可暂停、调整或结束。普通提问、刷新和监测都有明确边界，不因打开产品、选择主体或登记目录而自动扩库。
 
-1. **先按主体扩面。** 用已绑定的 Subject/BrandFocus、真实名称/别名和任务语义编译现有平台可执行查询；登记来源、市场/门店、任务时间及歧义。批量、分页和平台轮换沿原 Collector/Scheduler 的许可、预算、速率、冷却、游标与恢复执行。无需先补齐完整话题词库、热榜或 AI 分析再开始当前主体的真实采集；不能为扩大数量放宽范围校验或混入同名异地主体。
-2. **每批立即进入原数据链。** 返回的允许内容按原有身份/幂等/事务规则进入 Source→Evidence→Canonical，并可供检索和下游消费；不等待六个平台或所有查询结束。一个坏来源/媒体/受限平台不能撤销其他有效结果，也不能使整批假成功；保留逐项接收/拒绝/待补状态、原文覆盖、检查原因、断点和真实接收计数。摘要或截断观察不冒充全文；只有现有正式准入通过的记录进入 Canonical。
-3. **关键词后置。** 从已取得的原文和来源版本分析主题/词条，沿现有词库追加版本、关联与有效时期；旧词不删。来源语言、任务用词和检索别名仍可用于采集，但词库增长、热度测量和模型推理不是采集前置。无可用分析服务时保留待分析，不阻塞已有真实数据处理；不虚构主题、官方标签、热点或热度。
-4. **采集热路径只处理一张封面。** 当前批量采集每帖最多处理一张平台实际提供的封面/主图；无封面保留缺失原因。保留其他原媒体的定位、元数据、来源与版本，但不在同步采集路径批量下载/转码其他图片、抽帧或逐图分析，也不重写已存原件。此预算只限制同步入库耗时，不删除图片/视频内容理解；按下文在原有产品后台继续处理真实媒体。一张封面不证明全图集/全视频已看，既有创作/资料任务、具体用户输入和独立验收范围保留。
-5. **C1 持续自闭环。** 沿自己现有 Task/Goal、Scope、授权、Core/runtime 与 Scheduler 执行并记录实际吞吐、延迟、准入数、错误原因和恢复；不另造采集器/队列、无逐帖审批或逐函数消息。采集及处理必须由产品代码持续执行，Codex 手动操作不替代。源码、规则、当前状态随合格有界批次发布；仅统计计划/Raw 数量不能宣称闭环。
+1. 从用户问题、当前主体、已知时间和已有材料识别精确缺口，选择相关平台能力，不运行“主体×别名×话题×平台”的无边界扩面。
+2. 每批获准原文立即进入原Source/Evidence/Canonical链并供当前工作使用；检索摘要不冒全文，转载不重复算独立证据，平台失败只影响实际缺口。
+3. 研究与分析使用实际已取材料核实问题和反证；根据必要缺口补查，达到任务范围/预算/足够证据条件后停止，未知仍明确，不以填满字段为目标。
+4. 热路径只处理必要封面及原媒体定位；任务需要理解图片/视频时，由原媒体Owner处理对应内容，不把只取封面称为完整理解。
+5. 舆情、活动、营销监控用同一能力和明确订阅范围运行；保存游标、变化与失败恢复，用户可暂停和结束。研发Agent代搜不算产品自主执行。
 
-**采后分析的执行边界。** 上述 PO 原话已明确要求采后关键词/主题分析，属于当前 C1 的既有完整任务，不再逐函数询问 M。C1 自行在现有 SYSTEM Permission、签名维护计划和派生处理调用链落实内部 READ/ANALYZE 用途；原 `check_prelaunch_maintenance` 的 DATA_IMPORT 回执不能充当分析许可，也不伪造登录用户或把维护 principal 当作商业报告用户。每次使用须由服务端绑定实际 principal、当前未撤销计划、Source/Evidence 引用、来源内容 hash/版本、精确 scope、用途及处理版本，并重新检查来源可用性、隐私和现行来源政策；撤销、范围变化或来源失效即停止该用途。派生结果在已有版本/幂等/审计路径保存，写入仍经过其对应权限，不借 READ/ANALYZE 获得额外写入或外部效果。
-
-复用现有 `acquisition_plan.build_observed_topic_catalog` 的来源关联候选投影；其 `admitted=False` 和发现用途不自动变成正式准入或授权。此前的内部关键词用途绑定只覆盖已获准采集资料的关键词、主题候选和该批材料统计；下述媒体用途仍需独立核验，既不改变原文 `UNREVIEWED`/`allowed_uses`/第三方权益声明，也不授予商业复用、报告引文、训练、导出、发布或新 Provider 权限。不把候选、样本词频或确定性提取宣称为平台官方热度、市场需求或 Owned 推理。现有 Reporting `_source_use_material` / SavedWork 引用入口是商业成果的独立检查者，不能放宽其 `research_reference`/`report_quote` 与 actor/rights 检查来适配维护任务。需要模型时另走原 AI Gateway 的实际可用服务、AI_CALL 和逐来源用途检查；无模型可做有证据的确定性提取并明确 Owned `NOT_RUN`。确有来源政策/当前用途无法准入时保留 `PENDING_PERMISSION` 和缺件原因，只阻塞这项分析，其他已获准采集与原文入库持续执行。
+分析用途仍绑定实际actor、当前scope和SourceUse；采集回执不自动授予训练、发布、商业转载或新Provider权限。数学计算、关键词、AI推断和来源事实分开。当前仅更新规划，不启动采集或监控。
 
 ### 当前全产品数据到业务升级 — 2026-10-09 直接 PO 执行令
 
@@ -442,7 +246,7 @@ Product Owner明确取消“所有数据必须采全”的要求。产品必须�
 | 2.3 有效吞吐 | 先测真实返回量、原生分页/cursor、计划连续执行、重复请求、同步分析/封面、DB写入/事务/去重、平台锁、风控/频率/session/冷却与跨平台隔离；通过分页、增量、批处理、持久checkpoint提速。不得粗删 MAX_RESULTS=20 等边界或无界并发。计划恢复回执、原生cursor和权限各自独立。 |
 | 3 六平台 | RedNote（香港/国际账号）、抖音、公众号、Facebook、Instagram、X分别实证获准身份/范围、单帖详情/原生字段时间指标、分页回补、封面/元数据、Source/Evidence/Canonical、定时/取消/重启/续跑/重复处理。各平台分别保留真实任务、原帖及事务回执/计数/分母/时窗；BLOCKED路径不带停其他路径，不能被其他平台成功抵消。历史记录、打开页面、HTTP200不证实时可用。 |
 | 4 全产品消费 | 按下表核对真实受影响 Shared、CTH、BMP、Research/Reporting/Evaluation、SYSTEM 调用方；已有数据与确定性合法业务不因 AI 不可用停下。跨 Owner 由 M 原预约有界交接，C1必要Core/runtime/Scheduler/Permission修复仍自己完成，不额外唤醒暂停窗口。 |
-| 5 实际 Web | 官网/Web、Windows/macOS和iOS按完整规划并行实现、分别验收；当前用户工作同时完成视觉升级与数据链，主体选择/创建在权限内，真实范围/平台/时间/进度与状态、来源/业务关系/不确定性可查看，进入业务成果、保存/修订/重开，原帖在受控浏览器打开并返回原任务。不使用假数据墙、模拟后端或重复仪表盘；44屏不限制完整产品范围。 |
+| 5 实际 Web | Web/Windows按当前设备范围实现并分别验收，官网只展示，macOS/iOS客户端与设备验收后置；当前用户工作同时完成视觉升级与数据链，主体选择/创建在权限内，真实范围/平台/时间/进度与状态、来源/业务关系/不确定性可查看，进入业务成果、保存/修订/重开，原帖在受控浏览器打开并返回原任务。不使用假数据墙、模拟后端或重复仪表盘；44屏不限制完整产品范围。 |
 | 6 旧路径收敛 | 追真实caller后替换已证失效的耦合/重复入口/旧启动路径、错误GLOBAL默认、兼容映射、吞错假成功、未写Source/Evidence或提前checkpoint、重复拉取/无界重试/session反复启动；保留唯一能力、兼容迁移、原数据/研究/测试/失败/Git史，不因目录旧而删除。 |
 | 7 真正闭环 | 至少一个实际获准平台或公开网页来源：选择主体→真实采集→原始来源保留→Evidence/Canonical核验→工作流分析/分类→CTH/BMP使用→真实成果→保存→关闭→重开→修订→来源追溯→中断恢复；来源类别基础权重相同，采集/入库/恢复已实证后优先接通已有获准数据的下游工具流，不等待全部平台完善。另记录六平台逐项实证/限制/硬阻塞，不把网页成果冒充其他平台已验收。实际重复不多计、身份不误绑、撤权不能继续使用。 |
 | 8 同口径测量 | 真实合规观察/成功原始持久化数量比例、主体平台覆盖缺失、重复和无用请求、入库及分析可用延迟、来源完整/待核验/错误率、重启恢复和成果保存重开；保留真实时间/账号许可/平台任务口径。无有效旧基线写 BASELINE NOT VERIFIED，不造提升百分比。 |

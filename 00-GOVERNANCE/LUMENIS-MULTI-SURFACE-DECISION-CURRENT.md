@@ -16,7 +16,7 @@ current detailed screen specification establish `DESIGN_READY`.
 
 当前优先完成Web Workspace与Windows Desktop的真实产品工作；Public Website后置，不作为产品开发、运行或工作流闭环的前置；macOS/iOS保留完整角色和合同，待设备及后续PO指令后实施，按本端真实任务、运行、恢复与适用验收独立记录。Website使用既有`website/`；Workspace/Desktop/Mobile共用单一Flutter `app/` 和同一Product Core。直接建设任务化完整前端，不等待全部后端；已有真实API/Core立即接入，缺失行为沿现有Owner逐项连接并保持OPEN/UNBOUND，不用模拟结果。44份现有ScreenSpec是覆盖基线，不是页面或产品范围上限。保留全部R/J/U、官网内容家族、原件/源码/设计/回执；一个表面通过不代表其他表面或整产品通过。此规则不派发窗口、不更改实际调度或零新增付费边界。批准依据：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
-四个表面各自交付其既有角色适用的完整真实任务、研究/业务/创作、来源和权限、成果保存/修改/重开/恢复/评价。已存在的Core/API均直接接入；其他依赖由对应Owner继续，不因表面排期或客户端类型而遗漏。官网展示不得夸大能力，Web不使用模拟后端或桌面端跳转代替已批准能力。手机浏览器窄屏属于Web响应式验收，不等于原生Mobile Companion。
+操作端交付其既有角色适用的完整真实任务、研究/业务/创作、来源和权限、成果保存/修改/重开/恢复/评价。Public Website只展示产品、案例、制作好的演示、帮助和真实产品入口，不提供在线试用、功能体验、访客资料上传或生成；展示播放器和导航保留。已存在的Core/API均直接接入；其他依赖由对应Owner继续，不因表面排期或客户端类型而遗漏。官网展示不得夸大能力，Web不使用模拟后端或桌面端跳转代替已批准能力。手机浏览器窄屏属于Web响应式验收，不等于原生Mobile Companion。
 
 按既有Gate分别验收四个表面；每端的Goal/任务闭环只由本端真实证据支持，跨端一致性及整产品Release仍需各自适用证据，不能由单端自动宣告。部署、费用、身份和外部效果的授权边界不变。2026-10-08 Website/Web-first回执仅为历史记录，当前设备执行范围按2026-10-23直接PO修正，四表面角色批准仍见：`evidence/approvals/PO-20261011-WHOLE-PRODUCT-REUSE-EXPERIENCE.json`。
 
@@ -53,7 +53,7 @@ Latest 2026-10-12 PO: entering an operational workspace opens the existing conve
 
 | Surface | Product role | Permitted capability | Hard boundary |
 | --- | --- | --- | --- |
-| Public Website | Commercial introduction and acquisition | Product/domain explanation, industries and use cases, customer cases, truthful demo, trial request, enterprise contact, help, login/workspace entry | No Production Truth, operational workflow, privileged action, Canonical Data owner or client-side provider secret |
+| Public Website | Commercial introduction and acquisition | Product/domain explanation, industries and use cases, customer cases, prepared truthful demonstration, enterprise contact, help, download and workspace links | No embedded trial, functional sandbox, visitor upload/generation, operational workflow, Production Truth, privileged action, Canonical Data owner or client-side provider secret |
 | Web Workspace | Primary commercial workspace | Authorized Subject/BrandFocus selection; CTH/BMP/AI/Shared/SYSTEM workflows; Evidence Trace; Case/Insight/Decision/Action; reporting/export; collaboration, approval and light configuration | Uses canonical Product Core/API/ViewModel; must not recreate local Cookie/CDP/filesystem/local-AI capability in the browser or simulate a desktop result |
 | Desktop App | Power User Client | Full workspace plus local Browser/CDP, Cookie/session, Collector, long-running tasks, local files, approved owned AI capability, enterprise LAN/private deployment, recovery and advanced execution | Desktop-only capability remains behind SYSTEM Permission/effect fences and explicit capability state; it does not create separate business truth |
 | Mobile Companion | Timely review and light action | Notifications, events, AI results, approvals, task state, report reading and bounded quick actions | Not the primary dense-analysis or local-execution environment; unavailable capability is shown honestly and may hand off to an authorized Web/Desktop task |
@@ -165,7 +165,7 @@ Approval is not implementation evidence. Current source contains the trilingual 
 - Historical ROUND 07 planned Jev research; that implementation instruction is superseded. Jev remains inactive under current AGENTS policy.
 - ROUND 08: build the Cross-Surface Experience Foundation: Public Website foundation, Flutter Web Workspace shell, Desktop shell, Mobile Companion shell, shared state/accessibility/localization and capability boundary.
 - ROUND 09–14: every workflow specification records a surface matrix: Web primary/available, Desktop enhanced/exclusive, Mobile view/notify/approve/light action, Public Website explanation/demo only.
-- ROUND 15: prove Public Website → trial/login entry → Web Workspace → real context/workflow/Evidence → Desktop advanced execution when applicable → Web result → Mobile notification/approval when applicable → Report/Evaluation/Learning.
+- ROUND 15: prove Public Website presentation → workspace/download link → Web Workspace → real context/workflow/Evidence → Desktop advanced execution when applicable → Web result → Mobile notification/approval when applicable → Report/Evaluation/Learning.
 
 Stop and return `BLOCKED` rather than creating a second truth when identity/tenant scope, Permission, Evidence, API/ViewModel, desktop handoff, provider legal terms, secret handling or runtime ownership is unresolved.
 
@@ -175,7 +175,7 @@ Stop and return `BLOCKED` rather than creating a second truth when identity/tena
 
 | 入口 | 现有任务中的具体落实 | 同一任务与验收要求 |
 |---|---|---|
-| Public Website | 产品/能力说明用可操作且标注真实状态的示例、对照和步骤；帮助/说明/更新日志可查找并定位相关能力；真实入口明确。 | 演示数据和实测运行明确分开；不从示例开通业务权限，不把未来能力写成已上线。手机官网也独立排版，允许内容所需滚动。 |
+| Public Website | 产品/能力说明用制作好的演示视频、成果展示、对照和步骤；播放、定位、章节切换与动效只控制展示，不执行产品功能；帮助/说明/更新日志可查找并定位相关能力；真实入口明确。 | 演示数据和实测运行明确分开；不从示例开通业务权限，不把未来能力写成已上线。手机官网也独立排版，允许内容所需滚动。 |
 | Web Workspace | 实际材料进入阅读器、对照、图表、方案表单、文稿/媒体工作台；就地筛选与修改，来源和结果联动。 | 同Task/Brief/Scope/Source/版本；键盘/屏幕阅读器完整；流式中断、断网与重开保留可确认进度。 |
 | Desktop | 延续同一工作对象，适配多窗格、大文件、真实播放器、横向轨道/选区和本机系统朗读。 | 不新建本地业务真相；本机处理/服务端执行分别显示；关闭/重启恢复版本及用户选区，修改后旧播放不继续。 |
 | Mobile Companion | 用触控顺序重排事实、依据、审阅、允许的轻编辑/参数调整、审批和通知返回；可把复杂工作接续到Web/Desktop。 | 不把不可运行的重计算假装在手机完成；可用动作与原权限一致，不重新解释任务或重复选择来源；焦点与回退可达。 |

@@ -1,18 +1,81 @@
 # 寰意 / OEVIRA — Codex Takeover CURRENT
 
+## 2026-10-27 全产品规划收敛；实现保持暂停
+
+最新直接PO要求在闭环开发前完成全部关联规划调整。此次将本地已明确的主体范围、针对性采集/监控、任务内研究与文档、原创创作、媒体后期、官网展示、像素植物视觉及无GPU必训路线一并纳入原规划PR #147；不是另建规划或恢复功能开发。AGENTS、Architecture、Experience、范围/交付合同、Owner、主规划/总草图/执行工单、详细界面规格与开发入口在同一变更同步；删除被替代的活动条款，保留原ID和未撤回要求。
+
+本轮fresh origin/main及独立live main为`7361e37705e5599dbacd3e564ed9a5a19cb6a379`；原主工作区HEAD为`ec831c8e80b6463797d7223cdd3c6a20ae327ef2`，分支`codex/full-product-implementation-20261025`。合法未提交成果保留，PR #146仍为未合并草稿，不夹带其源码。PR #147此前`89de5080ec794b7bc0c2923adbb3f49eca1e7d68`的Product/App检查成功，只覆盖该版本；此次增补需新版本检查和正式审阅；后续PO直接要求线上线下唯一同步，适用于该规划PR的正常合入，不适用于未审#146；未读回合并前不称main已更新。
+
+G17 GPU训练路线WITHDRAWN_BY_PO，G163仍OPEN。模型执行、资源获取、真实产品操作、专业质量、运行迁移与发布未因规划变更升级。没有启动服务、采集、模型、训练或新的执行者。唯一接收与调整回执：[evidence/round-15/AI-ROUTE-CALIBRATION-20261026.md](evidence/round-15/AI-ROUTE-CALIBRATION-20261026.md)。本批为RULES_ONLY_PUBLICATION；源码、当前规划、已运行能力分别记账。
+
 Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
-## 2026-10-25 current planning correction
+## 2026-10-26 direct PO correction and development pause
 
-The latest direct PO instruction is **planning only; no product development now**. The complete approved functionality, task layouts, interactions and acceptance remain required. The current visual direction is pixel-cyber, botanical ecology and retro-futurism, with the Gypsophila logo and the five botanical characters specified in Experience §23. The supplied website recording informs the existing J01 and full-product sketch, not a replacement product scope. The prior frontend remains visually NOT_ACCEPTED; this planning correction does not establish implementation, runtime loading or user acceptance. Preserved unfinished source is not overwritten or deleted in this round. Development resumes only upon a later explicit PO instruction.
+The PO rejected the newly added standalone image editor and requires development
+to follow the approved product order. Its local editor, creation/navigation entries
+and chat-to-image-editor handoff are removed; valid media/document/research source
+and saved results are preserved. The local manual workspace's mistakenly enabled
+`shared.social_card` skill was returned to its previous disabled state. This does
+not delete historical results or prove product completion.
 
-This batch is **RULES_ONLY_PUBLICATION**: the PO subsequently requested online/local planning synchronization through the existing checked PR route. Its base is the fresh local/remote `ceb55251f8e0776d474bb65fcaeed8b4458d807e`. The preserved unfinished implementation and historical runtime observations below remain separate and are not delivered by this planning publication. No product development, local product build/test or runtime restart is part of this round; existing mandatory PR gates still apply. Publication does not resume development or accept the frontend.
+All product implementation and delegated capability work remain paused. Current authorization is planning convergence and bounded cleanup only, followed by PO review. The requested migration to `E:\寰意` is deferred until this consolidation is complete; the active root remains `D:\LUMENIS_REBUILD\序\序境`. No source, runtime or data has been moved. Current direct corrections: result-oriented operation with few steps outside video/podcast post-production; research/document work supports the current task; original creation and substantive business judgment remain required; targeted acquisition and explicit monitoring replace global expansion; only existing confirmed China-operating commercial/brand entities are active, with scoped add/remove/re-add; Website displays prepared material, not embedded product trials. Replaced active instructions are removed in place. Historical materials, valid dirty code and user results are preserved. Planning changes are proposed together in PR #147; their publication status follows the current readback above, and they are not implementation or user acceptance. Unreviewed source remains on the implementation branch and is not bundled into documentation publication.
+
+## 2026-10-26 whole-product implementation through adapted open-source code
+
+That earlier direct PO development order covered the entire
+approved product, including the complete frontend. Root AGENTS engineering
+conduct rules 3 and 5 own the adopted method: select suitable licensed upstream
+code per capability, adapt it into the existing product owners and complete the
+original requirements. Upstream features, layouts and defaults never redefine
+the product plan; missing required behavior is implemented in the same owners.
+Collection work from that stage is preserved; the current pause above controls execution.
+This does not narrow the collection plan to an adapter, public-web sample,
+configuration status or test result. The pre-investment collection route does
+not require official platform API authorization: implement the approved public
+page, exact-URL, Feed, controlled-browser and authorized-session paths. Official
+APIs remain optional providers when separately available; never substitute them
+as a universal prerequisite or switch paths to evade a platform denial.
+
+The PO's nine engineering conduct rules replace the existing lean-execution
+body in root AGENTS.md and apply to development of the entire product. They do
+not create another plan, scope or workflow. Confirmed superseded implementations,
+rules, stale references, builds and preview entries retire with their replacement;
+preserve unique valid work, user data, original research and required evidence.
+The complete current product plan and every applicable original requirement govern
+implementation; keyword hits, excerpts, summaries and group names are navigation,
+not scope. Development and compaction entrypoints follow root AGENTS rule 9;
+implementation optimization must not change the PO's product requirements.
+Actual collection changes and
+unfinished outcomes remain in the existing workspace-continuity record;
+no complete collection closure, publication or release is claimed by this update.
+
+The earlier all-product pause preserved PR #146. Its first Windows CI checkout
+failed on an existing long research path before packaging checks ran; the CI job
+then enabled Git long-path support only within that runner. Failed evidence is
+retained. Current authorization is limited to the plan consolidation and bounded cleanup recorded above; neither that development order nor its publication resumes implementation.
+
+The implementation branch is `codex/full-product-implementation-20261025`, originally based on
+`7361e37705e5599dbacd3e564ed9a5a19cb6a379`. Fresh fetch and independent GitHub main
+readback agreed at freeze time. The 271 previously uncommitted files were copied
+and SHA256-verified before publication preparation. The existing round evidence
+records their identities, current checks and known limitations. Source remains
+work in progress: full frontend visual acceptance and complete collection/data,
+creation, AI and whole-product closure have not been established.
+
+This batch preserves the existing implementation across the original owners:
+botanical/pixel frontend components and navigation, Website content, collection
+and source-use consumers, business actions, Office/media editing, task memory,
+AI consumers, packaging and development continuity. It is not a completed
+frontend or product release. The approved full scope, current Experience and
+all outstanding requirements remain unchanged. Earlier runtime receipts below
+retain their own source pins and do not verify this combined snapshot.
 
 ## 2026-10-24 Web and Windows integrated product development
 
-The 2026-10-24 development dispatch, superseded for this round by the planning-only instruction above, assigned one controller to the complete work order: Web Workspace and Windows first, followed by the complete Public Website within this delivery; macOS/iOS wait for devices and new dispatch. The visual implementation from that development stage remains unaccepted and is superseded by the current Experience §23 direction; task-specific layouts, backend results and save/revise/reopen/recovery remain one required delivery. All 30 outcome groups, 396 coverage items, 213 interactions and adopted PE01–PE24 remain required. Prior document-only work and withdrawn builds do not restrict this new dispatch.
+The historical 2026-10-24 development dispatch assigned one controller to the complete work order: Web Workspace and Windows first, followed by the complete Public Website within this delivery; macOS/iOS wait for devices and new dispatch. The visual implementation from that development stage remains unaccepted and is superseded by the current Experience §23 direction; task-specific layouts, backend results and save/revise/reopen/recovery remain one required delivery. All 30 outcome groups, 396 coverage items, 213 interactions and adopted PE01–PE24 remain required. Prior document-only work and withdrawn builds do not restrict this new dispatch.
 
 The current composition builds on PR #144 / `ceb55251f8e0776d474bb65fcaeed8b4458d807e`. Three directly authorized implementation helpers work under the integrating controller on separate source owners. Current source connects business decisions, manual-action receipts, separately sourced metric observations and costs/refunds, explicit SavedWork confirmation, subject registration, original Office object edits, and editable conversation goals/constraints/manual drafts/decisions. Office edits preserve untouched package parts and immutable parents; complex visual composition, native round-trip quality and the full PE13 requirement are not established by those bounded edits. Scoped Task Memory source search uses actual BM25; ordinary source-free chat does not retrieve those sources. The cosine/fusion/reranking algorithms do not imply an admitted embedding/reranker runtime. Unavailable model components remain explicit.
 
@@ -36,7 +99,7 @@ Real Web operations saved report v1, revised v2, reopened both and exported DOCX
 
 The owned manual workspace now lives under `data/runtime/workspace-20261024` inside the canonical product root. A consistent SQLite backup, graceful exact-process restart and hashes preserved ten pre-existing Artifact files during the move. The first in-repository launch failed because the manual-workspace guard previously required an external directory; its failure remains recorded. The guard now permits dedicated children of `data/runtime`, rejects the runtime root and the production DB (including a hardlink), and retains loopback/non-production-port restrictions. A subsequent restart preserved all twelve current Artifacts and served the report exports. Production8201 and production database were not changed during that earlier workspace move/restart stage; the later import incident has the separate uncertainty boundary above. This working-source runtime is not a claim of merged-version operation.
 
-This batch implements actor/workspace/scope-bound unsent draft storage in the existing AI Hub and canonical database migration 22, optimistic revision conflicts, explicit draft recovery, protected navigation, physical Home/navigation materials and the manuscript writing field with explicit old-content restoration through the latest verified parent. The creation entry now uses original physical tool objects and a document folio with explicit version access grouped only by verified work identity, preserving independent research/video/podcast entries. Normal Home/draft/save operations make no model call. Source and this CURRENT entry are co-published as PUBLISHED_SOURCE_VERIFIED only after the checked PR merge/readback; local edits alone are not publication.
+This batch implements actor/workspace/scope-bound unsent draft storage in the existing AI Hub and canonical database migration 22, optimistic revision conflicts, explicit draft recovery, protected navigation, physical Home/navigation materials and the manuscript writing field with explicit old-content restoration through the latest verified parent. The creation entry now uses original physical tool objects and a document folio with explicit version access grouped only by verified work identity, preserving research within the current task/video/podcast entries. Normal Home/draft/save operations make no model call. Source and this CURRENT entry are co-published as PUBLISHED_SOURCE_VERIFIED only after the checked PR merge/readback; local edits alone are not publication.
 
 On the dedicated manual workspace at loopback 58724, real Web operations saved manuscript v1, revised v2, reopened v1, restored its original writing as v3 without changing v2, independently reopened v2/v3, and recovered a competing-window draft through explicit choice. Windows displayed that same persisted draft and manuscript v3; automated native input did not apply and was NOT_VERIFIED at that earlier stage. The existing production runtime and production data were not modified by those recorded operations; this does not cover the later helper import incident above. The initial verification-Core restart was rejected before execution; that dated failure is retained. A later exact-process restart of this manual workspace succeeded after a consistent SQLite backup, as recorded below. Build/static/isolated checks remain separate from these bounded operations. See [current workspace evidence](evidence/round-15/workspace-continuity-20261024.json).
 
@@ -54,11 +117,11 @@ PR #142 first App CI found four Linux failures in active media-cache preservatio
 
 Runtime diagnostics now preserve unreadable and missing counts as unknown instead of zero. Database inspection uses the existing repository's read-only transaction; a missing existing DLQ returns UNAVAILABLE and creates no guardian. Real manual-runtime readback returned available database diagnostics and honestly unavailable DLQ. The complete professional enhancement specification is retained with normalized line endings/trailing whitespace as [adopted evidence](evidence/round-15/professional-enhancement-20261024.md), original attachment SHA-256 `521c1dbb662722a25f68a6688ecec3d7f3d5feb9d15025f88c005ebaa1c0ba2f` (repository-copy hash in the evidence receipt). All PE-01–PE-24 deepen the existing eight batches in full-plan §9.0, preserving the original 30 outcomes, 396 coverage items and 213 interactions; their adoption is not implementation completion.
 
-Whole-product visual and business acceptance remains OPEN. Remaining work includes complete planned task surfaces, CTH/BMP chains, independent research/proposal/video/podcast, browser context, AI enhancement, Windows interaction/recovery, same-version runtime and release acceptance. The current local runtime is an explicitly recorded working snapshot, not proof of the merged revision being loaded.
+Whole-product visual and business acceptance remains OPEN. Remaining work includes complete planned task surfaces, CTH/BMP chains, research within the current task/proposal/video/podcast, browser context, AI enhancement, Windows interaction/recovery, same-version runtime and release acceptance. The current local runtime is an explicitly recorded working snapshot, not proof of the merged revision being loaded.
 
 ## 2026-10-23 Source convergence and integrated execution work order
 
-The 2026-10-23 PO dispatch was one controller deep-checking and correcting the complete execution work order and current documents. Web Workspace and Windows product workflows take priority; Public Website follows without blocking product closure; macOS/iOS implementation and device acceptance wait for devices and a later PO instruction. Their planned scope remains intact. The selected whole-product visual style is digital skeuomorphic; task layouts, complete capabilities, localization, accessibility and optional motion remain governed by Experience and the current plan. The rejected old overall frontend is still NOT_ACCEPTED.
+The 2026-10-23 PO dispatch was one controller deep-checking and correcting the complete execution work order and current documents. Web Workspace and Windows product workflows take priority; Public Website follows without blocking product closure; macOS/iOS implementation and device acceptance wait for devices and a later PO instruction. Their planned scope remains intact. The current whole-product visual style follows Experience §23: pixel-cyber, botanical ecology and retro-futurism; task layouts, complete capabilities, localization, accessibility and optional motion remain governed by Experience and the current plan. The rejected old overall frontend is still NOT_ACCEPTED.
 
 This source batch reconciles the protected Home/recent-work, exact SavedWork reopening, independent Shared research, browser page-context extraction, local speech metadata and safe startup changes. Browser context selection produces an excerpt with NOT_GENERATED analysis status; it is not a completed analytical answer. Startup does not create a visible browser or force-stop an occupied Core; scheduled collection requires explicit opt-in. This publication does not restart services, collect data, invoke a model or deploy.
 
@@ -205,9 +268,10 @@ Unknown task states and uncertain saves keep their recovery controls instead of
 claiming completion or silently repeating execution. The editor and saved list
 show the actual saved version; read-aloud copy describes the current preview.
 
-The SH-01 entry now presents independent Research, Proposal/Document, Video and
-Podcast actions plus the existing saved-work lists; the registered Tools catalog
-is secondary. Independent actions do not inherit a selected business focus.
+The 2026-10-23 implementation receipt recorded separate Research, Proposal/Document,
+Video and Podcast actions. That entry structure is not the current design requirement:
+research and documents now support the current task, as specified in the current
+Architecture and plan. The historical receipt does not approve the old entry layout.
 Explicit domain-linked entry still preserves that context. Reopen uses the
 selected immutable Artifact and existing server validation, not regeneration.
 Podcast output and labels follow the actual audio kind. The existing complete
@@ -1165,6 +1229,12 @@ The direct PO clarified: Codex and Akang (GrokBot) are equal-level product-devel
 
 ## 1. Online reader's current-state snapshot
 
+The current protected local candidate only is not yet part of GitHub main and is
+not published Product Source. Promotion requires one coherent delivery through
+review and the required exact-head PR checks. A remote development branch is a
+source-preservation point, not accepted mainline or runtime publication.
+
+
 ### 2026-10-20 Issue #17 first source repair — FIX-089
 
 PR [#85](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/85) merged on 2026-10-20 at `644eec57f0796158034b9c5d325e80eeef829a59` (GitHub readback 2026-10-23). Its original base was `3f6d67785752b465b5b022847cbbe75a55e1eb47` and initial code head was `dff5b4a4635dddfc288a5139dbbcda4039aced3d`; the following checks and limitations describe that historical repair. It addresses only `FIX-089 · LOWER_ADAPTER_CACHE_SCOPE`: `lumenis/adapters/base.py` now binds cached fallback to complete actor/scope/query/task/source-version/result-limit identity and writes result+identity atomically; `lumenis/adapters/registry.py` carries an optional keyword-only context through existing search methods. Existing callers without complete trusted context retain live searches but fail truthfully without cached fallback. The current V4 search callers have not yet been wired to an authenticated complete context; their degraded cached fallback remains unavailable until their existing caller owner closes that boundary. No W6 composition file changed.
@@ -1180,9 +1250,9 @@ PR #97 follow-up (Refs #17): the last Codex P2 on PR #97 (credential presence me
 PR #114 integration readback: after PR #113 merged as `ce296449a07b9a6007a7e0f620af1fea84ba557a`, the non-conflicting merge preserves both source repairs. The four isolated auth/initialization/preflight modules run together on that integrated tree: **124 passed, 2 deselected**, with the same two baseline path diagnostics excluded as explicitly recorded above. No background-thread leak was detected; constitution, machine governance and takeover governance checks pass. This is one combined run, not a sum of different-version test counts.
 
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `LOCAL_CANDIDATE_NOT_PUBLISHED`
 
-The current source batch joins Web/Windows Home, scoped persistent drafts and manuscript version recovery. Publication becomes authoritative only at the reviewed PR merge and remote readback. Its exact working-source evidence and runtime limits are recorded in evidence/round-15/workspace-continuity-20261024.json; complete visual/product closure remains OPEN. The following document-alignment observations retain their historical scope.
+The historical 2026-10-25 pause synchronization preserved frontend, collection/data, business, Office/media, AI/context and packaging work; the current direct PO authorization is the whole-product implementation entry at the top of this file. The source snapshot and current check boundaries are recorded in evidence/round-15/workspace-continuity-20261024.json under pause_sync_20261025. Mainline publication remains conditional on reviewed exact-head checks; complete visual/product closure remains OPEN. The following observations retain their historical scope.
 
 Historical document-only alignment (not this implementation batch) started from GitHub/main
 `343ec0cc10231dc38005c77feaf4e907097b974f`, independently matched to origin/main
@@ -1327,7 +1397,7 @@ PR #75（源码提交`586776b3b1a94d143cc88cc12bcd825f248b8ee5`；当前远端PR
 | C1 / W1 | 主体/品牌/关系、原生采集、来源时间与字段、Source/Evidence/Canonical、持续供料和恢复；按真实任务范围、合法会话和原权限验证，不用来源数量代表覆盖。 |
 | C2 / W2 | 当前Owned Gateway、Agent任务、上下文、取消/恢复、评价与受控学习；与C5完成cosine/BM25/融合/cross-encoder完整合同，训练、模型绑定、重载、语义质量和晋升各自验收。 |
 | C3 / W3 | CTH/BMP完整问题驱动分析与业务对象、可用判断、获准动作及真实结果；基础业务无AI运行，来源/预算变化、保存、修订、重开和恢复必须连续。 |
-| C4 / W4 | 独立提案/文稿、视频、播客的完整编辑与交付；保留用户原稿、原素材、方法、项目版本、实际媒体输出、回读、视听检查和恢复，计划不替代成品。 |
+| C4 / W4 | 原创提案/文稿、视频、播客的完整编辑与交付；保留用户原稿、原素材、方法、项目版本、实际媒体输出、回读、视听检查和恢复，计划不替代成品。 |
 | C5 / W5 | 资料原件、检索、引用、SavedWork、报告/导出、版本、通知与Shared独立工作空间；现行来源用途和对象权限贯穿所有入口，复用已有底座。 |
 | C6 / W6 | 同版本集成、Core与依赖、运行身份、数据库迁移/恢复、打包、各端真实操作与发布；保护其他候选，分清Change、Owner Closure和Release。 |
 | F | 官网、Web、Windows为当前执行端，macOS/iOS保留完整要求并待设备和后续PO指令；各端独立验收；完整任务交互、三语、无障碍、原研究采用和真实成果接续，不以页面数或视觉草图结项。 |

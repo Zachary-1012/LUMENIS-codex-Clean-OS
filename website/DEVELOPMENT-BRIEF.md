@@ -1,58 +1,16 @@
-# Public Website development brief
+# Public Website development reference
 
-Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](../00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
-For current public copy, use OEVIRA as the English and Korean product mark and 寰意 as the Chinese brand. Historical `서경` / `LUMENIS` wording below is superseded for display naming only; dated research, approvals, implementation limits and verification remain historical evidence. The existing product positioning document retains the two-audience vision without treating planned capabilities as available.
+本文件只保存官网相关研究与历史核验依据。当前范围、构图和验收分别引用唯一
+[Product Architecture](../00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)、
+[Experience](../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)、
+[完整规划 J01](../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md)和
+[总草图 §2](../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md)。
+不在本文件维护第二份布局、执行顺序或旧设计指令。
 
-Status: retained Website implementation and research evidence. Current execution
-comes only from `../AGENTS.md`, the approved Product Architecture and Experience
-Constitution. Historical bases, file reservations and design approvals below
-apply only to their dated changes; they do not resume F or freeze the Website.
-
-## Current product requirement
-
-Use Cue as the Website visual/rhythm reference and the 319b video only for this
-surface. Use approved research for task-shaped space, hierarchy and motion;
-painted icons and suitable local artwork do not prescribe a flat-2D or all-3D
-product style. Retain useful interaction, Chinese/English/Korean access, operation video and real
-configured workspace/help/contact entries. Label fictional demos; never present
-them as actual customer or owned-AI results. Do not use an invented AIGC quota.
-Website may scroll. Operational surfaces adapt suitable principles to their own
-tasks. Preserve pause/skip, reduced-motion, keyboard, failure and return paths.
-The earlier foundation text below cannot prohibit these approved additions.
-
-## Historical foundation and verification
-
-## Product and surface assumptions
-
-- The Public Website is a separately deployable SEO/acquisition surface. It
-  explains LUMENIS, shows a clearly labelled fictional demonstration, and
-  routes people to configured trial, contact, help, and workspace destinations.
-- It owns no Product Truth, workflow execution, account, permission, evidence,
-  database, provider key, or operational workspace state.
-- The public copy uses the current naming contract: full domain names on the
-  primary UI and no internal CTH/BMP abbreviations. The Korean display name is
-  `서경`; `LUMENIS` remains the product mark.
-- The composition follows Point → Axis → Trace → Field → Strata → Boundary and
-  Trace/Return. Commercial operations use temporal/causal language; brand and
-  market work uses relationship/propagation language. The page is deliberately
-  a spatial/editorial field rather than a generic SaaS hero, card grid, or
-  dashboard.
-- Product demonstration text is fictional, has no customers or metrics, and
-  never claims to execute a desktop-only capability. The access ledger reports
-  configured/unconfigured public destinations honestly.
-
-## Implementation choices
-
-- Astro `7.3.3` is used only inside this package to prerender semantic HTML and
-  three locale routes. No dependency is added to the root acquisition package.
-- `/` is Chinese, `/en/` is English, and `/ko/` is Korean. Language links are
-  visible and explicit; there is no browser-language redirect.
-- `LUMENIS_PUBLIC_SITE_ORIGIN` is required for an indexable deployment build.
-  Without it, canonical/hreflang/sitemap output is withheld and robots is
-  blocked. Public destination variables are HTTPS-only and reject credentials.
-- Reduced motion, keyboard focus, named landmarks, semantic headings/lists,
-  contrast-aware focus rings, and a 390px responsive layout are part of the
-  foundation. The browser check is a smoke check, not a claim of full E2E.
+官网按已定2026-10-25录像构图展示寰意产品、场景、公开成果和制作好的演示；
+保留播放、章节切换、原创动效、中英韩、无障碍与真实产品/下载链接。
+不提供在线试用、功能沙箱、上传、分析、生成或业务保存。真实操作属于Web工作区和Windows产品。
+下列历史研究与核验只证明各自记录的版本，不恢复旧视觉，不证明当前官网上线。
 
 ## Standards and project research
 
@@ -88,58 +46,6 @@ locale routing, and maintained release path reduce SEO and build mistakes while
 keeping the package isolated. No network integration, analytics, auth, or paid
 hosting is introduced.
 
-## Impeccable/design-skill boundary
-
-The Product Owner pinned the public composition grammar and the task card limits
-changes to `website/**`. Impeccable context was run once; its `concept-seed`
-workflow would require a separate product/design artifact outside this scoped
-package, so it is not applicable. This brief records the local assumption
-without creating a second global authority.
-
-## 2026-10-02 bounded task-path refinement
-
-Status: **DESIGN_READY — reviewed by M / 序境12 on 2026-10-02**. This is a
-subordinate implementation specification, not a new design authority. It does
-not accept the operational product, a model, or a deployed public destination.
-
-M review (thread `private-source-id-sha256-c255b5e6a0750867a584692fa6107a7d4df9f561ec97e6faeac199516b522186`): approved this complete
-bounded candidate under the sole Experience Constitution §§31–36, only for the
-listed Website files and interactions. Workflow explanations and the fictional
-nine-step Trace must remain visibly identified as previews/demonstrations.
-Destinations must be actually configured or explicitly unavailable; no business
-or model availability may be implied. Preserve three languages, no-JS reading,
-hash/back/forward, keyboard, narrow layouts and reduced motion. W6 owns shared
-CURRENT status, integration and publication; F returns the exact diff, evidence
-and limits for actual-product acceptance. This design approval is not runtime
-acceptance or authorization for a public deployment.
-
-### Context and exclusive scope
-
-- Resume 2026-10-02: freshly verified `main` = `origin/main` =
-  `a85c35ee619ae75052f91b3b924e467bd8bc1622`. The current C1-C6/W1-W6 delivery
-  router supersedes the earlier ROUND08 scheduling label. This candidate stays
-  within F's Website surface; W6 coordinates integration/publication and M
-  reviews this design. The earlier read-only base below is provenance only.
-- Base: local `main` and freshly fetched `origin/main` both
-  `03740bc74e645f8c4212103b8aa0f2cef02e0102` when this batch opened.
-- Exclusive write scope: `website/**`. Preserve concurrent `work/`,
-  `tests/test_timeline_rendering.py`, `lumenis/system/ai_gateway/owned_inference.py`
-  and `tests/test_owned_inference.py`; this batch does not inspect or edit them.
-- Authority: root `AGENTS.md`, the current AI-native Product Constitution,
-  Product Architecture, Experience Constitution, Multi-Surface Decision,
-  Source Owner Index, Product Positioning and Real Delivery Overlay under
-  `00-GOVERNANCE/`. The Experience Constitution remains the sole design owner.
-- Navigation: the capability locator routed `--path website --query
-  'public website interaction and product entry'` to Experience. Read current
-  `SitePage.astro`, `i18n.ts`, `site.css`, `site-motion.js`, destination/host
-  validation and `tests/site.test.mjs`. `contracts/experience/README.md` and
-  ACC-02/CTH-03/SH-01 specifications preserve this surface's public role.
-- No dedicated Public Website screen specification was found. Review this
-  exact bounded candidate before implementation; do not borrow an operational
-  screen's approval or promote this brief automatically.
-- No API, new account design, production data, model/provider, external form,
-  dependency, analytics, hosting or platform-availability change is proposed.
-  Shared staging, commit, push and CURRENT updates belong to 序境12.
 
 ### Observed reference research, not copied design
 
@@ -159,96 +65,6 @@ component/license is introduced. The references only explain the abstract
 principles already allowed by the Experience Constitution. Public descriptions
 do not grant permission to publish private product data or user artifacts.
 
-### Reviewable composition and interaction
-
-Preserve the paper field, restrained optical trace, LUMENIS wordmark and
-Point / Trace / Return grammar. Avoid a dashboard, feature-card grid, fake chat
-or animated metric display. Keep the existing site sections and their anchors.
-
-1. **Entry / hero.** Keep the existing title and mark. Add a prominent product
-   entry bound to the existing `workspace` destination. If not configured,
-   show its truthful unavailable state and an active in-page path to the two
-   business questions. No guessed local URL, new login, or implied availability.
-2. **Choose a question / existing `#scenarios`.** Present the two existing
-   commercial-operations and brand-market questions as selectable editorial
-   rows. On wide screens, a narrow question rail accompanies one spacious
-   reading panel; on small screens, the controls precede the same panel in
-   document order. A question selection does not execute a business task.
-3. **Three reading stages.** For each question, use scenario-specific copy for
-   “materials to bring”, “judgment to make” and “deliverable to prepare”.
-   Commercial operations names store/activity/resource confirmation and a
-   content/operations plan. Brand work names market/competitor/consumer inputs,
-   target audience/content/channel/creator choices and a Brief. All copy is
-   a labelled workflow preview, not invented source findings or saved output.
-   No numbers, customers, actual-report snippets or fictional success states.
-4. **Progressive details.** Selecting a stage changes the adjacent reading
-   panel and its accessible selected state. Previous/next and return-to-question
-   actions provide explicit traversal; touch swipe is not the only way to
-   discover a panel. Optional native disclosure exposes what still needs human
-   confirmation. Switching the question resets to materials and announces it.
-5. **Trace / existing `#demo`.** Retain the clearly labelled fictional nine-step
-   trace and linear/orbit choice. Resolve hash navigation to the correct visible
-   panel after enhancement, including back/forward; prevent a hidden deep-link
-   target. Preserve all anchor content when JavaScript is absent.
-6. **Product access / existing `#access`.** Preserve the four configured-link
-   contracts and HTTPS/host protections. Do not rewrite an absent destination as
-   healthy, connect private artifacts publicly, or call a successful static
-   navigation a working Core/model workflow. Remove the stale public promise of
-   local AI without changing the approved surface/platform roster.
-
-### Accessibility, states and performance
-
-- Chinese, English and Korean have equivalent question/stage/action/state copy.
-- Use native buttons, labelled groups and explicit panel relationships; visible
-  focus, keyboard previous/next/Home/End where applicable, touch targets at least
-  44 px and no hover-only disclosure. Active selection must be readable without
-  color. No focus trap or automatic scrolling while reading.
-- No-JS fallback: both questions and every stage remain readable in order;
-  enhancement-only controls are hidden until handlers are ready.
-- No remote demo content is loaded, so do not invent a loading spinner or retry
-  state. Missing public destinations remain unavailable. A failed script leaves
-  the static explanation and anchors useful. Browser back/return restores a
-  discoverable stage, not a hidden panel.
-- Reduced motion removes translation/tilt and unnecessary transitions, including
-  preference changes during the session. Tiny focus/selection changes remain
-  instantaneous. No autoplay, WebGL, copied media or new network dependencies.
-- Check 1920/1440/1280/1024/768/430/390/360 px layouts. At narrow widths, the
-  question/stage choice and its content stay together; no fixed-height text crop
-  or orbit-induced horizontal overflow. Existing header/access links remain
-  reachable without overlapping the content.
-
-### Bounded implementation and acceptance
-
-Allowed implementation files: `src/components/SitePage.astro`, `src/i18n.ts`,
-`src/styles/site.css`, `src/scripts/site-motion.js`, and affected
-`tests/site.test.mjs`, relative to `website/`. Package configuration changes need
-a demonstrated defect; no dependency additions are planned.
-
-REAL USER JOB: a visitor understands which existing LUMENIS workflow fits their
-business question, what materials they need and what deliverable they seek,
-then follows a configured product entry or sees why it is unavailable.
-
-ENTRY / REAL INPUT: public page, visitor's selection between the two approved
-business questions. END-TO-END PATH: select question → inspect its three stages
-→ return/change question → trace a source relationship → product entry.
-VISIBLE RESULT: the chosen workflow's distinct inputs/decision/deliverable and
-honest destination state. No production data is necessary for this explanatory
-job. FAILURE/RECOVERY: missing destination, no JavaScript, direct/deep-link,
-browser back/forward, reduced motion and narrow viewport remain usable.
-
-Verification after the final edits: package build and Node tests in preview
-and isolated configured environments; browser operation of question/stage
-selection, keyboard navigation, Trace/Return/deep-link, locales, responsive
-widths, no-JS fallback and reduced motion. Record exact exit codes and source
-snapshot. Then run the current constitution and three Experience blocking
-validators without weakening existing tests. A test/build/screenshot alone is
-not public release or operational-product acceptance.
-
-GLOBAL UNIVERSE / DATA MATURITY IMPACT: no coverage change; all coverage claims
-remain unverified by this batch. COMMERCIAL OVERLAY IMPACT: public-hosting,
-configured real destinations and actual operational product acceptance remain
-separate. Return the diff, tests, browser evidence and limits to 序境12 for
-acceptance and co-publication; the Product Owner retains final product review.
 
 ### F verification record — 2026-10-02, local candidate
 
@@ -289,35 +105,6 @@ publication are recorded separately with the final F package. Public hosting,
 real configured destinations, Product Owner review and operational App work
 are not established by this Website result.
 
-### F direct-source continuation — 2026-10-11
-
-Current source base: `1fdb23d27da9f7f15d5dc0a2ab723e8befc371af` plus
-protected local work. This section records the current Website increment;
-historical acceptance below retains its original scope and date. Experience
-section 38 remains the only visual authority. Figma quota is not a prerequisite.
-
-- Reuse the existing Astro surface and three locales. Introduce original flat
-  painted object marks for research, writing, video and audio, alongside existing
-  linear controls. These are decorative task identities, never status signals.
-- Present the existing independent Shared writing/video/podcast paths with
-  addressable, keyboard-operable choices. Without JavaScript every path remains
-  readable. Browser Back to the creation entry restores the initial panel.
-  Workflow illustrations are labeled as illustrations, not executed results.
-- Use one actual local AI-01 draft recording: expand, revise, save to a browser
-  download, clear the authored text, reopen the exact downloaded file and compare
-  its text. The recording contains no AI inference or backend analysis; the
-  unavailable service state remains visible. It does not prove video/podcast
-  rendering, full AI execution or a released product.
-- Video uses original capture timing, native controls, an actual captured poster,
-  three caption tracks, an accessible text description and download fallback.
-  No autoplay, loop, external player or new tracking dependency.
-- Use product language for entry and device choices; retain unavailable entries
-  honestly without exposing implementation terminology as marketing copy.
-
-Verification and exact asset hashes are recorded with the current F outcome.
-Each surface progresses in parallel under its approved role and has separate
-real-device/user-outcome acceptance. The 44 screen specifications are a retained
-coverage baseline, not a scope ceiling. This record alone proves no integration.
 
 ### M acceptance — 2026-10-02
 

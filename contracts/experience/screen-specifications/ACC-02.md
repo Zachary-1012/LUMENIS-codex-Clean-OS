@@ -1,12 +1,12 @@
 # ACC-02 — Subject and view-lens selection
 
-## 2026-10-24 目录首主体正常入口（已接线，实际设备验收独立）
+## 当前主体目录与操作合同（2026-10-26）
 
-现有 ACC-02 增加经营主体 / 品牌目录切换与“添加主体”。填写中文名、英文名、可选行业/相关名称后，复用 `POST /api/settings/subjects/batch` 的 prepare → 展示服务端规范化身份 → 明确确认 apply → 目录刷新 → 现有 `PUT /api/settings/context` → 选择读回。主体身份登记不启动采集，不证明经营关系、来源事实或品牌覆盖，不改独立 Shared 工作的无主体入口。
+当前主体范围是现有目录中有依据确认正在中国境内经营的商业主体和品牌主体，包含在境内实际经营的国际品牌；不以国籍或名称判断，不做全球主体扩库。设置 → 主体目录统一管理添加、移除和重新添加，新增也须符合境内经营范围；证据不足的登记显示待核，不进入已确认的活动目录。目录移除停止该主体的新任务使用及关联监测，历史资料、报告、行动和版本仍按原权限保留。
 
-确认前取消不 apply；权限拒绝不显示登记成功；apply 回包丢失保留同一 normalized entries，再核对相同身份，服务端返回 EXISTING 时不重复创建。登记成功但目录或选择读回失败分别保留未确认状态。登记表单控制器在 DialogRoute 完整移除后释放，窄屏、三语、键盘与放大字体沿原工作面约束。隔离消费者回归见 `app/test/features/account/acc02/acc02_registration_test.dart` 和原 `acc02_feature_test.dart`；这些不是实际用户/设备 E2E。
+目录一级分经营主体/品牌，默认展示全部当前获准范围；按城市/类型搜索筛选，有据的商业体—场内门店/品牌—境内网点可展开，不把它们复制成多份主体。新增先查同一身份，有匹配就选用；仅补缺失必要字段。任务已有主体自动带入，可改可清除；添加不自动采集，清除当前筛选不等于移除目录。
 
-目录移除 / 归档 / 重新添加仍是未闭能力：当前注册 owner 没有相应 HTTP 生命周期合同，不以清除当前 Focus 冒充从目录移除。完整原 coverage、主体关系/来源权益与逐表面验收保持；本节不提升整屏为 ACCEPTED。
+新增、移除、重新添加沿原registry的操作级权限与持久生命周期合同；移除时处理关联监测与进行中任务，明确影响但保历史成果。源码中现有prepare/apply登记、选择读回与尚未闭合的目录生命周期不能因本次规划调整冒称已完成；正式界面不要求用户操作内部prepare/apply字段。
 
 ```yaml
 screen_id: ACC-02
@@ -102,7 +102,7 @@ Feature integration keys: `acc02.availableSubjects`, `acc02.confirmLens`, `acc02
 - `EVIDENCE`: request/response, permission decision, return state and downstream Subject header.
 - `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_LIVE_RUNTIME_E2E`.
 - `RANDOM ENTITY DATA ACCEPTANCE`: sample count 0 here; future acceptance must rotate non-reference commercial/brand/cross-region registry rows.
-- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: selection supports GLOBAL/ALL and focus-only semantics but does not assert collection maturity; report coverage separately.
+- `SUBJECT SCOPE / TASK DATA QUALITY IMPACT`: selection resolves the actor-authorized China-operating directory or a confirmed focus; it grants no acquisition permission and proves no task-data completeness.
 - `COMMERCIAL OVERLAY IMPACT`: `COMMERCIAL_READY=NO` until real selection/return is proven on promised surfaces.
 
 ## 9. Continuous frontier research / capability evolution
@@ -329,11 +329,7 @@ reduced motion. Public Website acquires no form or new runtime.
   assertion. Desktop build and browser screenshots alone do not prove native
   operation or a production write.
 - `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_EXACT_WRITE_CONTRACT_AND_REAL_E2E`.
-- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: extends the existing directory while
-  retaining GLOBAL by default. No change to Global Commercial Coverage, Global
-  Brand Coverage or Guangzhou Taikoo Hui Reference Coverage is asserted. The
-  named reference is a retained acceptance dimension, never a selected-subject
-  default, account selector or limit on the global directory.
+- `SUBJECT SCOPE / TASK DATA QUALITY IMPACT`: adds a verified China-operating entity through the existing registry; removal stops new use/monitoring while retaining historical results and identity. Registration proves no collection or analysis result; no worldwide or named-reference coverage gate applies.
 - `RANDOM ENTITY DATA ACCEPTANCE`: no registration sample run in this design
   step; sample count 0. Later tests must include real non-reference CTH and BMP
   objects without treating registration as collected coverage.

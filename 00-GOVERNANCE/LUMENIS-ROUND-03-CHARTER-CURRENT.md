@@ -39,11 +39,11 @@ The older B002/B003 audit is provenance, not acceptance. Current local `database
 | FAILURE / RECOVERY | Missing, not collected, unknown, stale, offline, error and access restricted remain distinct. Failed migration or unavailable source preserves committed data and gives an honest recovery path. |
 | EVIDENCE / ACCEPTANCE ASSERTION | Sol records source URL, request/response identity without secrets, Evidence ID, canonical row ID, UI action/result/return, protected fingerprints, regression and rollback proof. PASS requires the complete chain and no production DB mutation. |
 
-## GLOBAL UNIVERSE / DATA MATURITY IMPACT
+## SUBJECT SCOPE / TASK DATA QUALITY IMPACT
 
-ROUND 03 must preserve GLOBAL / ALL as the default and make Subject/BrandFocus a focus key, not collection ownership or Permission. It owns canonical storage keys, row identity, nullable/unknown state and consistent reads. It does not by itself establish global acquisition depth or Guangzhou Taikoo Hui as product default. Current status: `Global Commercial Coverage=NO / NOT YET VERIFIED`; `Global Brand Coverage=NO / NOT YET VERIFIED`; `Guangzhou Taikoo Hui Reference Coverage=PARTIAL / LOCAL_LIVE_SOURCE_ONLY`; therefore `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=NO`. Reassess these at exit from real evidence.
+The existing database owner preserves canonical keys, identity, null/unknown states, consistent reads and historical versions. Active subject reads use evidenced China-operating commercial entities and brands within the current actor's permission; add/remove/re-add uses the existing registry. Legacy GLOBAL identifiers grant neither worldwide scope nor collection authority. Do not delete historical overseas sources or production records to manufacture compliance.
 
-`RANDOM ENTITY DATA ACCEPTANCE` will record a reproducible seed, canonical registry version/population, rotating stratified non-reference commercial and brand IDs, cross-region IDs, the fixed Guangzhou reference, request/surface, valid/empty/stale/blocked rates and Evidence trace rate. If no authorized real population exists, record sample count zero and the owning gap. Fixtures and a single Guangzhou sample are not coverage proof.
+Task acceptance uses relevant permitted inputs, exact dates, provenance, correct results and recovery. Rotating samples are selected from the actual current authorized population; absent records and data gaps remain explicit. No worldwide coverage quota or fixed reference subject is a current release gate. Prior round receipts remain historical and do not verify this change.
 
 ## CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION
 

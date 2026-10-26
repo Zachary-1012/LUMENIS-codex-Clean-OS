@@ -71,7 +71,14 @@ entry-state fetch is not a prerequisite for the editor or host navigation.
 
 > 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#acc-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
-Use the existing wallpaper-aware Shell with its restrained brand and controls.
+Use the original wallpaper-aware workstation frame with separate botanical navigation,
+a thin pixel-aligned work surface and compact task controls. The gypsophila mark
+and all five assigned plants retain their current Experience roles. Pixel geometry
+aligns to physical pixels at fractional display scales; text remains normally
+rasterized for readability. Navigation hover/focus/selection feedback is reversible
+and bounded to 90 ms; reduced motion changes state immediately. The four work
+objects retain keyboard and screen-reader activation while using interruptible
+spring feedback. No plant or animation is a new product state or data claim.
 The main conversation occupies one comfortable reading width up to 940 logical
 pixels. With no selected conversation, a concise work prompt, input and direct
 business/research/creation actions form the opening workspace. With a conversation,
@@ -173,7 +180,7 @@ USER-VISIBLE RESULT: usable draft/file or actual target screen. FAILURE/RECOVERY
 preserved text and honest independent service/read states. EVIDENCE: pinned source,
 tests and operated runtime. ACCEPTANCE ASSERTION: LIVE_NOT_VERIFIED until that
 exact artifact is mounted and used. COMMERCIAL OVERLAY IMPACT: no release claim.
-GLOBAL UNIVERSE / DATA MATURITY IMPACT: routing measures no market coverage;
+SUBJECT SCOPE / TASK DATA QUALITY IMPACT: routing measures no market coverage;
 Global Commercial, Global Brand and Guangzhou reference coverage stay separate.
 
 ## 10. Research and review

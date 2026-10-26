@@ -396,7 +396,7 @@ SESSION/target/page revision、捕获TTL、request身份和当前权限由服务
 
 ## 10. Cross-cutting gates and review
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none; browser capacity is infrastructure, not global entity coverage.
+- SUBJECT SCOPE / TASK DATA QUALITY IMPACT: none; browser capacity is infrastructure; actual page capture and downstream task results need their own proof.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable; no business entity sample, count zero.
 - CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: the bounded reading-surface exploration below adapts return, focus and state presentation through existing owners. Browser action binding remains gated. Future acquisition improvements must preserve Source/Evidence/Canonical lineage and rollback.
 - Decision: `DESIGN_EXPLORATION`; Sol must verify the browser authorization boundary and prohibited identities remain untouched.

@@ -176,7 +176,7 @@ Feature integration keys to register with the canonical l10n owner: `acc01.betaE
 - `EVIDENCE`: current commit, live response, callback return, and no product-account side effect.
 - `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_LIVE_RUNTIME_E2E`; widget/parser evidence is not commercial acceptance.
 - `RANDOM ENTITY DATA ACCEPTANCE`: sample count 0 in this UI-only batch; no registry data fabricated.
-- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: entry surface does not claim global data maturity; all data coverage fields remain not applicable.
+- `SUBJECT SCOPE / TASK DATA QUALITY IMPACT`: entry does not trigger acquisition or claim task-data completeness; the server owns the current authorized scope.
 - `COMMERCIAL OVERLAY IMPACT`: `COMMERCIAL_READY=NO` until live entry/return and all target surfaces are verified.
 
 ## 9. Continuous frontier research / capability evolution
