@@ -44,6 +44,10 @@ Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns work; 
 
 ## 1. Authority
 
+### 2026-10-26 PO AI route
+
+GPU training is WITHDRAWN_BY_PO, not AI capability. Architecture §6/J27 own typed admission/learning. Docs-only PR; development paused; protect dirty work/#146. No merge, model/runtime/configuration action or dispatch; see CURRENT.
+
 2026-10-18 PO: absorb GGI into existing LUMENIS owners; Architecture §7 / LUMENIS-SOURCE-ADOPTION-V1.json. No new runtime/domain. Exchange 1.1.0 boundaries and all original scope remain; acceptance needs evidence.
 
 **PO precedence: 2026-10-12:** Branches/PRs and unit/integration tests are restored. Use branch -> tests/review -> PR -> required checks on current main -> merge -> remote readback. No direct push, bypass, force-push or main deletion. Preserve dirty work and existing rights; developer access is unchanged. No collection/model/training/spending/deployment effects are granted. Approval: `00-GOVERNANCE/evidence/approvals/PO-20261010-BRANCHES-AND-TESTING.json`; protection: CURRENT.
@@ -78,7 +82,7 @@ shared-write reservations and real acceptance remain binding.
 
 Latest direct PO authorizes the exact v2 archive (SHA-256 `92e0d17982010b55d9043405164e9b5de79cab9ef053bdbb53ede1963d4607aa`) through existing Task/API, Permission, SourceBrief and Shared Artifact owners. This does not dispatch other windows or authorize paid compute, external models, production deployment or owned-model promotion. The single current implementation is `lumenis/shared/evaluation/openai_math_papers/`; use the updated existing Math adoption record for fixed sources, mathematical assumptions, finite implementation limits and remaining main algorithms.
 
-Typed mathematical scenarios use explicit user-declared parameters/variable meanings and immutable problem hashes. Source context is verified independently; a scenario is never Canonical fact, observed market probability, or model capability. Preserve real-source scope/rights, actor, saved parent versions, readback, cancellation and recovery. Use the same deterministic path without AI across the five architecture rounds. Exact finite results, numerical approximations, rigorous rational enclosures, formal theorem replay and model gains remain separate claims. A completed bounded scenario does not close the nine full-paper algorithms or all J/R/U requirements. Training requires exact model/data/Permission approval. Gibbs receipts are trained/not deployed; G163 stays OPEN, with no gpt-oss promotion.
+Typed mathematical scenarios use explicit user-declared parameters/variable meanings and immutable problem hashes. Source context is verified independently; a scenario is never Canonical fact, observed market probability, or model capability. Preserve real-source scope/rights, actor, saved parent versions, readback, cancellation and recovery. Use the same deterministic path without AI across the five architecture rounds. Exact finite results, numerical approximations, rigorous rational enclosures, formal theorem replay and model gains remain separate claims. A completed bounded scenario does not close the nine full-paper algorithms or all J/R/U requirements. Optional CPU specialist training requires exact model/data/Permission approval; GPU training is withdrawn, not a prerequisite for inference. Gibbs receipts are trained/not deployed; G163 stays OPEN, with no gpt-oss promotion.
 
 ### Retained verification policy and C1 source responsibility (not dispatch)
 
@@ -268,16 +272,13 @@ GPU, new rental, recharge or retired model providers.
    speculative features. C3+C5 research serves capability improvement, data
    credibility and separately approved training/evaluation; product improvement
    does not wait for GPU. Keep unread/missing material and original rights honest.
-5. Existing/free GPU resources are preferred. C2/W2 is eligible and, when dispatched, may execute
-   the already-approved zero-cost training path only after its exact
-   model/recipe/data hashes, MODEL_TRAIN Permission, worker/source pins and real
-   zero-cost GPU capacity are verified. A free development environment is not
-   production model hosting. No paid GPU, rental, recharge or paid model
-   fallback starts without a new explicit cost authorization. C1/W1 is likewise
-   eligible and, when dispatched, may run live read-only collection only through the existing
-   Scope/Permission/session/rate-limit contracts on platforms that are actually
-   ready; a blocked identity/source blocks only that path and must never be
-   rewritten as ACTIVE.
+5. C2 retains the full owned-AI capability under the current PO dispatch.
+   GPU training is WITHDRAWN_BY_PO; old grants do not resume it. Fixed pretrained
+   inference and approved strategy learning follow typed admission, actual quality,
+   scope/resource approval and recovery. Optional CPU specialist training requires
+   justified held-out gain and exact data/Permission/resource approval; it is not
+   a prerequisite for all inference. C1 collection retains its own existing
+   Scope/Permission/session/rate-limit contracts and current dispatch.
 6. Product Owner alone selects the actual model, reasoning effort, speed and
    service tier for each window. Preserve the manual selection; do not apply
    historical role defaults, launcher/profile pins or Hook changes as a new order.
@@ -601,9 +602,7 @@ retain applicable security/recovery/affected gates. M receives complete results,
 necessary decisions or urgent risks. W6 integration follows the current bounded
 PO authorization and reservations; this paragraph does not dispatch it.
 
-Free/existing compute first; paid history is not authorization. Training requires
-real step/loss, checkpoint retrieval/reload, independent held-out and owned business
-results. F keeps its full Experience/owner Goal under the latest top-level dispatch.
+Architecture §6 separates pretrained/strategy/optional CPU admission. GPU training is withdrawn. Professional held-out quality, recovery and exact approval remain. F retains full scope under current PO dispatch.
 M waits when no real review/decision/repair remains, without repeat polling/scans.
 
 Before a capability change, run
@@ -737,7 +736,7 @@ the current Architecture round under existing reservations and gates.
 | Source responsibility / window label | Retained engineering environment | Responsibility |
 | --- | --- | --- |
 | **C1 / W1 — Data and Collection** | Codex/Akang | Existing registry and source owners; 14-country categories and approved candidates; platform-native fields and honest unavailable states; Subject/venue/tenant relationships; approved collection and browser sessions; Source → Evidence → Canonical; refresh, review and recovery. Registration never proves collection coverage. |
-| **C2 / W2 — Owned AI and Agent** | Codex/Akang using approved open base weights and approved training resources (available/free first; paid resources require the actual approved cost boundary) | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned model training and inference; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
+| **C2 / W2 — Owned AI and Agent** | Codex/Akang; approved typed inference/learning admission | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned pretrained inference and controlled learning; optional CPU specialist parameter training; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
 | **C3 / W3 — CTH and BMP Business Workflows** | Codex/Akang — W3 | Existing CTH and BMP services, metrics and task workflows; monitoring, market/competitor/creator/consumer work, operations, cases, campaigns, decisions, outcomes and evaluation inputs; call existing Shared and SYSTEM owners. |
 | **C4 / W4 — Original Pitch, Video and Podcast** | Codex/Akang | Separate customer-ready pitch, editable video and usable podcast results; existing Shared Timeline/Artifact and media owners; editing, review, export, reopen, cancellation and recovery. Each of the three deliverables has its own acceptance. |
 | **C5 / W5 — Importer, Research and Shared Deliverables** | Codex/Akang — W5 | Existing Importer/Research, citations, Reporting/Artifact, notifications and shared-preference owners; real material → locatable Evidence/citation → saved/versioned result → search, reopen, revise, export and return. No second database, Evidence store or model service. |
@@ -788,9 +787,7 @@ materials remain preserved. Both retain their mapped R/J/U requirements and
 existing source owners, read common provenance without duplicating the research
 queue or writing each other's owners. Actual admission/execution is recorded in
 the local live ledger; this binding does not claim either user outcome is accepted.
-C2/W2 remains the sole owned-AI training window and may execute only the verified
-zero-cost path under its current Permission/recipe/checkpoint/evaluation contracts.
-Paid GPU or billing operations still require a new explicit cost authorization.
+C2/W2 owns Architecture §6 typed inference/learning. Historical zero-cost grants do not resume withdrawn GPU training; optional CPU learning requires justified approval.
 W6 coordinates exact shared-file reservations, formal DB writes and main publication.
 
 Former Cloud W3 `private-source-id-sha256-0df3ba1d8208b13dfa31803c4c590c47cb40bb8c2a04ab5ce71a89bc9b3a2364` and Cloud W5
@@ -880,7 +877,7 @@ implementation, screen, provider, migration or release claim. M accepts each
 complete C-window outcome against current source/local/remote evidence and the
 applicable mapped R gates.
 
-Preserve product scope, rules, sources and workflows. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Retired providers retain denial/history metadata and unavailable compatibility responses only; delete their execution/probe bodies and defaults. No discovery, fallback or reactivation. Gateway status: CURRENT. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and approved training resources behind the one SYSTEM AI Gateway; training, inference, held-out quality, failure/recovery and user outcomes require evidence. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Accounts (free Google/email codes; Apple after developer-account activation; settings/30-day deletion undo), both developer modes (SYS-04 user/SYS-07 founder), six commercial capabilities, visuals, logo/role art and account sketches are in-loop. User mode requires reviewed terms, informed consent, backup and reversible disablement; founder mode requires restricted access, checks, signed staged updates and rollback. Ordinary work has no account wall; Permission/effect fences remain. Only real-user validation and paid/licensed sources follow launch; engineering operation/security/recovery remain pre-launch. Settings structure may be adapted; LUMENIS visuals remain original. This grants no deployment or spending.
+Preserve product scope, rules, sources and workflows. Apple, ChatGPT and TRAE remain Experience-principle references only. Codex/Codex CLI and Akang (GrokBot) are the current peer engineering runtimes, dispatched only by the PO; OpenCode is shelved and not part of the current execution route. Retired providers retain denial/history metadata and unavailable compatibility responses only; delete their execution/probe bodies and defaults. No discovery, fallback or reactivation. Gateway status: CURRENT. C2/W2 owns the approved LUMENIS-specific model route using commercially permitted open base weights and typed pretrained/strategy/optional CPU admission behind the one SYSTEM AI Gateway; typed inference/learning, held-out quality, failure/recovery and user outcomes require evidence; GPU training is withdrawn. Media-platform Cookie/session authorization remains separate from the future LUMENIS product account. Accounts (free Google/email codes; Apple after developer-account activation; settings/30-day deletion undo), both developer modes (SYS-04 user/SYS-07 founder), six commercial capabilities, visuals, logo/role art and account sketches are in-loop. User mode requires reviewed terms, informed consent, backup and reversible disablement; founder mode requires restricted access, checks, signed staged updates and rollback. Ordinary work has no account wall; Permission/effect fences remain. Only real-user validation and paid/licensed sources follow launch; engineering operation/security/recovery remain pre-launch. Settings structure may be adapted; LUMENIS visuals remain original. This grants no deployment or spending.
 
 Business work is selected in this order: Product Positioning → Industry Business
 Logic → Real User Jobs → Deliverable Outcomes → Experience → Data/Runtime
@@ -1054,7 +1051,7 @@ provider paths. Keep compatibility interfaces and historical artifacts, but
 do not call, auto-discover, probe, fall back to, or reactivate them. This
 supersedes prior activation guidance for those routes, not user BYOK. It does
 not retire approved C2/W2 work to build and validate a LUMENIS-owned model using
-commercially permitted open base weights and approved training resources (available/free first; paid resources require the actual approved cost boundary)
+commercially permitted pretrained weights and typed inference/learning admission
 behind the existing SYSTEM AI Gateway. Do not change the user's persistent
 Codex model selection or Windows user environment to enforce this policy.
 Codex Cloud remains a development environment, not a deployed LUMENIS model or

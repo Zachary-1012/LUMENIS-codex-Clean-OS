@@ -221,7 +221,7 @@ Reranker 对查询与候选二次精排。不同量纲分数不直接相加；�
 | 视频 | 已有时间轴、换源、媒体处理/渲染及历史成果；有限渲染路径限制明确 | 独立新建到实际编辑、播放、导出、旧版恢复的完整用户链和批准编辑范围仍待验；单轨有限路径不能替代全部承诺 |
 | 播客 | 已有计划、音频换源重排、导出与历史音频成果 | 独立节目入口、实际录音/导入、波形/剪辑/混音、脚本音频绑定、试听及保存重开恢复仍须同版验收 |
 | 内置浏览器 | 已有SYSTEM受控浏览、任务与笔记保存源码和有界旧回执 | 真正网页画面/操作、人工独占接管、安全返回、当前登录身份传递和恢复需同版证明；只读画面或接口成功不足以关闭浏览器目标 |
-| AI与数学增强 | 已有唯一Gateway、有限数学计算、研究采用和版本合同 | 完整主算法、适用性、各业务有效增益、实际模型训练/重载/独立评价分别未全闭合；基础链不等待它们 |
+| AI与数学增强 | 已有唯一Gateway、有限数学计算、研究采用和版本合同 | 完整主算法、适用性、各业务有效增益、实际分类推理/学习/重载/独立评价分别未全闭合，GPU训练已撤销；基础链不等待它们 |
 | 本轮解析/媒体办公适配 | 接收包、75项清单字节校验与原始说明已核对；包含独立补丁和隔离工程回执 | 尚未正式接入主仓与当前Runtime；较宽回归的PDF依赖和提案API错误仍未关闭；Flutter/真实用户链缺证据，不将示例和工程检查当成产品完成 |
 | 全产品与四表面 | 已有44份屏幕规格、客户端与Core源码；44份规格是覆盖基线而非范围上限 | Website、Web、Windows/macOS Desktop 与 iOS Mobile 的真实任务、跨能力正常联动、来源变化影响传播和恢复按当前PO设备范围建设、逐端独立验收。窗口状态在本地按直接PO指令核验，本稿不证明实现或发布 |
 
@@ -241,7 +241,7 @@ Scoped development branches and PRs are permitted globally; validate and review 
 | CTH | 声明运营安排/分配的对象、资源与权重，计算有限可行情景；来源仍为来源，情景概率不是经营事实或因果。 |
 | BMP | 在真实品牌范围内比较明确声明的方案；复用相同计算/成果合同，不能借 CTH 范围获得品牌授权。 |
 | Shared | 成果保存、父子修订、独立读回、导出与恢复；原问题/参数/版本及论文适用限制随成果保留。 |
-| Agent Groups / 自研 AI | Agent 消费同一受控计算入口；单独记录训练、checkpoint、独立新任务收益与晋升。确定性求解结果不计入模型能力。 |
+| Agent Groups / 自研 AI | Agent 消费同一受控计算入口；按§6分类记录推理/策略/可选CPU参数、独立新任务收益与晋升。确定性求解结果不计入模型能力。 |
 
 基础任务无需 AI。精确有理数恒等式、有限枚举、数值 exp/log、原创有理区间适配和固定 theorem 的 Lean 重放分别验收。完整一般算法保持未完成，不因一个有限计算或编译成功而缩减原要求。115 的理论大常数须先算成本，不能调小常数继承原概率保证；107 没有实测乘法瓶颈和生成程序时不得替换 BLAS/CUDA。官方上游撤回/修订记录属于版本准入，非全部论文正确性认证。
 
@@ -455,7 +455,7 @@ SYSTEM：采集、产品浏览器、Scheduler、AI Gateway、Agent/Skills/Memory
 | J4 原创提案 | 文档读取、资料理解、策略/概念、预算资源与Word等交付 | 用户可编辑和交付的提案，来源正确、理由清楚、可修订、导出、重开和回滚 |
 | J5 视频 | 素材、分镜、轨道、音频字幕、转场、预览、局部替换、渲染 | 真正新成片与可编辑项目；时间轴滚动/缩放/seek同步；保存、恢复、缺媒体处理成立 |
 | J6 播客 | 研究、脚本、采访/叙事、音频、转写、段落章节、混音 | 可听节目和完整工程；实际试听、语言与音量质量通过；局部修订不破坏其他段落 |
-| J7 资料与自有AI | 导入、检索、精确引用、多模态、现有 SH-01 Discover、Gateway、Agent/Skills/Memory、学习评价 | Discover 的趋势、热点和相似作品分析有来源、范围、时间与相关性说明；自有AI能基于已授权的产品资料为用户的创作/方案给出可追溯建议、备选与理由，并进入既有Brief/成果保存修订链；已批准权重训练、重载、独立评价、晋升/回滚有实际证据 |
+| J7 资料与自有AI | 导入、检索、精确引用、多模态、现有 SH-01 Discover、Gateway、Agent/Skills/Memory、学习评价 | Discover 的趋势、热点和相似作品分析有来源、范围、时间与相关性说明；自有AI能基于已授权的产品资料为用户的创作/方案给出可追溯建议、备选与理由，并进入既有Brief/成果保存修订链；获准固定预训练推理/策略学习及适用CPU参数的实际消费、独立评价、重载和晋升/回滚有证据；GPU训练已撤销 |
 | J8 跨端与运行 | 四入口、Core、FFmpeg/ffprobe、进程、DB、配置、通知、打包发布 | 同版本任务在目标端可用，重启/取消/授权撤销/回滚可恢复，离开Codex也能持续运行 |
 
 上述工作包完整保留现有U01–U25：全局主体；精确关系；总部/发源/市场/所在地；采集；历史指标/新鲜度；事件日历；消费者与趋势；风险；运营决策；品牌市场；创作者与传播；Campaign；提案；视频；播客；资料库与引用；报告/Artifact；自有AI；Agent/Skills/Memory；评价与学习；产品浏览器；开放入口与权限；四端；设置偏好通知；运行安全发布。
@@ -498,7 +498,7 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 第二批：视频与播客完整正常路径。合并仍在本地的必要媒体实现，解决播放、横向时间轴、实际渲染/试听、版本与Artifact绑定。与F完成对应端的实际操作；不等待自有训练先验证确定性的编辑和恢复。
 
-独立能力链：自有AI实际训练与服务；按五轮架构及必要依赖落实，实际窗口由PO决定，不设固定业务席位。现有/免费资源优先，许可允许的基础权重、自有训练部署、实际step/loss/checkpoint/重载/独立语义评价。以真实CTH/BMP/创作结果验收；Codex Cloud和免费临时GPU不冒充上线推理服务。开发电脑关闭、Codex停止、外部模型API禁用时，承诺的产品运行必须由寰意自有运行环境完成；部署与资源可用性要实际证明。
+独立能力链：获准预训练推理＋行业证据/业务数学工具＋受控知识与策略学习；可选CPU专用参数学习须另有数据权利、独立收益与资源批准。GPU训练路线为WITHDRAWN_BY_PO，不是所有推理的前置条件。 通过真实Gateway服务、Agent/Skills/Memory和各业务/Shared消费者，完成专业多模态/语言输出与保存、修订、重开、恢复。其余独立工作不等待模型训练；实际许可、版本、质量、资源与晋升/回滚分别取证。
 
 第三批：跨端统一运行与发布。一个同版本成果在承诺的四入口衔接；不要求四端相同布局。验证启动/崩溃/取消/撤权/重试/重开/恢复，完成同SHA Product/App门禁、备份回滚与打包。工程可用后由你重复完成核心任务，记录耗时、成本、正确性、修改成本与人工补救。
 
@@ -510,9 +510,14 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 ## 6. AI / Skill / Agent
 
+2026-10-26路线决定：获准预训练推理＋行业证据/业务数学工具＋受控知识与策略学习；可选CPU专用参数学习须另有数据权利、独立收益与资源批准。GPU训练路线为WITHDRAWN_BY_PO，不是所有推理的前置条件。 不新建AI产品、Owner、调度或数据真相。G17撤销路线，G21六项、U18–U20、九family及G163专业增益保持，G163仍OPEN。
+
+现有`owned_service`/`owned_inference`/`security/owned_model_admission`需迁移到显式版本化的 PRETRAINED_INFERENCE、CPU_SPECIALIST、STRATEGY_CONFIGURATION 三类合同。共享actor/workspace/scope/SourceUse、运行资源、操作/预算、并发/取消、版本与回滚必验；仅对应类别要求训练/参数证据，不填假hash或假TRAINED。旧v1历史回执不能自动晋升新类别。完整字段、调用者、兼容/迁移和专业验收设计由唯一主规划J27维护；本轮只改规划，执行器及config仍是旧合同，未宣称新推理已可运行。
+
+
 AI provider and owned-model responsibilities:
 
-- lumenis/system/ai_gateway/ remains the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved commercially usable open foundation weights, owned training/inference and held-out business evaluation; use existing/free resources first. Codex Cloud configuration is not proof of production inference or free GPU capacity.
+- lumenis/system/ai_gateway/ remains the sole SYSTEM owner; every product model call passes through this Gateway. C2 owns approved fixed pretrained inference, controlled strategy learning and independent professional evaluation; optional CPU specialists need justified gain and exact rights/resource approval. GPU training is withdrawn. Codex Cloud configuration is not product inference evidence.
 - Groq is the product-provided external connection, not the sole provider allowed for user-supplied API credentials. The product retains BYOK connections to other providers through the same SYSTEM Gateway, with explicit user selection, supported protocol adapters, validated destinations and applicable Permission/SourceUse. Configuration does not prove inference availability or authorize transmission; there is no hidden default, automatic provider switch or fallback.
 - Restore this capability through the existing Gateway, configuration/secret and Permission owners. A compatible API key does not imply support for every native protocol or modality, and a user-configured endpoint is not an unrestricted URL transport. Credentials remain actor-isolated and secret; selection, exact request confirmation, cancellation/revocation, provenance and saved-work recovery retain their contracts. Implementing BYOK does not itself authorize live credential use, external calls, training or spending.
 - Ollama/LM Studio/llama.cpp/Zhipu/OpenCode model routes are retired from product execution; Jev is an inactive historical typed candidate. For these retired routes: no calls, probes, auto-discovery, fallback or reactivation are permitted. Retiring a historical product route does not permanently prohibit a separately configured user BYOK connection to the same vendor; such a connection must satisfy the current Gateway protocol, destination and authorization contracts without reviving the old transport. Retained compatibility interfaces and historical artifacts are not permission to use them.

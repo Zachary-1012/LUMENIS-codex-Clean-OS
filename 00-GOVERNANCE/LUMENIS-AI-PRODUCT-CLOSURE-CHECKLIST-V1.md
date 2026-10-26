@@ -28,7 +28,7 @@
 - 数据库
 - Git
 - 浏览器
-- 本地程序
+- 产品已批准的文件/媒体程序（不恢复通用OS控制）
 - 外部API
 
 要求：权限、日志、Evidence、可回放。
@@ -53,11 +53,11 @@
 
 SYSTEM AI Gateway 统一管理产品运行模型：
 
-- 获批可商用开放基础权重、自有训练与推理
+- 获批固定预训练推理、行业工具和受控策略学习；GPU训练撤销；可选CPU专用参数仅在独立收益成立时准入
 - 停用 provider 接口/历史（不可调用/探测/自动发现/fallback）
 - 新模型须批准、真实评估与晋升回滚
 
-原则：根据成本、速度、复杂度、隐私、资源自动选择。
+原则：保留用户显式选择；仅在已批准能力/资源集合内优化调度，不能自动换模型、回退外部API或用更强模型补答案。
 
 Canonical owner：`lumenis/system/ai_gateway/`。`local_ai_client.py` 和现有 `/api/local-ai/*` 是需保留行为后收敛的兼容调用路径，不得形成第二或第三个 AI Gateway。
 
@@ -119,6 +119,12 @@ OpenCode 历史配置 .opencode/opencode.json 保留、模型调用停止。Code
 
 定位：持续优化系统，不直接成为Production Truth。
 
+## 专业任务与资源验收
+
+同任务/同输入/同预算的模型直答、检索、工具、策略、可选专用模型及完整组合分别评价；按主体/品牌/时间/来源族隔离最终留出，多次运行、原件数值引用核对、人工盲审与p50/p95/峰值内存/调用成本；关键事实、否定、身份、权限或重复效果错误不能由均分抵消。
+
+CTH经营判断/行动取舍、BMP品牌市场/创意/Campaign、Shared多源反证与原创修改，分别使用真实来源、业务工具、可编辑结果、v1/v2、独立重开导出、取消/断线/撤权/冲突恢复。多模态/十二语逐项验，不以文本接口代替。完整上下文保存与真实token预算分验；BM25_ONLY不算神经Hybrid，inactive学习候选不算激活或收益。必要条件不可被摘要或检索内容覆盖。
+
 ## Production Closure Gate
 
 进入 GPT-Level Experience Ready 前必须通过：
@@ -129,7 +135,8 @@ OpenCode 历史配置 .opencode/opencode.json 保留、模型调用停止。Code
 - Skills PASS
 - Evaluation PASS
 - Routing PASS
-- Owned useful inference / training / held-out business evaluation PASS
+- Fixed pretrained inference / actual business consumers / independent held-out professional evaluation PASS
+- GPU training route WITHDRAWN_BY_PO; optional CPU specialist parameter learning has its own approval, reload and benefit gate, not a universal prerequisite
 - Bounded failure / recovery / rollback PASS without retired providers
 - Evidence PASS
 - Security PASS
@@ -154,8 +161,7 @@ OpenAI、Codex、ChatGPT、Claude、Meta Muse 五个学习对象全部保留。�
 原创修改、工具执行、上下文/长任务/恢复、受控评价学习六类能力及产品交互必须验证。
 
 OSAI 独特有效资产按来源/许可适配现有 Gateway/Agent/Memory/Retrieval owners，
-不复制平行 runtime/资料库。实际训练需数据/留出隔离、真实获准业务目标、
-权重/配方/数据版本与可重载产物；算术训练或技术样本不等于业务能力。
+不复制平行runtime/资料库。固定预训练推理、策略配置与可选CPU参数按Architecture §6/J27分类准入；GPU训练撤销。CPU参数若获准，才要求真实数据/留出、版本、参数重载及业务收益；分类模型不能替代行业推理和创作。
 
 Source Brief、文档表格、图片、视频分镜和音频必须实际解析并进入 CTH/BMP/创作。
 文本模型不自动具备多模态。Realtime 仅实时对话语音后置，音频文件、视频音轨

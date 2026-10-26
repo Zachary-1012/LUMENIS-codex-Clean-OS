@@ -287,6 +287,9 @@ This schema is a learning/knowledge contract. Codex must verify the actual stora
 
 # 6. Retrieval rule for AI content creation
 
+检索采用原授权BM25→获准embedding独立召回→身份/版本排名融合→有界交叉编码重排；先筛scope/SourceUse，返回前复核来源。索引/缓存是Canonical派生，按更正/撤权失效，不每次重读全库，不拿相似度当事实可信度。必要Brief/品牌/否定/人工稿/效果回执保留，可选材料按真实tokenizer预算并保定位；原文不是系统指令。
+
+
 Do **not** send the entire 1,000-line research asset into every content-generation prompt.
 
 Use scoped retrieval:
@@ -385,6 +388,9 @@ For brand/product/campaign content, the system must not manufacture:
 ---
 
 # 9. Learning feedback loop
+
+持续学习按资料/索引、用户记忆/任务状态、策略/示例/规则、可选CPU参数四类处理，GPU训练路线撤销。沿J27采用ACE局部结构化经验和GEPA有界执行反馈候选优化；不新增常驻反思Agent、不无限循环，不让最终留出参与优化。`apply_approved_rule()`的inactive candidate不等激活，`build_prompt_context()`须证明使用获准promoted精确版本。批准→激活→消费者使用→独立收益→撤回传播/恢复分别留证，不能用applied状态或保存样例替代。
+
 
 Evaluation is not an appendix; it is what makes the content module improve over time.
 
@@ -517,3 +523,5 @@ Learning preserves only what deserves to be reused.
 ```
 
 The goal is not to make LUMENIS generate more content. The goal is to make each production cycle leave behind **structured, evidence-aware, reusable creative intelligence**.
+
+2026-10-26适用验收：上述原十项及完整13段生产链保持；补充同Brief对照、独立来源族留出、品牌/原创/可用性人工盲审、事实/数值/权限硬失败与任务资源预算。模型独立生成、人工稿保存、工具求解分别取证；策略和CPU参数路线不替代完整原创能力。分类准入见Architecture §6/J27，实施状态仍须真实运行证明。

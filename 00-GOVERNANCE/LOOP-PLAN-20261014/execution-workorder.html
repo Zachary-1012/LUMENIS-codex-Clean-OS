@@ -1819,7 +1819,7 @@ VoiceNPC官方证据到`.voicenpc`同App跨设备复用；未拿到样例、未�
 持久化、权限与错误恢复：听过仅本次导航标记，不等准确对齐已确认；采用继续走原明确批准和新工程修订，绑定父工程/候选/转录hash。多次试听不创建版本；保留原词不删除原音频。 父版或转录变化使旧候选过期，保合法选择待重新生成；无词时码、1/30秒下过短残片、全部音频将被删时保原稿和原声。取消试听停止播放并回原头，取消采用不写工程；音轨不支持则保手工阅读与现有编辑路径。 验收：听下一处绝不自动采用上一处；原句与候选有不同的明确播放状态；不把单WAV当前能力写成完整多轨长节目已支持。当前为研发合同，未实测减步数字，未宣称四端接线完成。
 
 验收以同一真实任务记录原路径/新路径的操作、切换、重复录入、失误与恢复；没有实测前不填写节约秒数或成功率。便利界面与接线仍须本地构建，后端只按实际Owner测试证据判断，不能用本段规划声称已完成。
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J25">查看 19 条对应要求</button></div></details><details class="outcome" id="J26" data-id="J26"><summary><span class="mono">J26</span><strong>发布包、切片、复盘与学习</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>C4/Deliverable + C2/C5/Learning + F</dd><dt>接口依赖</dt><dd>J20、J22、J25</dd><dt>完整验收</dt><dd>发布材料与切片、实际观察复盘、候选审阅/采用及失效；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J26 发布包、切片、复盘与学习
+</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J25">查看 19 条对应要求</button></div></details><details class="outcome" id="J26" data-id="J26"><summary><span class="mono">J26</span><strong>发布包、切片、复盘与学习</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>C4/Deliverable + C2/C5/Learning + F</dd><dt>接口依赖</dt><dd>J20、J22、J25</dd><dt>完整验收</dt><dd>发布材料与切片、实际观察复盘、候选审阅/采用及失效；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。 分类准入按J27；GPU训练撤销。独立专业任务质量、原件事实/数值核验、真实消费者、权限/撤回/恢复、同预算对照和资源成本分别验收，不以规划或训练标签报完成。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J26 发布包、切片、复盘与学习
 
 对应P10–P13、SH-04/05。发布包先列实际生成的MP3/M4A、show notes、封面、字幕与RSS，七件可编辑材料逐个保版本：plan.json、script.txt、原文VTT、校对VTT、chapters.json 1.2.0、corrections.json、metadata.json。缺件和不支持格式分别显示，不给一个空ZIP成功提示。
 
@@ -1857,9 +1857,9 @@ J15/J23/J26；C4创作、C5SavedWork/Artifact/实验/Evaluation。用户选准�
 
 Jev小模型v2是英文合成三类有限研究：测试准确率58.33%、macro-F1约0.58654，校准无法同时达到风险≤5%和覆盖≥50%，资格NOT_ELIGIBLE，测试弃答覆盖0。48回归探针通过不改变模型质量失败；OOD使用显式标记不等模型学会域外识别。此类状态在研究/评价详情如实显示，不进入用户默认任务路由。
 
-用户反馈→有权学习资产→数据/独立留出→明确MODEL_TRAIN批准→受限实验→同预算强基线→模型/adapter重载→人工质量/风险审核→申请admit；每步显示真实状态和缺证。点踩不自动训练；已消费test只作回归，需新预封test；短语覆盖、批阅次数、step/loss、文件存在不单独晋升。现measure_content_pattern明确NOT_ELIGIBLE，缺独立heldout/业务结果不能涂绿。
+用户反馈→有权学习资产→区分资料/用户记忆/策略/可选CPU参数→独立留出与受限实验→同预算强基线→对应产物实际消费与撤回/恢复→人工质量/风险审核→相应准入；仅确有参数训练时另核MODEL_TRAIN；每步显示真实状态和缺证。点踩不自动训练；已消费test只作回归，需新预封test；短语覆盖、批阅次数、step/loss、文件存在不单独晋升。现measure_content_pattern明确NOT_ELIGIBLE，缺独立heldout/业务结果不能涂绿。
 
-晋升或回滚绑定精确模型/recipe、train/heldout、adapter/checkpoint、评价/人审/SourceUse/runtime与操作范围hash。撤销先阻断新请求，核未完任务和最终读回；旧版本恢复不复活已撤许可。没有具体训练/模型调用/资源批准时，仍可阅读研究证据和完成普通编辑，不能自动开训。
+晋升或回滚按J27分类合同绑定精确模型/策略/检索版本与评价；只有CPU参数候选绑定train/heldout与可重载参数、评价/人审/SourceUse/runtime与操作范围hash。撤销先阻断新请求，核未完任务和最终读回；旧版本恢复不复活已撤许可。没有具体训练/模型调用/资源批准时，仍可阅读研究证据和完成普通编辑，不能自动开训。
 
 训练许可读取补充：固定源码TRL v0.22.2 LICENSE读取缺口已关闭，并有Transformers、Tokenizers、PyTorch、bitsandbytes和Triton固定源许可证据；这不证明部署wheel/CUDA/传递依赖、版本兼容或运行。Unsloth及unsloth_zoo对应tag许可读取404、PEFT/datasets/safetensors实际安装版本仍待核。界面部署准入不能因某个源码LICENSE可读就转绿。
 
@@ -1889,8 +1889,7 @@ UI可把增益与风险两个轴安排成可解释对照，不生成优胜分或
 
 持久化、权限与错误恢复：显示原候选只读与“重新审阅/准备新候选”明确两步；没有有效评价则回评价入口。外部RECEIVER_NOT_BOUND保持，local ACK不叫外部送达；禁止批量自动批准、恢复或伪复活旧封装。
 
-验收以同一真实任务记录原路径/新路径的操作、切换、重复录入、失误与恢复；没有实测前不填写节约秒数或成功率。便利界面与接线仍须本地构建，后端只按实际Owner测试证据判断，不能用本段规划声称已完成。
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J26">查看 47 条对应要求</button></div></details><details class="outcome" id="J27" data-id="J27"><summary><span class="mono">J27</span><strong>AI、并行任务与前端智能表达</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>C2/Gateway/Task + C5/SavedWork + F</dd><dt>接口依赖</dt><dd>J04、J07、J28</dd><dt>完整验收</dt><dd>真实任务/会话、增量消息、上下文来源、原创界面AIGC可逆采用；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J27 AI、并行任务与前端智能表达
+验收以同一真实任务记录原路径/新路径的操作、切换、重复录入、失误与恢复；没有实测前不填写节约秒数或成功率。便利界面与接线仍须本地构建，后端只按实际Owner测试证据判断，不能用本段规划声称已完成。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J26">查看 47 条对应要求</button></div></details><details class="outcome" id="J27" data-id="J27"><summary><span class="mono">J27</span><strong>AI、并行任务与前端智能表达</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>C2/Gateway/Task + C5/SavedWork + F</dd><dt>接口依赖</dt><dd>J04、J07、J28</dd><dt>完整验收</dt><dd>真实任务/会话、增量消息、上下文来源、原创界面AIGC可逆采用；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。 分类准入按J27；GPU训练撤销。独立专业任务质量、原件事实/数值核验、真实消费者、权限/撤回/恢复、同预算对照和资源成本分别验收，不以规划或训练标签报完成。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J27 AI、并行任务与前端智能表达
 
 对应AI-01/02/03、ACC-03与唯一Gateway/Task/成果Owner。用户目标、材料、约束是可编辑意图；长任务进行时还能继续输入、切另一任务或打开已有成果。结果明确归属Task/run/attempt与版本，旧回调不覆盖新修订。
 
@@ -1965,13 +1964,53 @@ UI可把增益与风险两个轴安排成可解释对照，不生成优胜分或
 
 #### 自研AI与独立Shared：实际能力不靠标签补齐
 
-保留已批准的gpt-oss-20b/NF4基座路线，按任务增加专用小模型候选，不按五角色各造一个模型，不静默替换基座。第三方基础权重、序境训练参数/adapter与序境数据/权限/编排/评价分别说明；微调不宣传为基础权重从零自研。小模型有无价值由独立业务测试判断，不靠大小或loss下降。
+2026-10-26 PO：寰意保持原垂直行业 AI 目标，采用获准预训练推理、行业证据、业务/数学工具与受控持续学习。GPU 排队/租赁、Kaggle/Colab GPU 训练、gpt-oss NF4 微调、LoRA/QLoRA/RL/蒸馏及 CUDA 训练环境作为当前交付路线均为 WITHDRAWN_BY_PO；不改成待排期，也不把同一大模型训练搬到 CPU。G17 的训练路线撤回不撤销 G21/U18–U20 的理解、判断、原创修改、工具、长任务和学习能力。现存权重、原始研究、批准和失败回执保留历史身份，不能自动成为新推理准入。图形/视频 GPU 加速不受此训练决策影响；新 GPU 推理、资源和费用仍单独准入。
 
-静态已查文本owned_service面向cth/bmp，服务类型固定OwnedProductionRuntime；business_brief与agent_plan有既有调用链。独立Shared通用自有文本生成和全部多模态的生产caller/SourceUse闭环，本轮未证明；不把“未知”写成任何路线绝不存在，更不能伪造cth/bmp scope绕过。Shared已有合法ASR路径，不能因此说Shared完全没有模型入口。
+正常链为 Brief/问题/人工编辑 → 服务端 actor/workspace/scope/SourceUse/任务版本 → 行业证据、案例与可比数据 → 获准预训练推理＋原业务/统计/数学工具 → 事实、约束、反证、替代方案及取舍 → 原 Task/Permission/EffectFence → 可编辑 Artifact/SavedWork → 保存v1、修订v2、独立重开、导出和恢复 → Outcome/人工修正/Evaluation → 经批准的知识/策略或可选专用模型更新。确定性计算、模型判断、人工决定和已观察效果分别记账。研究、文稿和文件输出服务当前工作，不强制另建项目；独立创作不要求 CTH/BMP 前置。图像编辑器、OS 控制和全球无边界采集不恢复；既有中国境内经营主体与针对性取材约束保持。
+
+CTH 消费主体/期间、事件风险、经营诊断、资源约束、备选行动和复盘；BMP 消费品牌/市场/竞品/消费者/创作者/渠道证据、传播判断、创意方向与 Campaign 评价；Shared 在同一 workspace 合同下完成多源反证研究、原创提案/文稿/脚本/分镜及播客内容，保留品牌约束、人工稿和事实底稿。产品协作沿原 Agent/Skills/Task 完成多任务、取消、接手、未知效果对账与恢复。无 AI 基础工作继续可用，不能以此取消 AI 增强。
+
+**双源事实与状态。** 2026-10-26 固定 GitHub main `7361e37705e5599dbacd3e564ed9a5a19cb6a379`；本地主区 HEAD `ec831c8e80b6463797d7223cdd3c6a20ae327ef2` 加受保护未提交内容。两者不是同一个组合版本。`owned_inference._prepare_candidate_files/_load_local_kernel/_production_runtime_identity` 仍要求训练状态、adapter/recipe 和 CUDA；`owned_service.OwnedModelAdmissionRequest/_validate_admission_request/_runtime_identity` 与 `security/owned_model_admission.py` 仍绑定旧资源身份。不能只把状态改成可用。主区已有 Shared workspace 身份/消费者、ContextPack 完整历史与更正依赖、BM25/原文定位/撤权改进；这些不是新 main 已发布或模型已运行证明。此次仅完成下述设计，代码迁移、模型准入、任务质量与发布仍 OPEN，PR #146 不自动合并。
 
 用户从独立稿件发起生成时先读当前能力和来源用途：可用才给对应动作；未接通明确说明可手写/编辑/导入/保存，保原Brief和作品，不能做假生成或自动调用外部provider补齐。现core多模态分析仍fail-closed；图片传入或文本回答成功不证明视觉理解。泛型chat不自动叫owned；用户明确选择Groq且请求符合既有例外时才走该路径，并由最终adapter重验身份/精确请求，不因全局配置外传来源。
 
 这不是另建生成器、第二Gateway或重建UI。原生编辑器继续作为主工作面，Gateway/Task/SourceUse/Evaluation/原成果Owner各守职责；AI补充依据、候选和局部改稿，成果可直接编辑与重开。界面只显示影响当前任务的真实可用性、来源授权、质量限制和必要设备状态；Owner接入、模型及算力诊断在详情按需查看，不常驻展示工程解释。
+
+##### 同一 Gateway 的分类准入迁移设计
+
+原 C2/SYSTEM Owner 将现有 admission 请求升级为显式版本和互斥 `artifact_kind`，不是第二 Gateway 或新配置真相源。建议下一合同版本 `owned-admission-v2`，字段名在原合同实施时统一；本轮不修改执行 schema 或模型配置。
+
+| 类别 | 必需身份和证据 | 不适用字段的表达 | 实际消费者 |
+| --- | --- | --- | --- |
+| PRETRAINED_INFERENCE | 上游仓库与固定revision、每个权重分片hash、量化格式/参数/转换来源、tokenizer/chat template、内核版本/构建、代码与权重许可、模态/语言/上下文、用途与scope、独立质量、CPU/RAM/耗时/并发预算、运行批准和回滚绑定 | schema 排除自有训练run、optimizer、adapter、训练checkpoint；不得用空字符串、零hash或假TRAINED替代 | 原 Gateway typed text/vision/ASR/TTS/embedding/reranker入口，C3/C4/C5和Agent消费者按各自能力准入 |
+| CPU_SPECIALIST | 任务/标签定义、来源权利、按主体/时间/来源族隔离的训练/验证/最终留出、实际参数产物hash、实现版本、训练预算、重载一致性、校准/业务增益、运行scope与批准 | 无大模型adapter、CUDA RNG、GPU设备必填；有真实CPU训练记录而非基础模型训练标签 | 原相关性/实体候选/广告概率/风险分类/排序等已批准工具；不能替代完整行业理解和创作 |
+| STRATEGY_CONFIGURATION | 来源/问题、精确版本与父版本、规则/示例/检索或提示变更、适用任务和消费者、独立评价、批准、生效/失效时间、撤回和回滚 | 不要求伪造权重、训练记录；配置身份与模型身份分别保留 | 原Memory/Learning/Skill/ContextPack，实际选中版本进入一次请求并留下消费回执 |
+
+共享必需字段仍由服务端绑定 actor/workspace/domain/scope、SourceUse、允许操作、精确资源与执行器/校验器版本、质量评价、输入/输出预算、并发、取消、授权期限及 prior binding。保留每次调用前身份/权限/来源撤回重核、来源最小化、效果幂等、输出核验和取消/重启恢复。基础权重注册不自动授予资料读取或外发；模型不能自填身份或批准。模态和检索执行器分别注册已证明能力，通用文本不得冒充其它消费者。
+
+迁移沿原 `owned_service` 请求/验证 → `owned_model_admission` 精确资源hash/审批 → `owned_inference` 对应内核和运行身份 → `owned_executor/owned_evaluation/core` → Task/Context/业务/Shared消费者实施。旧 v1 训练回执只读解释，保留其原hash，不用新结构改写或自动晋升。新类别先验证不适用字段拒绝、许可/资源/scope负例、显式批准和取消，再接真实消费者；转换关系、评价和运行绑定必须同版。现有审批资源仍有效与否须按实际合同决定，不能以迁移为名批量放行。部署/加载失败保留 prior binding，真实降级只在已批准能力内且不静默换模型；研究候选没有执行授权。
+
+##### 有界检索与当前工作上下文
+
+保留原 `agent_memory/retrieval.py`、`semantic.py` 的 BM25、原文/页段定位、scope、来源版本与撤权。同一授权候选集做 BM25 和 embedding 分别召回 → 按来源/版本/片段身份 RRF 排名融合 → 少量候选交叉编码重排 → 引用前复核。不可直接相加 BM25 与 cosine；FTS5 的 BM25 方向与常见相似度相反。BM25_ONLY 是有效词法降级而非完整神经检索；有 cosine/RRF/scorer 函数不证明模型绑定。
+
+优先保留实体/品牌别名、日期、单位、表格定位和原文；同源转载归来源族去重但不抹掉独立来源；矛盾保留并对照，不能用相似度当可信度。索引、向量与缓存都是原 Canonical 的可重建派生物，键绑定来源hash、版本、分块/模型/分词版本和scope；更正/撤回/权限变化使检索、摘要及下游引用失效并重建。避免每请求读取/嵌入全库；先按来源增量维护，再分块有界候选，只有必要的复合问题拆查询。候选数量/重排上限由独立 Recall/NDCG/引文正确性与 p95/峰值RAM共同确定，不能先省范围再叫精准。
+
+`context_pack.conversation_pack/validate_state` 已有完整 source-free 历史、人工目标/约束/草稿/决定、排除和派生依赖失效；普通会话真实token计量仍可能未绑定。`budget_owned_request/run_budgeted_owned_request` 只对实际已绑定 typed runtime/tokenizer 请求计量，可整体省略可选资料。保存完整不等于每次全量注入。目标、否定、硬约束、最新人工稿、确认决定、未完成工作和已执行效果是必需层；证据/参考/策略按相关性与实际token预算选择，逐项记录纳入/遗漏原因及可重读定位。必要层超窗不能静默裁剪，须拆分有保持约束的子任务或准确报告容量冲突，不能偷换模型。原文、摘要、反思和检索到的指令始终是数据，不能提升为系统指令、权限或外发授权。
+
+##### 持续学习、专业评价和成本退出条件
+
+学习分四类：资料/索引更新；用户可控记忆和任务状态；经评审的策略/示例/规则；确有标签与收益的可选 CPU 专用参数。前两类绑定来源、版本、范围、更正和恢复；第三类绑定实际消费者、批准、生效、撤回与效果；第四类才要求真实参数变化、独立留出和重载，且须先证明比适用规则/统计基线更有价值。CPU 学习是有条件采用，不是缩小后的全部 AI，也不是新强制门槛。
+
+借鉴 ACE 的结构化增量经验：保留来源、成功/失败条件、适用范围、反例和人工更正，以局部更新防止摘要吞掉约束。借鉴 GEPA 的执行反馈候选优化：从少量高价值失败提出有界策略diff，冻结评测后比较并停止。只接原 Learning/Memory/Evaluation，不整套复制框架、不建常驻反思Agent，不逐请求无限自评。每轮固定案例/次数/token/时间预算及无增益停止条件；不能用评测答案反灌最终留出。研究论文收益不作为寰意承诺。固定资料与采用边界见本轮证据记录。
+
+`LearningLoop.apply_approved_rule()` 写入 `is_active=0` candidate；`build_prompt_context()` 读取 promoted 规则/样本。提交候选、批准、激活、实际请求使用、效果改善是五个不同事实；须在原消费者补版本选择/撤回传播/使用回执和旧版本恢复，不能将 applied 标签当自动上线。
+
+专业评测在原 Evaluation 内冻结任务、输入、模型/工具/配置、硬件、预算与各质量阈值；分离新品牌/主体、时间和来源族，原稿与转载不得跨集合泄漏。对照原系统/模型直答、加检索、加业务工具、加策略、可选小模型及完整组合，分别归因，不把求解器结果算模型独立能力。多seed/重复运行报告分布、方差和失败，不只选优。引用/数值回原件，执行效果/身份/权限确定性核验；行业判断、品牌适配、原创性、可执行性、修改成本和成果用途做独立人工盲审，模型裁判只能辅助。
+
+记录首个有据结果与全任务 p50/p95、峰值内存、调用/token、实际费用、修订和恢复；不预填准确率、ROI或节省比例。幻觉引用、错归属、关键否定丢失、越权和重复效果为关键失败，不能平均高分抵消。最终留出与优化过程隔离，防验证器偏差/选优过拟合。CPU路径不达质量/容量时保留原要求与实测矛盾，列有限备选和资源决策，不恢复GPU训练、不私用外部强模型、不降低专业要求。
+
+推荐组合、有限备选、固定版本/许可/资源估算、双源逐项差异与代码迁移依赖见 `00-GOVERNANCE/evidence/round-15/AI-ROUTE-CALIBRATION-20261026.md`。该记录是本节的采用证据，不是另一个规划或执行授权。G163与全部尚未实测的能力保持OPEN。
 
 #### AI理解全产品：双入口、能力知识与真实调用
 
@@ -1996,7 +2035,7 @@ UI可把增益与风险两个轴安排成可解释对照，不生成优胜分或
 
 对旧文档与新接口冲突：从Owner取当前descriptor；投影hash不符就重新读取，不让模型以记忆补齐参数。新能力尚未训练进权重时，可用经核实的当前schema做检索增强规划；若不存在、禁用、未绑定或只PLANNED，明确不可用，不能编造函数调用。
 
-**当前恢复证据和界面限制。** AIHub service的chat只读取FUNCTION_MAP路由元数据，没有逐来源SourceUse或业务记录读取；它不是实时执行权威。恢复conversation保存actor/workspace/scope、revision和幂等，区分用户/模型/任务投影；实际上下文只有最多6条历史消息、每条800字符，token_budget_verified=False。界面应提示受影响历史/约束需重新确认，不宣传完整长记忆。task_projection或非source_free历史模型输出进入后续响应前要求typed SourceUse；来源不准入就保任务链接、原稿和人工继续路径，不绕过权限补全文。
+**当前恢复证据和界面限制。** AIHub service的chat只读取FUNCTION_MAP路由元数据，没有逐来源SourceUse或业务记录读取；它不是实时执行权威。恢复conversation保存actor/workspace/scope、revision和幂等，区分用户/模型/任务投影；线上历史实现曾限6条×800字符；本地主区ContextPack已保存完整source-free历史、人工目标/约束/稿件/决定以及排除和派生失效，不能再把旧窗口当当前本地实现。普通会话tokenizer尚未绑定时仍token_budget_verified=False；typed请求须以实际runtime计量。界面应提示受影响历史/约束需重新确认，不宣传完整长记忆。task_projection或非source_free历史模型输出进入后续响应前要求typed SourceUse；来源不准入就保任务链接、原稿和人工继续路径，不绕过权限补全文。
 
 interrupt_response当前返回external_call_stopped=False、prior_result_unknown=True。用户点中断后显示“已中断当前响应，外部调用结果待核”，不得画作GPU/HTTP已停止或效果已撤销。真正Task取消由TaskEngine/持久适配器读回；超时未知先核原key和已提交效果，不能重复生成、扣费或发布。
 
@@ -2022,7 +2061,7 @@ FormedCall绑定descriptor/implementation/runtime/content/request/context，形�
 | 资源不可用/成本 | 当前模型选择与可用证据、预算上限、真实耗用 | 文档宣称模型可用、暗转Groq/Claude、以临时开发算力承诺上线 |
 | 学习/知识更新 | 新descriptor可检索但不自动训练；训练与晋升独立批准 | 会话保存等于训练同意；角色模型自批升级 |
 
-以上13项全部保留逐项验收。此前恢复阶段“未恢复Conversation候选及所谓70项测试不计入该次候选”是当时的证据边界，不代表本次固定候选没有Conversation源码；当前candidate_ready_source_adoption_20261018T1317Z的conversations.py及原路由已可静态定位，当前最多6条历史消息、每条800字符历史窗口仍保留。源码存在不等正式前端接线或运行验证，未核测试不搬作本版通过数。继续按当前能力投影、精确版本化上下文及双入口闭环取证；知识更新不自动触发训练或晋升。
+以上13项全部保留逐项验收。此前恢复阶段“未恢复Conversation候选及所谓70项测试不计入该次候选”是当时的证据边界，不代表本次固定候选没有Conversation源码；当前candidate_ready_source_adoption_20261018T1317Z的conversations.py及原路由已可静态定位，该旧快照保留历史身份；当前本地ContextPack已纳入完整历史与更正依赖，普通会话token预算仍未实测。源码存在不等正式前端接线或运行验证，未核测试不搬作本版通过数。继续按当前能力投影、精确版本化上下文及双入口闭环取证；知识更新不自动触发训练或晋升。
 
 #### 会话留存、当前回复与上下文检查（原AI-01/02/03内细化）
 
@@ -2032,7 +2071,7 @@ FormedCall绑定descriptor/implementation/runtime/content/request/context，形�
 
 每个已接收问题下保一个绑定原轮次的回复位置：等待回复、已返回、模型不可用、请求失败、结果待核、中断记录分别可见。前者为reserved记录，不能画成已生成文本；失败保原输入和历史。“核对本次状态”只读原请求；“中断当前回复”先说明外部调用可能继续，不能当取消Task；“再次请求”仅在原Owner允许且用户明确确认后产生独立attempt，未决reserved不自动重发。Task停止仍回AI-02原任务动作。切会话、取消、撤权后的迟到响应不能覆盖新会话或人工稿。
 
-“本次参考范围”放在回复详情，分两层：①Conversation历史实际纳入消息数、遗漏消息数/字符和需重述约束，保留当前最多6条历史消息、每条800字符、token_budget_verified=False的事实；完整保存不等全部进入模型。②只有本次实际已加载Owned runtime返回measure_request回执时，才显示输入tokens、预留输出、窗口、fits与计量方法；未绑定/未加载显示“本次尚未实测”，不能拿字符数估算冒充token实测，实测也不证明模型质量或历史未裁剪。超窗保原稿并说明可缩减哪项合法输入，不静默截断或自动换模型。
+“本次参考范围”放在回复详情，分两层：①Conversation历史实际纳入消息数、遗漏消息数/字符和需重述约束，按当前ContextPack覆盖回执显示原文、人工确认条件、排除及依赖失效；普通会话未绑定tokenizer保持token_budget_verified=False；完整保存不等全部进入模型。②只有本次实际已加载Owned runtime返回measure_request回执时，才显示输入tokens、预留输出、窗口、fits与计量方法；未绑定/未加载显示“本次尚未实测”，不能拿字符数估算冒充token实测，实测也不证明模型质量或历史未裁剪。超窗保原稿并说明可缩减哪项合法输入，不静默截断或自动换模型。
 
 Web/Windows/macOS宽屏为会话目录—主对话—按需上下文/关联任务侧面，窄Web收目录与详情为可逆抽屉；Windows与macOS分别验退出冷开。iOS为会话列表→单主对话→任务/上下文Sheet，返回保轮次、锚点和未发稿，键盘不遮发送/取消。Public Website仅以去敏真实例解释留存与有限上下文，进入原AI入口，不搬私密历史。三语、48px触控、200%文字和读屏按完整回复块播报；UI自身AIGC只按真实问题/任务/历史密度选择原生阅读与旁读层，可锁定/简洁/撤销，不生成角色、历史或计量值。收益是交流可续、上下文缺口可知、失败不重复请求；以上不改变当前前端OPEN和逐端验收状态。
 
@@ -2113,8 +2152,7 @@ UI可按真实重要性整理成聚合摘要和证据面，不发明告警因果
 
 保存/重开/恢复沿原Artifact/SavedWork及Evidence，不新建trace事实库：记录权重文件与规范tensor、输入、假设、trace的hash，读回核身份/当前权限、重载输出与激活一致，明确非确定性容差。hash只核完整性不当签名。权重/输入/假设错配、源撤权、取消、hook异常、保存前后中断分别拒绝混用并保旧证据；实际重放是否执行与结果分列。无模型/无授权时仍可读合法原研究和完成无AI任务，干预保持NOT_RUN，不以模拟值补全。
 
-既有J19研究评价、J26受控学习、J27执行和原G109/G125/G163及R07/U18/U20接续本段，工单须分别记录四层、冻结对象、允许操作、源caller、失败恢复与真实出口。基线前补齐本合同与来源/未知界限；真实大模型覆盖、稳健性、业务价值、实际接线/设备和重载实验为后续适用验收，未验仍OPEN。
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J27">查看 71 条对应要求</button></div></details><details class="outcome" id="J28" data-id="J28"><summary><span class="mono">J28</span><strong>Skills、连接器与模型设置</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>C2/Skills/Models + C6/Connectors + F</dd><dt>接口依赖</dt><dd>J04、J07</dd><dt>完整验收</dt><dd>技能发现/注册/自测/启用、连接验真、模型状态与无AI路径；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J28 Skills、连接器与模型设置
+既有J19研究评价、J26受控学习、J27执行和原G109/G125/G163及R07/U18/U20接续本段，工单须分别记录四层、冻结对象、允许操作、源caller、失败恢复与真实出口。基线前补齐本合同与来源/未知界限；真实大模型覆盖、稳健性、业务价值、实际接线/设备和重载实验为后续适用验收，未验仍OPEN。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J27">查看 71 条对应要求</button></div></details><details class="outcome" id="J28" data-id="J28"><summary><span class="mono">J28</span><strong>Skills、连接器与模型设置</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>C2/Skills/Models + C6/Connectors + F</dd><dt>接口依赖</dt><dd>J04、J07</dd><dt>完整验收</dt><dd>技能发现/注册/自测/启用、连接验真、模型状态与无AI路径；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。 分类准入按J27；GPU训练撤销。独立专业任务质量、原件事实/数值核验、真实消费者、权限/撤回/恢复、同预算对照和资源成本分别验收，不以规划或训练标签报完成。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J28 Skills、连接器与模型设置
 
 对应AI-04/05、原Skills/Connector/Model/Permission。先看当前任务需要什么、能力输入输出、版本/许可/风险与实际可用状态，再按原合同启用/使用/更新/停用/卸载。目录有条目不等可运行，72来源能力不能都涂绿。
 
@@ -2144,9 +2182,9 @@ CLAP为接口而非现成安全宿主；Airwindows MIT源码不证明VST2 SDK/�
 
 能力页按意图/分类、实体/主题、检索、文本/工具、OCR/视觉、ASR、TTS、图片/视频、学习分别显示可用范围与验证状态；默认首先是已通过当前任务的合法能力，未通过保直接操作/确定性路径。BGE-M3、Qwen2.5-VL、Qwen3-TTS、FLUX/Wan等只是待审核候选，不是下载、安装或切换许可，也不因同家族名称继承全部能力/许可证。
 
-当前研究环境无已见CUDA条件，不能运行既有GPU训练配方，也不能外推所有云GPU不可用。配置的GPU/CPU依赖锁是不同环境，不自动升级或混装；资源超限明确阻断相关训练，保资料和任务。临时GPU、开发电脑在线或助手会话不承诺生产SLA。UI只需解释任务级能力/资源/代价/缺项；高级依赖/精确checkpoint在详情与既有设置，不在工作台铺满滑杆。
+GPU训练路线已由PO撤销，不以CUDA、Kaggle队列或大模型adapter限制正常推理准入。CPU预训练/专用模型/策略配置按J27分类和实际资源评测；资源估算不等本机实测，临时开发机不承诺生产SLA。界面呈现任务能力、资源不足的影响与可继续路径；模型/依赖详细身份只在原设置详情，不向普通用户堆训练滑杆。
 
-未来路由、蒸馏或MoE需另验任务、教师输出权利与结构兼容，异构ASR/分类/图像权重不能直接拼成大模型。保原基座与唯一Gateway，无自动外部回退。原始方法：[LoRA](https://arxiv.org/abs/2106.09685)、[蒸馏](https://arxiv.org/abs/1503.02531)、[BTX](https://arxiv.org/abs/2403.07816)；其存在不证明本产品已采用或有收益。
+LoRA/蒸馏/BTX原研究保留历史来源，GPU参数训练路线已撤销，不作为当前规划的待执行路线或自动恢复条件。异构ASR/分类/图像权重不能拼成通用模型。当前按J27分类推理/学习、原Gateway和用户模型选择执行，无自动外部回退。历史方法：[LoRA](https://arxiv.org/abs/2106.09685)、[蒸馏](https://arxiv.org/abs/1503.02531)、[BTX](https://arxiv.org/abs/2403.07816)；其存在不证明本产品已采用或有收益。
 
 #### 本次外部模型请求的精确确认（原AI-01/AI-05内）
 
@@ -2199,8 +2237,7 @@ Web/PC宽屏目录和合同/记录详情并读，Win/macOS分别核本地宿主�
 
 Public Website仅用获准真实样例说明原全部候选与受限插件目录及未核范围，不展示内部资料；Web按窗口宽度保主对象与可逆检查器、刷新读回原版本；Windows/macOS分别验证文件/窗口冷开和同版恢复；iOS按本组对象清单→单对象→检查/确认顺序重组，复杂编辑续接同版本，合法轻改不因窄屏丢失。三语、200%文字、键盘/读屏及48px触控均保关键字段和取消/返回。
 
-UI可按当前任务突出相关能力和缺输入，保用户过滤/锁定/撤销；不自动补许可/验证或以星数生成可信标章。
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J28">查看 22 条对应要求</button></div></details><details class="outcome" id="J29" data-id="J29"><summary><span class="mono">J29</span><strong>外观、物理、成果揭示与本地朗读</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>F/Experience + C6/Platform</dd><dt>接口依赖</dt><dd>J02、J20、J27</dd><dt>完整验收</dt><dd>舒展原创构图、物理交互/可爱加载、可访问性、朗读停止；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J29 外观、物理、成果揭示与本地朗读
+UI可按当前任务突出相关能力和缺输入，保用户过滤/锁定/撤销；不自动补许可/验证或以星数生成可信标章。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p><button class="filter-coverage" data-id="J28">查看 22 条对应要求</button></div></details><details class="outcome" id="J29" data-id="J29"><summary><span class="mono">J29</span><strong>外观、物理、成果揭示与本地朗读</strong><span class="state">待完整验收</span></summary><div class="detail"><dl><dt>源码职责</dt><dd>F/Experience + C6/Platform</dd><dt>接口依赖</dt><dd>J02、J20、J27</dd><dt>完整验收</dt><dd>舒展原创构图、物理交互/可爱加载、可访问性、朗读停止；按原章节完整正常操作、拒绝反例、保存修订重开及失败恢复验收；四表面按真实角色分别留证。</dd></dl><p class="small">已有局部实现与历史证据保留，OPEN不等于从零开发。依赖是接口关系，不是每个用户必须串行经过的路径。</p><h4>现行规划原文</h4><div class="source-text">### J29 外观、物理、成果揭示与本地朗读
 
 对应SYS-05、Experience物理/16动效/ReadAloud。设置中可预览、采用、保存偏好、返回原工作与恢复默认。参数是用户自主性的工具，官方默认能直接完成任务，不能让每个工作页先调一遍。
 
@@ -2449,19 +2486,9 @@ zh-CN/en/ko 任一缺失该屏不得验收
 
 当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
 
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J26"><summary><span class="mono">original-G:G17</span><strong>G17 训练</strong></summary><div class="detail"><p>对应成果：J26</p><div class="source-text">#### G17 训练
+</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J26"><summary><span class="mono">original-G:G17</span><strong>G17 训练路线撤销与分类准入</strong></summary><div class="detail"><p>对应成果：J26</p><div class="source-text">#### G17 训练路线撤销与分类准入
 
-原main表来源与历史责任（非当前派工）：RD:1360-1366,1384；阿康1；闭环内（PO 授权）。
-
-
-真实 optimizer step/loss/checkpoint/reload/held-out 才算训练；付费算力需 PO 授权
-
-来源：完整规划§8，第158行。建议关联 J26.07。理由：真实训练属于C2模型Owner；前端只呈现获准训练/评估证据和不可用状态，不新增自动训练按钮。待核：optimizer/loss/checkpoint/reload/held-out与精确模型数据资源授权均需独立证据。
-
-
-当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
-
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J03"><summary><span class="mono">original-G:G18</span><strong>G18 账号/ACC-01/04</strong></summary><div class="detail"><p>对应成果：J03</p><div class="source-text">#### G18 账号/ACC-01/04
+原ID保留。2026-10-26 PO将GPU训练及其免费队列/租赁、NF4/LoRA/QLoRA/RL/蒸馏、CUDA训练环境和必训门槛记为WITHDRAWN_BY_PO，不以训练loss/checkpoint决定普通推理可用。完整六项AI能力及专业任务质量保留。现存训练产物/失败/审批仅为历史；可选CPU专用模型必须有合法标签、独立留出增益、参数重载与有界CPU/内存/时间，不成为新的强制训练要求。分类准入和消费者迁移见J27/Architecture §6，本轮设计，未修改执行器。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J03"><summary><span class="mono">original-G:G18</span><strong>G18 账号/ACC-01/04</strong></summary><div class="detail"><p>对应成果：J03</p><div class="source-text">#### G18 账号/ACC-01/04
 
 原main表来源与历史责任（非当前派工）：EXP:376,1044；PO 2026-10-14；阿康1(C)/阿康(F)；闭环内。
 
@@ -2502,14 +2529,12 @@ zh-CN/en/ko 任一缺失该屏不得验收
 原main表来源与历史责任（非当前派工）：AICL:1-60、PA:134；阿康1；闭环内。
 
 
-Chat Memory/Context/Tool Calling/Skill Registry/Evaluation/Model Routing 全 VERIFIED 才算 AI Chat 完成
+Chat Memory/Context/Tool Calling/Skill Registry/Evaluation/Model Routing 六项分别VERIFIED并进入专业用户任务，才算AI Chat完成；分类准入按J27，固定预训练推理不先要求寰意训练。同任务/同输入/同预算的模型直答、检索、工具、策略、可选专用模型及完整组合分别评价；按主体/品牌/时间/来源族隔离最终留出，多次运行、原件数值引用核对、人工盲审与p50/p95/峰值内存/调用成本；关键事实、否定、身份、权限或重复效果错误不能由均分抵消。
 
 来源：完整规划§8，第162行。建议关联旅程 J27、J28（尚未绑定精确步骤）。理由：记忆/上下文/工具/Skill/评价/路由由两条旅程承接用户操作，六项完成仍分别归Owner。待核：逐项VERIFIED证据和真实业务成果缺一保持OPEN，聊天可回复不能替六项验收。
 
 
-当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
-
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J02"><summary><span class="mono">original-G:G22</span><strong>G22 屏幕状态</strong></summary><div class="detail"><p>对应成果：J02</p><div class="source-text">#### G22 屏幕状态
+当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J02"><summary><span class="mono">original-G:G22</span><strong>G22 屏幕状态</strong></summary><div class="detail"><p>对应成果：J02</p><div class="source-text">#### G22 屏幕状态
 
 原main表来源与历史责任（非当前派工）：各 spec frontmatter；阿康；闭环内。
 
@@ -2526,14 +2551,12 @@ Chat Memory/Context/Tool Calling/Skill Registry/Evaluation/Model Routing 全 VER
 原main表来源与历史责任（非当前派工）：Gateway；阿康1；闭环内。
 
 
-唯一AI Gateway保留既有user_api；Groq是产品内置外部连接，用户自带其他供应商API是原产品能力，均须明确选择具体连接/模型，经过对应协议适配、目的地安全校验及适用Permission/SourceUse才调用并留真实回执。自研/自有模型默认建设路线和完整目标保留；未配置不调用，配置不等于可用、来源权利或外发许可，不主动探测、不自动切换/回退。兼容协议与各供应商原生协议、文字/视觉/语音能力分别实现验收，不把任意Key视为任意协议可用，也不把自填端点视为无限URL执行许可。修复Groq-only全局限制不复活退休专用路线，不授权实际密钥使用、模型调用、训练或新费用。普通用户安全配置、显式选择、精确确认、撤销、凭据保存能力与真实回执分别验收；来源型消费、成果保存/重开/撤权/取消仍须在原Owner闭环，不以接口可填代替全产品可用。
+唯一AI Gateway保留既有user_api；Groq是产品内置外部连接，用户自带其他供应商API是原产品能力，均须明确选择具体连接/模型，经过对应协议适配、目的地安全校验及适用Permission/SourceUse才调用并留真实回执。自研/自有模型默认建设路线和完整目标保留，按J27固定预训练推理及受控学习，不强迫用户配外部API或先训练；未配置不调用，配置不等于可用、来源权利或外发许可，不主动探测、不自动切换/回退。兼容协议与各供应商原生协议、文字/视觉/语音能力分别实现验收，不把任意Key视为任意协议可用，也不把自填端点视为无限URL执行许可。修复Groq-only全局限制不复活退休专用路线，不授权实际密钥使用、模型调用、训练或新费用。普通用户安全配置、显式选择、精确确认、撤销、凭据保存能力与真实回执分别验收；来源型消费、成果保存/重开/撤权/取消仍须在原Owner闭环，不以接口可填代替全产品可用。
 
 来源：Architecture原有“保留user-supplied external API capability”要求（本次修订前第517行），及用户2026-10-19 06:43 UTC（北京时间14:43）澄清“我规划的是唯一接口，可以接外面任意key，这个只是我给产品内置的”。本次同步修订的AI-05草图是该要求的当前呈现，不作为独立原始授权证据。建议关联J28.08、J28.09、J28.10。理由：产品内置Groq与用户BYOK均沿唯一Gateway，明确选择/显式测试/秘密撤销和无自动回退。待核：按所选连接的endpoint/协议安全、重定向拒绝、Permission/SourceUse、安全存储与真实推理分别验证；不允许任意URL携带密钥外发。
 
 
-当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
-
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J05,J06"><summary><span class="mono">original-G:G51</span><strong>G51 A-SYS 采集/浏览器</strong></summary><div class="detail"><p>对应成果：J05 · J06</p><div class="source-text">#### G51 A-SYS 采集/浏览器
+当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J05,J06"><summary><span class="mono">original-G:G51</span><strong>G51 A-SYS 采集/浏览器</strong></summary><div class="detail"><p>对应成果：J05 · J06</p><div class="source-text">#### G51 A-SYS 采集/浏览器
 
 原main表来源与历史责任（非当前派工）：审计补录；阿康/阿康1；闭环内。
 
@@ -4273,19 +4296,11 @@ SYSTEM/C1：104仅在任务可建成有限博弈且概率经授权日志核实�
 
 当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
 
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J26"><summary><span class="mono">original-G:G163</span><strong>G163 数学驱动自研 AI（训练与新任务增益）— OPEN</strong></summary><div class="detail"><p>对应成果：J26</p><div class="source-text">#### G163 数学驱动自研 AI（训练与新任务增益）— OPEN
+</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J26"><summary><span class="mono">original-G:G163</span><strong>G163 数学驱动自研 AI（推理与新任务增益）— OPEN</strong></summary><div class="detail"><p>对应成果：J26</p><div class="source-text">#### G163 数学驱动自研 AI（推理与新任务增益）— OPEN
 
-原main表来源与历史责任（非当前派工）：OPENAI-MATH-ADOPTION §数学驱动自研 AI；C2（阿康1）。
+数学驱动智能保留完整九family与原G163，仍OPEN。问题/变量/量纲/假设/反例→有权证据与独立新任务→原约束核验/求解工具/任务策略与获准预训练模型协作→同模型同任务同预算的模型独立/模型加工具/策略对照→有用成果、修订重开恢复→独立质量/资源评价。撤销GPU参数训练、Kaggle队列、LoRA与checkpoint作为通用前提；不把求解器正确率算模型能力。历史Gibbs有限合成图120-step及6/8验证/holdout回执保留“已训练、未上线”，不计LLM训练或业务收益；AirLLM分层推理研究不是CPU性能或新训练授权。
 
-
-按采用文档 6 步：问题/约束/验证器 → rights 与 train/val/新任务隔离 → 复用免费 Kaggle 成果 → 已核验约束/奖励接入训练入口 → checkpoint 重载、同基座同预算前后对照、模型独立与模型+求解器分报 → 经唯一 Gateway 进入产品成果；Gibbs 113 小型参数策略既有120-step及6/8验证/holdout回执已核：已训练、未上线；仅合成有限图，不计为LLM训练或业务收益，G163仍OPEN；AirLLM固定源码同时含分层推理与LoRA训练，作为现有C2低显存资源候选：先核精确gpt-oss版本、MXFP4/结构/依赖、RAM/显存/磁盘与吞吐，远程模型代码须固定审核；没有同模型实测不采用4GB/70B宣传结论，不替换基座/Provider或自动训练。
-
-来源：完整规划§8，第444行。原步骤显式引用 J26.07
-
-
-当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
-
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J11"><summary><span class="mono">original-G:G164</span><strong>G164 Lean/Comparator 证明重放</strong></summary><div class="detail"><p>对应成果：J11</p><div class="source-text">#### G164 Lean/Comparator 证明重放
+来源：原OPENAI-MATH-ADOPTION与2026-10-26直接PO校准。J26/J27沿原Owner实施；当前是规划采用，不是算法、模型或业务收益验收。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J11"><summary><span class="mono">original-G:G164</span><strong>G164 Lean/Comparator 证明重放</strong></summary><div class="detail"><p>对应成果：J11</p><div class="source-text">#### G164 Lean/Comparator 证明重放
 
 原main表来源与历史责任（非当前派工）：REGISTER §OpenAI Math v2、ADOPTION §固定正式证明；阿康1。
 
@@ -4334,39 +4349,31 @@ Web/桌面在原统计结果方法栏就地展开资格原因与保输入动作�
 
 原main表来源与历史责任（非当前派工）：G119 广告识别、ad_intelligence 平台页、IL/02 品牌营销知识；阿康1。
 
-
-渠道花费代理＝公开刊例价/CPM/CPC 区间（平台公开价目与费率披露）×已采集曝光/内容量×商单/广告识别概率，输出区间而非点值；公开活动披露（新闻稿、获奖案例、招标公告）作锚点；无刊例或无曝光则 MISSING
+花费代理按同口径分别计算：CPM费率×展示数/1000，或CPC费率×点击数；内容条数不能代曝光/点击，同一次效果不能叠加两种计费估计。费率绑定来源、市场、时期、币种、税口径与区间；广告识别概率只有经过独立校准才可用于相应不确定性估计，不拿分类置信分直接乘出费用。缺必要费率/展示/点击保持MISSING；代理估计、报价、承诺、实支、退款和收益分账，公开披露只作可比锚点。
 
 来源：完整规划§8，第449行。原步骤显式引用 J16.09
 
 
-当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
-
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J13,J16"><summary><span class="mono">original-G:G169</span><strong>G169 自上而下 MMM 与宏观控制</strong></summary><div class="detail"><p>对应成果：J13 · J16</p><div class="source-text">#### G169 自上而下 MMM 与宏观控制
+当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J13,J16"><summary><span class="mono">original-G:G169</span><strong>G169 自上而下 MMM 与宏观控制</strong></summary><div class="detail"><p>对应成果：J13 · J16</p><div class="source-text">#### G169 自上而下 MMM 与宏观控制
 
 原main表来源与历史责任（非当前派工）：Meridian/PyMC-Marketing（Apache-2.0）、NBS、G141/G140 零授权；阿康1。
 
-
-按 集团/品牌×季度（中报/年报对齐）建模：因变量为申报收入/零售额/租户销售；自变量为财报营销费用、G168 花费代理、已采集声量；控制变量用国家统计局社零（月）、CPI（月）、文旅/假日出游、商务局商圈客流公开转引；输出贡献与 ROI 后验区间，滚动样本外检验；期数不足→INSUFFICIENT；用户自填明细可作可选更细粒度层
+保留集团/品牌与期间层级的MMM目标；收入/零售额/租户销售、实支或G168代理、声量及宏观变量先核单位、频率、来源、时效和测量误差。声明识别假设、样本充分性、控制变量、滞后/季节性、共线性与遗漏因素，做先验/模型/费率敏感性和滚动样本外验证。缺可识别条件为INSUFFICIENT或仅相关描述；声量、相关性和后验区间不自动证明销售增量或因果ROI。可以核验的实验/准实验与财务结果单列，不承诺未知ROI；可选用户明细沿原权限进入同一Owner。
 
 来源：完整规划§8，第450行。原步骤显式引用 J16.09
 
 
-当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
-
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J15"><summary><span class="mono">original-G:G170</span><strong>G170 内容学习源合同落地</strong></summary><div class="detail"><p>对应成果：J15</p><div class="source-text">#### G170 内容学习源合同落地
+当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J15"><summary><span class="mono">original-G:G170</span><strong>G170 内容学习源合同落地</strong></summary><div class="detail"><p>对应成果：J15</p><div class="source-text">#### G170 内容学习源合同落地
 
 原main表来源与历史责任（非当前派工）：Brief→原创产物；合同 §14 十项验收全过；BMP-06、SH-05；LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1。
 
 
-Narrative/Copy/Visual/Motion/Campaign/Evaluation 六个模式注册表 + ContentLearningAsset；按 Brief 范围检索不全文注入；事实墙（事实→Evidence，创意→模式，未知→UNKNOWN）；13 段生产链 Brief→…→Learning保留父引用、版本、上下文指纹及变更依赖；中韩英按语义意图重写不直译
+Narrative/Copy/Visual/Motion/Campaign/Evaluation 六个模式注册表 + ContentLearningAsset；资料/记忆/策略/可选CPU参数四类学习分别准入，inactive candidate、激活、实际消费和增益分验；ACE/GEPA只采用有界增量经验与执行反馈优化；按 Brief 范围检索不全文注入；事实墙（事实→Evidence，创意→模式，未知→UNKNOWN）；13 段生产链 Brief→…→Learning保留父引用、版本、上下文指纹及变更依赖；中韩英按语义意图重写不直译
 
 来源：完整规划§8，第511行。原步骤显式引用 J15.13
 
 
-当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。
-
-</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J15"><summary><span class="mono">original-G:G171</span><strong>G171 内容审核与客户解释</strong></summary><div class="detail"><p>对应成果：J15</p><div class="source-text">#### G171 内容审核与客户解释
+当前裁决：原范围保留；实现观察保其历史时间，当前实际接线/运行/质量不由原文字推定。</div><p class="source-link"><a href="../../00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md">00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md</a></p></div></details><details class="coverage" data-outcomes="J15"><summary><span class="mono">original-G:G171</span><strong>G171 内容审核与客户解释</strong></summary><div class="detail"><p>对应成果：J15</p><div class="source-text">#### G171 内容审核与客户解释
 
 原main表来源与历史责任（非当前派工）：候选→审核结论；推荐与已验证表现分开显示；不承诺流量池；BMP-06；CONTENT-INTELLIGENCE-SPEC-v1。
 

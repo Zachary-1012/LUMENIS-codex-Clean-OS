@@ -1,5 +1,11 @@
 # 寰意 / OEVIRA — Codex Takeover CURRENT
 
+## 2026-10-26 AI路线校准：独立规划PR，开发仍暂停
+
+本轮PO采用无GPU必训的垂直行业AI路线。仅原位更新规划、架构、Owner/交付、学习、数学与界面合同；分类推理准入设计不是代码实现。G17 GPU训练路线WITHDRAWN_BY_PO，G163仍OPEN，全部专业能力/原ID保持。开工独立GitHub main与fresh origin/main为`7361e37705e5599dbacd3e564ed9a5a19cb6a379`；主区HEAD为`ec831c8e80b6463797d7223cdd3c6a20ae327ef2`、ahead/behind=2/0，168条dirty/untracked记录受保护。后续变化不回填为开工事实。
+
+PR #146仍为未合并草稿，不夹带其实现或其它dirty；新规划在独立分支审阅，未获本次合并授权，不称main已采用。未修改执行器、模型配置、个人Codex配置或生产数据；未下载/调用/训练模型、启动服务、部署或派工。双源证据、推荐候选与迁移/质量依赖见[evidence/round-15/AI-ROUTE-CALIBRATION-20261026.md](evidence/round-15/AI-ROUTE-CALIBRATION-20261026.md)。状态为RULES_ONLY_PUBLICATION待审；运行/专业任务/增益/发布均未因文档变更升级。
+
 Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
 
 Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**

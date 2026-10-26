@@ -765,7 +765,7 @@ Discover
 CURRENT C2 AI INPUT / RETAINED R07 COVERAGE：
 - Retired local-model/Zhipu/OpenCode/Ark routes and Jev stay inactive; calling
   code deleted, without call/probe/auto-discovery/fallback/reactivation.
-- Approved owned weights, real training, held-out useful business outputs,
+- Approved pretrained inference, controlled strategy learning, held-out useful business outputs,
   multimodal input consumption, tools and resumable tasks are required.
 - Preserve model/data/license/scope/version, feedback/evaluation and controlled
   promotion/rollback. Engineering answers never own Truth or effects.
@@ -1360,13 +1360,7 @@ acceptance inside engineering closure. Account/login work adds no universal acco
 wall or automatic deployment authority. Timeline interaction, research and every
 other agreed capability retain their own complete outcome and acceptance.
 
-AI training acceptance requires the approved actual model/data/resource route,
-optimizer steps/loss, durable checkpoint, reload/resume and independent held-out
-results before Gateway/business quality and controlled promotion. Cached weights,
-CPU simulations, tests, recipe/manifest presence and rented GPU time are not
-training. Ready local prerequisites precede billing; record first-step evidence,
-actual cost and failure stop/recovery. Whole corpus review is not a prerequisite
-for the already approved training-pipeline inputs or unrelated business work.
+AI acceptance follows Architecture §6 / J27 typed pretrained inference, approved strategy configuration and optional CPU specialist learning. GPU training/queues are WITHDRAWN_BY_PO. Every applicable capability requires actual useful business consumption, exact artifact/runtime/scope/rights, independent held-out quality, cancellation/reload/recovery and controlled promotion/rollback. Only an approved CPU parameter-learning candidate requires genuine training/parameter/reload evidence. Cached weights, manifests, scripts, fixtures or a solver result cannot prove model quality. No category may fabricate training evidence or bypass Permission.
 
 At convergence verify the exact integrated source/runtime/model/build/DB identity,
 required same-SHA hosted gates, four-surface continuity and recovery/rollback.
@@ -1382,10 +1376,7 @@ not serial minimum function slices. Do not insert per-function M approvals,
 unchanged handoff checks or progress-only reports into that path. Existing
 owners coordinate dependencies directly; preserved valid evidence and required
 affected recovery/security/E2E gates still apply. F follows the newest Product Owner dispatch; M may audit its source and contracts
-for the authorized convergence without resuming F's implementation. C2
-prioritizes existing/free compute; no GPU SKU is preselected by this Overlay.
-Paid compute requires current explicit cost authorization under AGENTS.md;
-historic 4090/5090 proposals and leases are evidence only.
+for the authorized convergence without resuming F's implementation. C2 follows the typed pretrained/strategy/optional CPU route. GPU training/queues are withdrawn; historical 4090/5090 proposals and leases remain evidence only. New resources need their exact approval.
 
 
 ## Normal success and change continuity — 2026-10-04
@@ -1400,7 +1391,7 @@ Keep Source truth, analysis, human decision and production effect distinct.
 Require the six combination results in the Source Owner Index: purpose-bound
 collection answers a business question; Task/DOCX/SavedWork retry/cancel/parent
 versions work; research Brief/source/context survive creation formats and
-constraint edits; remote training/physical Artifact repeat/recover/evaluate/
+constraint edits; typed inference/strategy/physical Artifact repeat/recover/evaluate/
 promote/rollback; localized editing preserves the whole work; source corrections
 locate and revise all related conclusions and works without overwriting origins.
 
@@ -1433,8 +1424,8 @@ Corrections are appended/linked rather than rewriting source Evidence. Changed
 constraints retain the user goal/context and unaffected valid portions; external
 effects still need fresh permission/fences and do not silently replay on reopen.
 
-Prioritize actual remote training/step/loss/checkpoint bytes/load/cancel/connection
-loss; consistent training and Gateway recipes/budgets; true research→creation
+Prioritize actual typed inference/strategy consumption, exact artifact identity, load/cancel/connection
+loss recovery; consistent Gateway/category/budgets; true research→creation
 source transfer; semantic queries in actual capture/refresh/recovery; same-version
 integration/environment reproduction; and four-surface operation when F's
 separately authorized deliverable is reviewed. These are retained product gates,
@@ -1516,3 +1507,9 @@ external document grants collection or deployment permission.
 各领域真实验收还须证明：正常用户只给业务目标/范围/约束即可取得适用的已分析报告；不能要求论文 operation/对数权重或以覆盖计数冒充洞察。AI 分别验正常增益、局部不可用及撤销采用；不改 Canonical。数学方法的输入映射/假设/结果范围由后端证据核验，界面隐藏技术控件不是完成。
 
 记录同Task/actor/scope、目标/控制权、源码/运行版本、动作与新画面、取消/恢复、Source/Evidence/Artifact回执及真实端环境。原有效门禁可复用，仅补受影响验证；M验收完整结果。
+
+### 2026-10-26 行业AI专业出口
+
+同任务/同输入/同预算的模型直答、检索、工具、策略、可选专用模型及完整组合分别评价；按主体/品牌/时间/来源族隔离最终留出，多次运行、原件数值引用核对、人工盲审与p50/p95/峰值内存/调用成本；关键事实、否定、身份、权限或重复效果错误不能由均分抵消。
+
+沿原REAL DELIVERY CARD记录分类准入、实际消费者、模型独立/加工具收益、知识/策略生效和撤回；多模态十二语与完整专业要求不变。ContextPack完整保存不等于全量注入或真实计量；BM25_ONLY不冒神经检索；inactive候选不冒激活。G168按CPM×展示/1000或CPC×点击及同口径费率估计，未知保持MISSING；G169需识别条件/测量误差/敏感性和样本外验证，声量不直接推出因果ROI；G163仍OPEN。详细合同由主规划J26–J28及G条目维护，本轮仅规划，不是任务通过。
