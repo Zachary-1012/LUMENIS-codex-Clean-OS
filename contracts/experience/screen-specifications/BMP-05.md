@@ -35,13 +35,13 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 - **Role / context:** A BMP operator evaluates creators relevant to one authorized BrandFocus across KOS, KOL, KOC and UGC tiers.
 - **User task / completion:** compare creator fit and contribution, inspect risk and source evidence, and decide which creator analysis deserves a later workflow handoff. Completion requires same-focus profile data, typed metrics with definitions/windows, source and trace.
 - **Invariant:** a Subject ID cannot authorize or identify a creator's BrandFocus. A creator row with another focus or compatibility identity is hidden.
-- **Global rule:** `GLOBAL / ALL` is the default global creator universe when the response and every profile row carry explicit canonical global scope, verified lineage and `read_allowed`. Focused BrandFocus profiles without those markers are rejected, never promoted.
+- **Global rule:** `GLOBAL / ALL` is the task-relevant creator results for the current authorized brand directory when the response and every profile row carry explicit canonical actor/task scope, verified lineage and `read_allowed`. Focused BrandFocus profiles without those markers are rejected, never promoted.
 - **Out of scope:** contacting creators, publishing, campaigns, payments, identity matching, automated recommendations and any external effect.
 
 ## 2. Route, entry, exit and return
 
 - **Entry:** host shell opens BMP-05; read is `GET /api/experience/screen/BMP-05` through `LumenisCoreClient.screen('BMP-05')`.
-- **Required context:** server-returned focused BMP/ZBMP context with distinct Subject/BrandFocus IDs, applied binding and allowed read, or `GLOBAL_ALL` with explicit global grant, canonical scope, verified lineage and `read_allowed`.
+- **Required context:** server-returned focused BMP/ZBMP context with distinct Subject/BrandFocus IDs, applied binding and allowed read, or `GLOBAL_ALL` with explicit actor-directory read grant, canonical scope, verified lineage and `read_allowed`.
 - **Exit / return:** creator selection, tier filter and risk filter are local presentation state. Return restores the selected dossier when the host preserves the screen; no context mutation occurs.
 - **Trace:** the dossier retains creator source, evidence trace, metrics definition and window. No creator record or campaign is written.
 
@@ -50,8 +50,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | Priority | UI field / action | Current owner | Exact source / callable | Definition / units / window | Freshness and missing behavior | Binding ID | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | Runtime envelope and owner | Experience API adapter + BMP | `GET /api/experience/screen/BMP-05`; envelope and `truth` | Runtime-bound ZBMP/zbmp response | Mismatch blocks all profiles | BACKEND-GAP-022 | `experience_runtime.py::screen_viewmodel`; `bmp05_snapshot.dart` |
-| P0 | Focus/global read binding | SYSTEM context / Permission | `focus_context` + `focus_binding` | FOCUS exact Subject/BrandFocus; GLOBAL_ALL explicit global grant/canonical scope/verified lineage/read permission | Unknown blocks creator rows | BACKEND-GAP-022 | Historical cross-brand observation superseded by current read_scoped_profiles(binding) |
-| P1 | Creator roster | BMP creator ecosystem owner | Future `sections[type=creators|creator_roster].items[]`: id, optional BrandFocus, name, tier, platform, source, trace, row scope/read/lineage fields | FOCUS exact BrandFocus; GLOBAL_ALL explicit global scope/verified lineage/read permission; tier is KOS/KOL/KOC/UGC | Invalid/cross-focus row omitted | BACKEND-GAP-022 | `Bmp05Creator` strict parser |
+| P0 | Focus/global read binding | SYSTEM context / Permission | `focus_context` + `focus_binding` | FOCUS exact Subject/BrandFocus; GLOBAL_ALL explicit actor-directory read grant/canonical scope/verified lineage/read permission | Unknown blocks creator rows | BACKEND-GAP-022 | Historical cross-brand observation superseded by current read_scoped_profiles(binding) |
+| P1 | Creator roster | BMP creator ecosystem owner | Future `sections[type=creators|creator_roster].items[]`: id, optional BrandFocus, name, tier, platform, source, trace, row scope/read/lineage fields | FOCUS exact BrandFocus; GLOBAL_ALL actor/task scope/verified lineage/read permission; tier is KOS/KOL/KOC/UGC | Invalid/cross-focus row omitted | BACKEND-GAP-022 | `Bmp05Creator` strict parser |
 | P1 | Fit/contribution/risk metrics | BMP + Shared Evidence | typed metrics with value, unit, definition, window; risk level/label/score | Values are observed within the declared window; no missing→0 | Missing metric remains unavailable | BACKEND-GAP-022 | Current stats/profile outputs lack verified focus/lineage |
 | P2 | Tier/risk filters | App presentation state | `Bmp05ViewModel` local filters | No server mutation | Filtered empty state is explicit | BMP05-UI-LOCAL | `bmp05_view_model.dart` |
 
@@ -60,8 +60,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | State | Trigger / evidence | User-visible meaning | Available actions | Recovery / return behavior | Acceptance ID |
 | --- | --- | --- | --- | --- | --- |
 | Loading | Initial read or refresh | 正在读取创作者生态 | None; announce busy | No previous-focus rows flash | BMP05-W-001 |
-| Global / all blocked | Global grant/lineage/read contract is absent, or only focused rows are returned | 当前全局范围暂不能查看未核验创作者资料 | Retry; return to context selector | Reject focused rows; do not relabel them global | BMP05-W-002 |
-| Global / all ready | Authorized global binding plus valid global profiles | 查看全球创作者生态与分层资料 | Tier/risk filters; select creator | Preserve global view | BMP05-W-003 |
+| Global / all blocked | Actor-directory scope/lineage/read contract is absent, or only focused rows are returned | 当前全局范围暂不能查看未核验创作者资料 | Retry; return to context selector | Reject focused rows; do not relabel them global | BMP05-W-002 |
+| Global / all ready | Authorized global binding plus valid global profiles | 查看当前任务相关的创作者资料 | Tier/risk filters; select creator | Preserve global view | BMP05-W-003 |
 | Empty | Valid focus or global scope with no verified creators | 当前范围暂无创作者资料 | Refresh | Keep focus visible | BMP05-W-004 |
 | Not collected / unknown | No creator collection or unknown state | 创作者资料尚未形成可核验记录 | Refresh | No zero metrics | BMP05-W-005 |
 | Stale / partial | Stale data or missing metrics/lineage | 部分创作者资料仍待核验 | Refresh; inspect verified fields | Keep missing values explicit | BMP05-W-006 |
@@ -173,14 +173,14 @@ The real creator API/Permission/Evidence and runtime/E2E gate remains blocked un
 ## 10. Review decision and open questions
 
 - **Decision:** `BLOCKED` for full acceptance; bounded renderer remains `DESIGN_EXPLORATION`.
-- **Open owners:** BMP must define creator fit/contribution/risk semantics and source contract; SYSTEM must return verified read binding; Shared Evidence must validate profile traces; Sol must review the graph/roster/dossier composition.
+- **Open owners:** BMP must define creator fit/contribution/risk semantics and source contract; SYSTEM must return verified read binding; Shared Evidence must validate profile traces; the currently authorized frontend reviewer must review the graph/roster/dossier composition.
 - **Required before acceptance:** live BrandFocus run, random entity acceptance, responsive/a11y runtime proof and an explicit boundary for any future creator contact or campaign effect.
 
 ## 11. Real delivery and data-maturity overlay
 
 - **REAL USER JOB:** understand which creators fit a selected brand and what contribution/risk evidence supports that view.
 - **REAL DELIVERY CARD:** real BrandFocus → scoped creator roster → selected creator dossier → source/metric trace. Current source fails the scoped entry gate; commercial readiness is `NO`.
-- **GLOBAL UNIVERSE / DATA MATURITY IMPACT:** `GLOBAL / ALL` may show the global creator universe only through explicit global scope/lineage/read markers; focused profiles cannot become global roster truth. Current endpoint lacks that contract, so coverage remains blocked. Random sample acceptance is `NOT RUN / canonical scoped creator population unavailable`.
+- **SUBJECT SCOPE / TASK DATA QUALITY IMPACT:** `GLOBAL / ALL` may show the current task creator results only through explicit actor/task scope, lineage and read markers; focused profiles cannot become global roster truth. Current endpoint lacks that contract, so coverage remains blocked. Random sample acceptance is `NOT RUN / canonical scoped creator population unavailable`.
 - **CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION:** `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE`; current governance and Product Core are reused, with no alternate creator data owner or provider.
 
 

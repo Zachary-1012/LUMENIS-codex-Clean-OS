@@ -22,7 +22,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 ## 0. Authority basis and artifact disposition
 
 - Constitution basis: BMP market intelligence must be BrandFocus-first, source-aware and responsive across the approved surfaces.
-- Product/workflow basis: BrandFocus → market signal → opportunity interpretation → source brief. `GLOBAL / ALL` is also a first-class global product universe, but a global signal must carry explicit canonical global scope, verified lineage and `read_allowed`.
+- Product/workflow basis: BrandFocus → market signal → opportunity interpretation → source brief. `GLOBAL / ALL` is also a compatibility mode for the current actor-authorized China-operating directory, but a directory-level signal must carry the exact canonical actor/task scope, verified lineage and `read_allowed`.
 - Exploration references: current Experience Constitution blueprint only; historical dashboards and screenshots are rejected as implementation inputs.
 - Anti-template decision: the page is a momentum/confidence radar paired with a ranked signal feed and source brief, not a generic KPI wall.
 - Sol design decision: `DESIGN_EXPLORATION`; full acceptance is blocked because the current builder is global/unscoped.
@@ -39,7 +39,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 ## 2. Route, entry, exit and return
 
 - **Entry:** host shell opens BMP-03 and the screen reads `GET /api/experience/screen/BMP-03` through `LumenisCoreClient.screen('BMP-03')`.
-- **Required context:** verified BMP/ZBMP `FOCUS` with distinct Subject and BrandFocus IDs, applied binding and allowed read, or `GLOBAL_ALL` with explicit global grant, canonical scope, verified lineage and `read_allowed`. The route cannot grant access.
+- **Required context:** verified BMP/ZBMP `FOCUS` with distinct Subject and BrandFocus IDs, applied binding and allowed read, or `GLOBAL_ALL` with explicit actor-directory read grant, canonical scope, verified lineage and `read_allowed`. The route cannot grant access.
 - **Exit / return:** signal selection is local. Return restores selected signal and kind filter if the host preserves the screen; no context change or workflow write occurs.
 - **Trace:** the source brief keeps the signal's source, capture time/window and item-level trace as the return anchor. A future evidence-reader route remains unbound.
 
@@ -48,8 +48,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | Priority | UI field / action | Current owner | Exact source / callable | Definition / units / window | Freshness and missing behavior | Binding ID | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | Runtime envelope and owner | Experience API adapter + BMP | `GET /api/experience/screen/BMP-03`; envelope and `truth` fields | Runtime-bound, exactly ZBMP/zbmp | Any mismatch blocks signals | BACKEND-GAP-020 | `experience_runtime.py::screen_viewmodel`; `bmp03_snapshot.dart` |
-| P0 | BrandFocus/global read binding | SYSTEM context / Permission | `focus_context` + `focus_binding` | FOCUS requires exact Subject/BrandFocus; GLOBAL_ALL requires global grant, canonical scope, verified lineage and `read_allowed` | Unknown blocks the feed | BACKEND-GAP-020 | Current `_build_bmp03()` has no verified BrandFocus/global binding |
-| P1 | Market signal | BMP intelligence owner | Future `sections[type=signals|intel|opportunities].items[]`: id, optional BrandFocus, title, kind, confidence, momentum, source, evidence ref, row scope/read/lineage fields | FOCUS rows exact-match BrandFocus; GLOBAL_ALL rows require explicit global scope, verified lineage and row read permission | Missing score remains unavailable; no zero fallback | BACKEND-GAP-020 | Current builder reads global intelligence assets without the required contract |
+| P0 | BrandFocus/global read binding | SYSTEM context / Permission | `focus_context` + `focus_binding` | FOCUS requires exact Subject/BrandFocus; GLOBAL_ALL requires actor-directory read grant, canonical scope, verified lineage and `read_allowed` | Unknown blocks the feed | BACKEND-GAP-020 | Current `_build_bmp03()` has no verified BrandFocus/global binding |
+| P1 | Market signal | BMP intelligence owner | Future `sections[type=signals|intel|opportunities].items[]`: id, optional BrandFocus, title, kind, confidence, momentum, source, evidence ref, row scope/read/lineage fields | FOCUS rows exact-match BrandFocus; GLOBAL_ALL rows require explicit actor/task scope, verified lineage and row read permission | Missing score remains unavailable; no zero fallback | BACKEND-GAP-020 | Current builder reads global intelligence assets without the required contract |
 | P1 | Source brief | BMP + Shared Evidence | signal summary, source, captured time, time window, trace | Source position must explain the signal | Invalid lineage hides the signal | BACKEND-GAP-020 | `Bmp03Signal` parser preserves source fields only when safe |
 | P2 | Kind filter | App presentation state | `Bmp03ViewModel` | Local filter only | Empty filter state keeps focus and source context | BMP03-UI-LOCAL | `bmp03_view_model.dart` |
 
@@ -58,8 +58,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | State | Trigger / evidence | User-visible meaning | Available actions | Recovery / return behavior | Acceptance ID |
 | --- | --- | --- | --- | --- | --- |
 | Loading | Initial read or refresh | 正在读取市场情报 | None; announce busy | No previous-focus rows flash | BMP03-W-001 |
-| Global / all blocked | Global grant/lineage/read contract is absent, or only focused rows are returned | 当前全局范围暂不能查看未核验市场情报 | Retry; return to context selector | Reject focused rows; do not relabel them global | BMP03-W-002 |
-| Global / all ready | Authorized global binding plus valid global signals | 查看全球市场机会与来源说明 | Kind filter; select signal | Preserve global view | BMP03-W-003 |
+| Global / all blocked | Actor-directory scope/lineage/read contract is absent, or only focused rows are returned | 当前全局范围暂不能查看未核验市场情报 | Retry; return to context selector | Reject focused rows; do not relabel them global | BMP03-W-002 |
+| Global / all ready | Authorized global binding plus valid global signals | 查看当前范围的市场机会与来源 | Kind filter; select signal | Preserve global view | BMP03-W-003 |
 | Empty | Valid focused or global response with no valid signals and no rejected rows | 当前范围暂无市场机会信号 | Refresh | Keep explicit empty state | BMP03-W-004 |
 | Not collected / unknown | Data state says not collected or unknown | 市场情报尚未形成可核验记录 | Refresh | Do not translate unknown to zero | BMP03-W-005 |
 | Stale / partial | stale data or dropped rows | 部分市场情报仍待核验 | Refresh; read verified rows | Show data freshness wording without claiming live | BMP03-W-006 |
@@ -131,7 +131,7 @@ Real API/Permission/Evidence and runtime/E2E acceptance remain blocked because t
 ## 10. Review decision and open questions
 
 - **Decision:** `BLOCKED` for full acceptance; `DESIGN_EXPLORATION` bounded slice only.
-- **Open owners:** BMP must provide Focus-scoped signal fields and definitions; SYSTEM must return actor/read binding; Shared Evidence must validate signal traces; Sol must review the screen composition before DESIGN_READY.
+- **Open owners:** BMP must provide Focus-scoped signal fields and definitions; SYSTEM must return actor/read binding; Shared Evidence must validate signal traces; the currently authorized frontend reviewer must review the screen composition before DESIGN_READY.
 - **Required before acceptance:** live BrandFocus run, source-reader trace resolution, responsive/a11y runtime checks and random entity data acceptance.
 
 ### Bounded presentation acceptance added 2026-10-03
@@ -146,7 +146,7 @@ Real API/Permission/Evidence and runtime/E2E acceptance remain blocked because t
 
 - **REAL USER JOB:** understand which market opportunity matters for a selected brand and why.
 - **REAL DELIVERY CARD:** real BrandFocus → scoped signal retrieval → ranked signal → source brief. Current entry lacks scoped signal retrieval, so commercial readiness is `NO`.
-- **GLOBAL UNIVERSE / DATA MATURITY IMPACT:** `GLOBAL / ALL` may expose the global market universe only through explicit global scope/lineage/read markers; focused signals cannot be relabeled. Current endpoint lacks that contract, so global and brand coverage remain blocked. Random sample acceptance is `NOT RUN / scoped population unavailable`.
+- **SUBJECT SCOPE / TASK DATA QUALITY IMPACT:** `GLOBAL / ALL` may expose the current task market results only through explicit actor/task scope, lineage and read markers; focused signals cannot be relabeled. Current endpoint lacks that contract, so current task-scope read acceptance remains unverified. Random sample acceptance is `NOT RUN / scoped population unavailable`.
 - **CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION:** `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE`; current Experience Constitution and Product Core are reused, with no alternate intelligence provider or owner.
 
 

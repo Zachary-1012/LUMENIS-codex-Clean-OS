@@ -153,6 +153,8 @@
 | 产品代码与运行 | 保留原有效本地成果，本轮没有实现迁移、模型调用/训练、Core切换或部署 |
 | 完整产品闭环 | 尚未交付；原逐能力真实结果、修订/重开/恢复、专业及组合验收仍须实施完成 |
 
+末轮消费者核对同时更正ACC/BMP/AI/SYSTEM详细规格中的旧全球覆盖标签、默认全球目录和全球创作者展示文字，保留实际scope/lineage/read约束与历史执行回执。原技术GLOBAL_ALL兼容标识不迁移数据、不扩大授权；当前含义沿唯一主体范围合同。
+
 全部改动路径（同一规划PR，包含此前已发布的AI修订）：
 
 - `.agents/skills/lumenis-local-engineering-tools/SKILL.md`
@@ -182,14 +184,19 @@
 - `00-GOVERNANCE/evidence/round-15/source-adoption-20261018/EXISTING-OWNER-WORK-HANDOFF.json`
 - `AGENTS.md`
 - `README.md`
+- `contracts/experience/screen-specifications/ACC-01.md`
 - `contracts/experience/screen-specifications/ACC-02.md`
 - `contracts/experience/screen-specifications/ACC-03.md`
+- `contracts/experience/screen-specifications/ACC-04.md`
 - `contracts/experience/screen-specifications/AI-01.md`
 - `contracts/experience/screen-specifications/AI-02.md`
 - `contracts/experience/screen-specifications/AI-03.md`
 - `contracts/experience/screen-specifications/AI-04.md`
 - `contracts/experience/screen-specifications/AI-05.md`
 - `contracts/experience/screen-specifications/BMP-02.md`
+- `contracts/experience/screen-specifications/BMP-03.md`
+- `contracts/experience/screen-specifications/BMP-04.md`
+- `contracts/experience/screen-specifications/BMP-05.md`
 - `contracts/experience/screen-specifications/BMP-06.md`
 - `contracts/experience/screen-specifications/README.md`
 - `contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md`
@@ -197,6 +204,12 @@
 - `contracts/experience/screen-specifications/SH-02.md`
 - `contracts/experience/screen-specifications/SH-04.md`
 - `contracts/experience/screen-specifications/SYS-02.md`
+- `contracts/experience/screen-specifications/SYS-03.md`
+- `contracts/experience/screen-specifications/SYS-04.md`
+- `contracts/experience/screen-specifications/SYS-05.md`
+- `contracts/experience/screen-specifications/SYS-06.md`
+- `contracts/experience/screen-specifications/SYS-07.md`
+- `contracts/experience/screen-specifications/SYS-08.md`
 - `scripts/audit_tools/verify_ai_native_constitution.py`
 - `scripts/audit_tools/verify_codex_takeover_governance.py`
 - `tests/test_online_progress_governance.py`

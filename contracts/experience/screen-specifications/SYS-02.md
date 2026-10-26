@@ -201,7 +201,7 @@ Web：范围、实际进度与失败恢复逐项可见；后台状态刷新不�
 
 ## 10. Cross-cutting gates and review
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none; this page does not select a business entity or report Global/Brand/Guangzhou coverage.
+- SUBJECT SCOPE / TASK DATA QUALITY IMPACT: none; this page does not select a business entity or claim task-data coverage.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable; entity sample count is zero and no entity value is fabricated.
 - CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: research complete for this slice; no justified upgrade beyond the existing Collector closed-loop contract. Any future retry/effect must be versioned behind Permission, Evidence, observability and rollback.
 - Decision: `DESIGN_EXPLORATION`; Sol must review the spec, verify the screen route and complete authenticated runtime acceptance.

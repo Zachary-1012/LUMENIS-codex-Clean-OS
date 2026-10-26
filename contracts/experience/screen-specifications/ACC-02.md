@@ -102,7 +102,7 @@ Feature integration keys: `acc02.availableSubjects`, `acc02.confirmLens`, `acc02
 - `EVIDENCE`: request/response, permission decision, return state and downstream Subject header.
 - `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_LIVE_RUNTIME_E2E`.
 - `RANDOM ENTITY DATA ACCEPTANCE`: sample count 0 here; future acceptance must rotate non-reference commercial/brand/cross-region registry rows.
-- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: selection supports GLOBAL/ALL and focus-only semantics but does not assert collection maturity; report coverage separately.
+- `SUBJECT SCOPE / TASK DATA QUALITY IMPACT`: selection resolves the actor-authorized China-operating directory or a confirmed focus; it grants no acquisition permission and proves no task-data completeness.
 - `COMMERCIAL OVERLAY IMPACT`: `COMMERCIAL_READY=NO` until real selection/return is proven on promised surfaces.
 
 ## 9. Continuous frontier research / capability evolution
@@ -329,11 +329,7 @@ reduced motion. Public Website acquires no form or new runtime.
   assertion. Desktop build and browser screenshots alone do not prove native
   operation or a production write.
 - `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_EXACT_WRITE_CONTRACT_AND_REAL_E2E`.
-- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: extends the existing directory while
-  retaining GLOBAL by default. No change to Global Commercial Coverage, Global
-  Brand Coverage or Guangzhou Taikoo Hui Reference Coverage is asserted. The
-  named reference is a retained acceptance dimension, never a selected-subject
-  default, account selector or limit on the global directory.
+- `SUBJECT SCOPE / TASK DATA QUALITY IMPACT`: adds a verified China-operating entity through the existing registry; removal stops new use/monitoring while retaining historical results and identity. Registration proves no collection or analysis result; no worldwide or named-reference coverage gate applies.
 - `RANDOM ENTITY DATA ACCEPTANCE`: no registration sample run in this design
   step; sample count 0. Later tests must include real non-reference CTH and BMP
   objects without treating registration as collected coverage.

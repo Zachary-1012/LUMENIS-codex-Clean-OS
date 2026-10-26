@@ -180,7 +180,7 @@ USER-VISIBLE RESULT: usable draft/file or actual target screen. FAILURE/RECOVERY
 preserved text and honest independent service/read states. EVIDENCE: pinned source,
 tests and operated runtime. ACCEPTANCE ASSERTION: LIVE_NOT_VERIFIED until that
 exact artifact is mounted and used. COMMERCIAL OVERLAY IMPACT: no release claim.
-GLOBAL UNIVERSE / DATA MATURITY IMPACT: routing measures no market coverage;
+SUBJECT SCOPE / TASK DATA QUALITY IMPACT: routing measures no market coverage;
 Global Commercial, Global Brand and Guangzhou reference coverage stay separate.
 
 ## 10. Research and review

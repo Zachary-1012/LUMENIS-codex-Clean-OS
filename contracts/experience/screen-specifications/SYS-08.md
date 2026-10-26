@@ -153,7 +153,7 @@ Web：运行/工作区检查按任务分区，折叠细节保留关键错误与�
 
 ## 10. Cross-cutting gates and review
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none; logs do not establish Global Commercial, Brand or Guangzhou coverage.
+- SUBJECT SCOPE / TASK DATA QUALITY IMPACT: none; logs do not establish successful task acquisition or business-data completeness.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable; no business entity sample, count zero.
 - CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: research complete; no justified chart/export upgrade until trace, actor authorization, audit and rollback are canonical.
 - Decision: `DESIGN_EXPLORATION`; Sol review and live observability acceptance remain pending.

@@ -178,7 +178,7 @@ Public Website, Web Workspace, Desktop and Mobile keep distinct release roles. O
 
 ## 10. Cross-cutting gates and review
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none; evaluation posture does not assert commercial/brand/Guangzhou coverage.
+- SUBJECT SCOPE / TASK DATA QUALITY IMPACT: none; evaluation posture does not assert task-data completeness or subject coverage.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable; no entity values, sample count zero.
 - CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: research complete; no justified upgrade from registered-status display to acceptance. Promotion remains versioned, evaluated, approved, observable and reversible.
 - Decision: `DESIGN_EXPLORATION`; Sol review and real Evidence-backed acceptance are pending.

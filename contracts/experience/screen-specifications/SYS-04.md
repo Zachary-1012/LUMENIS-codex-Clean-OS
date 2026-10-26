@@ -170,7 +170,7 @@ Mobile：只读（状态、修改记录、备份列表）；开启/加载扩展�
 
 ## 10. Cross-cutting gates and review
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none; permission posture is not business coverage.
+- SUBJECT SCOPE / TASK DATA QUALITY IMPACT: none; permission posture is not business coverage.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable; no Subject/Brand entity sample is displayed, sample count zero.
 - CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: research complete; no justified upgrade to the incomplete actor/target decision binding. Any future control requires canonical Permission, Approval, Effect Fence, Audit and rollback.
 - Decision: `DESIGN_EXPLORATION`; Sol must verify server-side authorization before acceptance.
