@@ -23,19 +23,21 @@ PO已确认Architecture用户工作方式；窗口成果卡/建议执行顺序�
 | 原验收范围 | 必须证明的用户结果 | 不足以替代的证据 |
 | --- | --- | --- |
 | CTH、BMP | 两领域各用真实获准输入产出有用分析/判断、适用行动及真实结果记录、报告；保存/修订/关闭重开/恢复/来源返回 | 样本计数、拼接摘要、计划等于执行、用户自己配置论文算法、只验拒绝路径 |
-| 独立研究 | 普通资料直接上传，不填通用来源使用/本次用途表单；逐材料原件、定位、确定性分析及独立可用AI增强真实落地。按实际导入时间进入资料库，每份资料/分析有可打开卡片，原生日期与未知保持；原文、分析、行业案例、结论/依据/局限和引用可检索、保存、修订、重开及中断恢复；后台权限/权益与可选CTH/BMP采用各自核验 | 文件数、已读目录、模型回答、导入当事实确认、只跑业务附属研究、假进度/假保存 |
-| 独立提案、视频、播客 | 三项各自直接新建、实际编辑、适用预览/试听、真实可编辑工程与可使用成品、导出和版本恢复；另验用户选择的业务/研究联动 | 强制CTH/BMP或SourceBrief前置、截图/静态计划、脚本当音频、文件存在、仅有限单轨示例 |
+| 任务内研究 | 普通资料直接上传，不填通用来源使用/本次用途表单；逐材料原件、定位、确定性分析及独立可用AI增强真实落地。按实际导入时间进入资料库，每份资料/分析有可打开卡片，原生日期与未知保持；原文、分析、行业案例、结论/依据/局限和引用可检索、保存、修订、重开及中断恢复；后台权限/权益与可选CTH/BMP采用各自核验 | 文件数、已读目录、模型回答、导入当事实确认、只跑业务附属研究、假进度/假保存 |
+| 原创提案、视频、播客 | 三项各自直接新建、实际编辑、适用预览/试听、真实可编辑工程与可使用成品、导出和版本恢复；另验用户选择的业务/研究联动 | 强制CTH/BMP或SourceBrief前置、截图/静态计划、脚本当音频、文件存在、仅有限单轨示例 |
 | 产品内浏览器 | 同actor/task/session真实网页和获准操作、独占接管、停止、返回原工作、成果保存重开与失败恢复；自动采集后台运行 | raw CDP暴露、自动外部弹窗、HTTP200、只读画面、以OS执行器补齐网页功能 |
 | 数据与分析共性 | 已有获准数据可持续消费；真实字段、来源、身份、范围、时间、单位/分母、权利和未知状态正确，无AI正常链可独立成功 | 某平台未齐就停止全部业务、补零/假图/假热度、把模型输出或用户创作当Canonical事实 |
 | AI/数学及解析采用 | 现有领域Owner中的实际方法适用、结果核验；模型收益独立对照；媒体和办公解析适配实际调用、内容读回、安全及恢复 | 原文引用、算法命名、通用工具或wheel、有限示例、训练损失下降冒充完整论文/模型/产品能力 |
 
-同一有效证据可覆盖多个原要求，不反复建立资料和回执。随机实体/非参考主体、Global Commercial / Global Brand / Guangzhou Reference三维数据成熟度仍按原规则记录；样本成功不是全球覆盖。真实缺数据明确表达，采集/处理故障不能伪装为数据尚未补全。完整数据量不是启动已有数据工作流的前置条件；未完采集能力、原承诺平台/来源覆盖的开放项不得静默从最终验收删除。
+同一有效证据可覆盖多个原要求，复用已有资料与回执。数据验收针对当前获准的境内经营主体和实际任务，记录来源、时间、缺口、结果与恢复；不再以全球主体/品牌覆盖为门槛。平台能力与当前任务数据范围分开，不需要每个任务抓完所有平台。
 
 **全产品复用与适配核验**沿原成果卡进行：先列原要求及现有实现/调用者，证明是复用、纠冲突或补真实缺口；不得把用户询问转换成重复能力。来源类别同权须沿实际输入、样本选择、领域分析、引用/制作及Evaluation传递，非只检查界面文案；逐条质量、时间、身份和用途差异保留。外来方法/解析/组件实际接入既有Owner的有用结果和恢复合同，不能以安装、引用或更名算完成。
 
 **整体Experience验收**覆盖全部现有44屏基线与官网家族，以及新增/未映射但已批准的产品任务与页面；逐项验收自身任务、信息层级、独特布局、真实内容、编辑/导航/反馈及异常恢复，保存各端真实视觉和操作证据。44屏不是范围上限。所有外来能力与采集/导入材料的产品呈现适配序境视觉，原网页、原文、真实媒体及来源标记完整；来源类别同权不变成掩盖信息质量。中英韩、宽窄屏、键盘/触控/辅助技术及现有主题要求照常验收，四表面完整要求保留，当前按PO设备范围实施并独立验收。
 
-**Website/Web工程就绪**使用原门禁：全部适用用户链和屏幕可操作，前后端/Core/数据库/Artifact版本对应，权限拒绝与来源撤回正确，断网/取消/中断/重启/ACK丢失与备份恢复有实际证据，必要静态/安全/数据一致性、定向回归、实际构建及精确SHA CI成立。真实用户不看源码也能找到入口、读懂结果、编辑并恢复；开发者直接API操作只能支持后端证据，不能代替整条Web用户链。
+**Website展示验收**覆盖完整内容、已制作演示与录制版本/公开权利、播放/字幕/转写/失败恢复、章节/案例导航、三语/无障碍/窄屏、真实产品和下载链接；不得要求访客上传、运行采集/分析/生成、保存业务成果或使用功能沙箱。演示不执行业务，也不替代操作端能力验收。
+
+**Web工程就绪**使用原门禁：全部适用用户链和屏幕可操作，前后端/Core/数据库/Artifact版本对应，权限拒绝与来源撤回正确，断网/取消/中断/重启/ACK丢失与备份恢复有实际证据，必要静态/安全/数据一致性、定向回归、实际构建及精确SHA CI成立。真实用户不看源码也能找到入口、读懂结果、编辑并恢复；开发者直接API操作只能支持后端证据，不能代替整条Web用户链。
 
 **上线裁决**仍归原Release/商业就绪规则：M/C6收齐适用R/J/U、真实关键E2E、发布包/配置/依赖许可、安全、可观测与回滚证据后，交PO重复操作；实际域名/托管/生产部署、对外效果或新费用须各自有效授权。任一表面通过都不代表其他表面已通过，也不自动宣称全产品RELEASED或OPERATING。既已批准的账号体系、免费登录、两种开发者模式及商业六项仍在工程闭环内；只有真实用户重复验证和付费/授权来源按现行发布边界办理，不设新的通用账号墙。
 
@@ -331,14 +333,10 @@ THREE-LANGUAGE SURFACE ACCEPTANCE：
 - locale switch, persistence, Trace/Return, responsive and accessibility evidence
 - missing locale or key remains an explicit screen/surface acceptance gap
 
-GLOBAL UNIVERSE / DATA MATURITY IMPACT：
-- GLOBAL CTH maturity impact：本轮责任、已验证、未成熟、后续 owner/round
-- GLOBAL BMP maturity impact：本轮责任、已验证、未成熟、后续 owner/round
-- Registered-subject reference-loop impact：本轮责任、已验证、未成熟、后续 owner/round
-- `Global Commercial Coverage = YES / NO / PARTIAL / BLOCKED / LIVE_UNVERIFIED`
-- `Global Brand Coverage = YES / NO / PARTIAL / BLOCKED / LIVE_UNVERIFIED`
-- `Registered Subject Reference Coverage = YES / NO / PARTIAL / BLOCKED / LIVE_UNVERIFIED`
-- `LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES / NO`
+SUBJECT SCOPE / TASK DATA QUALITY IMPACT：
+- 本次境内经营主体/品牌范围、身份依据、添加/移除/重加与关系
+- 本次任务问题、原生时间窗、来源、实际可用结果
+- 缺失/失败/未知、恢复及结果限制；历史资料与当前目录范围分开
 
 RANDOM ENTITY DATA ACCEPTANCE：
 - sample seed / sample count / sample IDs
@@ -1169,11 +1167,6 @@ pre-populated fake success
 
 必须输出：
 
-Global Commercial Coverage =
-Global Brand Coverage =
-Registered Subject Reference Coverage =
-LUMENIS_INTERNAL_FULL_UNIVERSE_READY =
-
 ENGINEERING_READY =
 REAL_DATA_READY =
 USER_WORKFLOW_READY =
@@ -1182,7 +1175,7 @@ RELEASE_READY =
 OPERATING =
 COMMERCIAL_READY =
 
-先按 `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` 判断同一内部全量版的三个支撑维度。只有 `Global Commercial Coverage`、`Global Brand Coverage` 与 `Guangzhou Taikoo Hui Reference Coverage` 全部为 `YES`，唯一顶层结论 `LUMENIS_INTERNAL_FULL_UNIVERSE_READY` 才能为 `YES`。三项不得产生独立产品、版本、仓库、入口、发布轨道或 Data/Evidence/Permission/API/Context；广州太古汇单点成功、页面非空、目录存在或几个平台有数据都不能替代全球覆盖证明。
+按 `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` 核实本期境内主体范围、任务数据与实际用户结果。全球全量覆盖不属于本期验收要求。当前任务仍必须具备真实输入、专业判断或创作、可用成果、修订重开与恢复；不能以目录存在或页面非空签收。
 
 随后只有最终七状态全部 YES：
 

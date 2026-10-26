@@ -1,16 +1,25 @@
 # AGENTS.md — 寰意 / OEVIRA Production Execution Router
 
-## Latest direct PO correction — 2026-10-11: business outcomes, pervasive AI, browser-only scope
+## Current direct PO scope: user outcomes, China operations and shared capabilities
 
 OEVIRA remains the evidence-driven commerce operations and brand/market product.
-CTH and BMP are business domains. Shared content creation is independently usable:
-users may directly create a proposal/document, video or podcast from their own
-brief, writing or permitted assets. No CTH/BMP task, Subject/BrandFocus, case,
-Campaign or SourceBrief is a universal creation prerequisite. Continuing domain
-research into creation is an optional integration path. Keep workspace/project
-Permission, source-use checks for referenced assets, versions and recovery; user
-authorship is not Canonical external fact. The five delivery rounds are not a
-mandatory sequence that every user task must traverse.
+CTH and BMP are business domains. Research, analysis, document editing and export
+support the user's current work; they are not standalone products or mandatory
+research/document workspaces. Original creation produces new proposals and content
+from the user's brief; video and podcast post-production remain directly usable
+without a CTH/BMP, Subject, Case or Campaign prerequisite. Shared owners retain
+these processing responsibilities and one Permission, source, version and recovery chain.
+
+用户给目标和必要材料，产品复用当前上下文完成取证、分析、判断或原创创作，直接交可修改、导出和恢复的结果。除视频/播客精细后期，不强迫用户逐屏调度内部步骤；仅关键歧义、缺失输入或风险/外部效果需要确认。自动保全草稿不是外部行动批准。完整工作方式归Architecture及主规划§9.0。
+
+主体目录仅含有据在中国境内经营的商业主体和品牌（含国际品牌境内经营），不全球扩库。设置统一添加/移除/重加；身份不明先待核，移除停新使用与监测，保留历史成果和权限。详细生命周期与任务取数归现有范围合同。
+
+The current PO pause remains effective: only planning convergence and bounded
+cleanup are authorized until explicit resumption. Remove replaced active rule
+bodies and references in place; publication alone is not product implementation.
+A standalone image editor/canvas is excluded. Images remain materials for reports,
+documents, covers and media projects, not a separate image-editing product.
+
 General computer/OS control is removed from the active product requirements and
 acceptance scope, not deferred and not accepted. Do not implement a desktop/OS
 executor, arbitrary installed-application control, or an Agent Zero GUI worker
@@ -46,7 +55,7 @@ Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns work; 
 
 ### 2026-10-26 PO AI route
 
-GPU training is WITHDRAWN_BY_PO, not AI capability. Architecture §6/J27 own typed admission/learning. Docs-only PR; development paused; protect dirty work/#146. No merge, model/runtime/configuration action or dispatch; see CURRENT.
+GPU training is WITHDRAWN_BY_PO, not AI capability. Architecture §6/J27 own typed admission/learning. Current work reconciles the complete product planning dependencies; development remains paused and dirty work/#146 protected. Publication follows the applicable PR authorization; no model/runtime/configuration action or dispatch is implied. See CURRENT.
 
 2026-10-18 PO: absorb GGI into existing LUMENIS owners; Architecture §7 / LUMENIS-SOURCE-ADOPTION-V1.json. No new runtime/domain. Exchange 1.1.0 boundaries and all original scope remain; acceptance needs evidence.
 
@@ -184,13 +193,12 @@ authorized unfinished work remains.
 
 ### Cross-window request provenance
 
-Relays identify the original PO instruction, time, source and applicable roles/task.
-Agent paraphrases, old receipts and historical Goals cannot dispatch or pause peers.
-Preserve unverified state without expanding it globally; only current PO orders and
-factual readback select windows/models. F retains editable assets, complete screen
-capabilities, Website families, surface variants, zh/en/ko and accessibility. Source
-is not native Figma and screenshots are not editable delivery. Direct construction
-needs current PO dispatch, not historical DESIGN_READY or Golden Page ordering.
+Relays identify the direct PO instruction, time, source and current task/roles;
+old receipts or another agent's paraphrase cannot dispatch or pause peers. F
+retains all approved assets, screen capabilities, surface variants, three UI
+languages and accessibility. Screenshots/source are not native Figma delivery.
+Current PO dispatch permits direct construction without historical per-screen
+DESIGN_READY or Golden Page prerequisites; actual review and acceptance remain.
 
 ### Live dispatch semantics — NON-BYPASS
 
@@ -413,16 +421,23 @@ Product Owner's newest explicit instruction.
 
 ### Lean execution cadence — strict exits, lighter inner loop
 
-The final product standard remains strict; the inner development loop is intentionally lighter so Codex spends effort on implementation rather than repeatedly proving the same unchanged context.
+**寰意 / OEVIRA｜Codex 工程开发行为准则（PO，2026-10-26）**
 
-1. **Full bootstrap once, delta bootstrap thereafter.** Bootstrap on changed authority/main, conflicting handoff or uncertain truth; otherwise refresh only relevant source, owners and protected work. Before resumed writes read `.codex/README.md` continuity: retain all outcomes, acceptance, source paths and pending effects. Reconcile the latest direct PO instruction and current evidence before rebinding or stopping; old blockers do not renew themselves. Hooks never dispatch, change model settings or accept product work.
-2. **Research only when it can change the repair.** A repository-internal deterministic defect (wrong field, stale assertion, internal caller mismatch, obvious transaction bug) may go directly reproduce → owner/caller → repair → affected verification. Current official/upstream research is mandatory when the failure depends on an external framework/API/platform/standard, when root cause is genuinely uncertain, or when the chosen implementation needs current external evidence.
-3. **Incremental engineering is allowed; completion language stays strict.** A bounded correct repair may be integrated after its applicable build, static/security/data guards and real-operation checks pass; it need not pretend the entire Job is closed. Use the state ladder `DEFINED → IMPLEMENTED → INTEGRATED → VERIFIED → JOB_CLOSED → RELEASED → OPERATING`. Only `JOB_CLOSED` or a later state counts the mapped user outcome as complete.
-4. **Gate scope is proportional inside the loop.** Each bounded change verifies its applicable build, static/security/data guards and actual user-operation outcome. Owner closure runs the owner's full mapped acceptance. Whole-product release runs the complete R01-R15/J1-J8/U01-U25 and release evidence ladder. Do not rerun unrelated expensive suites merely to restate already valid evidence.
-5. **Follow current PO assignment.** A sole assigned controller implements and verifies all assigned owner outcomes without extra windows. With multiple assigned developers, each owns repairs; M handles conflicts, integration and acceptance. Source boundaries and gates remain binding.
-6. **Product Owner approves policies/batches, not routine rows.** Existing approved rules may admit ordinary same-class records/actions automatically when the canonical owner, rights, privacy, quality and guard contracts all pass. New sensitive sources, new rights, new paid resources, new external effects, new model/provider scope or other explicit human gates still require Product Owner approval.
+本准则约束整个产品的开发行为，不只约束某个模块；不新增产品规划、功能范围或管理流程。总原则：以完整产品能力的实际实现为目标。开发工作的价值取决于功能是否真正可用，而不是代码修改量、测试次数或过程文档。
 
-This cadence reduces governance overhead only. It does not weaken Permission, Evidence, Canonical truth, protected-account boundaries, no-fabrication rules, no-paid-resource rules, owner exclusivity, or final user-outcome/release acceptance.
+1. **直接开发，不重复规划。** 以现有完整产品规划和源码为依据。已经明确的需求直接实现，不反复分析、重新设计、拆解计划或制作替代性交付文档。只在权威、主线、输入或实际风险发生变化时更新相关上下文；压缩续接先读 `.codex/README.md` 与原任务记录，保留完整要求、实际成果、待办和未决效果，不能用摘要缩减原要求。
+2. **以真实能力闭环为开发单位。** 根据原功能要求完成实际需要的输入、处理逻辑、数据连接、前端交互、结果生成及后续操作。需要采集的功能贯通真实采集、数据处理、持久化和业务使用；不依赖采集的功能直接实现自身工作流程。只有用户能实际完成对应任务，才算能力实现，不能用孤立页面、接口或代码片段代替。
+3. **复用开源、二改适配完整规划，不限制必要的代码改造。** 本方式适用于整个产品，包括完整前端、采集与数据、CTH、BMP、任务内研究与创作、媒体、AI及SYSTEM；不是只接采集，也不限于某一个开源项目。先复用已正确的实现，针对原规划中的实际能力缺口选择合适且许可兼容的开源代码，固定来源版本，直接接入现有Owner并完成必要二改；源码、依赖安装或独立脚本存在不算接入。开源代码必须适配寰意的完整能力、业务语义、数据/权限、视觉/交互和验收要求，不能反过来缩减、替换或改变规划。前端沿当前Experience及PO确定的像素赛博＋植物生态＋复古未来主义、满天星Logo和五植物角色适配，不采用上游默认模板或被否定的旧页面骨架。开源缺失的必要能力继续自研补齐；需要跨模块修改、重构或替换时直接完成，不追求最小改动，不创建重复架构。保全有效未提交成果、原始资料和数据；沿原Owner同步实际调用者和消费者，并按§17保留上游许可及归属。
+4. **简化工程，消除无效复杂度。** 上线前完成原规划及正常使用必需的功能、安装/更新、权限与隐私、安全、数据一致性、异常恢复、性能与无障碍；每项工作必须对应原要求或实际用户风险，不以臆想需求、假设性问题或额外管理机制扩张范围。已有许可兼容且适用的开源实现优先复用并适配，普通代码/配置/依赖问题直接解决，不跳过，也不因等待其他无关模块而停工；真实授权、资源或外部限制只阻塞受影响动作，不能伪报通过。 借鉴OpenCode的编码原则：简单逻辑直接实现，复杂逻辑合理拆分；输入在明确边界校验，避免内部重复验证；只在确有复用或复杂度需要时建立抽象；不为未经证实的假设增加代码和机制；不复制已有功能，不增加与实际产品能力无关的实现。减少无效代码与无效工作，而不是减少必要开发量。借鉴原则不恢复已搁置的OpenCode执行路线；实际授权、身份、来源与版本边界不得省略。
+5. **真实功能必须由产品自己完成并真正接通。** 前端调用实际处理能力，后端形成真实业务结果。采集由寰意自身代码在原用户触发/明确选择的调度、来源及权限合同内完成获取、解析、去重、持久化、续采和恢复；研发Agent代搜、代抓后导入不能冒充产品采集能力。其他能力同样不得依赖开发人员在线代执行。不得用模拟数据、空实现、固定回复、虚假保存或装饰性交互冒充完成。新功能必须进入实际可运行的产品，不能只存在于源码或测试环境；保存、修订、重开、恢复和适用的业务消费者按原要求接通。
+6. **必要验证，不让测试取代开发。** 开发过程中执行必要的编译、类型检查、受影响功能测试和安全检查；不因每次局部修改重复运行全仓测试、大规模审计或重做开发计划。完整能力接通后集中进行产品级集成测试、系统回归、问题修复和最终验收。既有必要质量门禁正常保留，复用未变的有效证据；不以检查次数代替开发进展。
+7. **发现问题直接修复，持续完成产品。** 根据实际源码和运行结果定位并修复根本原因，不围绕同一问题反复打补丁。确定的仓库内缺陷直接修复；外部协议、框架或根因不确定时，只查能改变修复的当前官方或上游资料。完成一项能力后继续当前已获授权的原规划未完成能力，不擅自恢复暂停范围。不以单项测试、局部功能、代码提交或报告作为整个产品交付证明。
+8. **及时清退旧实现，不让旧内容干扰新开发。** 每项开发文件按职责只维护一份现行权威版本；在原路径替换旧正文并同步全部引用、生成视图和机器绑定，不追加相互冲突的规则、平行规划或“最终版”副本。目录沿 Source Owner Index 现有标准布局：产品/规则在 `00-GOVERNANCE/`，界面/接口合同在 `contracts/`，业务源码在原Owner，前端在 `app/` 与 `website/`；生成物不混入源码，研究原件和历史回执只作证据。 在同一改动中删除已确认过时、重复或被替代的代码、规则正文、失效引用、旧构建和旧预览入口，并同步调用者、配置与文档；不得保留旧路径继续被运行、加载或引用。删除前确认独有有效功能已迁移、必要引用已接替，保全用户数据、未提交有效成果、研究原件和必要历史证据。不能仅因年代旧或名称相似就删除；普通已确认的退役内容立即处理，不累积旧构建、临时副本或无用缓存。已获准删除的精确对象若被执行策略拦截，直接采用安全的非破坏性移动，集中到桌面“寰意待删除”交由PO删除，记录实际去向；不反复重试、不绕过保护、不把搬移称为删除，且不得连带有效运行数据或链接目标。仍涉及独有内容、生产数据或受保护资产的破坏性操作遵守其精确授权边界。此要求适用于整个产品开发，不另建候选体系或并行规则副本。
+9. **对照完整规划，不擅自改变产品。** 所有产品开发者与协作者必须先理解当前完整产品规划，再完整阅读本次能力的原要求及关联模块、数据、界面、操作、异常恢复和验收要求；沿原ID逐项对照 `source_requirement`、`specific_changes`、`deliverables`、`acceptance` 与实际消费者。关键词搜索只用于定位，不能用命中的片段、摘要、组名、标题或聊天压缩替代完整规划原文，更不能据此缩减或重定义产品。修改一处时同时核对并处理受影响的调用者、消费者、保存、导出、恢复和对应文件。实现方法可以在原要求内优化；未经PO明确变更，不得改变产品定位、能力范围、业务逻辑、视觉与交互要求或验收标准。未读完或无法取得的必要原文不能声称已覆盖，也不能自行猜测或删除要求；仅处理真实缺失依赖，继续其他已明确工作。已完整读取且版本未变的规划可复用其原文定位与覆盖记录，后续只补读变更和关联影响，避免反复全仓审计；压缩续接必须恢复这些完整要求，不能按摘要重设范围。本条适用于整个产品及全部开发入口，正文只在本规则维护，不另建规则副本；不自动恢复暂停的任务。
+
+最终标准：原规划要求的产品能力全部真实实现、接通、可使用，并通过适用的产品验收。沿原 `DEFINED → IMPLEMENTED → INTEGRATED → VERIFIED → JOB_CLOSED → RELEASED → OPERATING` 分层记账，只有实际达到相应门槛才升级状态。Owner闭环和全产品发布分别保留完整映射验收。
+
+当前直接PO指令决定任务范围、暂停与模型；协作者各自修复负责能力，M处理共享写入冲突、集成和验收。已批准的同类常规动作按原Owner合同执行，不逐行重复要批准；新敏感来源、权益、费用、模型资源或外部效果仍须其适用授权。此准则不削弱Permission、Evidence、Canonical、受保护账号、数据安全及真实验收，也不赋予Hook派工或产品验收权。
 
 ### Mandatory Codex bootstrap
 
@@ -582,28 +597,16 @@ Persistent Execution
 Explicit Completion Criteria
 ```
 
-### Complete outcome execution — latest Product Owner instruction, 2026-10-04
+### Complete outcome execution
 
-Use **最大完整成果执行**: research -> existing-source implementation -> real
-execution -> useful saved/retrievable results -> recovery/Evaluation -> acceptance
-for every owned capability. Preserve functionality, data/material coverage,
-Experience states, quality, acceptance depth and approved surfaces. A Task Card
-bounds owner/files/authority/effects, never a minimum feature, tiny slice or easier
-substitute. Focused context limits redundant reading, not the full outcome.
-
-No per-function/file stops, unchanged-pin handoffs, progress-only reports, stable
-re-audits or per-step M approval. A supported native thread Goal preserves the full
-outcome, verification surfaces, non-regression and real blocked-stop conditions;
-only current R/J/U/user-outcome evidence completes it. Goal/Skill cannot redefine
-Authority, Architecture, Owner, Permission, Truth or scope. Owners resolve ordinary
-failures under existing contracts/reservations. Load current context once; refresh
-on relevant source/input/authorization/acceptance-risk changes. Reuse valid evidence;
-retain applicable security/recovery/affected gates. M receives complete results,
-necessary decisions or urgent risks. W6 integration follows the current bounded
-PO authorization and reservations; this paragraph does not dispatch it.
-
-Architecture §6 separates pretrained/strategy/optional CPU admission. GPU training is withdrawn. Professional held-out quality, recovery and exact approval remain. F retains full scope under current PO dispatch.
-M waits when no real review/decision/repair remains, without repeat polling/scans.
+The engineering conduct rules above govern full-outcome development, context
+continuity, reuse and proportional verification. Existing Owner cards carry all
+original requirements, consumer dependencies, recovery, Evaluation and actual
+acceptance. Reuse unchanged evidence; no per-function handoff, duplicate queue,
+candidate tree or progress-only report replaces a complete authorized outcome.
+Current direct PO scope and pause remain binding. Historical Goals and receipts
+never resume work or alter model selection. M integrates and accepts; owners
+resolve their ordinary defects under existing reservations and authority.
 
 Before a capability change, run
 `python scripts/audit_tools/locate_capability_context.py --capability <existing-family> --query <specific-task-term>`
@@ -616,110 +619,46 @@ record missing historical inputs without narrowing capability. Its structural
 triggers alone permit a full-repository re-audit; a local gap, stale note or runner
 failure does not. Never repeat whole-repository discovery to locate a capability.
 
-### Product Owner correction: optimal method, full capability — 2026-10-03
+### Method and material continuity
 
-The retained seven corrections cover the deprecated Guardian setting,
-window requirements/research/media, supplied-video inspection
-frame by frame, study official websites article by article including support,
-guides and release logs, correct the four-surface UI/UX/AIGC rules and synchronize
-and exact online/offline rules. Current scope and execution come only from the
-current M/F/C1-C6 instruction at the top and the approved blueprint. Reuse completed repair
-evidence; a historical correction does not restart an already resolved task.
-Material coverage and capability requirements are not reduced.
-
-For every capability, bug, regression or technical blocker, the owning dispatched/RUNNING
-window must resolve it end-to-end instead of bouncing routine engineering work to
-M, another window or the Product Owner. Reproduce the failure once with a bounded
-case and locate the actual Owner/caller/contract. For deterministic repository-internal
-defects, repair directly and validate the affected behavior. When the defect depends
-on an external framework/API/platform/standard, the root cause is uncertain, or
-external evidence can materially change the repair, research the strongest current
-solution using authoritative vendor/standard documentation, the maintained upstream
-GitHub project, and high-quality current implementations or engineering practice
-relevant to the exact stack. When frontier methods materially matter,
-compare multiple credible approaches for task fitness, correctness, complete
-capability, recovery, security, licensing, maintainability, latency and real
-cost. Choose the strongest feasible solution that preserves the approved product,
-not the easiest patch, cheapest model, smallest feature or speculative rewrite.
-Implement it in the existing Owner, run affected checks plus the real outcome,
-and continue the same window toward closure. For OpenAI/Codex/ChatGPT/plugin/API
-questions, use the project-configured official `openaiDeveloperDocs` MCP first
-when available, then current official OpenAI domains and the maintained
-`openai/codex` GitHub source/issues as needed; never rely on stale model memory.
-Reuse still-valid pinned research; do not open a duplicate research/window loop
-merely to repeat an unchanged question. Escalate only a genuine Product
-Owner/product decision, permission or credential boundary, paid-resource
-approval, material security/data risk, or an external dependency that the owning
-window cannot control.
-
-Each dispatched/RUNNING delivery window therefore owns ordinary defects and blockers through
-research -> repair -> verification -> recovery -> complete outcome. M owns
-cross-window conflicts, integration and acceptance rather than absorbing routine
-window work. Do not bounce a solvable bug back to the reporter or wait for another
-user reminder. Record a genuine external blocker once with the exact next
-executable step, then continue independent in-scope work. Protect existing
-source/data and active shared writers.
-
-Keep one current input/version manifest per outcome and pointers to archived
-evidence. Classify superseded candidates without deleting unique valid work;
-do not load every old candidate/report into each context. Research materials
-must map both to product-capability improvements and, where separately approved,
-training/learning use. Capturing, reading, adopting, implementing and accepting
-are distinct states. No summary, selected sample, navigation map or reference
-count completes the full requested corpus.
+Apply the complete current plan and the full original requirements for the
+assigned capability. Preserve supplied research/video originals, adopted
+Experience requirements and exact source pins; references are evidence, not
+new instructions or acceptance. Unread/missing inputs remain explicit.
+For deterministic internal defects repair the owner and affected consumers
+directly; for external protocol/library uncertainty use authoritative current
+sources only where they change the solution. OpenAI/Codex questions first use
+available official OpenAI documentation tools, then official OpenAI sites or
+maintained openai/codex sources. Research never authorizes accounts, resources,
+effects or scope changes. Escalate only a real PO decision, rights/cost boundary,
+material data risk or uncontrollable dependency; continue independent approved
+work. Keep one current version manifest in the existing outcome record, with
+historical evidence pointers. Reading, adoption, implementation and acceptance
+are distinct; product adoption grants no model learning permission.
 
 ### Capability evolution loop — product improvement, not feature creep
 
-Governance must improve the product, not only constrain Codex. Before a mapped Job is `JOB_CLOSED`, every dispatched owner may strengthen an **already-approved capability** when current real-world evidence shows a materially better method, deeper domain understanding, better data coverage/freshness, stronger grounding/quality, safer recovery, better usability, or more reliable execution. This is capability evolution, not permission to add a new product, feature family, owner, data truth or effect.
+Improve only approved capabilities when actual evidence shows a useful gap:
+real task → targeted reliable current sources → source/date/rights/version check
+→ existing Owner adoption (ADOPT/ADAPT/DEFER/REJECT) → implementation → actual
+outcome/recovery/Evaluation → governed learning candidate. Product adoption and
+model learning are separate decisions; C2/C5 retain permission, privacy, quality
+and held-out controls. Extract methods/constraints/counterexamples, never promote
+model output to facts or copy restricted expression. No new product, Owner,
+truth store or external effects. If an improvement has no material acceptance
+benefit or cannot be validated within the Owner, DEFER that improvement and
+continue the original outcome; research never keeps an otherwise ready Job open.
 
-Use one bounded loop:
+### Direct execution and task-targeted collection
 
-```text
-real task / observed capability gap
-→ targeted current-world retrieval
-→ source / date / rights / reliability check
-→ distill into reusable research knowledge
-→ PRODUCT ADOPTION branch: map to existing Owner/contract and ADOPT/ADAPT/DEFER/REJECT
-→ MODEL LEARNING branch: create a separately governed learning candidate
-→ implement only the justified improvement inside the existing capability
-→ real task / E2E / Outcome / Evaluation
-→ feed the evaluated result back into Research/Learning
-```
-
-Rules:
-- Retrieval is targeted and fast: search only what can materially improve the current capability or resolve a real knowledge gap. Do not run open-ended research merely because more material exists.
-- Retrieved material is not Production Truth by default. Preserve source, date, jurisdiction/market, rights, version and uncertainty; promote factual product/business claims only through the existing Source/Evidence/Canonical owners.
-- Product adoption and model learning are two outputs of the same research intake, not the same admission decision. Product adoption must land in the existing capability Owner; model learning must pass the existing C2/C5 rights/privacy/quality/evaluation/held-out controls before training.
-- Distillation means extracting methods, constraints, evidence, counterexamples and evaluation criteria. It must not copy restricted expression, treat model output as ground truth, or bypass source/use rights.
-- Evolution may improve depth, quality, coverage, reasoning, workflow efficiency, reliability and presentation of an existing approved function. It may not silently add a new function or expand external effects.
-- **Stop rule:** if a candidate improvement does not materially improve the current Job, cannot be validated within the current Owner, or would delay closure without a demonstrated acceptance benefit, record `DEFER` and continue to closure. Research is never an excuse to keep a Job permanently open.
-
-### Direct execution and continuous collection
-
-Choose the strongest evidence-supported feasible implementation in the existing
-Owner that maximizes the approved complete user outcome. Optimize away redundant
-reading, duplicate scans and meaningless retries—not functionality, data/research
-coverage, Experience states, recovery, quality, acceptance depth or promised
-surfaces. Do not choose a minimum viable subset, tiny patch, easier substitute or
-narrower product merely to finish sooner. Execute the full owned outcome through
-the complete real user result and stop only at a genuine external blocker or a
-completed acceptance boundary. Reuse valid pinned evidence. Run applicable build/static/security/data checks and actual complete user operations.
-Run applicable isolated unit/integration tests under the 2026-10-10 PO authorization;
-keep test types explicit and preserve genuine E2E and all product scope.
-An isolated integration copy protecting a dirty tree is not a competing product.
-Reject an incorrect approach without deleting protected data or unknown work.
-
-When product execution is explicitly authorized, source owners continue their
-assigned outcomes under current PO dispatch and shared-write reservations. A rule
-publication or historical topology does not start/stop product services.
-When C1 is actually dispatched, collection and
-new brand/commercial-entity admission continue through approved sources and
-existing owners; GPU, a different window or completion of the global inventory
-does not pause those paths. A blocked identity/source stops only its own path.
-Use the current Collector query contract and retain source/identity/Evidence
-and MANUAL/AUTO boundaries. Publish a changed canonical rule/status before its
-dependent integration, then notify each affected window with the exact published
-revision and receive a readback. A message or candidate count is not delivery.
+The engineering conduct rules retain complete outcomes, proportional verification
+and protected work. Only current PO dispatch starts execution; publication does
+not start or stop services. C1 uses the current task, authorized China-operating
+directory, original Collector/Source/Permission owners and MANUAL default;
+scheduled monitoring requires explicit opt-in. A blocked source affects only its
+own path. Registry growth, GPU availability and worldwide inventory completion
+are not task prerequisites. Publish changed contracts before dependent integration
+and coordinate only currently authorized writers; messages are not delivery.
 
 ### Engineering source responsibilities and retained acceptance coverage
 
@@ -735,7 +674,7 @@ the current Architecture round under existing reservations and gates.
 
 | Source responsibility / window label | Retained engineering environment | Responsibility |
 | --- | --- | --- |
-| **C1 / W1 — Data and Collection** | Codex/Akang | Existing registry and source owners; 14-country categories and approved candidates; platform-native fields and honest unavailable states; Subject/venue/tenant relationships; approved collection and browser sessions; Source → Evidence → Canonical; refresh, review and recovery. Registration never proves collection coverage. |
+| **C1 / W1 — Data and Collection** | Codex/Akang | Existing registry and source owners; evidenced commercial entities and brands operating in China, with user add/remove controls; task-targeted acquisition, scoped monitoring and browser context; platform-native fields and honest unavailable states; Subject/venue/tenant relationships; Source → Evidence → Canonical; refresh, review and recovery. Registration never proves collection coverage. |
 | **C2 / W2 — Owned AI and Agent** | Codex/Akang; approved typed inference/learning admission | The single AI Gateway and existing Agent, Skills, Memory, context, Evaluation and Learning owners; LUMENIS-owned pretrained inference and controlled learning; optional CPU specialist parameter training; grounded CTH/BMP/creation results; multimodal file understanding; version, held-out evaluation, feedback, controlled promotion and rollback. |
 | **C3 / W3 — CTH and BMP Business Workflows** | Codex/Akang — W3 | Existing CTH and BMP services, metrics and task workflows; monitoring, market/competitor/creator/consumer work, operations, cases, campaigns, decisions, outcomes and evaluation inputs; call existing Shared and SYSTEM owners. |
 | **C4 / W4 — Original Pitch, Video and Podcast** | Codex/Akang | Separate customer-ready pitch, editable video and usable podcast results; existing Shared Timeline/Artifact and media owners; editing, review, export, reopen, cancellation and recovery. Each of the three deliverables has its own acceptance. |
@@ -847,7 +786,7 @@ The Product Owner performs the repeated core-job acceptance only after
 engineering is fully operable; development window E2E does not mark
 USER_VERIFIED, RELEASED or OPERATING.
 
-`00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` is the single subordinate contract for default `GLOBAL / ALL`, focus-only Subject/BrandFocus selection, honest uncollected states and data-maturity acceptance. It governs one internal full-universe edition over one Product/Core/Data/Evidence/Permission/API/Context/Experience stack; no acceptance dimension may become a separate product or release. Every related Round Charter and `REAL DELIVERY CARD` must add `GLOBAL UNIVERSE / DATA MATURITY IMPACT` and report `Global Commercial Coverage`, `Global Brand Coverage` and `Guangzhou Taikoo Hui Reference Coverage`. Guangzhou Taikoo Hui is the controlled depth-reference Subject, never the product default or a substitute for global coverage. Only all three `YES` permits `LUMENIS_INTERNAL_FULL_UNIVERSE_READY=YES`; later-round functionality must be reported honestly and must not block unrelated work.
+`00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md` remains the single subordinate scope/data-quality contract; its legacy filename is not a global-expansion requirement. Acceptance uses the current authorized China-operating directory and the actual task's data scope. No worldwide inventory, country quota or globally complete baseline is a product release prerequisite. A reference subject is never the default. Source relevance, native time, provenance, honest missing states, actual useful results and recovery remain required.
 
 Every C window whose deliverable consumes registry data runs RANDOM ENTITY DATA
 ACCEPTANCE against the canonical registry with a recorded rotating/stratified
@@ -984,7 +923,7 @@ Learning is derivative. It may recommend, evaluate and promote a tested version 
 
 LUMENIS is one product with four approved surfaces: Public Website, Web Workspace, Desktop App and Mobile Companion. `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md` records their approved roles and delivery route; it is subordinate to the sole Product Architecture and Experience Constitution.
 
-The Flutter application under `app/` is the shared implementation for Web Workspace, Windows/macOS Desktop and iOS Mobile. The committed `website/` foundation is restricted to the Public Website; its presence is not proof of configured commercial entry or release acceptance. Flask routes remain the one Product Core/API/ViewModel boundary; Shared Reporting resolves scope through SYSTEM Permission, never by depending on `app.py`. Neither surface may create parallel business logic, data, Permission, Evidence or runtime truth. Historical `templates/`, `static/` and `experience_v2/` must not be restored. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical Product Core and approved surfaces.
+The Flutter application under `app/` is the shared implementation for Web Workspace, Windows/macOS Desktop and iOS Mobile. The Public Website presents product information, prepared demonstrations, cases, help and actual product/download links. It has no embedded product trial, functional sandbox, visitor uploads, generation or business execution. Playback, chapter selection and display motion remain; all actual product operations occur in Web Workspace or the installed app. The committed `website/` foundation is restricted to the Public Website; its presence is not proof of configured commercial entry or release acceptance. Flask routes remain the one Product Core/API/ViewModel boundary; Shared Reporting resolves scope through SYSTEM Permission, never by depending on `app.py`. Neither surface may create parallel business logic, data, Permission, Evidence or runtime truth. Historical `templates/`, `static/` and `experience_v2/` must not be restored. Before removing any remaining user-visible capability, trace its business purpose, ViewModel, permission, state, Evidence and acceptance evidence into the canonical Product Core and approved surfaces.
 
 All UI/UX/visual/presentation decisions remain subordinate to the sole authority:
 
@@ -1660,24 +1599,16 @@ Check valid requirements and callers before removing redundant rule copies; neve
 restore stopped providers. Launchers preserve user-selected account/model/effort/tier;
 task instructions never rewrite global settings. Missing readback: `SETTINGS_UNVERIFIED`.
 
-### Intelligent UI full-product coverage — 2026-10-08 Product Owner clarification
+### Intelligent UI full-product coverage
 
-Apply Experience §38's eight concrete requirements to every existing capability,
-all 44 App screens and the existing Public Website content families, including
-navigation, source/results, editing, settings, notifications and failure/recovery.
-Do not limit adoption to AI chat, a homepage or decorative result cards. Each
-screen records its real job, source/action/version contract, task-specific visual
-interaction, four-surface differences and normal-success/recovery acceptance in
-its existing specification. Preserve full scope; use botanical pixel icons and suitable page
-elements under Experience §23. Overall visuals use the PO-selected pixel-cyber, botanical-ecology and retro-futurist style with the
-existing task-specific layouts and full interaction scope. AI-independent deterministic work remains operable when
-inference is unavailable. The sole blueprint, Experience, surface decision,
-Owner index, screen specs, the unique full-product plan/sketch and README are co-published.
-Historical sketches remain evidence; amendments do not self-promote to
-DESIGN_READY/IMPLEMENTED/ACCEPTED. At publication this update did not itself
-dispatch C1-C6/F. Current window/model choices belong to the Product Owner;
-verified observations require fresh admission/tool evidence and a verification time. It changes no model settings and installs no
-OpenAI UI SDK.
+Experience §§23/38 govern all approved workspaces, current ScreenSpecs and Website
+families: original pixel-cyber/botanical/retro-futurist identity, task-specific
+layout/actions, sources/results, editing/settings/notifications, recovery,
+localization, accessibility and complete selectable motion. 44 screen IDs are a
+compatibility baseline, not a scope ceiling. The full plan/sketch, Experience,
+Owner and screen contracts stay synchronized; documentation grants no execution,
+model change, SDK adoption or DESIGN_READY/ACCEPTED status. Deterministic basic
+work remains operable without inference.
 
 ### Current frontend implementation routing
 
@@ -1731,11 +1662,14 @@ Research is adopted through an existing capability's real inputs, processing,
 quality/credibility requirements and user outcome. Reading or training alone
 does not replace product integration; unread/missing assets remain explicit.
 
-### 2026-10-08 前端审计与工具维护增补
+### Frontend and developer-tool continuity
 
-前端执行、设计记录、窗口事实化统一依本文件现行 Authority、Experience 与源码责任章节，不另设阶段。已有 Figma 工程及局部节点的本地收据保留，当前云端版本未核；免费受限时按 Experience §38 使用可编辑源码，不等待付费，不冒称原生 Figma 交付。规则发布不证明界面实现或用户验收。
-
-工具维护保护现有模型/effort/tier、登录方式、权限、网络/代理及会话；只更新核实的稳定兼容版本，开发插件不变成产品依赖。需要中断桌面/会话、重启、扩大权限或新增登录/费用时等待精确批准。既有未发布源代码、私有配置及生产DB保持原边界。
+Use current Experience and source ownership. Existing Figma receipts describe
+their recorded version only; use editable source when approved free tooling is
+limited, without claiming native Figma acceptance. Tool maintenance preserves
+model/effort/tier, accounts, network, sessions, valid dirty source and production
+data. New cost/login/permission or disruptive restart needs its actual grant;
+only verified stable compatible updates are admitted. Publication is not UI proof.
 
 ### 2026-10-08 collection time and missing-data correction
 

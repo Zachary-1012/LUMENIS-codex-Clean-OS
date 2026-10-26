@@ -5,7 +5,15 @@
 
 ## 2026-10-11 当前体验纠偏：业务成果、贯穿式 AI、浏览器边界
 
-CTH/BMP是业务领域；Shared内容制作提供独立入口。用户可直接新建文稿/提案、视频或播客，输入创作要求或导入获准素材并进行编辑，不先选商业主体/品牌、不先创建业务任务或来源简报。业务/研究成果进入制作属于可选续接路径；按用户选择带入资料与版本，不建立强制依赖。创作自己的Brief与项目由既有制作Owner管理，不能要求伪造业务上下文。
+CTH/BMP是业务领域；Shared提供研究、原创创作、文档和媒体处理。研究与文稿服务当前工作，不设置独立研究/文稿产品入口。原创创作、视频及播客后期无需CTH/BMP前置。
+
+用户只需说明目标并提供必要材料；已有主体、时间、资料和约束由当前工作带入。系统在同一任务内完成必要的检索、采集、研究、计算、分析、业务判断或原创创作，直接呈现可用结果。用户按需要追问、修改选中部分或导出，不承担逐项选择工具、搬运资料、建立内部任务、启动各分析模块和拼装报告的工作。除视频与播客后期的精细编辑外，不把后台步骤设计成用户必须逐屏完成的操作链。只有影响结果的歧义、缺失关键输入或有实际风险/外部效果的动作才请求必要确认。草稿及工作状态自动保全，正式修订可追溯，不能把自动保存当外部行动批准。
+
+当前主体范围是现有目录中有依据确认正在中国境内经营的商业主体和品牌主体，包含在境内实际经营的国际品牌；不以国籍或名称判断，不做全球主体扩库。设置 → 主体目录统一管理添加、移除和重新添加，新增也须符合境内经营范围；证据不足的登记显示待核，不进入已确认的活动目录。目录移除停止该主体的新任务使用及关联监测，历史资料、报告、行动和版本仍按原权限保留。
+
+默认按实际相关时间由近到远呈现，提供近一周、近一个月、近半年、近一年及自定义范围；明确用户日期优先。事件发生时间、原文发布时间、采集时间分列，不互相冒充；日期未知单列，历史类比与当前事件时间线分区。
+
+参考依据（2026-10-26，OpenAI Docs 官方正文）：[Projects and chats](https://learn.chatgpt.com/codex/projects)说明自包含任务可直接开始，项目用于复用相关文件和上下文；[Work with files](https://learn.chatgpt.com/codex/artifacts-viewer)说明在聊天旁预览成果并针对选中位置修改。寰意采用的是直接开始、连续上下文、结果就地查看和局部修订的交互原则，不复制其功能范围、界面骨架或品牌。这里是规划采用，不是寰意运行验证，也不据此恢复通用电脑控制。
 
 默认交互围绕用户的业务目标与可用成果。采集清洗、统计、数学方法选择、业务分析及报告组织在后端完成，前端展示已分析的结果，并提供范围/时间/业务约束、筛选比较、直接编辑、保存修订、引用追溯和恢复操作。不要把内部工程流程、论文计算器或 Agent 参数表变成普通用户的工作前提。
 
@@ -1025,7 +1033,7 @@ Responsive acceptance uses the widths in §20 and verifies a semantic recomposit
 
 | Form factor | Composition contract |
 | --- | --- |
-| Public Website | SEO-readable product narrative, capability proof, truthful demo/case material, trial/contact/help and a clear workspace entry. Optional sign-in and account recovery have clear entries alongside direct workspace access; no account wall is imposed. It cannot resemble or execute the operational workspace. |
+| Public Website | SEO-readable product narrative, capability proof, prepared truthful demo/case material, contact/help, downloads and a clear workspace link. Playback, chapter selection, display motion and navigation serve presentation only. No embedded trial, functional sandbox, visitor upload, analysis or generation is offered. Optional sign-in and account recovery belong to the linked product; no account wall is imposed on ordinary product work. |
 | Web Workspace | Browser-first primary operating surface with URL/deep-link semantics, keyboard/pointer access and responsive evidence/workflow composition. Desktop-only capability exposes a truthful handoff/state, never simulated success. |
 | Wide desktop (≥1280 logical px) | Persistent product/domain navigation, a compact active-context bar, workflow-specific work surface, and an optional Evidence/inspector region. The inspector may resize but cannot obscure the primary task. |
 | Compact desktop/tablet (768–1279 px) | Collapsible navigation rail, one primary work surface, and Evidence/inspector as a reversible panel. Keep keyboard navigation and selected context visible. |
@@ -1125,7 +1133,7 @@ The 44 screen IDs and 54 binding records (`BACKEND-GAP-001..054`) are the existi
 - **Web Workspace:** primary browser entry for real workflows; optimize for URL/deep-link restoration, keyboard/pointer work and responsive evidence inspection over the same canonical contracts.
 - **Desktop:** optimize for dense, multi-source decisions and approved local capability: context remains pinned; comparisons can be viewed side by side; timelines, tables and graph relationships support keyboard sorting/filtering; an inspector exposes lineage without obscuring the task; bulk actions preview impact and require the owning product's authorization.
 - **Mobile Companion:** optimize for timely review and a single owned action: keep Subject or Brand focus visible; provide a compact signal feed, prioritized alerts and a one-task action sheet; allow capture/review/approval and source trace; restore the exact originating campaign, case, filters and scroll position on Return. Dense analysis can be summarized, but its definition, uncertainty and source remain inspectable.
-- **Public Website:** optimize product comprehension, credible capability demonstration and low-friction trial/contact/workspace entry. It never presents marketing fixtures as live production results.
+- **Public Website:** optimize product comprehension, credible capability demonstration and clear contact/download/workspace links without embedded product trials. It never presents marketing fixtures as live production results.
 - **Shared UI:** loading, no data, not collected, stale, blocked, permission denied, offline, partial result and failure have distinct copy and recovery actions. Charts, AI summaries and status badges always disclose the selected scope and time window.
 - **Signature behavior:** Trace / Return follows a signal or creative through source → interpretation → decision → authorized action → observed result, then returns to the same working context. This causal continuity, coupled with the Point → Axis → Trace → Field → Strata → Boundary spatial grammar, is the OEVIRA-owned interaction signature. Visual novelty must follow this workflow and must never disguise missing data or authorization.
 

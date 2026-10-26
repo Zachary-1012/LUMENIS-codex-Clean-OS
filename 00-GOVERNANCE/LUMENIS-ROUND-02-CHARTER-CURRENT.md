@@ -35,23 +35,17 @@ ROUND 02 owns classification and enforcement of:
 - root Python caller disposition without deletion;
 - legacy naming/compatibility boundaries;
 - API route truth and duplicate route ownership scheduling;
-- the one internal full-universe context/data-maturity contract: default `GLOBAL / ALL`, focus-only selection, one existing owner stack and compatibility classification for the legacy Guangzhou Taikoo Hui fallback;
+- the one current subject/task-scope contract: China-operating entities, focus-only selection, one existing owner stack and no implicit reference-subject fallback;
 - Jev as an absent ROUND 07 typed decision/evaluation candidate behind the one AI Gateway;
 - the persistent `REAL USER WORK E2E ACCEPTANCE` gate for ROUND 02–15.
 
 ROUND 02 does not implement ROUND 03 database convergence, create Website/Web Workspace/Jev runtime, delete compatibility callers, migrate protected production data or claim release readiness.
 
-## ONE INTERNAL EDITION / context decision
+## Current subject and task scope
 
-ROUND 02 fixes the semantic and routing authority in `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`:
+The sole scope contract remains `LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`. Current subjects are evidenced commercial entities and brands operating in China, including international brands with China operations. Users can add, remove and re-add within that scope. No global directory, country quota or universal reference subject is a release requirement.
 
-- one LUMENIS internal full-universe edition uses one Product, Repository, Product Core, Global Product Universe, Canonical Data, Evidence, Permission, Context Model and Experience ecosystem;
-- default product entry is `GLOBAL / ALL`; selecting Subject/BrandFocus changes focus only, grants no Permission and does not control background execution;
-- Global Commercial Coverage, Global Brand Coverage and Guangzhou Taikoo Hui Reference Coverage are three supporting acceptance dimensions of that one edition, never three products or releases;
-- `GUANGZHOU_TAIKOO_HUI` in current `subject_context.py` is a protected legacy CTH compatibility fallback and controlled depth-reference Subject. It is not product default truth, a selector whitelist or a proxy for global coverage;
-- current global discovery/add/select/clear behavior is not implemented or accepted in ROUND 02. Database keys/registry separation belong to ROUND 03, Permission separation to ROUND 04, continuous runtime/collection/AI scope to ROUND 05–07, and four-surface selector interaction to ROUND 08; later business flows validate it in ROUND 09–14.
-
-ROUND 02 therefore closes the owner/consumer/compatibility decision only. It does not upgrade global coverage or the reference loop to mature.
+Unfocused reads use the current actor's allowed directory; Subject/BrandFocus only focuses a task and grants no Permission or collection schedule. Existing GLOBAL compatibility identifiers do not widen that scope. Source identity, nullable states, row keys and lineage remain owned by the existing repositories. Any runtime adoption needs actual implementation and verification; this charter update proves neither.
 
 ## Current state table
 
@@ -139,17 +133,9 @@ Sol may set this Charter to `PASS` only after the current executable evidence pr
 
 ROUND 03 may begin only in its own Sol-controlled task after fresh remote/local resolution, protection of unknown work and its entry gate. No ROUND 02 Luna worker continues automatically. Sol owns the final `PASS` decision recorded here.
 
-## GLOBAL UNIVERSE / DATA MATURITY IMPACT
+## SUBJECT SCOPE / TASK DATA QUALITY IMPACT
 
-| Acceptance dimension | ROUND 02 responsibility | Verified in this round | Still immature / next owner |
-| --- | --- | --- | --- |
-| Global Commercial Coverage | Fix one owner/consumer/compatibility contract for global CTH discovery and focus. | Governance routes to existing context, registry, Database, Evidence, Permission and Product Core owners; no second product/truth created. | `NO / NOT YET VERIFIED`; registry/key separation ROUND 03, visibility/Permission ROUND 04, acquisition/runtime ROUND 05–06, surface selector ROUND 08, CTH workflows ROUND 09–11. |
-| Global Brand Coverage | Fix the same one-edition contract for global BMP brand discovery and BrandFocus. | CTH/BMP share discovery/context foundation while retaining distinct business semantics and owners. | `NO / NOT YET VERIFIED`; same foundation rounds, then BMP coverage/workflows ROUND 12–13. |
-| Guangzhou Taikoo Hui Reference Coverage | Classify as controlled depth reference, never default/whitelist/global proxy. | Legacy `GUANGZHOU_TAIKOO_HUI` fallback is recorded as compatibility only and forbidden as product-default truth. | `PARTIAL`; full Source→Evidence→Canonical→workflow→Outcome→Learning→Return is accumulated by the owning rounds and revalidated in ROUND 15. |
-
-Selector matrix A–D is `NOT YET IMPLEMENTED`: global discovery/selection, one non-reference commercial Subject, one non-reference brand Subject, deep reference journey and clear-to-Global continuity all require later owning rounds. This does not block the unrelated ROUND 02 SYSTEM runtime job, but it forbids any global-selector or data-maturity completion claim.
-
-`LUMENIS_INTERNAL_FULL_UNIVERSE_READY = NO`.
+Evaluate the user's actual question, time range, authorized subjects and relevant sources. Record what was obtained, its freshness, lineage, missing dimensions and the useful downstream result. Subject removal stops new use and scoped monitoring while preserving historical data and works. Registration, a single reference example or a valid response does not prove task completion. Historical round evidence below retains its recorded version and never grants current execution.
 
 ## RANDOM ENTITY DATA ACCEPTANCE
 

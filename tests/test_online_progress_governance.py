@@ -14,6 +14,39 @@ from scripts.audit_tools.verify_codex_takeover_governance import (
 )
 
 
+class CurrentProductScopeTests(unittest.TestCase):
+    def test_current_scope_requires_task_data_and_protected_history(self) -> None:
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+
+        body = gate.PATHS["global_universe_contract"].read_text(encoding="utf-8")
+        gate._assert_current_subject_scope(body)
+        for required in (
+            "正在中国境内经营",
+            "选择不产生授权",
+            "不因打开产品、选择主体或登记目录而自动扩库",
+            "不迁移/删除生产数据",
+            "近一周、近一个月、近半年、近一年",
+        ):
+            with self.subTest(required=required), self.assertRaises(AssertionError):
+                gate._assert_current_subject_scope(body.replace(required, ""))
+        for retired in (
+            "LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES",
+            "PRE-LAUNCH GLOBAL FOUNDATION",
+        ):
+            with self.subTest(retired=retired), self.assertRaises(AssertionError):
+                gate._assert_current_subject_scope(body + "\n" + retired)
+
+    def test_rule_publication_does_not_admit_product_implementation(self) -> None:
+        from scripts.audit_tools import verify_codex_takeover_governance as gate
+
+        self.assertTrue(gate._is_rules_only_publication_path(
+            ".agents/skills/lumenis-task-router/SKILL.md"))
+        for path in ("app.py", "account/api.py", "app/lib/main.dart",
+                     ".agents/skills/unknown/config.json"):
+            with self.subTest(path=path):
+                self.assertFalse(gate._is_rules_only_publication_path(path))
+
+
 class GovernanceHistoryRegressionTests(unittest.TestCase):
     def _agents_matrix(self) -> str:
         return "\n".join(

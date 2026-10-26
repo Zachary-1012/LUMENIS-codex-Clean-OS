@@ -29,7 +29,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 - **Role / context:** A BMP operator compares one authorized BrandFocus with its owned brands, sub-brands and competitor entities.
 - **User task / completion:** choose or confirm a BrandFocus, or inspect the default global product universe, understand the portfolio relationship, and inspect one source-backed entity profile. FOCUS completion requires exact `brand_focus_id`; GLOBAL_ALL completion requires explicit global scope, verified lineage and row read permission, plus source and item-level trace.
 - **Invariant:** `subject_id` identifies the selected context only; `brand_focus_id` is a distinct BMP business scope. The screen must never infer brand ownership from a Subject, author, source or display name.
-- **Global rule:** `GLOBAL / ALL` is the default full-universe view. It may show real global portfolio rows only when the response and every row carry explicit canonical global scope, verified lineage and `read_allowed`; a focused BrandFocus row without those markers is rejected, never promoted.
+- **Scope rule:** An unfocused portfolio contains only authorized, evidenced China-operating brands. Legacy `GLOBAL / ALL` markers do not widen that scope. Each row retains verified lineage and `read_allowed`; selecting BrandFocus never creates permission. Overseas comparison material remains cited research, not an implicitly registered active brand.
 - **Out of scope:** changing context, creating a brand, editing competitor sets, CTH records, publishing, reports and any write or external effect.
 
 ## 2. Route, entry, exit and return

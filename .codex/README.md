@@ -2,6 +2,9 @@
 
 This directory implements development tooling, not product architecture or production truth.
 Root AGENTS.md and the current source/owner/contracts govern product work.
+Every development and resume entry follows root AGENTS.md's engineering conduct,
+including rule 9 on the complete product plan. Keyword lookup and compacted
+summaries locate original requirements; they never replace or narrow them.
 
 - Lifecycle source: hooks/lumenis_hooks.py; register it once per workstation in ~/.codex/hooks.json after native /hooks trust. Do not duplicate the same handler in both user and project hook registrations. hooks.example.json is a portable-reference template that requires local Python/path review.
 - UserPromptSubmit is treated as user input; duplicate-event detection uses its turn ID, never marker text in the prompt body.
@@ -126,6 +129,34 @@ Missing/truncated/disabled hooks require this same manual command, not a new loo
 These describe recovery mechanics, not a guarantee of error-free model execution.
 
 ### Complete-outcome guards / 完整成果约束
+
+Execution is constrained before supported tool calls, not only at Stop. The existing
+Owner continuity section may bind `execution` with `schema_version: 1`, `status`
+(`RUNNING` or `PAUSED`), `role` (`FRONTEND`, `CAPABILITY`, or explicitly authorized
+`GUARD_MAINTENANCE`), the exact `po_source`, `allowed_writes`, and `approved_calls`.
+Paths are repository-relative exact files or directory prefixes ending in `/`.
+Frontend writes stay in app/, website/ and contracts/experience/; capability work
+cannot write frontend files. Ordinary implementation cannot edit AGENTS, governance
+or the enforcement tooling. A patch checks every source and move destination.
+Linked paths and repository escapes are refused. An unbound or unreadable execution
+scope denies mutation/opaque calls; the native event identity must match the binding.
+
+Shell, MCP and delegation are not made safe by claiming they are read-only. Except
+for explicitly recognized reads and the original continuity entry, admit their
+exact tool name and canonical JSON arguments SHA-256, purpose, input-file hashes
+and explicit `repeat` boolean in `approved_calls`. Successful unchanged calls with
+`repeat: false` cannot be rerun. Changing pinned inputs requires renewed admission.
+This is bounded call admission, not an interpreter for arbitrary scripts or an OS
+sandbox; reviewed scripts remain responsible for their indirect writes/effects.
+No hook can determine visual quality or prove that a declared receipt is truthful.
+
+The admitted scope is frozen through compaction. A new direct PO instruction is
+required to expand it. Pause persists across later questions; only explicit resume
+plus reconciliation may resume writes. Stop preserves unfinished work during a
+pause and cannot dispatch work or demand tests. Native hook registration/trust and
+actual invocation must be verified separately from this source implementation.
+The template uses all supported tool names so delegation does not escape matching.
+Do not register a duplicate handler or claim native enforcement from a script run.
 
 The same Owner continuity record can include `delivery` (schema version 1).
 Record the complete direct-PO outcome before implementation, with stable existing

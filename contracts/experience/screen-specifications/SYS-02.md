@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-02
 status: DESIGN_EXPLORATION
-revision: 2
+revision: 3
 owner_domain: SYSTEM Collector
 binding_ids:
   - BACKEND-GAP-037
@@ -12,16 +12,16 @@ design_authority: 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
 design_decision: DESIGN_EXPLORATION
 reviewer: M target-convergence review
 reviewed_at: 2026-10-07
-approval_reference: Product Owner-approved Universal Platform Acquisition / PlatformManifest / PlatformSession convergence; current implementation remains read-only until bindings pass
+approval_reference: Product Owner-approved Universal Platform Acquisition / PlatformManifest / PlatformSession convergence; current manual actions use the existing Collector owner
 ```
 
 ## 0. Authority basis and artifact disposition
 
 - Constitution basis: SYSTEM collector blueprint, truthful state semantics, responsive recomposition, accessibility and §36 executable acceptance.
-- Product contract: `SYSTEM Collector → Source/Evidence → Canonical Data`; this screen reports operational collection state only.
+- Product contract: `SYSTEM Collector → Source/Evidence → Canonical Data`; this screen reads collection state and starts explicit user requests through the same owner.
 - External sketches, screenshots and taskbooks: `KEEP_AS_EXPLORATION`; none authorize layout or capability.
 - Anti-template check: the primary composition is a platform-lane inspection with an ingestion-boundary explanation, not a generic KPI dashboard.
-- Sol design decision: `DESIGN_EXPLORATION`; the current implementation is a bounded read-only candidate. Product Owner approval below defines the final target, not implementation proof.
+- Design decision: `DESIGN_EXPLORATION`; the source binds manual task operations and saved results. Implementation does not establish visual or whole-platform acceptance.
 
 ## 0.1 Approved final-target extension — 2026-10-07
 
@@ -57,14 +57,14 @@ Final actions may include explicit manual run, an already-authorized schedule, p
 - Authorized context: SYSTEM operator permitted to read the current screen envelope.
 - Real task: determine which collection lanes are verified, partial, missing or blocked, and whether a record may cross into Evidence/Canonical Data.
 - Completion signal: the returned platform states and counts are visible with their source state; missing values stay unavailable.
-- This screen’s verified slice remains the read envelope in §3. The backend has a human-confirmed `POST /api/collect`; its existence is not evidence that this screen’s manual action, background AUTO for every registered subject, or durable scheduling has passed end-to-end acceptance. The final-target controls in §0.1 remain conditional on their actual Owner, current Permission and receipts.
+- Users explicitly select search, original detail, author profile or author history. Source rows provide comments/replies and saved-original reading. Opening the screen, selecting scope and reading task history do not fetch external content. Scheduled collection requires a separate explicit opt-in.
 
 ## 2. Route, entry, exit and return
 
 - Entry: App shell route for SYS-02; shell authentication remains the caller boundary.
 - Read binding: `GET /api/experience/screen/SYS-02` → `experience_screens._build_sys02()` → `collector_status_api.get_all_status()`.
-- Exit: return to the originating SYSTEM route; no drilldown route is verified.
-- Return state: preserve shell origin and scroll position only; no Subject/Brand selection is changed.
+- Exit: return to the originating route without changing Subject/Brand selection. Once the server creates a task, leaving does not discard the task or committed pages.
+- Return state: load authorized task history from the original durable queue; open the saved task and its exact Source/Evidence page versions without refetching.
 
 ## 3. Verified data and callable bindings
 
@@ -74,7 +74,7 @@ Final actions may include explicit manual run, an already-authorized schedule, p
 | P0 | Platform lane | `sections[type=table].rows` fields `平台/状态/解析记录/说明` | Unknown status and unavailable record count remain explicit | BACKEND-GAP-037 |
 | P1 | Ingestion boundary note | `sections[type=note]` | If absent, show binding-unavailable copy; do not infer Evidence acceptance | Collector closed-loop contract |
 
-No write action is verified through this screen’s current read binding. Separately, `app.api_collect` implements a bounded human request (`operator=human|human_ui`, `confirm_read_only=true`), server-derived scope/Permission and admission rechecks, a task_id and current status reads. Its current in-memory task contract returns `resume_supported=false`; this is not durable cross-restart recovery, an idempotency key or a verified cancel control. No unconditional AUTO-for-all-subjects guarantee, screen-level write binding, durable schedule, or end-to-end Evidence emission is established by this screen specification. Timeout/unknown results must query the known task rather than silently resubmit; when no task_id was received, show unknown and do not invent deduplication.
+`CollectorRequestPanel` calls the existing `POST /api/experience/cth/platform-collection/search` for prepare/confirm/start/step/cancel/resume/recover. The original `TaskQueue` stores actor/scope-bound requests, attempt leases and immutable result references; source bodies remain in Source/Evidence/Canonical. `GET .../tasks` filters exact actor and scope before pagination, `GET .../tasks/<id>` reopens a task, and `GET .../results?evidence_ref=...&source_id=...` reads the captured original and its native metrics. A later refresh does not replace an earlier capture. Comment pages use the original signed page/cursor chain. The client retains a request identity on uncertain delivery, reads the existing task and never blindly starts a replacement. A terminal task never re-fetches. Current permissions are rechecked on reads and execution; session recovery does not itself resume acquisition. Runtime, platform coverage and visual acceptance require their separate actual evidence.
 
 ## 4. State and recovery matrix
 
@@ -83,9 +83,18 @@ No write action is verified through this screen’s current read binding. Separa
 | Loading | Reading current collector state; no placeholder counts | Wait or leave |
 | Empty / not collected | No platform lane or metric returned | Read boundary explanation; do not show zero |
 | Partial | Some lanes/counts returned, others unavailable | Refresh read route |
-| Offline / error | Connection, malformed envelope or server failure | Retry only when the failure is retryable; clear stale snapshot |
+| Discovery only | Display the observed source title/URL; search indices with zero originals are not collected article content | Preserve discovery records and the actual verification/access state; resume only through the permitted recovery path |
+| Offline / error | Connection, malformed envelope or server failure; prior authorized snapshot is marked stale | Retry only when retryable; preserve saved results, but clear private content on access denial |
 | Blocked / permission denied | 401/403 access state | Return to authentication/access flow; no collector operation |
-| Ready | Current returned states are shown | Read only; `ACTIVE` is not inferred from registration |
+| Ready | Current returned states are shown | Explicit collection only; `ACTIVE` is not inferred from registration |
+| Waiting / cooldown | Prior committed pages remain readable; latest attempt cause is separate | Honor server delay; continue through the same task and cursor |
+| Cancelled | Pending work stopped; prior results retained | Resume through the original task after current authorization |
+| Completed | This bounded request ended; platform coverage is still explicit | Reopen saved pages; a refresh is a new explicit request |
+| Media saved | Source-bound original bytes, file identity and available inspection are distinct from text/image/audio understanding | Reopen through the same authorized task; original file streaming supports Range and stops on revoked access |
+
+原文详情、评论与回复、媒体原件沿已保存来源身份进入同一持久采集任务；停止保留已提交结果，继续从服务器保存的游标或原件回执恢复。历史页读取不重新抓取，原文版本变化保留旧快照。媒体检查仅展示实际完成的维度，未执行的OCR、ASR或语义理解不得显示已分析；配置可用与真实平台访问成功分别显示。
+
+用户明确发起或继续的媒体请求，在原任务内按服务端确认的步预算继续获取剩余原件，显示发现媒体数与已保存数；不要求每一小批重复点击。遇到访问、资源或处理阻塞时停止自动续步，取消、离开和范围变化也停止客户端续步；已保存原件和失败位置可重开，不重复抓取或重试失败。此行为不新增定时采集，不启动其他任务，也不扩大已确认的来源范围。
 
 ## 5. Purpose-built desktop composition
 
@@ -101,7 +110,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 **9. Executable acceptance**
 - 三语 zh-CN/en/ko 完整；适用全部已登记主体；无账号墙。
-- 只显示Collector/Scheduler Owner读回的真实模式与范围：MANUAL默认，用户刷新或当前上下文任务明确触发采集；AUTO需对实际范围和日程显式opt-in。历史内部连续程序回执不授权当前自动开工，登记、进入或选择主体不触发采集，无单主体硬编码。当前只读切片不执行模式写入、手动采集或取消；依赖动作在真实callable/Permission/幂等恢复合同接通前保持OPEN。身份、来源权益、Permission及Effect Fence始终执行，界面不自行关闭安全边界。
+- 只显示Collector/Scheduler Owner读回的真实模式与范围：MANUAL默认，用户刷新或当前上下文任务明确触发采集；AUTO需对实际范围和日程显式opt-in。历史内部连续程序回执不授权当前自动开工，登记、进入或选择主体不触发采集，无单主体硬编码。手动采集、继续、取消、恢复与历史读取绑定原持久任务合同；独立日程与尚未接通的依赖仍按实际证据保留OPEN。身份、来源权益、Permission及Effect Fence始终执行，界面不自行关闭安全边界。
 
 ### Existing contract — Purpose-built desktop and web composition
 
@@ -143,7 +152,7 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 ### 采集模式与动作边界（目标布局见唯一草图）
 
 Web Workspace composition
-Web：范围、实际进度与失败恢复逐项可见；后台状态刷新不抢焦点，返回保留筛选与选择。完整手动/批量操作目标在唯一草图保留，接通真实Owner动作后须显式请求、Permission与幂等/恢复核验，不得因浏览器刷新重复启动；当前只读切片不发起该效果。
+Web：范围、实际进度与失败恢复逐项可见；后台状态刷新不抢焦点，返回保留筛选与选择。完整手动/批量操作目标在唯一草图保留，接通真实Owner动作后须显式请求、Permission与幂等/恢复核验，不得因浏览器刷新重复启动；仅用户明确发起采集或继续动作才执行该效果。
 
 ## 6. Purpose-built mobile composition
 
@@ -165,6 +174,9 @@ Web：范围、实际进度与失败恢复逐项可见；后台状态刷新不�
 | --- | --- | --- |
 | Load current state | Existing screen GET; read only | No persisted Evidence; distinguish 401, 403, offline and malformed response |
 | Retry read | Same GET only when retryable | No collector mutation and no fake success |
+| Collect / continue | Current actor/scope, exact source confirmation and original Collector permission | Durable attempt fence, original native cursor and transactional Evidence/Canonical |
+| Stop / resume | Original task actor/scope and current permission | Stop invalidates the attempt; resume retains committed pages and reconciles signed receipts |
+| Open capture / original / comments | Current source visibility and authenticated Evidence | Saved versions, unknown metrics and index/original distinction remain intact |
 
 ## 8. Accessibility, motion and localization
 

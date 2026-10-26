@@ -4,21 +4,22 @@
 
 品牌域名：oevira.com。此源码更名不代表域名已部署或各端已安装新版本。
 
-商业运营、品牌市场、独立研究与内容制作的一体化工作平台。
-An integrated workspace for commerce operations, brand and market work, independent research, and content production.
+围绕商业运营、品牌市场与原创创作，完成从真实问题到可用成果的工作。
+A workspace for commerce operations, brand and market work, and original creation—from real questions to usable results.
 
 [产品蓝图 / Product blueprint](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) · [完整产品规划 / Full product plan](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md) · [全产品草图 / Full-product sketches](00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md) · [体验规范 / Experience](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md) · [开发规则 / Contributing rules](AGENTS.md)
 
 ## 产品定位 / Product purpose
 
-从使用者出发：为品牌方、商业运营者和代理机构连接可靠资料、判断、可修改成果与实际复盘；也希望服务普通人对品牌、商业空间和公司的个人关注。大众体验是发展愿景，不冒称已上线能力。独立研究、一份文稿、一段影像或一期播客都可从想法开始，不以先完成商业分析为前提。完整品牌陈述见[现行定位](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)。
+从使用者出发：为品牌方、商业运营者和代理机构连接可靠资料、判断、可修改成果与实际复盘；也希望服务普通人对品牌、商业空间和公司的个人关注。大众体验是发展愿景，不冒称已上线能力。任务内研究、一份文稿、一段影像或一期播客都可从想法开始，不以先完成商业分析为前提。完整品牌陈述见[现行定位](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)。
 
-寰意将真实资料、分析、业务判断和可编辑成果连接起来。CTH 与 BMP 是两个业务领域；共享能力中的研究、提案、视频和播客可以独立使用，也可以与业务工作联动。SYSTEM 提供共同的采集、浏览器、权限、数据、调度和恢复基础。
+寰意将真实资料、分析、业务判断和可编辑成果连接起来。研究、文档和报告服务当前任务；原创创作、视频及播客后期可以直接开始，无需先建立业务任务。SYSTEM提供共同的采集、浏览器、权限、数据和恢复基础。
 
-OEVIRA connects real materials, analysis, business decisions, and editable deliverables. CTH and BMP are business domains. Shared research, proposals, video, and podcasts can be used independently or connected to business work. SYSTEM provides acquisition, browsing, permissions, data, scheduling, and recovery.
+OEVIRA connects real materials, analysis, business decisions, and editable results. Research, documents, and reports support the current task. Original creation and video or podcast post-production can start directly without a prior business task. SYSTEM supplies shared acquisition, browsing, permissions, data, and recovery.
 
-CTH 围绕商业主体工作，BMP 围绕品牌与市场工作，Shared Capability 提供独立、可复用的研究与制作能力。
-CTH is Subject-first, BMP is Brand/Market-first, and Shared Capability provides independent, reusable research and production.
+CTH · 商业运营围绕经营主体，BMP · 品牌市场围绕品牌与市场；Shared在同一工作中提供研究、原创创作、文档交付及视频/播客后期。主体目录面向在中国境内经营的商业主体与品牌，可添加、移除和重新添加。
+
+CTH is Subject-first commerce operations; BMP is Brand/Market-first. Shared Capability provides research, original creation, document delivery, and video/podcast post-production within that work. The directory covers commercial entities and brands operating in China, with add, remove, and re-add controls.
 
 产品交付按五轮推进：SYSTEM → CTH → BMP → Shared → Agent Groups / 自研 AI。这是研发与验收顺序，不是用户必须经过的流程。
 
@@ -28,26 +29,26 @@ AI 贯穿适用的工作环节，辅助理解、分析、建议和创作；正�
 
 AI assists understanding, analysis, recommendations, and creation across applicable workflows. Ordinary business operations, deterministic analysis, manual editing, saving, and recovery do not require a model, external AI API, or GPU. Source facts, computed results, AI suggestions, and human decisions retain distinct provenance.
 
-产品 AI 经唯一的 SYSTEM AI Gateway 调用。寰意自有模型是默认建设路线与完整能力目标；Groq 是产品内置的外部连接，用户也可自带其他供应商 API，经同一 Gateway 的相应协议适配、安全目的地校验、明确选择及适用 Permission/SourceUse 使用。配置不等于可用或外发授权；旧退役路线不恢复、不探测，不自动切换或回退。AI 不可用时，只有依赖 AI 的增强动作不可用；正常业务、确定性分析、人工编辑、保存与恢复继续工作。
+产品 AI 经唯一的 SYSTEM AI Gateway 调用。寰意行业AI通过获准预训练模型、行业知识、专业工具与受控学习提供完整能力，不以GPU训练为前提；Groq 是产品内置的外部连接，用户也可自带其他供应商 API，经同一 Gateway 的相应协议适配、安全目的地校验、明确选择及适用 Permission/SourceUse 使用。配置不等于可用或外发授权；旧退役路线不恢复、不探测，不自动切换或回退。AI 不可用时，只有依赖 AI 的增强动作不可用；正常业务、确定性分析、人工编辑、保存与恢复继续工作。
 
-Product AI uses the single SYSTEM AI Gateway. OEVIRA-owned models remain the default development route and complete capability goal. Groq is the product-provided external connection; users may also bring other providers’ API credentials through supported adapters, validated destinations, explicit selection and applicable Permission/SourceUse in the same Gateway. Configuration proves neither availability nor permission to transmit. Retired routes are not revived or probed, and no automatic switching or fallback occurs. If AI is unavailable, ordinary business work, deterministic analysis, manual editing, saving and recovery continue.
+Product AI uses the single SYSTEM AI Gateway. OEVIRA combines approved pretrained inference, industry knowledge, professional tools, and controlled learning without requiring GPU training. Groq is the product-provided external connection; users may also bring other providers’ API credentials through supported adapters, validated destinations, explicit selection and applicable Permission/SourceUse in the same Gateway. Configuration proves neither availability nor permission to transmit. Retired routes are not revived or probed, and no automatic switching or fallback occurs. If AI is unavailable, ordinary business work, deterministic analysis, manual editing, saving and recovery continue.
 
 ## 用户如何工作 / User workflows
 
 | 工作 / Work | 操作与成果 / Actions and outcomes |
 | --- | --- |
-| 工作区首页与聊天 / Workspace home and chat | 打开工作区即进入聊天/任务入口；可在同一入口提交多个彼此隔离的任务，长任务异步执行并把结果送回对应任务，不展示内部推理过程。侧边导航可进入 CTH、BMP、Shared 独立研究、提案/视频/播客、内置浏览器和 SYSTEM。 / Open the workspace directly to its chat/task entry. Submit multiple isolated tasks through one entry; long tasks run asynchronously and return results to their task without exposing internal reasoning. Navigation opens CTH, BMP, independent Shared research, proposals/video/podcasts, the in-product browser, and SYSTEM. |
+| 工作区首页与聊天 / Workspace home and chat | 打开工作区即进入聊天/任务入口；可在同一入口提交多个彼此隔离的任务，长任务异步执行并把结果送回对应任务，不展示内部推理过程。侧边导航可进入 CTH、BMP、Shared 创作、视频/播客、内置浏览器和 SYSTEM。 / Open the workspace directly to its chat/task entry. Submit multiple isolated tasks through one entry; long tasks run asynchronously and return results to their task without exposing internal reasoning. Navigation opens CTH, BMP, original creation, video/podcasts, the in-product browser, and SYSTEM. |
 | CTH · 商业运营 / Commerce operations | 围绕商业主体查看监测、事件、消费者反馈与风险，形成有依据的判断、行动和结果报告。 / Monitor a commercial subject, inspect events, consumer feedback and risks, and develop supported decisions, actions, and outcome reports. |
 | BMP · 品牌市场 / Brand and market | 研究品牌、市场、竞品、创作者和传播，制定及评价 Campaign。 / Research brands, markets, competitors, creators, and communications; plan and evaluate campaigns. |
-| 独立研究 / Independent research | 普通资料可直接上传，无需填写来源使用或本次用途表单；后台解析并提供不依赖 AI 的确定性基础分析，可用且获准的 AI 增强单独标明为派生结果。资料库按真实入库时间展示逐项资料卡，原生发布时间单独保留且可为空；后台仍执行现有权限检查，未核实的作者/权益保持 UNKNOWN，不隐含对外发布或训练许可。打开资料卡可阅读原文、可定位引用与分析，并保存、修订、重开和恢复。 / Upload ordinary materials directly without a source-use or per-task-purpose form. The backend parses each item and provides deterministic baseline analysis without AI; available and authorized AI enhancement is labeled separately as derived output. A materials timeline shows one card per item ordered by its actual ingest time, while native publication time remains a separate nullable value. Existing permission checks remain; unverified authorship and rights stay UNKNOWN, with no implied publication or training license. Open a card to read the original, locatable citations, and analysis, then save, revise, reopen, and recover the work. |
+| 资料与依据 / Materials and evidence | 在当前工作附入资料，直接得到有依据的结果；需要时打开原文、引用和分析，资料卡可查找和重开。研究不另设必经工作区。 / Attach materials to the current task and receive grounded results. Open originals, citations, and analysis when needed; find and reopen material cards without a separate research workflow. |
 | 提案与文稿 / Proposals and documents | 从空白、创作要求或已有资料开始，编写、编辑、审阅和导出。 / Start from a blank document, creative brief, or existing material; write, edit, review, and export. |
 | 视频 / Video | 导入素材、编排与剪辑、调整声音和字幕、预览及渲染，保存成片与可编辑工程。 / Import and arrange media, edit clips, sound and captions, preview and render, and retain both the output and editable project. |
 | 播客 / Podcasts | 编写脚本、导入或录制音频、剪辑混音、管理章节与转写、试听及导出。 / Write scripts, import or record audio, edit and mix, manage chapters and transcripts, listen, and export. |
 | 内置浏览器 / In-product browser | 查看原帖和网页、进行获准操作，并返回原任务；人工接管必须明确发起。 / Inspect sources and webpages, perform permitted actions, and return to the original task; human takeover is explicit. |
 
-独立研究与制作不要求先创建 CTH/BMP 任务、商业主体、品牌聚焦或业务研究报告。跨能力联动由用户选择，并传递所选来源、权限、约束和版本。产品内浏览器的范围为网页工作，不包含通用操作系统或任意桌面应用控制。
+说明目标，附入必要材料，系统完成适用的检索、研究、分析或创作；直接查看结果，按需局部修改和导出。视频和播客后期保留专业精细编辑。基础工作不依赖AI，模型专属能力有其实际可用性和权限边界。
 
-Independent research and production do not require a prior CTH/BMP task, commercial subject, brand focus, or business research report. Optional connections preserve the chosen sources, permissions, constraints, and versions. In-product browsing covers web work, not general operating-system or desktop-application control.
+Describe the goal and attach necessary inputs. The product performs applicable retrieval, research, analysis, or creation and presents the result for focused revision or export. Video and podcast post-production retain detailed editing. Basic work remains usable without AI; model-specific actions retain availability and permission boundaries.
 
 ## 数据与成果原则 / Data and deliverable principles
 
@@ -63,7 +64,7 @@ Independent research and production do not require a prior CTH/BMP task, commerc
 
 | 表面 / Surface | 用途 / Purpose |
 | --- | --- |
-| Public Website | 产品介绍、使用说明、帮助与工作区入口。 / Product information, guidance, help, and workspace entry. |
+| Public Website | 产品、场景、制作好的演示、帮助及产品/下载链接；不提供在线功能体验。 / Product and scenario presentation, prepared demonstrations, help, and product/download links; no embedded product trial. |
 | Web Workspace | 浏览器中的业务、研究与制作工作区。 / Browser-based business, research, and production workspace. |
 | Desktop · Windows / macOS | 原生桌面工作区。 / Native desktop workspace. |
 | Mobile Companion · iOS | 移动查阅、审阅与工作接续。 / Mobile reading, review, and work continuation. |

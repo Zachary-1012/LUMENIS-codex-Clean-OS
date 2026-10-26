@@ -1,6 +1,6 @@
-# 寰意 AI 路线校准：双源核对、规划变更与实施依赖
+# 寰意全产品规划收敛与 AI 路线校准：变更、核对及实施依赖
 
-本轮依据 PO 于 2026-10-26 提交的两份 Markdown 和附加完整执行文本，完成现行规划的原位调整；不是重新定义产品，也不是实现、模型运行或专业能力验收。GPU 训练路线为 **WITHDRAWN_BY_PO**，完整行业 AI 目标保留。本文是采用和交付证据；长期规划仍由原 Architecture、主规划、Owner 和合同维护。
+本轮依据 PO 于 2026-10-26 提交的两份 Markdown、附加完整执行文本及随后“全部关联文件更新”的直接指令，完成现行规划的原位调整；不是重新定义产品，也不是实现、模型运行或专业能力验收。GPU 训练路线为 **WITHDRAWN_BY_PO**，完整行业 AI 目标保留。本文是采用和交付证据；长期规划仍由原 Architecture、主规划、Owner 和合同维护。
 
 ## 1. 授权、双源与保护边界
 
@@ -107,41 +107,100 @@
 
 优化在相同输入、模型版本和任务预算下比较：原系统/模型直答、检索、业务工具、策略经验、可选小模型、完整组合；工具与模型收益分开。冻结新品牌/主体、时间和来源族留出，原稿/转载不得跨集合；报告多次运行分布和失败。事实/数值回原件，行业判断、原创、品牌自然度与成果可用性独立盲审，关键越权/错归属/幻觉引用/重要否定遗漏/重复效果不能被平均分抵消。成本包括首个有据结果和全任务p50/p95、峰值RAM、tokens、调用费、修改及恢复，不预填节省比例。
 
-## 6. 本轮文件落位、验证与交付状态
+## 6. 全产品原位收敛与退役条款处理
 
-本轮在原主规划J26–J28、G17/G21/G50/G163/G168/G169/G170、Architecture §6、AI Checklist、Source Owner、Real Delivery、Learning合同、Math采用Markdown、专业增强规格、AI-01～05、Experience、总草图及AGENTS/CURRENT同步修改。原覆盖JSON和工单HTML只是这些权威正文的投影，不另建规划。30成果组、396唯一coverage_ref、原需求ID和213交互要求保持，撤销路线与未完成能力分开。
+不是仅修改AI章节。当前调整已同时进入唯一Architecture、主规划、总草图、Experience、Owner、范围/采集/交付合同、详细界面规格、README、AGENTS、续接入口与原HTML工单。原30成果组、396个唯一coverage_ref和213交互保持；原ID保留变更处置，撤销的路线不改称通过。
 
-`OPENAI-MATH-ADOPTION-20261007.json` 保持原字节/历史证据身份；其日期与原训练收据不代表当前训练授权。当前采用路线在同名 Markdown、J27、Architecture及本记录明确修改。训练配置、训练测试和执行代码本轮不变，其后续分类迁移列于§3；不能把文档PR当做代码已退出训练依赖。
+| PO决定 | 当前规划落位与清退 |
+|---|---|
+| 境内经营主体、可添加删减 | 当前范围合同及Architecture、主体设置/关系规格同步；删除全球扩库、国家配额和全球成熟度发布门槛；保历史资料和Permission |
+| 精准任务采集与固定监控 | 当前问题、时间、来源缺口驱动；浏览器抓取、舆情/活动/营销监控保留；用户选择监测范围频率，可暂停结束；删入口触发扩库与无限采集要求 |
+| 近期时间线 | 近一周/月/半年/一年/自定义；原生事件、发布和捕获时间分开，历史类比不混当前事件 |
+| 研究/文稿服务当前工作 | 主规划、草图、Shared/AI/业务规格、README同步；删除强制独立研究产品与结果搬运步骤；原创创作及视频/播客后期可以直接开始 |
+| 官网展示 | 官网README/开发参考、原J01及草图同步；只展示制作好的演示、场景/案例/帮助和产品链接，无嵌入功能试用、上传/分析/生成 |
+| 前端风格与范围 | 原像素赛博＋植物生态＋复古未来主义、满天星及五植物角色、任务布局、动效选择、三语/无障碍保留；独立图片编辑器不恢复 |
+| 无GPU必训行业AI | 本记录§2–5及原J/G/PE/AI规格保留完整能力；分类推理/策略/可选CPU专用学习，不强迫预训练推理拥有自训回执 |
+| 执行顺序与连续性 | 原主规划§9.0及原工单按实际能力依赖组织；研究/文档是任务内能力，不让用户逐工程模块通关；已暂停实现不自行恢复 |
 
-本轮验证于 2026-10-27T00:04:46.350349+08:00 读回。只执行已查明无产品运行副作用的文档/静态校验，每个子进程设90秒硬超时。
+两个治理检查器同步适配：主体范围检查不再强制全球覆盖；原则检查不再强制历史固定角色模型。保留账号/模型由PO选择、来源/权限、数据真实性、历史保护、暂停、CI及完整能力要求。增加对应范围负例，防止退役全球门槛回流或把产品实现混入RULES_ONLY_PUBLICATION；没有改必需工作流或降低产品验收。
 
-| 检查 | 结果与范围 |
-| --- | --- |
-| constitution | PASS；文档/源码结构校验，不是功能验收 |
-| experience-authority | PASS；文档/源码结构校验，不是功能验收 |
-| screen-blueprints | PASS；文档/源码结构校验，不是功能验收 |
-| experience-anti-template | PASS；文档/源码结构校验，不是功能验收 |
-| source-adoption-final | PASS |
-| governance-staged | PASS |
-| 原要求与Owner | 396唯一coverage_ref、30成果组及原Owner/状态未删改；213交互要求保留 |
-| 保护核对 | 4808文件冻结摘要比对：本轮文档之外没有修改或缺失；原分支HEAD及暂存为空保持 |
-| diff及发布范围 | diff --check通过；20个明确文档路径，未暂存产品代码/配置/数据 |
+`OPENAI-MATH-ADOPTION-20261007.json`等历史证据保持原字节身份；日期和原训练回执不构成新训练授权。当前路线在原Markdown和本记录更新。产品加载器、执行配置、数据库和未审实现本轮未修改，其分类迁移依赖仍见§3。
 
-首次source-adoption检查因AGENTS超过既有上下文体积上限失败；已压缩本轮重复措辞并清退旧规则，114651字节低于114688上限，复跑通过。没有改检查器或放宽门槛。初次失败及最终日志保存在本机原任务记录。
+## 7. 验证、保护和发布状态
 
-本轮没有必要运行产品编译、模型/业务测试或全仓回归，因为没有产品源码变化；未将文档静态通过冒充这些结果。PR托管CI由原工作流执行，尚未完成的CI不预记为通过。本机脏树整体及其先前变化不由本轮规划PR代验。
+本次收口核对时间：`2026-10-27T01:12:03.607002+08:00`。仅对文档及受影响治理工具执行必要验证，不启动产品、浏览器采集或模型。
 
-PR #147首轮Product Gate（run 40356178544，head 1ca51de917e1daa57d15dac6c070195f74af3249）失败：Architecture缺少原“commercially usable open foundation weights”许可标识。已在分类推理句中补回原许可要求，未恢复GPU训练、未修改/弱化检查器。后置日志上传因前序门禁中止没有测试文件，不能说产品测试已运行。修复后精确SHA的CI单独读回，不借用旧结果。
+| 检查 | 实际范围与结果 |
+|---|---|
+| 原要求与工单投影 | 30成果组、396唯一coverage_ref完整；全部当前来源绑定及HTML五项来源摘要核对通过；未提高功能验收状态 |
+| 规划一致性 | Constitution、Source adoption、Experience唯一/blueprints/anti-template、Only-One通过 |
+| 发布边界 | staged治理门禁、精确路径diff --check通过；实际暂存只有规划/文档与既有治理工具/相应回归 |
+| 修改的治理工具 | 三个Python文件编译通过；新增两项政策负例通过；Ruff新增问题为0，原22项格式/既有风格问题保留并明确记录，不称全绿 |
+| 原工作区保护 | 冻结4783项已跟踪文件身份；本轮选择路径之外无修改/缺失，原实现分支/暂存和未提交源码保留 |
+| 产品运行及专业验收 | NOT_RUN；没有产品执行代码变化，不能由文档检查升级 |
 
+本轮发现并修复的规划核对失败：AGENTS重复规则超过114688字节上限，已删除重复正文而保留唯一规则引用；原则检查仍要求历史固定模型配置，已按当前PO权限修正；README删重时漏掉三个仍有效的域名词，已恢复正确双语定位。原失败记录保留，不改判历史结果。
 
-| 状态层 | 本轮真实结论 |
-| --- | --- |
-| 已改规划 | 是；权威正文及适用镜像原位调整 |
-| 已提交 PR | 以本记录所在规划 PR 实际提交/链接为准 |
-| 已合入 main | 否；等待审阅与适用批准，不自动合并#146 |
-| 已实现代码迁移 | 否；本轮未改执行文件 |
-| 实际模型运行／训练 | 未执行；GPU训练已撤销，CPU学习未获本轮执行 |
-| 专业任务通过／效果提升 | 未验证，不能由规划或文档检查推出 |
-| 已发布／已运行 | 否；未启动/切换Core或部署 |
+完整治理文件回归另暴露Windows隔离检出把不可变历史证据换成CRLF而违反原SHA；仅在临时发布工作树按Git已提交blob及原固定SHA核实换行，不改证据内容、检查值或主区文件。换行复原后四项clearance治理回归通过；此前通过的其他治理用例复用原结果，失败日志保留。这不是产品业务回归。
 
-下一阶段按原Owner实施§3的分类准入和实际消费者，并在明确准入后验证推荐组合及完整专业任务。本轮交付到可审阅规划 PR 后停止；不恢复暂停的产品开发、旧GPU任务或其他窗口。
+首轮AI规划PR的历史检查：head `89de5080ec794b7bc0c2923adbb3f49eca1e7d68` 的Product `40357328779` / App `40357328954`成功；更早head `1ca51de917e1daa57d15dac6c070195f74af3249` 的Product `40356178544`因许可标识缺失失败，补回许可要求后修复。旧CI不覆盖本次全产品增补；新CI必须按本次推送SHA读回。
+
+| 状态层 | 结论 |
+|---|---|
+| 当前规划调整 | 已在原位完成并统一当前绑定；不是新总规划 |
+| 发布途径 | 原规划PR #147增补，Refs #17保持OPEN；实际提交/CI以该PR精确版本为准 |
+| main | 按后续PO“线上线下统一、唯一主线”指令，经审阅与必需CI后仅合入本规划PR；读回前不称main已更新，不合并未审#146 |
+| 产品代码与运行 | 保留原有效本地成果，本轮没有实现迁移、模型调用/训练、Core切换或部署 |
+| 完整产品闭环 | 尚未交付；原逐能力真实结果、修订/重开/恢复、专业及组合验收仍须实施完成 |
+
+全部改动路径（同一规划PR，包含此前已发布的AI修订）：
+
+- `.agents/skills/lumenis-local-engineering-tools/SKILL.md`
+- `.agents/skills/lumenis-progressive-context/SKILL.md`
+- `.agents/skills/lumenis-task-router/SKILL.md`
+- `.codex/README.md`
+- `00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md`
+- `00-GOVERNANCE/LOOP-PLAN-20261014/execution-workorder.html`
+- `00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md`
+- `00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md`
+- `00-GOVERNANCE/LUMENIS-AI-PRODUCT-CLOSURE-CHECKLIST-V1.md`
+- `00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md`
+- `00-GOVERNANCE/LUMENIS-CONTENT-CREATION-LEARNING-SOURCE-CONTRACT-V1-20260911.md`
+- `00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md`
+- `00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md`
+- `00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md`
+- `00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`
+- `00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md`
+- `00-GOVERNANCE/LUMENIS-ROUND-02-CHARTER-CURRENT.md`
+- `00-GOVERNANCE/LUMENIS-ROUND-03-CHARTER-CURRENT.md`
+- `00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`
+- `00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md`
+- `00-GOVERNANCE/SHARED-CAPABILITY-COLLECTOR-CLOSED-LOOP-V1.md`
+- `00-GOVERNANCE/evidence/round-15/AI-ROUTE-CALIBRATION-20261026.md`
+- `00-GOVERNANCE/evidence/round-15/OPENAI-MATH-ADOPTION-20261007.md`
+- `00-GOVERNANCE/evidence/round-15/professional-enhancement-20261024.md`
+- `00-GOVERNANCE/evidence/round-15/source-adoption-20261018/EXISTING-OWNER-WORK-HANDOFF.json`
+- `AGENTS.md`
+- `README.md`
+- `contracts/experience/screen-specifications/ACC-02.md`
+- `contracts/experience/screen-specifications/ACC-03.md`
+- `contracts/experience/screen-specifications/AI-01.md`
+- `contracts/experience/screen-specifications/AI-02.md`
+- `contracts/experience/screen-specifications/AI-03.md`
+- `contracts/experience/screen-specifications/AI-04.md`
+- `contracts/experience/screen-specifications/AI-05.md`
+- `contracts/experience/screen-specifications/BMP-02.md`
+- `contracts/experience/screen-specifications/BMP-06.md`
+- `contracts/experience/screen-specifications/README.md`
+- `contracts/experience/screen-specifications/SCREEN_SPEC_TEMPLATE.md`
+- `contracts/experience/screen-specifications/SH-01.md`
+- `contracts/experience/screen-specifications/SH-02.md`
+- `contracts/experience/screen-specifications/SH-04.md`
+- `contracts/experience/screen-specifications/SYS-02.md`
+- `scripts/audit_tools/verify_ai_native_constitution.py`
+- `scripts/audit_tools/verify_codex_takeover_governance.py`
+- `tests/test_online_progress_governance.py`
+- `website/DEVELOPMENT-BRIEF.md`
+- `website/README.md`
+
+当前只交规划及对应治理修正。产品实现继续遵守当前暂停，不能把文档收口当作任何功能已完成或恢复旧GPU路线。

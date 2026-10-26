@@ -4,10 +4,10 @@ Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canoni
 The approved brand domain is `oevira.com`; the positioning line is “An Open Space for Thought and Creation.” This documentation does not configure DNS, a public origin or deployment, or establish that the destination is live. Existing verified-origin and unavailable-link rules below still apply.
 
 This package contains the public, static Astro website for introducing OEVIRA
-and its product boundaries. It is separate from the Product Core-backed Web Workspace
+and its product boundaries through prepared demonstrations and public materials. Visitors can play videos, browse chapters and follow real product/download links; the site offers no embedded trial, upload, analysis or generation. It is separate from the Product Core-backed Web Workspace
 in [`../app/`](../app/README.md).
 
-本目录是寰意面向公众的静态 Astro 官网，用于介绍产品及其边界；它与
+本目录是寰意面向公众的静态 Astro 官网，用于产品/场景展示、制作好的演示、帮助及真实产品/下载链接，不提供在线试用、功能体验、资料上传、分析或生成。视频播放、章节切换和展示动效保留；它与
 [`../app/`](../app/README.md) 中的 Web Workspace 相互独立。
 
 ## Local development｜本地开发
@@ -47,6 +47,18 @@ The static site provides these locale routes:
 Keep each language's content aligned in meaning and product facts. A locale
 route must not imply an unsupported feature, service, permission or availability.
 
+Each locale also has addressable `products/`, `solutions/`, `outcomes/`, `help/`,
+`trust/`, `updates/`, `download/`, `contact/`, `terms/`, `privacy/` and `license/`
+pages. Language switching retains the current family. The help library covers
+starting work, sources, research, writing, video, podcast, commerce, brand,
+recovery and preferences; its content remains readable without JavaScript.
+Search filters the displayed guide text locally and provides a clear reset.
+
+每种语言还提供产品、使用场景、成果与操作、帮助、信任、更新、下载、联系及法律
+文本状态等独立页面。切换语言保留当前家族；帮助可在无脚本时完整阅读，搜索仅在
+当前页面筛选指南。真实操作视频、客户案例、正式法律文本与发行包未提供时，页面
+明确说明状态，不以虚构演示、占位下载或模拟提交代替。
+
 保持各语言内容在产品含义与事实上的一致。语言路由不得暗示尚未支持的功能、服务、
 权限或可用状态。
 
@@ -84,7 +96,11 @@ canonical origin.
 （`example.invalid`、`example.com`、`.test`）和 localhost 会被拒绝。不得将未核验
 或私有主机设为 canonical 源站。
 
-Unset destinations render an explicit disabled state. The website must not
+Unset external destinations render an explicit disabled state. The generated
+local help page is available independently of an external help channel.
+Configured workspace links use only the existing product routes and creation
+entry values; earlier task queries and fragments are not carried into new work.
+The website must not
 pretend to submit a form, store user credentials, handle provider secrets or
 execute Product Core workflows. Product data, Evidence, Permission and business
 actions remain with their existing owners.
