@@ -575,5 +575,468 @@
       "app\\lib\\features\\shared\\sh01\\native_media_player.dart": "550c6e594bda9f6cabdca486246e2fe36aec693d2f08f703a5235ca322ef9740",
       "app\\lib\\features\\shared\\sh01\\native_media_preview_controller.dart": "13b37d7cc9be037b33ff73fff4aba6cdf354f2ea4720ad86c87251e011ead604"
     }
+  },
+  "rejected_frontend_retirement_20261028": {
+    "observed_at": "2026-10-28T16:34:59.911053+08:00",
+    "authority": "Direct PO: remove rejected frontend including uncommitted visual work; latest instruction requires the online repository to remove it too.",
+    "base_main": "31a193bdc4cce13464ba1c46551dc7c66ff1dfb0",
+    "branch": "codex/retire-rejected-frontend-20261028",
+    "primary_workspace_head": "ec831c8e80b6463797d7223cdd3c6a20ae327ef2",
+    "status": "DEVELOPMENT_BRANCH_ONLY_NOT_MAIN",
+    "full_product_scope": "UNCHANGED_UNFINISHED",
+    "deleted_from_main_baseline": [
+      {
+        "path": "app/assets/wallpapers/cobalt-dusk.jpg",
+        "main_blob": "51dc1017b311e17885ba4c2be459f2a424f4681d",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/assets/wallpapers/crimson-sunset.jpg",
+        "main_blob": "ac4700850076ec94b005cee4376c8faa063a08ee",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/core/generated_result_reveal.dart",
+        "main_blob": "2c1f9eed186ef49b41a9d29919a2ef3022cd127d",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/core/lumenis_icon.dart",
+        "main_blob": "ea2c2293bade815b0c0138ccf552948b1fb013c2",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/core/lumenis_icon_geometry.dart",
+        "main_blob": "5cdb7dd1298238e61ab6bb2616b03e8ea90659d4",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/core/lumenis_theme.dart",
+        "main_blob": "49f9463a04f31856a15ba9a2c0d5bdf3d7d4ebb6",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/account/acc01/acc01_screen.dart",
+        "main_blob": "3c578afeabd9c58872ecdd1dc23d14bd1ea86ddc",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/account/acc02/acc02_screen.dart",
+        "main_blob": "3527211d585316ab98ccda78473a5e7f655e0f40",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/account/acc03/acc03_recent_work.dart",
+        "main_blob": "c67e71870e3982a7834064aae632f7f4e7a5148c",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/account/acc03/acc03_screen.dart",
+        "main_blob": "5672b853ab64e24ae122e4b6725d20c7e3e25b35",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/account/acc04/acc04_screen.dart",
+        "main_blob": "66fc8436b271096763e1b633a8bae57abae571e7",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/ai01/ai01_conversation_panel.dart",
+        "main_blob": "53b39cc0274635f7ceb8d58c02169b9aa2c36d2c",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/ai01/ai01_draft_actions.dart",
+        "main_blob": "d46bff4346b8be1a2bf5fdf226e73182182c86b2",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/ai01/ai01_screen.dart",
+        "main_blob": "67e7ebda997d226aae202a4dc1d0c060bbcaf5b7",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/ai02/ai02_screen.dart",
+        "main_blob": "264369b64e1c1eba3e49a6804605f6fd336d7e4d",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/ai03/ai03_screen.dart",
+        "main_blob": "4ce5187aaeeb205b58b23bc3ca36c09bfe28314b",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/ai04/ai04_screen.dart",
+        "main_blob": "2f15ecd7b5da104640599d6a068fc382d9e9f313",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/ai05/ai05_screen.dart",
+        "main_blob": "d8363535126280105c1dbc8cce12ac8548e54cd4",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp01/bmp01_screen.dart",
+        "main_blob": "111c05d9aa6b4d5031acb3b8be16a7ad56b50dd5",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp02/bmp02_screen.dart",
+        "main_blob": "daffb4018d2ea66f405ff022fc9be90c931b9e0e",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp03/bmp03_screen.dart",
+        "main_blob": "b28985cf7914cdc51328089f8791c334019fd06e",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp04/bmp04_screen.dart",
+        "main_blob": "396a98fcd9e10f6e92ae975cddfa0cba250d00f0",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp05/bmp05_screen.dart",
+        "main_blob": "e0fe305058ef633251a74225d5467320b900b2dd",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp06/bmp06_screen.dart",
+        "main_blob": "08da5ddb89a13926a0e80601d63577cdacf0cf67",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp07/bmp07_screen.dart",
+        "main_blob": "78e0ce6e1dffa48fbce38a6f1dd53eb41cbbd977",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp08/bmp08_screen.dart",
+        "main_blob": "a1237770cfe5ca3e572578f10f558513d7063476",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp09/bmp09_screen.dart",
+        "main_blob": "a5b5fd6ae031fd1ba2de2d73445bd2f6e583c46e",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp10/bmp10_screen.dart",
+        "main_blob": "c49d8e9254e96e94fa86265803c50c5e61e7512e",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/bmp11/bmp11_screen.dart",
+        "main_blob": "4b7a047878f82326ce041ce9887208e2f749f3f4",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth01/cth01_screen.dart",
+        "main_blob": "7010c2d7c60d69fb64020fb355f334be1a3a5ac3",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth02/cth02_screen.dart",
+        "main_blob": "cda8542abd5891b43014621c8931771fe2f52100",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth03/cth03_screen.dart",
+        "main_blob": "33b015bba1db58462e7e8a15a7f03a68694b8aa7",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth04/cth04_screen.dart",
+        "main_blob": "bcb9894f93ebc4820a2f48158af8cd281fbd924f",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth05/cth05_screen.dart",
+        "main_blob": "156b099b60a0e3202b746a8174b17aadcaa46e75",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth06/cth06_screen.dart",
+        "main_blob": "dd1c81b6f4a318556968edf2014975150f5ba6e2",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth07/cth07_screen.dart",
+        "main_blob": "53400708a19251b393a01878da1126a8b70f4657",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth08/cth08_screen.dart",
+        "main_blob": "fb62bd33e99e82c64c1fedd968892a41b2db0dd6",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth09/cth09_screen.dart",
+        "main_blob": "de5844910e6149cc497db5e0d575f57ee2036e9b",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth10/cth10_screen.dart",
+        "main_blob": "1c75c8932d09bd48d676061329da7461fe400b3c",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/cth/cth10/source_brief_panel.dart",
+        "main_blob": "21eea243fce073f122ae46654a681713c186afb7",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/launch/launch_surface.dart",
+        "main_blob": "750bf4456a347566ee6cdf2e6150c34ee3549c82",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/read_aloud_action.dart",
+        "main_blob": "3def7b5d47ce8336ca36b25c624af206dbb368fe",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/research/shared_research_workspace.dart",
+        "main_blob": "12679505203d3fb8c4ba2ee11f5de31ba0c9747e",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/manuscript_editor.dart",
+        "main_blob": "91f1368b7c06ab55c63ea10097c0f83b7f309d1b",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/media_audio_comparison.dart",
+        "main_blob": "419408ca85e430144e3e9872f53bc90a1e24805e",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/media_preview.dart",
+        "main_blob": "e757a6d17ba6d366a06b2861c1e6545f27070a52",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/media_preview_native.dart",
+        "main_blob": "2a51722036597501b15f537c80d7b4eff874ac4d",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/media_preview_stub.dart",
+        "main_blob": "30441ad47669765d00f0bea9ab1ec648be9c383c",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/media_preview_web.dart",
+        "main_blob": "4bc10698acde3b50e3fa1aa86d02497ea0642428",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/media_project_workbench.dart",
+        "main_blob": "6950ab90f5c372746c62b1a09293f68b36e92db5",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/media_source_waveform.dart",
+        "main_blob": "a02d243b44f639aed220969d5cb2ef27939634dc",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh01/sh01_screen.dart",
+        "main_blob": "7c1d006baf684d7256ec06d981b310a51e86ddfe",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh02/sh02_screen.dart",
+        "main_blob": "976a4c83c463c03cc05ad687ff82ac13390bb680",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh03/sh03_screen.dart",
+        "main_blob": "bd545caf39d98e3836bd7b40498f3252150a33df",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh04/sh04_screen.dart",
+        "main_blob": "d2885757b9f3d8a1fc0de18e84aa772b61dfa69c",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh05/sh05_screen.dart",
+        "main_blob": "d4f98187b00c525b44302d0baa7b21346510b07d",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/shared/sh06/sh06_screen.dart",
+        "main_blob": "858cb6bd27cd9aac308e33e6e774d5c4fa5fc04b",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys01/sys01_screen.dart",
+        "main_blob": "0d9ebeb3d20a45f7e085e7d085f1e84f1afc4f6c",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys02/sys02_screen.dart",
+        "main_blob": "9118d391757a9d101759420ff1653e822ac73228",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys03/sys03_screen.dart",
+        "main_blob": "cada001b41fc950e2ec9b44c74b2355c61ed325d",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys04/sys04_screen.dart",
+        "main_blob": "0d587ed8ff8289f64e4e7c5ad64cb41c7223faa6",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys05/sys05_appearance_editor.dart",
+        "main_blob": "7a5162b406787db6b4d0b32aae69406d9a5273c6",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys05/sys05_screen.dart",
+        "main_blob": "2688a1a505764ed20799d0b13f44a984173021d2",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys06/sys06_page_context.dart",
+        "main_blob": "fb8ac2c2ecec1ad1906bf2a524897a51ac1bb49e",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys06/sys06_screen.dart",
+        "main_blob": "6b649ce89e01ea68aca1fe33199f408979115da8",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys07/sys07_screen.dart",
+        "main_blob": "ed052ddedbe33508b37491b4eeaa4157d9cd0eba",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/features/system/sys08/sys08_screen.dart",
+        "main_blob": "44fc40a4bc707028589673071606d488999be0fd",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/main.dart",
+        "main_blob": "f51011518f2ddaf89a3e75ea9c5b4ab51e28121d",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/navigation/lumenis_router.dart",
+        "main_blob": "54d2b6e731753006687f40ef1c8cdd9d3377d1e6",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/product/lumenis_app.dart",
+        "main_blob": "1e991d3757b3478198cc06c1f686f84cd338d0b2",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "app/lib/shell/lumenis_workspace_shell.dart",
+        "main_blob": "93d2fec90e81df226e35fa37b63697d02f041812",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/components/CreativePaths.astro",
+        "main_blob": "a59acb73657db32be5964ad48d027db8265434bf",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/components/PaintedIcon.astro",
+        "main_blob": "6d340dca056959e8e3e7cd670c888fa3450bc965",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/components/SitePage.astro",
+        "main_blob": "d6477e89125db4ea8e7c84e6a75faf1bee1f01ff",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/pages/en/index.astro",
+        "main_blob": "d7d1195d2bd7910639aabdf21adf66e7a859f9b7",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/pages/index.astro",
+        "main_blob": "1cd0372e50e5e700e5c061dee05451278063f795",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/pages/ko/index.astro",
+        "main_blob": "3837a52e07177c348f15c39c918ec0e931afd693",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/scripts/site-motion.js",
+        "main_blob": "4549da70911b8f874eb2977580b6b02c67d48723",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      },
+      {
+        "path": "website/src/styles/site.css",
+        "main_blob": "eea65b59c14df30dd09a7ae497e2c41d5b8eae51",
+        "disposition": "REMOVE_REJECTED_PRESENTATION"
+      }
+    ],
+    "already_absent_from_main": [
+      "app/lib/core/lumenis_botanical.dart",
+      "app/lib/core/lumenis_context_menu.dart",
+      "app/lib/core/lumenis_split_handle.dart",
+      "app/lib/core/lumenis_work_object.dart",
+      "app/lib/features/ai01/ai01_source_picker.dart",
+      "app/lib/features/cth/cth10/business_domain_plan_editor.dart",
+      "app/lib/features/cth/cth10/business_work_panel.dart",
+      "app/lib/features/shared/sh01/creation_brief_dialog.dart",
+      "app/lib/features/shared/sh02/office_property_editor.dart",
+      "app/lib/features/system/sys02/collected_comments_panel.dart",
+      "app/lib/features/system/sys02/collector_request_panel.dart",
+      "app/lib/shell/lumenis_workspace_frame.dart",
+      "website/src/components/PixelPlant.astro",
+      "website/src/components/PublicContent.astro",
+      "website/src/components/PublicNavigation.astro",
+      "website/src/pages/[...page].astro"
+    ],
+    "unchanged_boundaries": [
+      "backend and nonvisual controllers",
+      "user data and production database",
+      "models and research originals",
+      "required CI and acceptance gates"
+    ],
+    "validation": {
+      "source_removed_paths": "PASS_79_ABSENT",
+      "manifest_bindings": "PASS_RETIRED_WALLPAPERS_REMOVED",
+      "governance": [
+        {
+          "check": "verify_ai_native_constitution.py",
+          "exit_code": 0,
+          "output": "AI-NATIVE CONSTITUTION GATE: PASS\n - 18 lightweight principles present\n - AGENTS/README bootstrap routes through the constitution\n - non-bypass status and dirty-worktree protections present\n - missing!=0 and CI anti-bypass regression anchors present\n - Product Gate executes this validator as BLOCKING\n"
+        },
+        {
+          "check": "verify_experience_authority_exclusive.py",
+          "exit_code": 0,
+          "output": "LUMENIS Experience authority exclusivity: PASS\nsole_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\napproved_experience_surfaces=public-website,web-workspace,desktop-app,mobile-companion\nlegacy_design_authorities=0\n"
+        },
+        {
+          "check": "verify_lumenis_single_product.py",
+          "exit_code": 1,
+          "output": "LUMENIS Only-One/multi-surface architecture guard: FAIL\n- missing canonical app foundation: app/lib/main.dart\n- missing canonical app foundation: app/lib/product/lumenis_app.dart\n- missing canonical app foundation: app/lib/features/launch/launch_surface.dart\n"
+        },
+        {
+          "check": "verify_experience_anti_template.py",
+          "exit_code": 2,
+          "output": "{\n  \"ok\": false,\n  \"mode\": \"strict\",\n  \"canonical_experience\": \"public-website + app/web-desktop-mobile\",\n  \"experience_authority\": \"00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\",\n  \"dart_file_count\": 171,\n  \"legacy_web_authority\": false,\n  \"errors\": [\n    \"required multi-surface authority file missing: app\\\\lib\\\\features\\\\launch\\\\launch_surface.dart\",\n    \"required multi-surface authority file missing: app\\\\lib\\\\main.dart\",\n    \"required multi-surface authority file missing: app\\\\lib\\\\product\\\\lumenis_app.dart\"\n  ]\n}\n"
+        },
+        {
+          "check": "verify_experience_screen_blueprints.py",
+          "exit_code": 0,
+          "output": "Experience blueprint/source contract: PASS screens=44 bindings=54 sha256=verified ids=verified\n"
+        }
+      ],
+      "frontend_build": "BLOCKED_MISSING_REJECTED_ENTRYPOINT",
+      "product_release": "NOT_ACCEPTED"
+    }
   }
 }

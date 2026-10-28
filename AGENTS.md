@@ -169,6 +169,14 @@ for current capabilities through the existing Owner Index adoption path.
 
 ### Frontend construction and native targets
 
+The direct PO cleanup instruction on 2026-10-28 requires removal of the rejected
+frontend presentation, route entrypoints and page skeletons, including their
+uncommitted visual replacements. This withdraws those implementations, not the
+approved product surfaces, capabilities or Experience requirements. Preserve
+nonvisual owners, valid controllers, user data and original research. The missing
+frontend remains unavailable and its applicable build/acceptance gates remain
+blocking; never restore rejected pages or add a placeholder to claim completion.
+
 F builds from the current Experience, screen specs and owner contracts; separate drafts,
 Figma delivery and per-screen M DESIGN_READY are not coding prerequisites. Reuse assets,
 update specs alongside code, and record DESIGN_READY only after real review. Actual

@@ -1,5 +1,30 @@
 # 寰意 / OEVIRA — Codex Takeover CURRENT
 
+## 2026-10-28 rejected frontend removal publication
+
+The PO explicitly requires the rejected frontend to be removed both locally and
+online. This change removes the 79 rejected presentation files present in the
+verified main baseline, including Flutter entrypoints/pages/theme, the Website
+pages/styles/motion and two wallpaper assets; the wallpaper manifest entries are
+removed with them. The complete approved product and frontend requirements remain
+open. Nonvisual backend services, repositories/controllers, platform hosts,
+fonts, user data and original research are not retired by this change.
+
+This is an implementation-removal change, not RULES_ONLY_PUBLICATION or a release.
+Until the PR passes the existing required checks and is merged, publication is
+DEVELOPMENT_BRANCH_ONLY / NOT_MAIN and online/local source unification is BLOCKED.
+The missing Flutter entrypoint prevents current frontend build and acceptance.
+No required gate is disabled, no old UI is restored, and no placeholder is supplied
+to manufacture a passing build. The existing workspace-continuity record contains
+the exact removed paths, main blob identities and bounded validation results.
+
+The primary workspace retains unrelated unfinished code on
+`codex/full-product-implementation-20261025`; this scoped publication does not
+absorb or accept that work. Files removed only from that unpublished/local
+implementation are tracked separately in the same record. Runtime recovery and
+the earlier local disk cleanup retain their own evidence and do not establish
+that this branch is loaded, released or that the product is usable.
+
 ## 2026-10-27 全产品规划收敛；实现保持暂停
 
 最新直接PO要求在闭环开发前完成全部关联规划调整。此次将本地已明确的主体范围、针对性采集/监控、任务内研究与文档、原创创作、媒体后期、官网展示、像素植物视觉及无GPU必训路线一并纳入原规划PR #147；不是另建规划或恢复功能开发。AGENTS、Architecture、Experience、范围/交付合同、Owner、主规划/总草图/执行工单、详细界面规格与开发入口在同一变更同步；删除被替代的活动条款，保留原ID和未撤回要求。
