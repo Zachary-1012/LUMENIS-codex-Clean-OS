@@ -2,6 +2,7 @@
 import json
 import math
 import struct
+import subprocess
 import wave
 from pathlib import Path
 import pytest
@@ -9,6 +10,13 @@ import shared_artifacts as artifacts
 from lumenis.shared.content_creation.video_editing import Timeline, fingerprint_local_media, VideoEditingError
 from lumenis.shared.content_creation import rendering
 from tests.test_content_project_storage import media_store, approve, import_source, ACTOR, SCOPE
+
+
+def _ffmpeg_command(*arguments):
+    executable=artifacts._ffmpeg_path()
+    if not executable or not Path(executable).is_file():
+        pytest.skip("media regression requires the configured FFmpeg executable")
+    return [executable,*(str(argument) for argument in arguments)]
 
 
 def source_wave(path):
@@ -121,6 +129,29 @@ def test_real_silence_candidates_keep_margins_and_never_apply(media_store):
     candidate=report['candidates'][0]
     assert abs(candidate['suggested_remove_start_sec']-1.15)<.01 and abs(candidate['suggested_remove_end_sec']-1.85)<.01
     assert path.read_bytes()==original
+
+
+def test_long_silence_scan_covers_overlapping_windows_and_merges_boundary(media_store,monkeypatch):
+    if not artifacts._ffmpeg_path():
+        pytest.skip('long silence scan requires installed FFmpeg')
+    path=media_store['source'].with_name('long-silent.wav')
+    monkeypatch.setenv('LUMENIS_LOCAL_ASSET_DIR',str(path.parent))
+    with wave.open(str(path),'wb') as audio:
+        audio.setnchannels(1);audio.setsampwidth(1);audio.setframerate(8000)
+        audio.writeframes(bytes([128])*(601*8000))
+    asset=fingerprint_local_media(str(path))
+    assert asset.duration_sec==pytest.approx(601,abs=.01)
+    report=rendering.propose_silence_edits(asset,min_silence_sec=.5,margin_sec=.15)
+    assert report['scan_window_count']==2
+    assert report['scan_strategy']=='overlapping_bounded_windows_v1'
+    assert report['scan_overlap_seconds']==12
+    assert report['scan_windows']==[{'start_sec':0.0,'end_sec':600.0},
+                                    {'start_sec':588.0,'end_sec':601.0}]
+    assert report['scanned_source_duration_sec']==pytest.approx(asset.duration_sec)
+    assert len(report['candidates'])==1
+    assert report['candidates'][0]['suggested_remove_start_sec']==pytest.approx(.15,abs=.01)
+    assert report['candidates'][0]['suggested_remove_end_sec']==pytest.approx(600.85,abs=.01)
+    assert report['automatic_application'] is False and report['word_alignment_verified'] is False
 
 
 def edl_parent(store):
@@ -282,7 +313,7 @@ def test_styled_chinese_caption_real_render_ass_and_saved_version(media_store,tm
     import subprocess,zipfile
     from lumenis.shared.content_creation.video_editing import CaptionStyle
     source=tmp_path/'owned-video.mp4'
-    subprocess.run(['ffmpeg','-v','error','-y','-f','lavfi','-i','testsrc2=s=320x180:r=30:d=1','-c:v','libx264','-pix_fmt','yuv420p',str(source)],check=True,capture_output=True)
+    subprocess.run(_ffmpeg_command('-v','error','-y','-f','lavfi','-i','testsrc2=s=320x180:r=30:d=1','-c:v','libx264','-pix_fmt','yuv420p',source),check=True,capture_output=True)
     media_store['source']=source;approve(media_store);sid=import_source(media_store)['artifact']['artifact_id']
     style=CaptionStyle(font_size=42,color='#FFFF00',max_chars_per_line=14,max_lines=2,position='bottom')
     with artifacts.resolve_content_source_assets([sid],actor=ACTOR,**SCOPE) as sources:
@@ -301,7 +332,60 @@ def test_styled_chinese_caption_real_render_ass_and_saved_version(media_store,tm
         assert b'[V4+ Styles]' in ass and b'\\N' in ass
         assert layout['display_text'] in archive.read('captions.srt').decode()
     # The actual libass parser/render path accepts the emitted file.
-    subprocess.run(['ffmpeg','-v','error','-f','lavfi','-i','color=s=1280x720:d=1','-vf','ass=captions.ass','-frames:v','1','-f','null','-'],cwd=tmp_path,check=True,capture_output=True)
+    subprocess.run(_ffmpeg_command('-v','error','-f','lavfi','-i','color=s=1280x720:d=1','-vf','ass=captions.ass','-frames:v','1','-f','null','-'),cwd=tmp_path,check=True,capture_output=True)
+
+
+def test_export_queue_recovery_reopens_artifact_and_commits_reference(media_store, tmp_path, monkeypatch):
+    from lumenis.system.collector.guard import task_queue
+    from lumenis.shared.content_creation import rendering
+    from lumenis.shared.content_creation.video_editing import fingerprint_local_media
+
+    approve(media_store)
+    source_id = import_source(media_store)["artifact"]["artifact_id"]
+    asset = fingerprint_local_media(str(media_store["source"]))
+    timeline = Timeline.from_assets([asset]).add_audio_track("voice", audio_role="voiceover")
+    timeline = timeline.add_clip(asset.asset_id, track_id="voice", source_out=0.4)
+
+    queue = task_queue.TaskQueue(str(tmp_path / "export-recovery-queue.sqlite3"))
+    request_key = "a" * 64
+    digest = "b" * 64
+    binding = {
+        "actor_ref": "actor:1", "scope_sha256": "c" * 64,
+        "payload_sha256": digest, "parent_version_sha256": None,
+    }
+    task_id = queue.enqueue_once("shared_content_project_export", {
+        "request_id": "d" * 32, "request_key": request_key,
+        "request_digest": digest, "parent_version_sha256": None,
+        "binding": binding,
+    }, request_key)
+
+    # Model the separate Artifact DB commit succeeding before the process dies
+    # and before TaskQueue has stored its result reference.
+    orphan_receipt = artifacts.stage_timeline_artifact(
+        timeline, actor=ACTOR, source_execution_id=str(task_id), output_kind="audio",
+        source_artifact_refs=[source_id], **SCOPE,
+    )
+    original_artifact_id = orphan_receipt["artifact"]["artifact_id"]
+    attempt = queue.dequeue(worker_id="recover-worker", lease_owner="recover-lease", task_id=task_id)
+    assert attempt and attempt["status"] == "running"
+
+    monkeypatch.setattr(rendering, "render_timeline",
+                        lambda *_args, **_kwargs: pytest.fail("recovery must not render twice"))
+    recovered = artifacts.stage_timeline_artifact(
+        timeline, actor=ACTOR, source_execution_id=str(task_id), output_kind="audio",
+        source_artifact_refs=[source_id], **SCOPE,
+        task_control={"queue": queue, "task_id": task_id, "request_key": request_key,
+                      "run_id": attempt["run_id"], "worker_id": "recover-worker",
+                      "lease_owner": "recover-lease"},
+    )
+    row = queue.get(task_id)
+    assert row["status"] == "done"
+    assert row["payload"]["result"]["artifact_id"] == original_artifact_id
+    assert row["payload"]["result"]["sha256"] == orphan_receipt["artifact"]["sha256"]
+    assert recovered["artifact"]["artifact_id"] == original_artifact_id
+    assert recovered["recovered_existing_artifact"] is True
+    assert artifacts.read_content_project(original_artifact_id, actor=ACTOR, **SCOPE)
+    queue.close()
 
 
 @pytest.mark.parametrize('style',[{'font_size':True},{'font_size':200},{'color':'red:movie=evil'},{'safe_margin_ratio':0},{'background_opacity':float('nan')},{'max_chars_per_line':15},{'position':'center'}, {'fontfile':'/untrusted.ttf'}])
@@ -314,7 +398,7 @@ def test_explicit_frame_crop_preserves_selected_subject_region_and_version(media
     import subprocess
     from lumenis.shared.content_creation.video_editing import FrameCrop
     source=tmp_path/'two-regions.mp4'
-    subprocess.run(['ffmpeg','-v','error','-y','-f','lavfi','-i','color=blue:s=320x180:r=30:d=0.5','-vf','drawbox=x=0:y=0:w=160:h=180:color=red:t=fill','-c:v','libx264','-pix_fmt','yuv420p',str(source)],check=True,capture_output=True)
+    subprocess.run(_ffmpeg_command('-v','error','-y','-f','lavfi','-i','color=blue:s=320x180:r=30:d=0.5','-vf','drawbox=x=0:y=0:w=160:h=180:color=red:t=fill','-c:v','libx264','-pix_fmt','yuv420p',source),check=True,capture_output=True)
     media_store['source']=source;original=source.read_bytes();approve(media_store);sid=import_source(media_store)['artifact']['artifact_id']
     with artifacts.resolve_content_source_assets([sid],actor=ACTOR,**SCOPE) as sources:
         asset=sources[0]['asset'];timeline=Timeline.from_assets([asset],format_ratio='9:16').add_clip(asset.asset_id,source_out=.5)
@@ -325,7 +409,7 @@ def test_explicit_frame_crop_preserves_selected_subject_region_and_version(media
     aid=result['artifact']['artifact_id'];opened=artifacts.read_content_project(aid,actor=ACTOR,**SCOPE)
     assert opened['project']['timeline']['tracks'][0]['clips'][0]['frame_crop']==crop.to_dict()
     data=artifacts.authorized_project_media(aid,actor=ACTOR,**SCOPE)['data'];out=tmp_path/'cropped.mp4';out.write_bytes(data)
-    pixel=subprocess.run(['ffmpeg','-v','error','-ss','0.2','-i',str(out),'-vf','crop=2:2:iw/2:ih/2','-frames:v','1','-f','rawvideo','-pix_fmt','rgb24','-'],check=True,capture_output=True).stdout
+    pixel=subprocess.run(_ffmpeg_command('-v','error','-ss','0.2','-i',out,'-vf','crop=2:2:iw/2:ih/2','-frames:v','1','-f','rawvideo','-pix_fmt','rgb24','-'),check=True,capture_output=True).stdout
     assert len(pixel)==12 and pixel[0]>200 and pixel[1]<50 and pixel[2]<50
     assert source.read_bytes()==original
     assert result['render']['frame_processing']['automatic_subject_detection'] is False
@@ -378,7 +462,7 @@ def test_actual_source_frame_timing_and_metadata_persist_in_artifact(media_store
     import subprocess
     from lumenis.shared.content_creation.stream_probe import probe_source_streams
     source=tmp_path/'timed.mp4'
-    subprocess.run(['ffmpeg','-v','error','-y','-f','lavfi','-i','testsrc2=s=320x180:r=30:d=1','-c:v','libx264','-pix_fmt','yuv420p',str(source)],check=True,capture_output=True)
+    subprocess.run(_ffmpeg_command('-v','error','-y','-f','lavfi','-i','testsrc2=s=320x180:r=30:d=1','-c:v','libx264','-pix_fmt','yuv420p',source),check=True,capture_output=True)
     media_store['source']=source;approve(media_store);sid=import_source(media_store)['artifact']['artifact_id']
     with artifacts.resolve_content_source_assets([sid],actor=ACTOR,**SCOPE) as sources:
         asset=sources[0]['asset'];report=probe_source_streams(asset,analyze_timing=True)
@@ -422,8 +506,8 @@ def test_real_variable_frame_timestamps_are_not_reported_as_cfr(media_store):
     import subprocess
     from lumenis.shared.content_creation.stream_probe import probe_source_streams
     path=media_store['source'].with_suffix('.mp4')
-    subprocess.run(['ffmpeg','-v','error','-nostdin','-n','-f','lavfi','-i','testsrc2=s=96x64:r=30:d=1',
-                    '-vf',"select='not(mod(n,2))+eq(n,3)'",'-fps_mode','vfr','-c:v','libx264','-threads:v','1',str(path)],check=True,capture_output=True)
+    subprocess.run(_ffmpeg_command('-v','error','-nostdin','-n','-f','lavfi','-i','testsrc2=s=96x64:r=30:d=1',
+                    '-vf',"select='not(mod(n,2))+eq(n,3)'",'-fps_mode','vfr','-c:v','libx264','-threads:v','1',path),check=True,capture_output=True)
     result=probe_source_streams(fingerprint_local_media(str(path)),analyze_timing=True)
     assert result['frame_timing']['global_classification']=='variable_frame_intervals'
     assert result['frame_timing']['observed_constant_intervals'] is False

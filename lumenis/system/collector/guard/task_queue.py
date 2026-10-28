@@ -87,19 +87,29 @@ class TaskQueue:
 
     def enqueue_once(self, task_type, payload, request_key):
         """Atomically recover one server-bound request without a second task store."""
+        if not isinstance(task_type, str) or not task_type or type(payload) is not dict:
+            raise ValueError("TASK_QUEUE_REQUEST_INVALID")
+        if not isinstance(request_key, str) or not request_key:
+            raise ValueError("TASK_QUEUE_REQUEST_KEY_INVALID")
+        if "request_key" in payload and payload["request_key"] != request_key:
+            raise ValueError("TASK_QUEUE_REQUEST_KEY_MISMATCH")
         now = time.time()
         with _LOCK, self._conn:
             self._conn.execute("BEGIN IMMEDIATE")
             row = self._conn.execute(
-                "SELECT id FROM tasks WHERE task_type=? AND json_extract(payload, '$.request_key')=? "
+                "SELECT id,payload FROM tasks WHERE task_type=? AND json_extract(payload, '$.request_key')=? "
                 "ORDER BY id LIMIT 1", (task_type, request_key)).fetchone()
             if row is not None:
+                existing_payload = json.loads(row["payload"])
+                for field in ("request_id", "request_digest", "binding", "parent_version_sha256"):
+                    if field in payload and existing_payload.get(field) != payload[field]:
+                        raise ValueError("TASK_QUEUE_REQUEST_ID_CONFLICT")
                 return row['id']
             material = {**payload, 'request_key': request_key}
             return self._conn.execute(
                 "INSERT INTO tasks(task_type,payload,priority,status,created_at,scheduled_at) "
                 "VALUES(?,?,5,'pending',?,?)",
-                (task_type, json.dumps(material, ensure_ascii=False), now, now)).lastrowid
+                (task_type, json.dumps(material, ensure_ascii=False, sort_keys=True, allow_nan=False), now, now)).lastrowid
 
     def dequeue(self, worker_id="", lease_owner="", *, task_id=None):
         """Claim the next due task and issue a fresh server-owned run_id receipt.
@@ -335,6 +345,291 @@ class TaskQueue:
                 (json.dumps(payload, ensure_ascii=False), time.time(), task_id))
             return True
 
+    def request_cancel(self, task_id, *, task_type, request_key, reason="user_cancelled"):
+        """Request cancellation for one owner-bound generic operation.
+
+        The business route must authorize the actor/scope before calling this
+        method. The queue additionally binds the mutation to the exact task
+        type and immutable request key. Running work stays leased in
+        ``cancel_requested`` until its worker confirms cancellation; pending
+        work becomes terminal immediately. A completed result always wins.
+        """
+        if (type(task_id) is not int or task_id <= 0
+                or not isinstance(task_type, str) or not task_type
+                or not isinstance(request_key, str) or not request_key):
+            return None
+        reason = str(reason or "user_cancelled")[:500]
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT * FROM tasks WHERE id=? AND task_type=? "
+                "AND json_extract(payload,'$.request_key')=?",
+                (task_id, task_type, request_key),
+            ).fetchone()
+            if row is None:
+                return None
+            payload = json.loads(row["payload"])
+            status = row["status"]
+            if status == "pending":
+                payload["cancel_requested"] = True
+                self._conn.execute(
+                    "UPDATE tasks SET payload=?,status='cancelled',last_error=?,"
+                    "recovery_reason='USER_CANCELLED',lease_owner='' "
+                    "WHERE id=? AND status='pending'",
+                    (json.dumps(payload, ensure_ascii=False, sort_keys=True), reason, task_id),
+                )
+            elif status == "running":
+                payload["cancel_requested"] = True
+                self._conn.execute(
+                    "UPDATE tasks SET payload=?,status='cancel_requested',last_error=? "
+                    "WHERE id=? AND status='running' AND run_id=? AND worker_id=? AND lease_owner=?",
+                    (json.dumps(payload, ensure_ascii=False, sort_keys=True), reason,
+                     task_id, row["run_id"], row["worker_id"], row["lease_owner"]),
+                )
+            # Repeated cancellation is idempotent. Terminal success/failure
+            # remains authoritative and is never overwritten.
+            current = self._conn.execute(
+                "SELECT * FROM tasks WHERE id=?", (task_id,)
+            ).fetchone()
+            self._conn.commit()
+            result = dict(current)
+            result["payload"] = json.loads(result["payload"])
+            return result
+
+    def finish_cancelled(self, task_id, *, task_type, request_key, reason="user_cancelled",
+                         run_id=None, worker_id=None, lease_owner=None):
+        """Confirm cancellation from the current leased worker only."""
+        if (not self._has_attempt_receipt(run_id, worker_id, lease_owner)
+                or not isinstance(task_type, str) or not task_type
+                or not isinstance(request_key, str) or not request_key):
+            return False
+        reason = str(reason or "user_cancelled")[:500]
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT payload FROM tasks WHERE id=? AND task_type=? "
+                "AND status='cancel_requested' AND run_id=? AND worker_id=? AND lease_owner=? "
+                "AND json_extract(payload,'$.request_key')=?",
+                (task_id, task_type, run_id, worker_id, lease_owner, request_key),
+            ).fetchone()
+            if row is None:
+                return False
+            payload = json.loads(row["payload"])
+            if payload.get("cancel_requested") is not True:
+                return False
+            cursor = self._conn.execute(
+                "UPDATE tasks SET status='cancelled',last_error=?,recovery_reason='USER_CANCELLED',"
+                "lease_owner='' WHERE id=? AND task_type=? AND status='cancel_requested' "
+                "AND run_id=? AND worker_id=? AND lease_owner=? "
+                "AND json_extract(payload,'$.request_key')=?",
+                (reason, task_id, task_type, run_id, worker_id, lease_owner, request_key),
+            )
+            return cursor.rowcount == 1
+
+    def commit_result(self, task_id, result_ref=None, commit_effect=None, *, task_type, request_key,
+                      run_id=None, worker_id=None, lease_owner=None):
+        """Commit the existing business result under the active queue lease.
+
+        ``commit_effect`` performs the final owner-side Artifact registration
+        and readback, and returns its small result-reference DTO. The compact
+        two-argument form ``commit_result(task_id, commit_effect, ...)`` is
+        preferred when the Artifact reference is known only after registration;
+        callers may provide a precomputed ``result_ref`` as the second argument
+        when it is already fixed. The queue write reservation serializes the
+        owner commit with cancellation, then stores the result reference and
+        marks the durable operation done in the same queue transaction. If the
+        process exits after the Artifact owner commits but before this queue
+        transaction commits, the caller must reconcile by the immutable task
+        id and return the already-registered Artifact on explicit recovery.
+        """
+        if callable(result_ref) and commit_effect is None:
+            commit_effect, result_ref = result_ref, None
+        if (not self._has_attempt_receipt(run_id, worker_id, lease_owner)
+                or not isinstance(task_type, str) or not task_type
+                or not isinstance(request_key, str) or not request_key
+                or result_ref is not None and type(result_ref) is not dict
+                or not callable(commit_effect)):
+            return False
+
+        def encode_result(value):
+            if type(value) is not dict:
+                raise ValueError("TASK_RESULT_REFERENCE_INVALID")
+            try:
+                encoded = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                                     allow_nan=False, separators=(",", ":"))
+            except (TypeError, ValueError) as exc:
+                raise ValueError("TASK_RESULT_REFERENCE_INVALID") from exc
+            if len(encoded.encode("utf-8")) > 16 * 1024:
+                raise ValueError("TASK_RESULT_REFERENCE_TOO_LARGE")
+            return encoded
+
+        encoded_result = encode_result(result_ref) if result_ref is not None else None
+
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT payload FROM tasks WHERE id=? AND task_type=? AND status='running' "
+                "AND run_id=? AND worker_id=? AND lease_owner=? "
+                "AND json_extract(payload,'$.request_key')=?",
+                (task_id, task_type, run_id, worker_id, lease_owner, request_key),
+            ).fetchone()
+            if row is None:
+                return False
+            payload = json.loads(row["payload"])
+            if payload.get("cancel_requested") is True:
+                return False
+            deadline = payload.get("deadline_at")
+            if deadline is not None and (type(deadline) not in (int, float) or time.time() >= deadline):
+                return False
+
+            effect_result = commit_effect()
+            if effect_result is False:
+                return False
+
+            if encoded_result is None:
+                encoded_result = encode_result(effect_result)
+
+            payload["result"] = json.loads(encoded_result)
+            cursor = self._conn.execute(
+                "UPDATE tasks SET payload=?,status='done',last_success_at=?,lease_owner='',"
+                "last_error='',recovery_reason='' WHERE id=? AND task_type=? AND status='running' "
+                "AND run_id=? AND worker_id=? AND lease_owner=? "
+                "AND json_extract(payload,'$.request_key')=?",
+                (json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False),
+                 time.time(), task_id, task_type, run_id, worker_id, lease_owner, request_key),
+            )
+            return cursor.rowcount == 1
+
+    def record_result_metadata(self, task_id, metadata, *, task_type, request_key):
+        """Monotonically add owner-authored metadata to an existing task result.
+
+        This is a post-completion operational annotation (for example, whether
+        the result's Evidence side-write was recorded). It is deliberately
+        fenced to the exact completed task and immutable request identity and
+        cannot change task state or the committed result reference.
+        """
+        if (type(task_id) is not int or task_id <= 0
+                or type(metadata) is not dict
+                or any(type(key) is not str or not key for key in metadata)
+                or not isinstance(task_type, str) or not task_type
+                or not isinstance(request_key, str) or not request_key):
+            return False
+        try:
+            encoded_metadata = json.dumps(
+                metadata, ensure_ascii=False, sort_keys=True, allow_nan=False,
+                separators=(",", ":"),
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError("TASK_RESULT_METADATA_INVALID") from exc
+        if len(encoded_metadata.encode("utf-8")) > 16 * 1024:
+            raise ValueError("TASK_RESULT_METADATA_TOO_LARGE")
+
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT payload FROM tasks WHERE id=? AND task_type=? AND status='done' "
+                "AND json_extract(payload,'$.request_key')=?",
+                (task_id, task_type, request_key),
+            ).fetchone()
+            if row is None:
+                return False
+            payload = json.loads(row["payload"])
+            result = payload.get("result")
+            if type(result) is not dict:
+                return False
+            current = result.get("metadata", {})
+            if type(current) is not dict:
+                return False
+            for key, value in metadata.items():
+                if key in current and current[key] != value:
+                    return False
+            additions = {key: value for key, value in metadata.items() if key not in current}
+            if not additions:
+                return True
+            current.update(additions)
+            result["metadata"] = current
+            payload["result"] = result
+            encoded_payload = json.dumps(
+                payload, ensure_ascii=False, sort_keys=True, allow_nan=False,
+            )
+            cursor = self._conn.execute(
+                "UPDATE tasks SET payload=? WHERE id=? AND task_type=? AND status='done' "
+                "AND json_extract(payload,'$.request_key')=?",
+                (encoded_payload, task_id, task_type, request_key),
+            )
+            return cursor.rowcount == 1
+
+    def mark_interrupted_if_dead(self, task_id, *, task_type, request_key,
+                                  stale_after_seconds, worker_alive_check):
+        """Mark a lost operation interrupted only after lease expiry and a death check.
+
+        Heartbeat age alone is not proof of worker death. The owner supplies a
+        check for the exact persisted worker/run identity (for example the
+        process and worker thread) and this method revalidates the lease under
+        the queue transaction before changing its state.
+        """
+        if (type(task_id) is not int or task_id <= 0
+                or not isinstance(task_type, str) or not task_type
+                or not isinstance(request_key, str) or not request_key
+                or type(stale_after_seconds) not in (int, float)
+                or stale_after_seconds <= 0 or stale_after_seconds > 86400
+                or not callable(worker_alive_check)):
+            return False
+        cutoff = time.time() - float(stale_after_seconds)
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT status,payload,run_id,worker_id,lease_owner,last_heartbeat_at FROM tasks "
+                "WHERE id=? AND task_type=? AND status IN ('running','cancel_requested') "
+                "AND json_extract(payload,'$.request_key')=?",
+                (task_id, task_type, request_key),
+            ).fetchone()
+            if row is None or float(row["last_heartbeat_at"] or 0) >= cutoff:
+                return False
+            if worker_alive_check(row["worker_id"], row["lease_owner"], row["run_id"]):
+                return False
+            payload = json.loads(row["payload"])
+            cancelled = row["status"] == "cancel_requested" or payload.get("cancel_requested") is True
+            state = "cancelled" if cancelled else "interrupted"
+            reason = "CANCELLED_AFTER_CONFIRMED_WORKER_EXIT" if cancelled else "WORKER_EXIT_CONFIRMED"
+            cursor = self._conn.execute(
+                "UPDATE tasks SET status=?,last_error=?,recovery_reason=?,lease_owner='' "
+                "WHERE id=? AND task_type=? AND status=? AND run_id=? AND worker_id=? AND lease_owner=? "
+                "AND last_heartbeat_at < ? AND json_extract(payload,'$.request_key')=?",
+                (state, reason, reason, task_id, task_type, row["status"], row["run_id"],
+                 row["worker_id"], row["lease_owner"], cutoff, request_key),
+            )
+            return cursor.rowcount == 1
+
+    def resume_interrupted(self, task_id, *, task_type, request_key):
+        """Explicitly make one confirmed interrupted task claimable again."""
+        if (type(task_id) is not int or task_id <= 0
+                or not isinstance(task_type, str) or not task_type
+                or not isinstance(request_key, str) or not request_key):
+            return False
+        with _LOCK, self._conn:
+            self._conn.execute("BEGIN IMMEDIATE")
+            row = self._conn.execute(
+                "SELECT payload FROM tasks WHERE id=? AND task_type=? AND status='interrupted' "
+                "AND json_extract(payload,'$.request_key')=?",
+                (task_id, task_type, request_key),
+            ).fetchone()
+            if row is None:
+                return False
+            payload = json.loads(row["payload"])
+            if payload.get("cancel_requested") is True:
+                return False
+            payload["resume_count"] = int(payload.get("resume_count", 0)) + 1
+            cursor = self._conn.execute(
+                "UPDATE tasks SET payload=?,status='pending',scheduled_at=?,locked_at=0,"
+                "run_id='',worker_id='',lease_owner='',last_error='',"
+                "recovery_reason='EXPLICIT_USER_RESUME' WHERE id=? AND task_type=? "
+                "AND status='interrupted' AND json_extract(payload,'$.request_key')=?",
+                (json.dumps(payload, ensure_ascii=False, sort_keys=True), time.time(),
+                 task_id, task_type, request_key),
+            )
+            return cursor.rowcount == 1
+
     def close(self):
         """关闭数据库连接（测试/清理用）。"""
         try:
@@ -372,12 +667,16 @@ class TaskQueue:
             if row is None or row['status'] == 'done':
                 return False
             payload = json.loads(row['payload'])
-            if cancelled is False and payload.get('cancel_requested') is not True:
+            if (cancelled is False and payload.get('cancel_requested') is not True
+                    and row['status'] != 'failed'):
                 return False
             payload['cancel_requested'] = cancelled
+            scheduled_at = max(time.time(), float(row['scheduled_at'] or 0))
+            attempts = row['attempts'] if cancelled else 0
             self._conn.execute('UPDATE tasks SET payload=?,status=\'pending\',scheduled_at=?,run_id=\'\','
-                'worker_id=\'\',lease_owner=\'\',locked_at=0,last_error=? WHERE id=?',
-                (json.dumps(payload, ensure_ascii=False), time.time(), 'CANCELLED' if cancelled else '', task_id))
+                'worker_id=\'\',lease_owner=\'\',locked_at=0,last_error=?,attempts=? WHERE id=?',
+                (json.dumps(payload, ensure_ascii=False), scheduled_at,
+                 'CANCELLED' if cancelled else '', attempts, task_id))
             return True
 
     def stats(self):
@@ -389,6 +688,32 @@ class TaskQueue:
             d["total"] = sum(d.values())
             return d
 
+    def list_manual_requests(self, identity, scope, *, before=None, limit=20):
+        if (set(identity) not in ({'actor_id'}, {'principal_ref'})
+                or type(limit) is not int or not 1 <= limit <= 100
+                or before is not None and (type(before) is not int or before <= 0)):
+            raise ValueError('COLLECTION_HISTORY_REQUEST_INVALID')
+        fields = {f'identity.{key}': value for key, value in identity.items()}
+        fields.update({f'scope.{key}': scope.get(key) for key in
+                       ('domain_id', 'global_scope', 'subject_id', 'brand_focus_id')})
+        clauses = ['task_type=?']
+        parameters = ['collector_manual_request']
+        for key, value in fields.items():
+            clauses.append('json_extract(payload, ?) IS ?')
+            parameters.extend(['$.binding.' + key, value])
+        if before is not None:
+            clauses.append('id<?')
+            parameters.append(before)
+        with _LOCK:
+            rows = self._conn.execute('SELECT * FROM tasks WHERE ' + ' AND '.join(clauses)
+                + ' ORDER BY id DESC LIMIT ?', [*parameters, limit + 1]).fetchall()
+        result = []
+        for row in rows[:limit]:
+            item = dict(row)
+            item['payload'] = json.loads(item['payload'])
+            result.append(item)
+        return result, result[-1]['id'] if len(rows) > limit else None
+
     def list_by_status(self, status, limit=50):
         """按状态列出任务（运维/调试）。"""
         with _LOCK, self._conn:
@@ -397,3 +722,42 @@ class TaskQueue:
                 "FROM tasks WHERE status=? ORDER BY id DESC LIMIT ?",
                 (status, limit)).fetchall()
             return [dict(r) for r in rows]
+
+    def list_by_type(self, task_type, *, before_id=None, limit=20,
+                     actor_ref=None, scope_sha256=None):
+        """List one task type in reverse creation order with optional binding filters.
+
+        Actor/scope predicates run in SQL before pagination so tasks belonging
+        to other bindings cannot crowd a caller's page. Returned payloads are
+        decoded using the existing task row contract.
+        """
+        if (not isinstance(task_type, str) or not task_type
+                or type(limit) is not int or not 1 <= limit <= 50
+                or before_id is not None and (type(before_id) is not int or before_id <= 0)
+                or actor_ref is not None and (not isinstance(actor_ref, str) or not actor_ref)
+                or scope_sha256 is not None and (not isinstance(scope_sha256, str) or not scope_sha256)):
+            raise ValueError("TASK_QUEUE_LIST_REQUEST_INVALID")
+        clauses = ["task_type=?"]
+        parameters = [task_type]
+        if before_id is not None:
+            clauses.append("id<?")
+            parameters.append(before_id)
+        if actor_ref is not None:
+            clauses.append("json_extract(payload,'$.binding.actor_ref')=?")
+            parameters.append(actor_ref)
+        if scope_sha256 is not None:
+            clauses.append("json_extract(payload,'$.binding.scope_sha256')=?")
+            parameters.append(scope_sha256)
+        with _LOCK, self._conn:
+            rows = self._conn.execute(
+                "SELECT * FROM tasks WHERE " + " AND ".join(clauses)
+                + " ORDER BY id DESC LIMIT ?",
+                (*parameters, limit + 1),
+            ).fetchall()
+        result = []
+        for row in rows[:limit]:
+            item = dict(row)
+            item["payload"] = json.loads(item["payload"])
+            result.append(item)
+        next_before_id = result[-1]["id"] if len(rows) > limit else None
+        return result, next_before_id

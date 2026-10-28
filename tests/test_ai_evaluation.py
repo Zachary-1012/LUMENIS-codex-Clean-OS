@@ -71,6 +71,40 @@ def _seed_calls(test_db, calls):
     conn.close()
 
 
+def _typed_conversation_request(turn_suffix='a'):
+    from lumenis.ai_hub import conversations
+    turn_id = 'turn_' + turn_suffix * 32
+    material = {
+        'conversation_id': 'conv_' + 'c' * 32,
+        'response_turn_id': turn_id,
+        'user_turn_id': 'turn_' + 'b' * 32,
+        'actor_ref': 'actor:synthetic-evaluation-user',
+        'workspace_binding': 'a' * 64,
+        'scope': dict(conversations._SCOPE),
+        'question': 'PRIVATE_EVALUATION_QUESTION_7e29',
+        'history': [{'role': 'user', 'content': 'PRIVATE_EVALUATION_HISTORY_3a10'}],
+        'context_accounting': {'context_pack_sha256': 'd' * 64},
+        'source_use_mode': 'source_free',
+    }
+    return conversations._conversation_request(material)
+
+
+def _completed_owned_result(request, *, attempt_id='attempt_' + '1' * 32):
+    from lumenis.system.ai_gateway.owned_service import owned_service_request_digest
+    return {
+        'ok': True, 'status': 'COMPLETED', 'code': 'OWNED_INFERENCE_COMPLETED',
+        'provider': 'owned', 'attempt_id': attempt_id, 'run_id': 'synthetic-run-1',
+        'request_digest': owned_service_request_digest(request),
+        'operation': request.operation, 'domain_id': request.domain_id, 'scope': request.scope,
+        'input_revision_sha256': request.input_revision_sha256,
+        'source_binding_sha256': request.source_binding_sha256,
+        'real_input_bound': True, 'model_id': 'synthetic-owned-cpu',
+        'model_revision': 'synthetic-rev-1', 'runtime_sha256': 'e' * 64,
+        'executor_sha256': 'f' * 64, 'text': 'PRIVATE_EVALUATION_OUTPUT_5c31',
+        'prompt_tokens': 9, 'completion_tokens': 4, 'total_tokens': 13,
+    }
+
+
 # ============================================================
 # 1. AI 调用追踪记录
 # ============================================================
@@ -535,7 +569,161 @@ class TestProviderFallback:
 
 
 # ============================================================
-# 5. 人工修正反馈闭环
+# 5. Owned Gateway execution and conversation feedback binding
+# ============================================================
+class TestOwnedGatewayEvaluationBinding:
+    def test_ai_hub_service_writes_the_gateway_result_to_evaluation(self, test_db, monkeypatch):
+        from lumenis.ai_hub import context_pack, service
+        from lumenis.system.ai_gateway import user_api_adapter
+        request = _typed_conversation_request()
+        result = _completed_owned_result(request)
+        monkeypatch.setattr(service.freg, 'search_function_metadata', lambda *args, **kwargs: [])
+        monkeypatch.setattr(service, 'status', lambda: {'state': 'BOUND', 'model_id': 'synthetic-owned-cpu'})
+        monkeypatch.setattr(service, 'record_learning', lambda *args, **kwargs: None)
+        monkeypatch.setattr(context_pack, 'run_budgeted_owned_request',
+            lambda *args, **kwargs: dict(result))
+        monkeypatch.setattr(user_api_adapter, 'is_selected', lambda: False)
+
+        response = service.chat('PRIVATE_EVALUATION_QUESTION_7e29', _owned_request=request,
+                                _include_evaluation_ref=True)
+        assert response['ok'] is True
+        assert response['provider'] == 'owned'
+        assert response['owned_provenance']['evaluation_call_ref'].startswith('ai-call:v1:')
+        row = acl.query_calls(provider='owned')[0]
+        assert row['success'] == 1
+        assert row['input_text'] == '' and row['output'] == ''
+        assert 'PRIVATE_EVALUATION_QUESTION_7e29' not in row['system_result']
+        assert 'PRIVATE_EVALUATION_OUTPUT_5c31' not in row['system_result']
+
+    def test_completed_call_is_hash_only_and_context_exclusion_is_actor_bound(self, test_db):
+        request = _typed_conversation_request()
+        result = _completed_owned_result(request)
+        evaluation_ref = aev.record_owned_gateway_execution(request, result, latency_ms=37)
+        assert evaluation_ref and evaluation_ref.startswith('ai-call:v1:')
+
+        rows = acl.query_calls(provider='owned')
+        assert len(rows) == 1
+        row = rows[0]
+        assert row['success'] == 1
+        assert row['input_text'] == '' and row['output'] == ''
+        assert row['input_hash'] == request.input_revision_sha256
+        assert row['output_hash']
+        payload = json.loads(row['system_result'])
+        assert payload['state'] == 'COMPLETED'
+        assert payload['generation_performed'] is True
+        assert payload['binding']['conversation_id'] == request.job_id
+        assert payload['binding']['turn_id'] == request.request_id.split(':', 1)[0]
+        assert 'PRIVATE_EVALUATION_QUESTION_7e29' not in row['system_result']
+        assert 'PRIVATE_EVALUATION_HISTORY_3a10' not in row['system_result']
+        assert 'PRIVATE_EVALUATION_OUTPUT_5c31' not in row['system_result']
+
+        connection = aev._conn()
+        try:
+            connection.execute('BEGIN IMMEDIATE')
+            args = {'scope': request.scope, 'conversation_id': request.job_id,
+                    'turn_id': request.request_id.split(':', 1)[0]}
+            assert aev.record_conversation_turn_exclusion(connection, evaluation_ref,
+                actor_ref='actor:wrong-user', **args) == 'NOT_LINKED'
+            assert aev.record_conversation_turn_exclusion(connection, evaluation_ref,
+                actor_ref=request.actor_ref, **args) == 'RECORDED'
+            assert aev.record_conversation_turn_exclusion(connection, evaluation_ref,
+                actor_ref=request.actor_ref, **args) == 'ALREADY_RECORDED'
+            connection.commit()
+        finally:
+            connection.close()
+
+        quality = aev.evaluate_ai_quality(provider='owned')
+        assert quality['success_count'] == 1
+        assert quality['failure_count'] == 0
+        assert quality['conversation_context_exclusion_count'] == 1
+        assert quality['human_correction_count'] == 0
+
+    def test_not_bound_budget_cancelled_and_runtime_failure_remain_distinct(self, test_db):
+        from lumenis.system.ai_gateway.owned_service import owned_service_request_digest
+        outcomes = [
+            (_typed_conversation_request('a'), 'UNAVAILABLE', 'OWNED_SERVICE_EXECUTOR_NOT_BOUND', None),
+            (_typed_conversation_request('b'), 'BLOCKED', 'CONTEXT_REQUIRED_INPUT_EXCEEDS_MODEL_BUDGET', None),
+            (_typed_conversation_request('f'), 'CANCELLED', 'OWNED_SERVICE_CANCELLED', None),
+            (_typed_conversation_request('c'), 'CANCELLED', 'OWNED_SERVICE_CANCELLED',
+             'attempt_' + '2' * 32),
+            (_typed_conversation_request('d'), 'ERROR', 'OWNED_RUNTIME_EXECUTION_FAILED',
+             'attempt_' + '3' * 32),
+        ]
+        for request, status, code, attempt_id in outcomes:
+            result = {'ok': False, 'status': status, 'code': code,
+                      'request_digest': owned_service_request_digest(request),
+                      'provider': 'owned'}
+            if attempt_id:
+                result['attempt_id'] = attempt_id
+            aev.record_owned_gateway_execution(request, result, latency_ms=5)
+        unverified = _typed_conversation_request('e')
+        unverified_result = _completed_owned_result(unverified, attempt_id='')
+        aev.record_owned_gateway_execution(unverified, unverified_result, latency_ms=5)
+
+        quality = aev.evaluate_ai_quality(provider='owned')
+        assert quality['success_count'] == 0
+        assert quality['failure_count'] == 1
+        assert quality['cancelled_count'] == 2
+        assert quality['cancelled_before_generation_count'] == 1
+        assert quality['not_executed_count'] == 3
+        assert quality['not_executed_states'] == {
+            'NOT_BOUND': 1, 'BUDGET_BLOCKED': 1, 'UNVERIFIED_COMPLETION': 1}
+        assert quality['execution_counts'] == {
+            'attempted': 2, 'completed': 0, 'failed': 1,
+            'cancelled': 2, 'cancelled_before_generation': 1,
+            'not_executed': 3,
+            'not_executed_states': {
+                'NOT_BOUND': 1, 'BUDGET_BLOCKED': 1, 'UNVERIFIED_COMPLETION': 1},
+        }
+        assert quality['provider_failure_rate']['owned'] == 1.0
+
+    def test_provider_health_rates_only_actual_generation_outcomes(self, test_db):
+        from lumenis.system.ai_gateway.owned_service import owned_service_request_digest
+        cases = [
+            (_typed_conversation_request('1'), 'UNAVAILABLE',
+             'OWNED_SERVICE_EXECUTOR_NOT_BOUND', None),
+            (_typed_conversation_request('2'), 'BLOCKED',
+             'CONTEXT_REQUIRED_INPUT_EXCEEDS_MODEL_BUDGET', None),
+            (_typed_conversation_request('3'), 'CANCELLED',
+             'OWNED_SERVICE_CANCELLED', None),
+            (_typed_conversation_request('4'), 'CANCELLED',
+             'OWNED_SERVICE_CANCELLED', 'attempt_' + '4' * 32),
+            (_typed_conversation_request('5'), 'ERROR',
+             'OWNED_RUNTIME_EXECUTION_FAILED', 'attempt_' + '5' * 32),
+        ]
+        for request, status, code, attempt_id in cases:
+            result = {'ok': False, 'status': status, 'code': code,
+                      'request_digest': owned_service_request_digest(request),
+                      'provider': 'owned'}
+            if attempt_id:
+                result['attempt_id'] = attempt_id
+            aev.record_owned_gateway_execution(request, result, latency_ms=12)
+        completed = _typed_conversation_request('6')
+        aev.record_owned_gateway_execution(completed,
+            _completed_owned_result(completed, attempt_id='attempt_' + '6' * 32),
+            latency_ms=30)
+
+        health = aev.evaluate_provider_health()['owned']
+        assert health['total'] == 6
+        assert health['attempted'] == 3
+        assert health['success'] == 1 and health['failure'] == 1
+        assert health['known_outcomes'] == 2 and health['failure_rate'] == 0.5
+        assert health['cancelled'] == 2
+        assert health['cancelled_before_generation'] == 1
+        assert health['not_executed'] == 2
+        assert health['not_executed_states'] == {'NOT_BOUND': 1, 'BUDGET_BLOCKED': 1}
+        assert health['avg_latency_ms'] == 21
+
+        report = aev.generate_evaluation_report()
+        assert '实际执行尝试: 3' in report
+        assert '执行后取消: 1' in report
+        assert '执行前取消: 1' in report
+        assert '未执行（未绑定/预算/权限等）: 2' in report
+        assert '取消=2 未执行=2' in report
+
+
+# ============================================================
+# 6. 人工修正反馈闭环
 # ============================================================
 class TestHumanCorrection:
     def test_submit_human_correction(self, test_db):

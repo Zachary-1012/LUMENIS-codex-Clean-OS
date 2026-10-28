@@ -61,34 +61,41 @@ def test_atom_keeps_native_identity_views_and_unknown_interactions():
     assert item["publish_datetime"] != item["captured_at"]
 
 
-def test_youtube_feed_is_blocked_before_fetch():
+def test_public_youtube_feed_uses_existing_atom_fetch_and_checks_channel_identity():
     fetches: list[str] = []
     result = _adapter(_atom(), fetches).search(
-        "https://www.youtube.com/feeds/videos.xml?channel_id=blocked"
+        "https://www.youtube.com/feeds/videos.xml?channel_id=UCapproved"
     )
-    assert result.status is CollectionStatus.BLOCKED
-    assert result.metadata["blocked_reason"] == "source_policy"
-    assert fetches == []
+    assert result.status is CollectionStatus.SUCCESS
+    assert len(fetches) == 1 and result.items[0]['raw']['channel_id'] == 'UCapproved'
+    mismatched = _adapter(_atom()).search('https://m.youtube.com/feeds/videos.xml?channel_id=another-channel')
+    assert mismatched.status is CollectionStatus.PROVIDER_UNAVAILABLE and not mismatched.items
 
 
-def test_public_source_transport_blocks_youtube_feed_before_dns_or_http(monkeypatch):
+def test_public_source_transport_accepts_public_youtube_feed_and_retains_ssrf_guard(monkeypatch):
+    from types import SimpleNamespace
     calls: list[str] = []
-
-    def unexpected(*_args, **_kwargs):
-        calls.append("network")
-        raise AssertionError("blocked feed must not reach DNS or HTTP")
-
-    monkeypatch.setattr(public_source.socket, "getaddrinfo", unexpected)
-    monkeypatch.setattr(public_source.requests.Session, "get", unexpected)
+    monkeypatch.delenv('LUMENIS_PUBLIC_SOURCE_DOH_FALLBACK',raising=False)
+    monkeypatch.setattr(public_source,'load_public_source_host_pins',lambda:{})
+    monkeypatch.setattr(public_source,'_resolved_addresses',lambda _:['8.8.8.8'])
+    def get(_session,url,**kwargs):
+        calls.append(url)
+        assert kwargs['verify'] is True and kwargs['allow_redirects'] is False
+        assert 'Authorization' not in kwargs['headers'] and 'Cookie' not in kwargs['headers']
+        return SimpleNamespace(status_code=200,url=url,headers={'Content-Type':'application/atom+xml'},
+            iter_content=lambda **_:iter([_atom()]),close=lambda:None)
+    monkeypatch.setattr(public_source.requests.Session,'get',get)
+    url = 'https://m.youtube.com/feeds/videos.xml?channel_id=UCapproved'
+    result = AtomAdapter().search(url)
+    assert result.status is CollectionStatus.SUCCESS and calls == [url]
+    monkeypatch.setattr(public_source,'_resolved_addresses',lambda _:['127.0.0.1'])
     try:
-        public_source.fetch_public_url(
-            "https://m.youtube.com/feeds/videos.xml?channel_id=blocked"
-        )
+        public_source.fetch_public_url(url)
     except PublicSourceError as exc:
-        assert "blocked" in str(exc).lower()
+        assert 'private or local' in str(exc)
     else:
-        raise AssertionError("YouTube feed fetch should be rejected")
-    assert calls == []
+        raise AssertionError('a public Feed hostname must not bypass private-address rejection')
+    assert calls == [url]
 
 
 def test_atom_without_entry_identity_is_not_silent_empty_success():

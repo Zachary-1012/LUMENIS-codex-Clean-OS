@@ -10,7 +10,7 @@ import pytest
 
 from lumenis.system.ai_gateway import owned_training as training
 from lumenis.system.ai_gateway import owned_inference as inference
-from tests.test_owned_ai_training import _t4_inputs, _run, _mock_training_stack
+from tests.test_owned_ai_training import _t4_inputs, _run
 from tests.test_owned_inference import candidate, _Tokenizer, _Tensor, _request
 from tests.test_owned_training_checkpoint_recovery import policy_material
 
@@ -40,10 +40,9 @@ def test_ada_reuses_exact_nf4_snapshot_and_requires_its_own_approval(tmp_path, m
     def deny(request):
         requests.append(request)
         return False
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
         _run(paths, recipe=training.ADA_RECIPE, execute=True, approval_verifier=deny)
-    assert requests[0].recipe == training.ADA_RECIPE
-    assert requests[0].manifest_sha256 == result["manifest_sha256"]
+    assert requests == []
     assert not paths[-1].exists()
 
 
@@ -102,41 +101,14 @@ def test_ada_precision_scope_restores_existing_environment(monkeypatch):
     assert os.environ["UNSLOTH_FORCE_FLOAT32"] == "previous"
 
 
-def test_ada_training_call_preserves_isolation_and_pinned_stack(tmp_path, monkeypatch):
+def test_ada_training_execution_is_withdrawn_after_read_only_preflight(tmp_path, monkeypatch):
     paths = _ada_inputs(tmp_path, monkeypatch)
-    observed = _mock_training_stack(monkeypatch)
-    monkeypatch.setattr(training, "_require_cuda", lambda recipe: (
-        SimpleNamespace(bfloat16="synthetic-bfloat16", cuda=SimpleNamespace(
-            synchronize=lambda _: None, reset_peak_memory_stats=lambda _: None,
-            max_memory_allocated=lambda _: 10 * 1024**3,
-            max_memory_reserved=lambda _: 12 * 1024**3)), "synthetic RTX 4090", 24 * 1024**3))
-    monkeypatch.setattr(importlib.metadata, "version", inference._T4_PACKAGES.__getitem__)
-    def load(**kwargs):
-        assert kwargs["dtype"] == "synthetic-bfloat16"
-        assert kwargs["max_seq_length"] == 4096
-        assert kwargs["load_in_4bit"] is True
-        assert kwargs["local_files_only"] is True and kwargs["token"] is False
-        assert os.environ["UNSLOTH_FORCE_FLOAT32"] == "0"
-        model = SimpleNamespace(config=SimpleNamespace(
-            _name_or_path=str(paths[0]), quantization_config={"bnb_4bit_quant_type": "nf4"}))
-        return model, sys.modules["transformers"].AutoTokenizer.from_pretrained(
-            str(paths[0]), local_files_only=True, trust_remote_code=False)
-    monkeypatch.setitem(sys.modules, "unsloth", SimpleNamespace(FastLanguageModel=SimpleNamespace(
-        from_pretrained=load, get_peft_model=lambda model, **kwargs: model)))
-    trainer_class = sys.modules["trl"].SFTTrainer
-    original_train = trainer_class.train
-    def train(self):
-        result = original_train(self)
-        return SimpleNamespace(global_step=result.global_step, metrics={"train_loss": 1.25})
-    monkeypatch.setattr(trainer_class, "train", train)
-    result = _run(paths, recipe=training.ADA_RECIPE, execute=True, approval_verifier=lambda _: True)
-    assert result["training_recipe"] == training.ADA_RECIPE
-    assert observed["args"].bf16 is True and observed["args"].fp16 is False
-    assert observed["args"].max_length == 4096
-    assert observed["args"].per_device_train_batch_size == 1
-    assert observed["args"].gradient_accumulation_steps == 1
-    assert "Question B" not in observed["dataset"][0]["text"]
-    assert result["candidate_status"] == "NOT_EVALUATED"
+    preflight = _run(paths, recipe=training.ADA_RECIPE)
+    assert preflight["execution_state"] == "PREFLIGHT_ONLY"
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
+        _run(paths, recipe=training.ADA_RECIPE, execute=True,
+            approval_verifier=lambda _request: pytest.fail("approval must not be requested"))
+    assert not paths[-1].exists()
 
 
 def _ada_candidate(candidate, checkpoint_document=None):

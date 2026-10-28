@@ -244,6 +244,66 @@ class EngineeringTests(unittest.TestCase):
         second = h.state_file({"session_id": "session-b"}, self.root)
         self.assertNotEqual(first, second)
 
+    def test_legacy_continuity_without_execution_binding_keeps_existing_hook_policy(self):
+        shell_read = {
+            "tool_name": "exec_command",
+            "tool_input": {"command": "rg -n value sample.py"},
+        }
+        self.assertEqual(self.handle("PreToolUse", **shell_read), {})
+
+        self.make_continuity_record()
+        h.continuity_save(
+            self.root, self.state,
+            {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"},
+            "work/checkpoint.json", "continuity",
+        )
+        self.assertNotIn("execution_digest", self.state)
+        self.assertEqual(self.handle(
+            "PreToolUse", session_id="engineering-test-thread", agent_id="bounded-test-agent", **shell_read
+        ), {})
+        blocked = self.handle(
+            "PreToolUse", session_id="engineering-test-thread", agent_id="bounded-test-agent",
+            tool_name="exec_command", tool_input={"command": "git reset --hard HEAD"},
+        )
+        self.assertEqual(blocked["hookSpecificOutput"]["permissionDecision"], "deny")
+
+    def test_bound_execution_missing_from_record_fails_closed(self):
+        record, payload, event = self.bind_execution_scope()
+        self.assertIn("execution_digest", self.state)
+        del payload["continuity"]["execution"]
+        record.write_text(json.dumps(payload), "utf-8")
+
+        result = self.handle(
+            "PreToolUse", **event, tool_name="exec_command",
+            tool_input={"command": "python -m py_compile sample.py"},
+        )
+
+        self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertIn("EXECUTION_SCOPE_CHANGED", result["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def test_bound_execution_change_fails_closed(self):
+        record, payload, event = self.bind_execution_scope()
+        payload["continuity"]["execution"]["allowed_writes"] = ["other.py"]
+        record.write_text(json.dumps(payload), "utf-8")
+
+        result = self.handle(
+            "PreToolUse", **event, tool_name="exec_command",
+            tool_input={"command": "python -m py_compile sample.py"},
+        )
+
+        self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertIn("EXECUTION_SCOPE_CHANGED", result["hookSpecificOutput"]["permissionDecisionReason"])
+
+    def test_explicit_pause_still_blocks_legacy_execution_fallback(self):
+        self.state["execution_paused"] = True
+        result = self.handle(
+            "PreToolUse", tool_name="exec_command",
+            tool_input={"command": "python -m py_compile sample.py"},
+        )
+
+        self.assertEqual(result["hookSpecificOutput"]["permissionDecision"], "deny")
+        self.assertIn("PO_PAUSED_OR_READ_ONLY", result["hookSpecificOutput"]["permissionDecisionReason"])
+
     def continuity_item(self, pending_effects=None):
         return {
             "owner": "C4",
@@ -271,6 +331,22 @@ class EngineeringTests(unittest.TestCase):
         self.make_continuity_record()
         event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
         h.continuity_save(self.root, self.state, event, "work/checkpoint.json", "continuity")
+
+    def bind_execution_scope(self):
+        record = self.make_continuity_record()
+        payload = json.loads(record.read_text("utf-8"))
+        payload["continuity"]["execution"] = {
+            "schema_version": 1,
+            "status": "RUNNING",
+            "role": "CAPABILITY",
+            "po_source": "Current direct PO instruction in the isolated test fixture.",
+            "allowed_writes": ["sample.py"],
+            "approved_calls": [],
+        }
+        record.write_text(json.dumps(payload), "utf-8")
+        event = {"session_id": "engineering-test-thread", "agent_id": "bounded-test-agent"}
+        h.continuity_save(self.root, self.state, event, "work/checkpoint.json", "continuity")
+        return record, payload, event
 
     def observe_patch_mutation(self):
         self.handle("PostToolUse", tool_name="apply_patch", tool_input={"command": "patch"}, tool_response={"exit_code": 0})

@@ -45,6 +45,27 @@ from lumenis.shared.evaluation.dimensions import (
 from lumenis.shared.evaluation.runner import EvaluationRunner, run_full_evaluation
 
 
+def test_live_ai_execution_logs_do_not_fabricate_accuracy_correction_or_fallback(temp_db):
+    import sqlite3
+    with sqlite3.connect(temp_db) as con:
+        con.execute('CREATE TABLE ai_filter_log(provider TEXT,confidence REAL,filter_result TEXT)')
+        con.execute('CREATE TABLE note_review_history(note_id TEXT)')
+        con.executemany('INSERT INTO ai_filter_log VALUES(?,?,?)',
+            [('owned', .9, 'pass')] * 10 + [('owned', .8, 'filtered'),
+            ('owned', None, 'pending'), ('owned', None, 'error')] + [('rule', 1.0, 'pass')] * 9)
+        con.executemany('INSERT INTO note_review_history VALUES(?)', [('unlinked-review',)] * 3)
+    records = {record.metric_name: record for record in evaluate_ai_dimension(db_path=temp_db)}
+    for metric in ('accuracy', 'human_correction_rate', 'fallback_rate'):
+        assert records[metric].metric_value is None and records[metric].status == 'unknown'
+    assert json.loads(records['accuracy'].metadata)['completed_filter_count'] == 11
+    assert json.loads(records['accuracy'].metadata)['execution_completion_rate'] == round(11 / 13, 4)
+    assert records['provider_reliability'].metric_value == round(11 / 13, 4), 'A pending call is not successful'
+    assert json.loads(records['fallback_rate'].metadata)['rule_only_count'] == 9
+    with sqlite3.connect(temp_db) as con:
+        assert con.execute('SELECT COUNT(*) FROM ai_filter_log').fetchone()[0] == 22
+        assert con.execute('SELECT COUNT(*) FROM note_review_history').fetchone()[0] == 3
+
+
 # ============================================================
 # Fixtures
 # ============================================================

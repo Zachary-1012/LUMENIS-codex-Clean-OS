@@ -21,6 +21,21 @@ or a blanket redistribution clearance. No upstream notice or font file is change
 
 ## Dependencies and optional external tools
 
+- SYSTEM Collector public media embeds the Unlicense `yt-dlp==2026.10.21`
+  Python wheel, not its bundled executable. Preserve its complete
+  [original license](vendor/lumenis-reuse-notices/yt-dlp-2026.10.21-Unlicense.txt).
+- C1 public platform parsers adapt OpenCLI commit
+  `aeaff2b796efabb7fd46654112418ab61fcae917`, copyright 2025 jackwener,
+  Apache-2.0. Preserve the complete
+  [upstream license](vendor/lumenis-reuse-notices/OpenCLI-aeaff2b7-Apache-2.0.txt)
+  and the source/pin/modification notices in adapted files. The selected upstream
+  paths carry no separate NOTICE. Auth/publish/session runtime is not adopted.
+- C1 Naver/Daum body/iframe parsing adapts `adapters/naver_blog/scrape.py` from
+  sipher commit `2c3470f973d47842a13b70c552872a6ceabd7a9b`, copyright 2026
+  stepbyjason-lab, MIT. Preserve the complete
+  [original notice](vendor/lumenis-reuse-notices/sipher-2c3470f9-MIT.txt).
+  Its CLI, setup, model, OCR and session paths are not adopted.
+
 Python, npm, Flutter and native dependencies remain under their own exact-version
 licenses. Record the actual shipped dependency graph, copied source and binary
 builds before distributing a package, together with required license, attribution,
@@ -87,3 +102,15 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
+
+## Flutter work-surface packages
+
+- flutter_animate 4.5.2: [complete upstream license](vendor/lumenis-reuse-notices/flutter_animate-4.5.2-LICENSE.txt); package archive SHA256 `7befe2d3252728afb77aecaaea1dec88a89d35b9b1d2eea6d04479e8af9117b5`.
+- pixel_snap 0.1.5: [complete upstream license](vendor/lumenis-reuse-notices/pixel_snap-0.1.5-LICENSE.txt); package archive SHA256 `677410ea37b07cd37ecb6d5e6c0d8d7615a7cf3bd92ba406fd1ac57e937d1fb0`.
+- flutter_shaders 0.1.5: [complete upstream license](vendor/lumenis-reuse-notices/flutter_shaders-0.1.5-LICENSE.txt); package archive SHA256 `16cd456daf2fd6ed7ac0c5168716c5e2fe18f91d82631b775f1af9100fb3f586`.
+
+## 2026-10-26 authorized lexical retrieval adaptation
+
+
+`agent_memory/retrieval.py` adapts the BM25Okapi term-frequency/length normalization from `dorianbrown/rank_bm25`, pinned commit `47aa3ddf8dc1ebeb7ef4e65f2b4536af44594099`, `rank_bm25.py`. Original copyright Dorian Brown; Apache-2.0. The adapted implementation retains workspace/actor filtering and revalidation, adds sparse postings and bounded long-document passage selection, and uses non-negative IDF instead of upstream negative-IDF flooring. This lexical component is not a neural embedding or cross-encoder reranker. Retain the [complete upstream license](vendor/lumenis-reuse-notices/rank_bm25-47aa3ddf-Apache-2.0.txt).

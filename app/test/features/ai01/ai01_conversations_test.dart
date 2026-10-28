@@ -21,6 +21,29 @@ void main() {
 
   tearDown(() => model.dispose());
 
+  for (final (error, expected) in <(Object, String)>[
+    (const LumenisCoreException('connection unavailable'), 'offline'),
+    (
+      const FormatException('invalid conversation response'),
+      'invalid_response',
+    ),
+  ]) {
+    test(
+      'reading a conversation reports $expected without an uncertain write',
+      () async {
+        repository.listError = error;
+        await model.refreshList();
+        expect(model.issue, expected);
+        expect(model.outcomeUnknown, isFalse);
+        expect(model.creatingUnknown, isFalse);
+        expect(repository.respondCalls, isEmpty);
+        repository.listError = null;
+        await model.refreshList();
+        expect(model.issue, isNull);
+      },
+    );
+  }
+
   testWidgets(
     'work details save, reopen and exclude messages without requesting AI',
     (tester) async {
@@ -831,6 +854,7 @@ Future<void> _showContextField(WidgetTester tester, String name) async {
 }
 
 class _ConversationRepository implements Ai01ConversationRepository {
+  Object? listError;
   final contexts = <String, Ai01ConversationContext>{};
   int contextWriteCount = 0;
   bool contextConflictOnce = false;
@@ -938,6 +962,7 @@ class _ConversationRepository implements Ai01ConversationRepository {
     required int limit,
     required int offset,
   }) async {
+    if (listError case final Object error) throw error;
     listOffsets.add(offset);
     final items = conversations.values.toList()
       ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));

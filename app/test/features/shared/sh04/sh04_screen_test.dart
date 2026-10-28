@@ -6,10 +6,83 @@ import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/features/shared/sh04/sh04_repository.dart';
 import 'package:lumenis_app/features/shared/sh04/sh04_screen.dart';
 import 'package:lumenis_app/features/shared/sh04/sh04_snapshot.dart';
+import 'package:lumenis_app/features/shared/sh04/sh04_view_model.dart';
 
 import '../shared_test_support.dart';
 
 void main() {
+  test('legacy visual reports require an explicit document continuation', () {
+    final item = _savedWorkItem();
+    item['document']['payload'] = {
+      'visual_document': {'schema': 'lumenis.visual-document/v1'},
+    };
+    expect(Sh04Export.fromSavedWorkItem(item).isLegacyVisualReport, isTrue);
+    item['document']['payload'] = <String, dynamic>{};
+    expect(Sh04Export.fromSavedWorkItem(item).isLegacyVisualReport, isFalse);
+  });
+
+  test(
+    'revision cannot report success after discarding the edited body',
+    () async {
+      final repository = _FakeSh04Repository()..discardRevisionBody = true;
+      final parent = _makeExport(
+        index: 1,
+        title: 'Original',
+        markdown: 'Original body',
+        version: 1,
+      );
+      repository.items.add(parent);
+      final model = Sh04ViewModel(repository: repository);
+      addTearDown(model.dispose);
+      await model.refresh();
+      await expectLater(
+        model.reviseReport(
+          parent: parent,
+          title: 'Revised',
+          markdown: 'Edited body',
+          reason: 'Correction',
+        ),
+        throwsFormatException,
+      );
+      expect(model.exports.single.markdown, 'Original body');
+    },
+  );
+
+  testWidgets(
+    'legacy report continuation explains and preserves the original',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final item = _savedWorkItem();
+      item['document']['payload'] = {'visual_document': <String, dynamic>{}};
+      final parent = Sh04Export.fromSavedWorkItem(item);
+      final repository = _FakeSh04Repository()..items.add(parent);
+      await tester.pumpWidget(_app(repository));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Shared report').first);
+      await tester.pumpAndSettle();
+      expect(find.text('继续写作'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('sh04-revise-report')));
+      await tester.pumpAndSettle();
+      expect(find.text('新版本保存为文稿，原作品保持不变。'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('sh04-report-markdown')),
+        'Edited document',
+      );
+      await tester.enterText(
+        find.byKey(const Key('sh04-revision-reason')),
+        'Continue writing',
+      );
+      await tester.tap(find.byKey(const Key('sh04-save-report')));
+      await tester.pumpAndSettle();
+      expect(repository.items.first.markdown, parent.markdown);
+      expect(repository.items.last.markdown, 'Edited document');
+      expect(repository.items.last.isLegacyVisualReport, isFalse);
+      expect(find.text('Edited document'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   test('typed manuscript remains readable and uses its original editor', () {
     final item = _savedWorkItem();
     item['document']['contract'] = {
@@ -329,6 +402,7 @@ Widget _app(
 );
 
 class _FakeSh04Repository implements Sh04Repository {
+  bool discardRevisionBody = false;
   final List<Sh04Export> items = [];
   Object? loadError;
   int saveCount = 0;
@@ -383,7 +457,7 @@ class _FakeSh04Repository implements Sh04Repository {
     final revised = _makeExport(
       index: 2,
       title: title,
-      markdown: markdown,
+      markdown: discardRevisionBody ? parent.markdown : markdown,
       version: parent.version + 1,
       workId: parent.workId,
       parentArtifactId: parent.internalId,

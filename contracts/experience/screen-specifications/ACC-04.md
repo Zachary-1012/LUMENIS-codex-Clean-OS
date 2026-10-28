@@ -72,7 +72,7 @@ Feature keys: `acc04.guardUnavailable`, `acc04.guardBlocked`, `acc04.productAcco
 - `EVIDENCE`: guard response, permission audit and protected-route recheck.
 - `ACCEPTANCE ASSERTION`: `BLOCKED_PENDING_LIVE_RUNTIME_E2E`.
 - `RANDOM ENTITY DATA ACCEPTANCE`: sample count 0; no access decisions fabricated.
-- `GLOBAL UNIVERSE / DATA MATURITY IMPACT`: none; this page reports authorization state only.
+- `SUBJECT SCOPE / TASK DATA QUALITY IMPACT`: none; this page reports authorization state only.
 - `COMMERCIAL OVERLAY IMPACT`: `COMMERCIAL_READY=NO` until denied and recovered real flows pass.
 
 ## 7. Continuous frontier research / review decision

@@ -22,10 +22,13 @@ captured_at，二者严格分离。
 import re
 import logging
 import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlsplit
-from .base import BaseAdapter, AdapterResult
-from .human_browser import HumanBrowser, PageState, configured_readonly_worker_url
+from .base import BaseAdapter, AdapterResult, optional_int
+from .human_browser import (HumanBrowser, NativeReadCapture, PageState, configured_readonly_worker_url,
+                            NativePageWindowError, native_json_nodes, native_page_json, native_page_window,
+                            native_read_scroll, validate_native_page_window_cursor)
 from .cookie_vault import inject_into_context
 
 logger = logging.getLogger(__name__)
@@ -1036,7 +1039,7 @@ class InstagramAdapter(BaseAdapter):
             hb.close()
 
     # ---------- 评论 ----------
-    def comments(self, shortcode: str, max_comments: int = 20) -> AdapterResult:
+    def comments(self, shortcode: str, max_comments: int = 20, *, cursor=None, include_replies=False) -> AdapterResult:
         """进详情页解析评论区（只读，绝不发表评论）。
 
         评论列表放在返回 note 的 raw_data["comments"] 中，每条含
@@ -1045,7 +1048,7 @@ class InstagramAdapter(BaseAdapter):
         if not shortcode or not shortcode.strip():
             return AdapterResult(success=False, error="shortcode 为空")
         try:
-            return self._comments_browser(shortcode.strip(), max_comments)
+            return self._native_read("comments", shortcode.strip(), max_comments, cursor=cursor, include_replies=include_replies)
         except Exception as e:
             diagnostic = log_instagram_failure("comments", e)
             return AdapterResult(success=False, error=diagnostic["error_code"], diagnostics=diagnostic)
@@ -1181,7 +1184,7 @@ class InstagramAdapter(BaseAdapter):
         if not username or not username.strip():
             return AdapterResult(success=False, error="username 为空")
         try:
-            return self._creator_browser(username.strip().lstrip("@"))
+            return self._native_read("author", username.strip().lstrip("@"), 1)
         except Exception as e:
             diagnostic = log_instagram_failure("creator", e)
             return AdapterResult(success=False, error=diagnostic["error_code"], diagnostics=diagnostic)
@@ -1275,6 +1278,273 @@ class InstagramAdapter(BaseAdapter):
                 except Exception:
                     pass
             hb.close()
+
+    @staticmethod
+    def _native_time(value):
+        if type(value) in {int, float}:
+            try: return datetime.fromtimestamp(value, timezone.utc).isoformat()
+            except (ValueError, OSError, OverflowError): pass
+        return ""
+
+    @staticmethod
+    def _native_count(node, key, edge):
+        return optional_int(node.get(key)) if node.get(key) is not None else optional_int((node.get(edge) or {}).get("count"))
+
+    def _native_media_note(self, item):
+        code = item.get("shortcode") or item.get("code")
+        mid = item.get("pk") or item.get("id")
+        if not isinstance(code, str) or re.fullmatch(r"[A-Za-z0-9_-]{3,64}", code) is None or not mid:
+            return None
+        owner = item.get("owner") or item.get("user") or {}
+        caption = item.get("caption") or {}
+        caption = caption.get("text") if isinstance(caption, dict) else caption if isinstance(caption, str) else None
+        if caption is None:
+            edges = (item.get("edge_media_to_caption") or {}).get("edges") or []
+            caption = "\n".join(edge["node"]["text"] for edge in edges if isinstance(edge, dict)
+                                and isinstance(edge.get("node"), dict) and isinstance(edge["node"].get("text"), str))
+        hints = []
+        def media_hints(media, locator):
+            candidates = [(media.get("display_url") or media.get("display_uri"), "image"), (media.get("video_url"), "video")]
+            candidates.extend((value.get("url"), "image") for value in (media.get("image_versions2") or {}).get("candidates") or [] if isinstance(value, dict))
+            candidates.extend((value.get("url"), "video") for value in media.get("video_versions") or [] if isinstance(value, dict))
+            for url, kind in candidates:
+                safe = self._safe_media_url_hint(url) if isinstance(url, str) else None
+                if safe:
+                    hints.append({"kind": kind, "url": safe, "native_media_id": str(media.get("pk") or media.get("id") or mid),
+                                  "locator": locator, "bytes_state": "NOT_ACQUIRED"})
+        media_hints(item, "$.media")
+        for child in item.get("carousel_media") or []:
+            if isinstance(child, dict): media_hints(child, "$.media.carousel_media[]")
+        for edge in (item.get("edge_sidecar_to_children") or {}).get("edges") or []:
+            if isinstance(edge, dict) and isinstance(edge.get("node"), dict): media_hints(edge["node"], "$.media.edge_sidecar_to_children.edges[].node")
+        return self._make_note(title=(caption or "")[:100], content=caption or "", url=f"https://www.instagram.com/p/{code}/",
+            author=owner.get("username") or "", author_id=str(owner.get("pk") or owner.get("id") or ""),
+            publish_date=self._native_time(item.get("taken_at") or item.get("taken_at_timestamp")),
+            likes=self._native_count(item, "like_count", "edge_media_preview_like"),
+            comments=self._native_count(item, "comment_count", "edge_media_to_comment"),
+            cover=next((value["url"] for value in hints if value["kind"] == "image"), ""), source_platform="instagram",
+            raw_data={"engine": "instagram_native_media", "shortcode": code, "media_id": str(mid), "author": owner,
+                      "source_observation": item, "body_state": "PLATFORM_CAPTION", "media_hints": hints})
+
+    def _native_read(self, capability, target, limit, *, cursor=None, include_replies=False):
+        if re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", str(target)) is None or type(limit) is not int or not 1 <= limit <= 100:
+            return AdapterResult(success=False, error="INSTAGRAM_INPUT_INVALID")
+        try:
+            validate_native_page_window_cursor(cursor)
+            if isinstance(cursor, dict) and cursor.get('mode') == 'replies':
+                validate_native_page_window_cursor(cursor.get('next_root'))
+        except NativePageWindowError:
+            return AdapterResult(success=False, error='INSTAGRAM_NATIVE_CURSOR_WINDOW_INVALID')
+        if cursor is not None:
+            if (not isinstance(cursor, dict) or cursor.get("mode") not in {"roots", "replies", "posts"}
+                    or not isinstance(cursor.get("page"), dict) or len(cursor["page"]) > 1
+                    or any(key not in {"after", "min_id", "max_id"} or not isinstance(value, str)
+                           or not 1 <= len(value) <= 4096 or any(ord(c) < 32 for c in value) for key, value in cursor["page"].items())
+                    or not isinstance(cursor.get("media_id"), str) or re.fullmatch(r"[0-9]{1,30}", cursor["media_id"]) is None):
+                return AdapterResult(success=False, error="INSTAGRAM_NATIVE_CURSOR_INVALID")
+            if cursor["mode"] == "replies" and (not isinstance(cursor.get("root_id"), str)
+                    or re.fullmatch(r"[0-9]{1,30}", cursor["root_id"]) is None or not isinstance(cursor.get("pending_roots"), list)
+                    or len(cursor["pending_roots"]) > 100 or any(not isinstance(v, str) or re.fullmatch(r"[0-9]{1,30}", v) is None for v in cursor["pending_roots"])):
+                return AdapterResult(success=False, error="INSTAGRAM_NATIVE_CURSOR_INVALID")
+            if (capability == 'author_posts' and cursor['mode'] != 'posts'
+                    or capability == 'comments' and cursor['mode'] not in {'roots', 'replies'}
+                    or capability == 'author'):
+                return AdapterResult(success=False, error='INSTAGRAM_NATIVE_CURSOR_INVALID')
+            if (capability == 'comments' and include_replies and 'reply_scope_unknown' in cursor
+                    and type(cursor['reply_scope_unknown']) is not bool):
+                return AdapterResult(success=False, error='INSTAGRAM_NATIVE_CURSOR_INVALID')
+        worker, page = None, None
+        capture = NativeReadCapture(hosts={"www.instagram.com", "i.instagram.com"}, paths=("/api/v1/", "/graphql"),
+            request_keys={"shortcode", "code", "media_id", "mediaId", "id", "user_id", "username", "after", "before", "min_id", "max_id", "parent_comment_id", "comment_id", "first", "count"})
+        try:
+            worker = HumanBrowser(cdp_url=configured_readonly_worker_url("instagram"), auto_ensure=False, launch_url="about:blank")
+            worker.connect()
+            inject_into_context(worker._context, "instagram")
+            page = worker.new_page(stealth=False)
+            capture.attach(page)
+            url = f"https://www.instagram.com/p/{target}/" if capability == "comments" else f"https://www.instagram.com/{target}/"
+            page.goto(url, wait_until="domcontentloaded", timeout=40000)
+            page.wait_for_timeout(1000)
+            known_media, known_users = set(), {}
+            def register(objects):
+                for obj in objects:
+                    for node in native_json_nodes(obj):
+                        mid = node.get("pk") or node.get("id")
+                        if capability == "comments" and (node.get("shortcode") or node.get("code")) == target and mid:
+                            known_media.add(str(mid).split("_")[0])
+                        if capability != "comments" and isinstance(node.get("username"), str) and node["username"].casefold() == target.casefold() and mid:
+                            known_users[str(mid)] = node
+            register(native_page_json(page))
+            def select(observation):
+                register(observation["objects"])
+                if capability == "author" and known_users:
+                    profiles = [node for node in known_users.values() if any(key in node for key in ("biography", "follower_count", "edge_followed_by", "edge_owner_to_timeline_media"))]
+                    if profiles: return {"profile": profiles[0]}
+                request = observation["request"]
+                if any(str(request.get(key) or "") != value for key, value in (cursor or {}).get("page", {}).items()):
+                    return None
+                if cursor is None and any(request.get(key) for key in ("after", "min_id", "max_id")):
+                    return None
+                root = (cursor or {}).get("root_id")
+                path = observation["path"]
+                if capability == "comments":
+                    match = re.search(r"/media/([0-9]+)(?:_[0-9]+)?/comments(?:/([0-9]+)/child_comments)?/?$", path)
+                    requested_media = str(request.get("media_id") or request.get("mediaId") or request.get("id") or "").split("_")[0]
+                    short_bound = (request.get("shortcode") or request.get("code")) == target
+                    if match:
+                        requested_media = match[1]
+                    if not short_bound and requested_media not in known_media:
+                        return None
+                    media_id = requested_media if requested_media in known_media else next(iter(known_media), None)
+                    if cursor and cursor["media_id"] != media_id:
+                        return None
+                    observed_parent = (match[2] if match else None) or request.get("parent_comment_id") or request.get("comment_id")
+                    if bool(root) != bool(observed_parent) or root and str(observed_parent) != root:
+                        return None
+                else:
+                    match = re.search(r"/feed/user/([0-9]+)/?$", path)
+                    uid = str(request.get("id") or request.get("user_id") or (match[1] if match else ""))
+                    if uid not in known_users:
+                        return None
+                    media_id = uid
+                    if cursor and cursor["media_id"] != uid:
+                        return None
+                for obj in observation["objects"]:
+                    for node in native_json_nodes(obj):
+                        if capability == "comments" and isinstance(node.get("comments"), list):
+                            return {"rows": node["comments"], "container": node, "media_id": media_id}
+                        if capability == "author_posts" and isinstance(node.get("items"), list):
+                            return {"rows": node["items"], "container": node, "media_id": media_id}
+                        for key, connection in node.items():
+                            allowed = ("comment" in key.lower()) if capability == "comments" else ("timeline" in key.lower() or "edge_owner_to_timeline_media" == key)
+                            if allowed and isinstance(connection, dict) and isinstance(connection.get("edges"), list):
+                                return {"rows": [edge.get("node") for edge in connection["edges"] if isinstance(edge, dict) and isinstance(edge.get("node"), dict)],
+                                        "container": connection, "media_id": media_id}
+                return None
+            def advance(_step):
+                if self._search_state_error(worker, page) in {"INSTAGRAM_AUTH_REQUIRED", "INSTAGRAM_CHALLENGE_REQUIRED", "INSTAGRAM_RATE_LIMITED", "INSTAGRAM_NETWORK_UNAVAILABLE"}:
+                    return False
+                return native_read_scroll(page, reply_id=(cursor or {}).get("root_id"), reply_attribute="data-comment-id")
+            # SSR profile is already an actual native response, not an empty
+            # placeholder requiring another request to count as observed.
+            profile = next((node for node in known_users.values() if any(k in node for k in ("biography", "follower_count", "edge_followed_by"))), None)
+            selected = {"profile": profile, "observed_prior_native_responses": 0} if capability == "author" and profile else capture.seek(page, select, advance, max_steps=16)
+            if selected is None:
+                failure = capture.failure() or {}
+                code = failure.get("failure_class") or self._search_state_error(worker, page) or "NATIVE_PAGE_NOT_OBSERVED"
+                return AdapterResult(success=False, error="INSTAGRAM_" + code, metadata={"failure_class": failure.get("failure_class"),
+                    "http_status": failure.get("http_status"), "retry_after_seconds": failure.get("retry_after_seconds"),
+                    "pagination": {"request_cursor": cursor, "next_cursor": None, "exhausted": None, "page_complete": False}})
+            if capability == "author":
+                profile = selected["profile"]
+                uid = str(profile.get("pk") or profile.get("id"))
+                return AdapterResult(success=True, notes=[self._make_note(title=profile.get("full_name") or target, content=profile.get("biography") or "",
+                    url=url, author=target, author_id=uid, source_platform="instagram", raw_data={"engine": "instagram_native_profile", "username": target,
+                        "native_user_id": uid, "followers": self._native_count(profile, "follower_count", "edge_followed_by"),
+                        "following": self._native_count(profile, "following_count", "edge_follow"),
+                        "content_count": self._native_count(profile, "media_count", "edge_owner_to_timeline_media"),
+                        "verified": profile.get("is_verified") if type(profile.get("is_verified")) is bool else None,
+                        "is_private": profile.get("is_private") if type(profile.get("is_private")) is bool else None,
+                        "native_author_aliases": [{"kind": "username", "value": target}, {"kind": "id", "value": uid}], "source_observation": profile})], raw_count=1)
+            container, rows, media_id = selected["container"], selected["rows"], selected["media_id"]
+            page_info = container.get("page_info") or {}
+            has_more = page_info.get("has_next_page")
+            if type(has_more) is not bool:
+                has_more = next((container[key] for key in ("has_more_comments", "has_more", "more_available") if type(container.get(key)) is bool), None)
+            next_page = None
+            for source_key, request_key in (("next_min_id", "min_id"), ("next_max_id", "max_id")):
+                if isinstance(container.get(source_key), str) and container[source_key]: next_page = {request_key: container[source_key]}; break
+            if next_page is None and isinstance(page_info.get("end_cursor"), str) and page_info["end_cursor"]:
+                next_page = {"after": page_info["end_cursor"]}
+            window = native_page_window(rows, limit=limit, cursor=cursor, identities=[
+                str(row.get('pk') or row.get('id')) if isinstance(row, dict) else None for row in rows])
+            complete = window['page_complete']
+            base_cursor = {key: value for key, value in (cursor or {}).items() if key not in {'item_offset', 'page_sha256'}}
+            if not base_cursor:
+                base_cursor = {'mode': 'posts' if capability == 'author_posts' else 'roots', 'media_id': media_id, 'page': {}}
+            next_cursor = ({**base_cursor, **window['next_window']} if not complete else
+                           {**base_cursor, 'page': next_page} if has_more is True and next_page
+                           and next_page != base_cursor['page'] else None)
+            exhausted = not has_more if type(has_more) is bool and complete else None
+            if not complete:
+                exhausted = False
+            notes, comments, pending, seen = [], [], [], set()
+            reply_scope_unknown = (cursor.get('reply_scope_unknown', True)
+                                   if capability == 'comments' and include_replies and cursor is not None else False)
+            if capability == "author_posts":
+                for item in window['rows']:
+                    note = self._native_media_note(item) if isinstance(item, dict) else None
+                    if not note: continue
+                    owner = note.raw_data["author"]
+                    if str(owner.get("pk") or owner.get("id") or "") != media_id:
+                        return AdapterResult(success=False, error="INSTAGRAM_AUTHOR_HISTORY_IDENTITY_MISMATCH")
+                    note.raw_data["author_history_binding"] = {"requested_id": target, "native_user_id": media_id}
+                    notes.append(note)
+                replies_complete = None
+            else:
+                flattened = []
+                for node in window['rows']:
+                    if not isinstance(node, dict): continue
+                    cid = str(node.get("pk") or node.get("id") or "")
+                    flattened.append((node, (cursor or {}).get("root_id")))
+                    child_connection = node.get("edge_threaded_comments") or {}
+                    inline = node.get("preview_child_comments") or node.get("child_comments") or [edge.get("node") for edge in child_connection.get("edges") or [] if isinstance(edge, dict)]
+                    inline = inline if isinstance(inline, list) else []
+                    flattened.extend((child, cid) for child in inline if isinstance(child, dict))
+                    count = optional_int(node.get("child_comment_count")) if node.get("child_comment_count") is not None else optional_int(child_connection.get("count"))
+                    if include_replies and count is None:
+                        reply_scope_unknown = True
+                    if count is not None and count > len(inline) and cid.isdigit(): pending.append(cid)
+                for node, parent in flattened:
+                    cid = str(node.get("pk") or node.get("id") or "")
+                    if not cid or cid in seen: continue
+                    seen.add(cid)
+                    owner = node.get("owner") or node.get("user") or {}
+                    comments.append({"platform_comment_id": cid, "parent_content_id": target,
+                        "parent_comment_id": str(node.get("parent_comment_id") or parent) if node.get("parent_comment_id") or parent else None,
+                        "reply_to_comment_id": str(node.get("replied_to_comment_id")) if node.get("replied_to_comment_id") else None,
+                        "content": node.get("text") if isinstance(node.get("text"), str) else "", "author_id": str(owner.get("pk") or owner.get("id") or ""),
+                        "author_nickname": owner.get("username") or "", "publish_datetime": self._native_time(node.get("created_at")),
+                        "likes": self._native_count(node, "comment_like_count", "edge_liked_by") if node.get("like_count") is None else optional_int(node.get("like_count")),
+                        "url": url + "c/" + cid + "/", "raw": {"source_observation": node, "media_id": media_id, "native_id_locator": "$.comments[].pk|id"}})
+                if (cursor or {}).get("mode") == "replies":
+                    if next_cursor is None and exhausted is True and cursor["pending_roots"]:
+                        next_cursor = {**base_cursor, "root_id": cursor["pending_roots"][0], "page": {}, "pending_roots": cursor["pending_roots"][1:]}
+                    elif next_cursor is None and exhausted is True:
+                        next_cursor, exhausted = cursor.get("next_root"), cursor.get("root_exhausted")
+                elif include_replies and pending:
+                    next_cursor = {"mode": "replies", "media_id": media_id, "root_id": pending[0], "page": {}, "pending_roots": pending[1:],
+                                   "next_root": next_cursor, "root_exhausted": exhausted}
+                    exhausted = False
+                replies_complete = (True if exhausted is True and next_cursor is None and not reply_scope_unknown else
+                                    False if next_cursor is not None or exhausted is not True else None) if include_replies else None
+                if include_replies and next_cursor is not None:
+                    next_cursor = {**next_cursor, 'reply_scope_unknown': reply_scope_unknown}
+                notes = [self._make_note(title="comments", content="", url=url, source_platform="instagram",
+                    raw_data={"engine": "instagram_native_comments", "shortcode": target, "media_id": media_id, "comments": comments})]
+            return AdapterResult(success=True, notes=notes, raw_count=len(comments) if capability == "comments" else len(notes), metadata={"pagination": {
+                "request_cursor": cursor, "next_cursor": next_cursor, "exhausted": exhausted, "page_complete": complete,
+                "replies_complete": replies_complete,
+                "reported_total": optional_int(container.get("count")), "coverage_scope": "PROVIDER_VISIBLE_NATIVE_PAGE",
+                **{key: window[key] for key in ('window_start', 'window_end', 'observed_native_rows', 'page_sha256', 'page_identity_basis')},
+                "resume_strategy": "OFFICIAL_PAGE_NATIVE_CURSOR_SEEK", "observed_prior_native_responses": selected["observed_prior_native_responses"],
+                "partial_reason": "REQUESTED_LIMIT_REACHED" if not complete else "NATIVE_NEXT_CURSOR_NOT_OBSERVED" if has_more and not next_cursor else None}})
+        except NativePageWindowError as exc:
+            return AdapterResult(success=False, raw_count=None, error='INSTAGRAM_' + str(exc), metadata={
+                'failure_class': str(exc), 'pagination': {'request_cursor': cursor, 'next_cursor': None,
+                    'exhausted': None, 'page_complete': False, 'resume_requires_fresh_page': True}})
+        except Exception as exc:
+            diagnostic = log_instagram_failure(capability, exc)
+            return AdapterResult(success=False, error=diagnostic["error_code"], diagnostics=diagnostic)
+        finally:
+            capture.close()
+            if page is not None:
+                try: page.close()
+                except Exception: pass
+            if worker is not None: worker.close()
+
+    def author_posts(self, author_id, *, max_results=20, cursor=None, **kwargs):
+        return self._native_read("author_posts", str(author_id or "").lstrip("@"), max_results, cursor=cursor)
 
     # ---------- 工具 ----------
     @staticmethod

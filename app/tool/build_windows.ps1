@@ -5,7 +5,10 @@ Build the existing Windows app through a verified ASCII path to the same files.
 .DESCRIPTION
 Some Flutter gen_snapshot builds decode Windows narrow argv as UTF-8 although
 the CRT supplies the system code page. A junction avoids non-ASCII arguments
-without copying source, patching the SDK, changing drives or changing settings.
+without copying source, patching the SDK or changing persistent settings. When
+plugin symlinks are nested below that junction, a temporary SUBST drive maps
+the repository root and addresses the same app at `R:\app`, avoiding Windows
+reparse traversal failures while keeping CMake's project path below the drive root.
 The junction is kept for repeat builds. Never remove it with recursive deletion.
 #>
 [CmdletBinding()]
@@ -220,6 +223,105 @@ def build_receipt_path(repo, target):
     return plain(repo / 'app/build/native-build-receipts' / ('verified-' + target + '.json'))
 
 
+class _StandardMessageCodecReader:
+    """Decode Flutter's generated StandardMessageCodec asset manifest."""
+    def __init__(self, data):
+        self.data = memoryview(data)
+        self.offset = 0
+
+    def _read(self, size):
+        if size < 0 or self.offset + size > len(self.data):
+            raise ValueError('Flutter AssetManifest.bin is truncated')
+        start = self.offset
+        self.offset += size
+        return self.data[start:self.offset].tobytes()
+
+    def _size(self):
+        marker = self._read(1)[0]
+        if marker < 254:
+            return marker
+        width = 2 if marker == 254 else 4
+        return int.from_bytes(self._read(width), 'little')
+
+    def _align(self, alignment):
+        self.offset += (-self.offset) % alignment
+        if self.offset > len(self.data):
+            raise ValueError('Flutter AssetManifest.bin has invalid value alignment')
+
+    def _value(self, depth=0):
+        import struct
+        if depth > 64:
+            raise ValueError('Flutter AssetManifest.bin is nested too deeply')
+        tag = self._read(1)[0]
+        if tag == 0:
+            return None
+        if tag == 1:
+            return True
+        if tag == 2:
+            return False
+        if tag == 3:
+            return int.from_bytes(self._read(4), 'little', signed=True)
+        if tag == 4:
+            return int.from_bytes(self._read(8), 'little', signed=True)
+        if tag == 5:
+            return self._read(self._size()).decode('utf-8')
+        if tag == 6:
+            self._align(8)
+            return struct.unpack('<d', self._read(8))[0]
+        if tag == 7:
+            return self._read(self._size()).decode('utf-8')
+        if tag == 8:
+            return self._read(self._size())
+        if tag in (9, 10, 11, 14):
+            width = {9: 4, 10: 8, 11: 8, 14: 4}[tag]
+            fmt = {9: '<i', 10: '<q', 11: '<d', 14: '<f'}[tag]
+            self._align(width)
+            count = self._size()
+            return [struct.unpack(fmt, self._read(width))[0] for _ in range(count)]
+        if tag == 12:
+            count = self._size()
+            if count > len(self.data) - self.offset:
+                raise ValueError('Flutter AssetManifest.bin has an invalid list length')
+            return [self._value(depth + 1) for _ in range(count)]
+        if tag == 13:
+            count = self._size()
+            if count > (len(self.data) - self.offset) // 2:
+                raise ValueError('Flutter AssetManifest.bin has an invalid map length')
+            result = {}
+            for _ in range(count):
+                key = self._value(depth + 1)
+                value = self._value(depth + 1)
+                try:
+                    if key in result:
+                        raise ValueError('Flutter AssetManifest.bin contains a duplicate key')
+                    result[key] = value
+                except TypeError as exc:
+                    raise ValueError('Flutter AssetManifest.bin contains an invalid map key') from exc
+            return result
+        raise ValueError('Flutter AssetManifest.bin contains an unsupported value tag')
+
+    def decode(self):
+        value = self._value()
+        if self.offset != len(self.data):
+            raise ValueError('Flutter AssetManifest.bin has trailing bytes')
+        return value
+
+
+def asset_manifest_paths(path):
+    manifest = _StandardMessageCodecReader(path.read_bytes()).decode()
+    if not isinstance(manifest, dict):
+        raise ValueError('Flutter AssetManifest.bin must contain an asset map')
+    paths = set()
+    for key, variants in manifest.items():
+        if not isinstance(key, str) or not isinstance(variants, list):
+            raise ValueError('Flutter AssetManifest.bin contains an invalid asset entry')
+        for variant in variants:
+            if not isinstance(variant, dict) or not isinstance(variant.get('asset'), str):
+                raise ValueError('Flutter AssetManifest.bin variant has no asset path')
+            paths.add(variant['asset'])
+    return sorted(paths)
+
+
 def verify_flutter_assets(repo, target, root):
     import yaml  # Existing canonical PyYAML dependency; never parses executable YAML tags.
     spec = yaml.safe_load((repo / 'app/pubspec.yaml').read_text('utf-8'))
@@ -235,7 +337,10 @@ def verify_flutter_assets(repo, target, root):
             raise ValueError('Required Flutter asset is missing/empty: ' + relative)
         return path
 
-    required('AssetManifest.bin')
+    asset_manifest = required('AssetManifest.bin')
+    manifest_assets = asset_manifest_paths(asset_manifest)
+    for name in manifest_assets:
+        required(name)
     font_manifest = required('FontManifest.json')
     fonts = json.loads(font_manifest.read_text('utf-8'))
     if not isinstance(fonts, list):
@@ -279,7 +384,8 @@ def verify_flutter_assets(repo, target, root):
         if not original.is_file() or sha(original) != sha(built):
             raise ValueError('Declared Flutter source asset differs from its bundled bytes: ' + name)
         checked.append({'path': name, 'sha256': sha(built), 'size': built.stat().st_size})
-    return {'asset_manifest_sha256': sha(assets / 'AssetManifest.bin'),
+    return {'asset_manifest_sha256': sha(asset_manifest),
+            'asset_manifest_asset_count': len(manifest_assets),
             'font_manifest_sha256': sha(font_manifest), 'declared_assets': checked,
             'font_families': sorted(families), 'runtime_acceptance': 'NOT_VERIFIED'}
 
@@ -376,8 +482,13 @@ SUPPLEMENTAL_LICENSES = {
 
 
 def is_notice(relative):
-    return (relative.name.lower().startswith(('license', 'licence', 'copying', 'notice', 'thirdpartynotice', 'mit-license'))
-            or any(part.lower() in {'licenses', 'licences', 'build_licenses'} for part in relative.parts[:-1]))
+    if relative.suffix.lower() in {'.py', '.pyc', '.pyo'}:
+        return False
+    if relative.name.lower().startswith(('license', 'licence', 'copying', 'notice', 'thirdpartynotice', 'mit-license')):
+        return True
+    return (relative.suffix.lower() in {'.txt', '.md', '.rst'} and
+            any(part.lower() in {'licenses', 'licences', 'build_licenses'}
+                for part in relative.parts[:-1]))
 
 
 def dependency_license(name, dist, repo, media, media_notices=None):
@@ -680,7 +791,10 @@ def assemble(repo, output, runner, sites, media, core_url, app_url, vc_runtime, 
     for dependency in dependency_inventory:
         for entry in dependency['license_notices'] + dependency.get('library_source_files', []):
             if copied.get(entry['path']) != entry['sha256']:
-                raise ValueError(f"Dependency license/source identity changed: {dependency['name']}")
+                raise ValueError(
+                    f"Dependency license/source identity changed: {dependency['name']} "
+                    f"at {entry['path']} (expected {entry['sha256']}, copied {copied.get(entry['path'])})"
+                )
     python_paths = '.\nDLLs\nLib\nLib/site-packages\n../../core\n'
     (output / f'runtime/python/{abi}._pth').write_text(python_paths, encoding='ascii')
     for path in media.iterdir():
@@ -715,6 +829,57 @@ def assemble(repo, output, runner, sites, media, core_url, app_url, vc_runtime, 
             redistribution_blockers.append('LGPL_INCORPORATED_GPL_TEXT_MISSING:' + dependency['name'])
         if 'LGPL' in dependency['license'] and not dependency.get('library_source_files'):
             redistribution_blockers.append('LGPL_LIBRARY_SOURCE_UNAVAILABLE:' + dependency['name'])
+    magika_dependency = next((dependency for dependency in dependency_inventory
+                              if dependency['name'] == 'magika'), None)
+    onnxruntime_dependency = next((dependency for dependency in dependency_inventory
+                                   if dependency['name'] == 'onnxruntime'), None)
+    model_resources = []
+    for entry in files:
+        relative = PurePosixPath(entry['path'])
+        if relative.suffix.lower() not in {'.onnx', '.tflite'}:
+            continue
+        path = relative.as_posix()
+        resource = dict(entry)
+        if path.endswith('/magika/models/standard_v3_3/model.onnx'):
+            if (magika_dependency is None or magika_dependency['version'] != '0.6.3' or
+                    magika_dependency['license'] != 'Apache-2.0' or
+                    not magika_dependency['license_notices']):
+                raise ValueError('Pinned Magika detector model lacks matching version/license evidence')
+            resource.update({
+                'resource_kind': 'third_party_content_type_detection_model',
+                'component': 'magika',
+                'component_version': magika_dependency['version'],
+                'model_id': 'standard_v3_3',
+                'purpose': 'Local document content-type identification used by MarkItDown; not business-answer inference',
+                'license': magika_dependency['license'],
+                'license_notices': magika_dependency['license_notices'],
+                'upstream_source_commit': 'a04562a9bb5d52c809a4424911ca8d07c0265767',
+                'upstream_windows_wheel_sha256': 'e57f75674447b20cab4db928ae58ab264d7d8582b55183a0b876711c2b2787f3',
+                'training_data_included': False,
+                'learning_or_training_performed': False,
+            })
+        elif '/onnxruntime/datasets/' in path:
+            resource.update({
+                'resource_kind': 'dependency_sample_graph',
+                'component': 'onnxruntime',
+                'component_version': (onnxruntime_dependency['version']
+                                      if onnxruntime_dependency else None),
+                'purpose': 'Small distribution sample graph; not a selected product inference model',
+                'license': (onnxruntime_dependency['license']
+                            if onnxruntime_dependency else 'UNKNOWN'),
+                'license_notices': (onnxruntime_dependency['license_notices']
+                                    if onnxruntime_dependency else []),
+            })
+        else:
+            resource.update({
+                'resource_kind': 'unclassified_model_resource',
+                'purpose': 'Requires explicit component and license classification',
+            })
+        model_resources.append(resource)
+    detection_resources = [resource for resource in model_resources
+                           if resource['resource_kind'] == 'third_party_content_type_detection_model']
+    if magika_dependency is not None and len(detection_resources) != 1:
+        raise ValueError('Expected exactly one pinned Magika standard_v3_3 detection model resource')
     manifest = {'schema': 'lumenis.windows-portable-bundle/v1', 'product': 'OEVIRA',
                 'source_commit': head, 'source_entry_sha256': sha(output / 'core/app.py'),
                 'core_base_url': core_url, 'core_port': port, 'app_core_base_url': core_url,
@@ -746,8 +911,12 @@ def assemble(repo, output, runner, sites, media, core_url, app_url, vc_runtime, 
                            'license_reference': 'https://www.gnu.org/licenses/gpl-3.0.html#section6'},
                 'dependencies': dependency_inventory, 'files': sorted(files, key=lambda f: f['path']),
                 'data_included': False, 'credentials_included': False,
-                'embedded_detection_resources': [f for f in files if PurePosixPath(f['path']).suffix in {'.onnx', '.tflite'}],
-                'independent_model_weights_included': False, 'installer': False,
+                'embedded_model_resources': model_resources,
+                'embedded_detection_resources': detection_resources,
+                'independent_model_weights_included': True,
+                'independent_model_weights_scope': 'THIRD_PARTY_FILE_TYPE_DETECTION_ONLY',
+                'lumenis_owned_or_domain_model_weights_included': False,
+                'installer': False,
                 'runtime_acceptance': 'NOT_VERIFIED', 'local_use': 'SUBJECT_TO_RECORDED_COMPONENT_TERMS',
                 'redistribution_clearance': 'BLOCKED', 'redistribution_blockers': redistribution_blockers}
     (output / 'bundle-manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
@@ -824,10 +993,101 @@ public static class LumenisBuildPathIdentity {
     return [LumenisBuildPathIdentity]::Resolve($Path)
 }
 
+function Invoke-LumenisSubst {
+    param([string[]]$Arguments)
+    $executable = Join-Path ([Environment]::GetFolderPath('System')) 'subst.exe'
+    $start = [Diagnostics.ProcessStartInfo]::new()
+    $start.FileName = $executable
+    $start.UseShellExecute = $false
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $start.CreateNoWindow = $true
+    foreach ($argument in $Arguments) { $start.ArgumentList.Add($argument) }
+    $process = [Diagnostics.Process]::new()
+    try {
+        $process.StartInfo = $start
+        if (-not $process.Start()) { throw 'SUBST_START_FAILED' }
+        $stdout = $process.StandardOutput.ReadToEndAsync()
+        $stderr = $process.StandardError.ReadToEndAsync()
+        if (-not $process.WaitForExit(10000)) {
+            $process.Kill($true)
+            $process.WaitForExit(3000) | Out-Null
+            throw 'SUBST_TIMEOUT'
+        }
+        if (-not $stdout.Wait(3000) -or -not $stderr.Wait(3000)) {
+            throw 'SUBST_OUTPUT_TIMEOUT'
+        }
+        return [pscustomobject]@{
+            ExitCode = $process.ExitCode
+            StandardOutput = $stdout.Result
+            StandardError = $stderr.Result
+        }
+    } finally {
+        if (-not $process.HasExited) {
+            try { $process.Kill($true); $process.WaitForExit(3000) | Out-Null } catch {}
+        }
+        $process.Dispose()
+    }
+}
+
+function Find-LumenisFreeDriveLetter {
+    $occupied = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    foreach ($drive in [IO.DriveInfo]::GetDrives()) {
+        if ($drive.Name.Length -gt 1) { [void]$occupied.Add($drive.Name.Substring(0, 1)) }
+    }
+    foreach ($drive in Get-PSDrive -PSProvider FileSystem) {
+        if ($drive.Name.Length -eq 1) { [void]$occupied.Add($drive.Name) }
+    }
+    foreach ($letter in @('R','S','T','U','V','W','X','Y','Z','Q','P','O','N','M','L','K','J','I','H','G','F')) {
+        if ($occupied.Contains($letter) -or (Test-Path -LiteralPath ($letter + ':\'))) { continue }
+        return $letter
+    }
+    return $null
+}
+
+function Find-LumenisDriveForSameDirectory {
+    param([string]$Path)
+    $expected = Get-LumenisPhysicalDirectory $Path
+    foreach ($letter in @('R','S','T','U','V','W','X','Y','Z','Q','P','O','N','M','L','K','J','I','H','G','F','E','D','C','B','A')) {
+        $root = $letter + ':\'
+        if (-not (Test-Path -LiteralPath $root -PathType Container)) { continue }
+        try {
+            if ((Get-LumenisPhysicalDirectory $root).Equals(
+                    $expected, [StringComparison]::OrdinalIgnoreCase)) {
+                return $letter
+            }
+        } catch {
+            # An inaccessible drive is not a reusable mapping.
+        }
+    }
+    return $null
+}
+
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 if (-not $IsWindows) { throw 'This build entry requires Windows.' }
 if ($BuildWeb -and $BundleOnly) { throw 'BuildWeb and BundleOnly are separate explicit operations.' }
+$processEnvironmentOverrides = @()
+$programFilesX86 = [Environment]::GetEnvironmentVariable('ProgramFiles(x86)', 'Process')
+$canonicalProgramFilesX86 = 'C:\Program Files (x86)'
+$canonicalVsWhere = Join-Path $canonicalProgramFilesX86 'Microsoft Visual Studio/Installer/vswhere.exe'
+$currentVsWhere = if ([string]::IsNullOrWhiteSpace($programFilesX86)) {
+    ''
+} else {
+    Join-Path $programFilesX86 'Microsoft Visual Studio/Installer/vswhere.exe'
+}
+if ((Test-Path -LiteralPath $canonicalVsWhere -PathType Leaf) -and
+    -not (Test-Path -LiteralPath $currentVsWhere -PathType Leaf)) {
+    [Environment]::SetEnvironmentVariable('ProgramFiles(x86)', $canonicalProgramFilesX86, 'Process')
+    $processEnvironmentOverrides += [ordered]@{
+        name = 'ProgramFiles(x86)'
+        scope = 'PROCESS_ONLY'
+        value = $canonicalProgramFilesX86
+        verified_tool = $canonicalVsWhere
+    }
+}
 function Invoke-LumenisWebBuild {
     if ($Mode -ne 'release' -or -not $CoreBaseUrl) {
         throw 'BuildWeb requires release mode and an explicit CoreBaseUrl.'
@@ -951,6 +1211,50 @@ if ($aliasItem.LinkType -ne 'Junction' -or
 }
 if ($BuildWeb) { Invoke-LumenisWebBuild }
 
+# Flutter's CMake project reaches package CMakeLists.txt through nested plugin
+# symlinks. On this workstation, those paths fail through the persistent app
+# junction even though the same files are readable from their real target.
+# A direct SUBST root keeps source bytes unchanged and gives CMake a stable,
+# short path for this build. Keep the app below the drive root: CMake/Flutter
+# can otherwise emit PROJECT_DIR as a drive-relative path such as `R:`.
+$buildRoot = $alias
+$buildRootSelection = 'VERIFIED_JUNCTION'
+$repositoryRoot = Split-Path -Parent $project
+$substDrive = $null
+$substTarget = $null
+$substCreated = $false
+$substCleanupStatus = 'NOT_REQUIRED'
+$pluginLinks = Join-Path $project 'windows/flutter/ephemeral/.plugin_symlinks'
+$pluginLinksHaveNestedReparsePoints = $false
+if (Test-Path -LiteralPath $pluginLinks -PathType Container) {
+    $pluginLinksHaveNestedReparsePoints = @(
+        Get-ChildItem -LiteralPath $pluginLinks -Force -ErrorAction Stop |
+            Where-Object { $_.Attributes -band [IO.FileAttributes]::ReparsePoint }
+    ).Count -gt 0
+}
+if ($pluginLinksHaveNestedReparsePoints) {
+    $existingDrive = Find-LumenisDriveForSameDirectory $repositoryRoot
+    if ($existingDrive) {
+        $substDrive = $existingDrive + ':'
+        $buildRoot = $existingDrive + ':\app'
+        $substTarget = $repositoryRoot
+        if (-not (Get-LumenisPhysicalDirectory $buildRoot).Equals(
+                (Get-LumenisPhysicalDirectory $project), [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'The existing drive does not resolve its app child to the canonical app directory.'
+        }
+        $buildRootSelection = 'REUSED_EXISTING_DRIVE_REPOSITORY_ROOT_APP_SUBDIR'
+        $substCleanupStatus = 'REUSED_NOT_OWNED'
+    } else {
+        $freeDrive = Find-LumenisFreeDriveLetter
+        if (-not $freeDrive) { throw 'No free drive letter is available for a temporary repository-root build mapping.' }
+        $substDrive = $freeDrive + ':'
+        $buildRoot = $freeDrive + ':\app'
+        $substTarget = $repositoryRoot
+        $buildRootSelection = 'PROCESS_TEMP_SUBST_REPOSITORY_ROOT_APP_SUBDIR'
+        $substCleanupStatus = 'PENDING_CREATION'
+    }
+}
+
 # CMake caches absolute source locations. Archive just that generated state
 # before changing the spelling of the same source path; never clean the app.
 $build = [IO.Path]::GetFullPath((Join-Path $project 'build/windows/x64'))
@@ -968,8 +1272,9 @@ if (Test-Path -LiteralPath $cache -PathType Leaf) {
     $sourceLine = Get-Content -LiteralPath $cache |
         Where-Object { $_.StartsWith('CMAKE_HOME_DIRECTORY:INTERNAL=') } |
         Select-Object -First 1
-    $expectedSource = (Join-Path $alias 'windows').Replace('\', '/')
-    if ($sourceLine -ne ('CMAKE_HOME_DIRECTORY:INTERNAL=' + $expectedSource)) {
+    $expectedSource = ($buildRoot.Replace('\', '/').TrimEnd('/') + '/windows')
+    $actualSource = if ($sourceLine) { $sourceLine.Replace('\', '/') } else { '' }
+    if ($actualSource -ne ('CMAKE_HOME_DIRECTORY:INTERNAL=' + $expectedSource)) {
         $pathChanged = $true
         foreach ($name in @('CMakeCache.txt', 'CMakeFiles')) {
             $target = Join-Path $build $name
@@ -1010,7 +1315,7 @@ if (Test-Path -LiteralPath $lastBuild) {
             foreach ($suffix in @('/windows/flutter/ephemeral/')) {
                 $boundary = $normal.IndexOf($suffix, [StringComparison]::OrdinalIgnoreCase)
                 if ($boundary -gt 0 -and -not $normal.Substring(0, $boundary).Equals(
-                    $alias.Replace('\', '/'), [StringComparison]::OrdinalIgnoreCase)) {
+                    $buildRoot.TrimEnd('\').Replace('\', '/'), [StringComparison]::OrdinalIgnoreCase)) {
                     $pathChanged = $true
                 }
             }
@@ -1028,6 +1333,13 @@ $record = [ordered]@{
     canonical_project = $project
     alias = $alias
     alias_selection = $(if ($ProjectAlias) { 'EXPLICIT_EXISTING_SAME_DIRECTORY' } else { 'VERIFIED_JUNCTION' })
+    build_root = $buildRoot
+    build_root_selection = $buildRootSelection
+    subst_drive = $substDrive
+    subst_target = $substTarget
+    subst_created_by_process = $false
+    subst_cleanup_status = $substCleanupStatus
+    process_environment_overrides = $processEnvironmentOverrides
     flutter = $flutter
     arguments = @('build', 'windows', ('--' + $Mode), '--no-pub')
     archived_cache = $archived
@@ -1069,9 +1381,28 @@ try {
             $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $recordPath -Encoding utf8
         }
     }
-    Push-Location -LiteralPath $alias
+    if ($buildRootSelection -eq 'PROCESS_TEMP_SUBST_REPOSITORY_ROOT_APP_SUBDIR') {
+        $driveRoot = $substDrive + '\'
+        if (Test-Path -LiteralPath $driveRoot) {
+            throw "Refusing to replace a drive mapping created by another process: $substDrive"
+        }
+        $substResult = Invoke-LumenisSubst @($substDrive, $repositoryRoot)
+        if ($substResult.ExitCode -ne 0) {
+            throw "SUBST creation failed for $substDrive (exit $($substResult.ExitCode))."
+        }
+        $substCreated = $true
+        $record.subst_created_by_process = $true
+        $record.subst_cleanup_status = 'PENDING_VERIFIED_CLEANUP'
+        $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $recordPath -Encoding utf8
+        $physicalTarget = Get-LumenisPhysicalDirectory $buildRoot
+        $physicalProject = Get-LumenisPhysicalDirectory $project
+        if (-not $physicalTarget.Equals($physicalProject, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "The temporary drive app subdirectory does not resolve to the canonical app directory: $substDrive"
+        }
+    }
+    Push-Location -LiteralPath $buildRoot
     $locationPushed = $true
-    Write-Output "Building existing app through $alias"
+    Write-Output "Building existing app through $buildRoot (canonical source: $project)"
     $buildArguments = $record.arguments
     & $flutter @buildArguments 2>&1 | Tee-Object -FilePath $logPath
     $buildExit = $LASTEXITCODE
@@ -1104,6 +1435,28 @@ try {
     [Console]::Error.WriteLine($_.Exception.Message)
 } finally {
     if ($locationPushed) { Pop-Location }
+    if ($substCreated) {
+        try {
+            $driveRoot = $substDrive + '\'
+            $currentTarget = Get-LumenisPhysicalDirectory $driveRoot
+            $expectedTarget = Get-LumenisPhysicalDirectory $substTarget
+            if ($currentTarget.Equals($expectedTarget, [StringComparison]::OrdinalIgnoreCase)) {
+                $removeResult = Invoke-LumenisSubst @($substDrive, '/d')
+                if ($removeResult.ExitCode -eq 0 -and -not (Test-Path -LiteralPath $driveRoot)) {
+                    $substCleanupStatus = 'REMOVED_AFTER_TARGET_MATCH'
+                } elseif ($removeResult.ExitCode -eq 0) {
+                    $substCleanupStatus = 'REMOVAL_REPORTED_SUCCESS_PATH_STILL_PRESENT'
+                } else {
+                    $substCleanupStatus = 'REMOVAL_FAILED_EXIT_' + $removeResult.ExitCode
+                }
+            } else {
+                $substCleanupStatus = 'PRESERVED_TARGET_CHANGED'
+            }
+        } catch {
+            $substCleanupStatus = 'PRESERVED_TARGET_UNVERIFIABLE'
+        }
+        $record.subst_cleanup_status = $substCleanupStatus
+    }
     $record.exit_code = $buildExit
     $record['finished_utc'] = [DateTime]::UtcNow.ToString('o')
     $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $recordPath -Encoding utf8

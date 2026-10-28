@@ -27,12 +27,6 @@ def _entry_time(entry: Any) -> str:
     return str(entry.get("published") or "")[:80]
 
 
-def _is_blocked_youtube_feed(url: str) -> bool:
-    parts = urlsplit(url)
-    host = (parts.hostname or "").lower()
-    return (host == "youtube.com" or host.endswith(".youtube.com")) and parts.path == "/feeds/videos.xml"
-
-
 class AtomAdapter(BasePlatformAdapter):
     """Keyless Atom feed adapter using the same Evidence boundary as RSS."""
 
@@ -42,6 +36,7 @@ class AtomAdapter(BasePlatformAdapter):
 
     def __init__(self, *, fetcher: Callable[[str], PublicResponse] | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._uses_public_transport = fetcher is None
         self.fetcher = fetcher or fetch_public_url
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
@@ -55,22 +50,18 @@ class AtomAdapter(BasePlatformAdapter):
             )
         parts = urlsplit(feed_url)
         source_url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
-        if _is_blocked_youtube_feed(feed_url):
-            return CollectionResult(
-                status=CollectionStatus.BLOCKED,
-                platform=self.platform,
-                message="This YouTube feed is blocked pending an authorized access route.",
-                metadata={"provider": "feedparser_atom", "blocked_reason": "source_policy"},
-            )
         try:
-            response = self.fetcher(feed_url)
-            if _is_blocked_youtube_feed(response.url):
-                return CollectionResult(
-                    status=CollectionStatus.BLOCKED,
-                    platform=self.platform,
-                    message="This YouTube feed is blocked pending an authorized access route.",
-                    metadata={"provider": "feedparser_atom", "blocked_reason": "source_policy"},
+            check_continue = kwargs.get("check_continue")
+            before_fetch = kwargs.get("before_fetch")
+            response = (
+                self.fetcher(
+                    feed_url, check_continue=check_continue, before_fetch=before_fetch,
                 )
+                if self._uses_public_transport and (
+                    check_continue is not None or before_fetch is not None
+                )
+                else self.fetcher(feed_url)
+            )
             parts = urlsplit(response.url)
             source_url = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
             parsed = feedparser.parse(response.content)
@@ -81,7 +72,8 @@ class AtomAdapter(BasePlatformAdapter):
             feed_parts = urlsplit(feed_url)
             expected_channel = (
                 parse_qs(feed_parts.query).get("channel_id", [None])[0]
-                if feed_parts.hostname == "www.youtube.com" and feed_parts.path == "/feeds/videos.xml"
+                if feed_parts.hostname in {"youtube.com", "www.youtube.com", "m.youtube.com"}
+                and feed_parts.path == "/feeds/videos.xml"
                 else None
             )
             for entry in list(parsed.entries)[: int(kwargs.get("max_results", 20))]:

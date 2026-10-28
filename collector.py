@@ -702,7 +702,8 @@ def _norm_cdp_note(rec):
 
 def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=None, region=None, account=None,
                     resume_path=None, time_budget=None, worker_chunk_seconds=300,
-                    acquisition_fingerprint=None, detail_media_mode='legacy', detail_url=None):
+                    acquisition_fingerprint=None, detail_media_mode='legacy', detail_url=None,
+                    native_operation=None, native_target=None, native_cursor=None, include_replies=False):
     """Use the configured server browser worker with the existing XHS collector."""
     import math
     if not isinstance(detail_media_mode, str) or detail_media_mode not in {'legacy', 'cover_only'}:
@@ -765,6 +766,14 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
         cmd.extend(['--resume-from', str(resume_path)])
     if detail_url is not None:
         cmd.extend(['--detail-url', detail_url])
+    if native_operation is not None:
+        if native_operation not in {'comments', 'author', 'author_posts'} or not isinstance(native_target, str):
+            return {'keyword': keyword, 'notes': [], 'total': None, 'error': 'INVALID_NATIVE_OPERATION', 'channel': 'cdp'}
+        cmd.extend(['--operation', native_operation, '--target', native_target])
+        if native_cursor is not None:
+            cmd.extend(['--native-cursor', json.dumps(native_cursor, ensure_ascii=False, separators=(',', ':'))])
+        if include_replies:
+            cmd.append('--include-replies')
     invocation_budget = min(worker_chunk_seconds, time_budget) if time_budget is not None else worker_chunk_seconds
     try:
         p = subprocess.run(cmd, cwd=SCRIPT_DIR, capture_output=True, text=True, encoding='utf-8',
@@ -831,7 +840,9 @@ def _search_via_cdp(keyword, max_scroll, output_path, max_details=10, cdp_url=No
             'partial': bool(data.get('partial')), 'checkpoint': data.get('checkpoint', {}),
             'detail_media_mode': data.get('detail_media_mode', 'legacy'),
             'identity_verified': data.get('identity_verified') is True,
-            'search_diagnostics': data.get('search_diagnostics', {})}
+            'search_diagnostics': data.get('search_diagnostics', {}),
+            **({'native_result': data['native_result']} if native_operation is not None and isinstance(data.get('native_result'), dict) else {}),
+            **({'identity_failure_stage': data['identity_failure_stage']} if isinstance(data.get('identity_failure_stage'), str) else {})}
 
 
 def _search_standalone(keyword, max_scroll, output_path, account=None, region='intl', cdp_url=None):
@@ -881,7 +892,8 @@ def _is_noise_keyword(k):
 def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                         region=None, cdp_port=None, kos_only=False, account=None, resume_path=None,
                         time_budget=None, worker_chunk_seconds=300, acquisition_fingerprint=None,
-                        detail_media_mode='legacy', detail_url=None):
+                        detail_media_mode='legacy', detail_url=None, native_operation=None,
+                        native_target=None, native_cursor=None, include_replies=False):
     """多通道搜索 RedNote：仅走获准的香港/国际身份与注册 SYSTEM 会话。
     返回 dict: {keyword,total,notes,error,channel,region}。风控态显式返回，不当作普通0条。
     region: 当前生产值为 'intl'；'cn' 明确返回策略阻断，不触发任何下游进程。
@@ -989,6 +1001,9 @@ def search_xiaohongshu(keyword, max_scroll=4, output_path=None, max_details=10,
                              worker_chunk_seconds=worker_chunk_seconds,
                              acquisition_fingerprint=acquisition_fingerprint,
                              detail_media_mode=detail_media_mode,
+                             **({'native_operation': native_operation, 'native_target': native_target,
+                                 'native_cursor': native_cursor, 'include_replies': include_replies}
+                                if native_operation is not None else {}),
                              **({'detail_url': detail_url} if detail_url is not None else {}))
     result['region'] = region
     result['channel'] = 'registered_system_browser_worker'
@@ -1014,6 +1029,34 @@ def detail_xiaohongshu(content_id, *, source_url=None, **kwargs):
                 'error': 'DETAIL_SOURCE_UNVERIFIED', 'channel': 'policy'}
     kwargs.pop('detail_url', None)
     return search_xiaohongshu(url, detail_url=source_url, **kwargs)
+
+
+def collect_native_xiaohongshu(target, *, operation, cursor=None, max_results=20, include_replies=False, **kwargs):
+    """Native pages are callers of the same policy/session/subprocess owner."""
+    try:
+        if operation not in {'comments', 'author', 'author_posts'} or type(max_results) is not int or not 1 <= max_results <= 100:
+            raise ValueError('INVALID_NATIVE_OPERATION')
+        if operation == 'comments':
+            from lumenis.system.collector.adapters.xhs import xhs_detail_source_reference
+            source_url = validate_xhs_detail_target(target)
+            reference = xhs_detail_source_reference(source_url)
+        else:
+            if not isinstance(target, str) or re.fullmatch(r'[0-9a-fA-F]{24}', target) is None:
+                raise ValueError('XHS_AUTHOR_ID_INVALID')
+            source_url = target.lower()
+            reference = 'xhs-author:' + source_url
+        if cursor is not None and (not isinstance(cursor, dict) or len(json.dumps(cursor, ensure_ascii=False)) > 32768):
+            raise ValueError('XHS_NATIVE_CURSOR_INVALID')
+        if kwargs.get('resume_path') is not None:
+            # Native continuation is the server-authored cursor in the original
+            # durable task; never borrow an unbound search/detail raw checkpoint.
+            raise ValueError('XHS_NATIVE_RESUME_PATH_UNSUPPORTED')
+    except (TypeError, ValueError) as exc:
+        return {'keyword': '', 'total': None, 'notes': [], 'error': str(exc), 'channel': 'policy', 'ok': False}
+    kwargs.pop('detail_url', None)
+    kwargs.pop('max_details', None)
+    return search_xiaohongshu(reference, max_details=max_results, native_operation=operation,
+        native_target=source_url, native_cursor=cursor, include_replies=include_replies, **kwargs)
 
 
 def _collect_one_keyword(guard, kw, kw_scroll, kw_details, account=None):

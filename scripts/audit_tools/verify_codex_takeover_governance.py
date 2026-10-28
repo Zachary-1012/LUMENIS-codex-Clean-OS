@@ -107,6 +107,26 @@ def _require(text: str, *needles: str, label: str) -> None:
         raise AssertionError(f"{label} missing required current markers: {missing}")
 
 
+def _assert_current_subject_scope(text: str) -> None:
+    _require(
+        text,
+        "当前主体范围", "正在中国境内经营", "不做全球主体扩库",
+        "添加、移除和重新添加", "历史资料、报告、行动和版本",
+        "Permission", "Source/Evidence/Canonical", "选择不产生授权",
+        "NOT_COLLECTED / NOT_CONFIGURED / BLOCKED / STALE / OFFLINE / ERROR / NULL",
+        "近一周、近一个月、近半年、近一年", "自定义范围",
+        "用户设定对象、目的、时间和频率", "可暂停、调整或结束",
+        "不因打开产品、选择主体或登记目录而自动扩库",
+        "SUBJECT SCOPE / TASK DATA QUALITY IMPACT",
+        "RANDOM ENTITY DATA ACCEPTANCE", "不迁移/删除生产数据",
+        label="CURRENT subject/task scope contract",
+    )
+    for retired in ("LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES",
+                    "PRE-LAUNCH GLOBAL FOUNDATION"):
+        if retired in text:
+            raise AssertionError(f"retired global release requirement: {retired}")
+
+
 def _require_collapsed(text: str, *needles: str, label: str) -> None:
     _require(re.sub(r"\s+", " ", text), *needles, label=label)
 
@@ -162,6 +182,7 @@ def _assert_current_round_statuses(current: str) -> None:
 
 
 CURRENT_PUBLICATION_STATES = {
+    "SOURCE_RETIREMENT_ONLY",
     "LOCAL_CANDIDATE_NOT_PUBLISHED",
     "PUBLISHED_SOURCE_VERIFIED",
     "RULES_ONLY_PUBLICATION",
@@ -405,6 +426,7 @@ def _is_rules_only_publication_path(path: str) -> bool:
         "lumenis/bmp/README.md",  # Existing BMP scope/navigation owner document, not runtime behavior.
         ".agents/skills/lumenis-flutter-experience/SKILL.md",
         ".agents/skills/lumenis-progressive-context/SKILL.md",
+        ".agents/skills/lumenis-task-router/SKILL.md",
         "scripts/audit_tools/verify_codex_takeover_governance.py",
         "scripts/audit_tools/verify_lumenis_single_product.py",  # Existing positioning/Only-One governance validator.
         'scripts/production_baseline_check.py',
@@ -536,9 +558,19 @@ def _assert_current_publication_truth(
             )
         return
 
+    if state == "SOURCE_RETIREMENT_ONLY":
+        try:
+            from .experience_gate_mode import frontend_state
+        except ImportError:
+            from experience_gate_mode import frontend_state
+        if frontend_state(ROOT) != "REMOVED_PENDING_REBUILD":
+            raise AssertionError("Source retirement publication requires approved removed source")
+        if runtime.group(1) != "NOT_LOADED_OR_NOT_VERIFIED":
+            raise AssertionError("Source retirement cannot claim a loaded product")
+
     if current_path not in paths:
         raise AssertionError(
-            "PUBLISHED_SOURCE_VERIFIED requires CURRENT co-publication in the same commit"
+            state + " requires CURRENT co-publication in the same commit"
         )
     product_paths = sorted(path for path in paths if _is_product_behavior_source(path))
     if not product_paths:
@@ -1046,7 +1078,6 @@ def validate(*, staged: bool = False) -> None:
         "Direct PDF/sketch implementation is `REWORK`",
         "LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md",
         "LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md",
-        "LUMENIS_INTERNAL_FULL_UNIVERSE_READY",
         "Cross-round capability gap register",
         "APPROVED D1–D5 historical-package convergence",
         "EIGHT OWNER RESULT PACKAGES",
@@ -1054,43 +1085,7 @@ def validate(*, staged: bool = False) -> None:
         label="CURRENT source owner index",
     )
 
-    _require(
-        global_universe_contract,
-        "CURRENT SUBORDINATE CONTEXT AND DATA-MATURITY CONTRACT",
-        "ONE Product",
-        "ONE Repository",
-        "ONE Product Core",
-        "ONE Global Product Universe",
-        "ONE Canonical Data",
-        "ONE Evidence",
-        "ONE Permission",
-        "ONE Context Model",
-        "ONE Experience Ecosystem",
-        "GLOBAL / ALL",
-        "ONE INTERNAL EDITION ACCEPTANCE MATRIX",
-        "Global Commercial Coverage",
-        "Global Brand Coverage",
-        "Guangzhou Taikoo Hui Reference Coverage",
-        "PRE-LAUNCH GLOBAL FOUNDATION",
-        "Measurable maturity matrix",
-        "coverage",
-        "freshness",
-        "completeness",
-        "provenance/Evidence",
-        "deduplication/entity resolution",
-        "source authorization/compliance",
-        "failed/stale/blocked ratios",
-        "CTH/BMP workflow usability",
-        "LUMENIS_INTERNAL_FULL_UNIVERSE_READY = YES",
-        "one non-Guangzhou-Taikoo-Hui commercial Subject",
-        "one non-Guangzhou-Taikoo-Hui brand Subject",
-        "RANDOM ENTITY DATA ACCEPTANCE",
-        "sample seed / sample count / sample IDs",
-        "non-empty valid result rate",
-        "Evidence trace rate",
-        "maturity delta since prior round",
-        label="CURRENT global universe/context/data-maturity contract",
-    )
+    _assert_current_subject_scope(global_universe_contract)
 
     _require(
         real_delivery_overlay,
@@ -1121,10 +1116,7 @@ def validate(*, staged: bool = False) -> None:
         "COMMERCIAL OPERATIONS",
         "COMMERCIAL READINESS GAP / BLOCKED FOR COMMERCIAL_READY",
         "COMMERCIAL_READY=NO",
-        "Global Commercial Coverage",
-        "Global Brand Coverage",
-        "Guangzhou Taikoo Hui Reference Coverage",
-        "LUMENIS_INTERNAL_FULL_UNIVERSE_READY",
+        "SUBJECT SCOPE / TASK DATA QUALITY IMPACT",
         "RANDOM ENTITY DATA ACCEPTANCE",
         "sample seed / sample count / sample IDs",
         "CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION",
@@ -1158,12 +1150,8 @@ def validate(*, staged: bool = False) -> None:
         "FAILURE / RECOVERY",
         "EVIDENCE",
         "ACCEPTANCE ASSERTION",
-        "ONE INTERNAL EDITION / context decision",
-        "GLOBAL UNIVERSE / DATA MATURITY IMPACT",
-        "Global Commercial Coverage",
-        "Global Brand Coverage",
-        "Guangzhou Taikoo Hui Reference Coverage",
-        "LUMENIS_INTERNAL_FULL_UNIVERSE_READY = NO",
+        "Current subject and task scope",
+        "SUBJECT SCOPE / TASK DATA QUALITY IMPACT",
         "RANDOM ENTITY DATA ACCEPTANCE",
         "Sample count / IDs",
         "0 / []",

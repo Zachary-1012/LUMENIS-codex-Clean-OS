@@ -42,6 +42,92 @@ def _companions(ws):
     return Path(str(destination) + '.' + ws['file'].name), Path(str(destination) + '.signing-manifest.json')
 
 
+def test_explicit_existing_signer_import_keeps_history_and_restores_backup(signed_workspace, tmp_path):
+    ws = signed_workspace
+    before = ws['db'].read_bytes()
+    ws['file'].unlink()
+    loaded = dict(ws['loaded'])
+    path = signing_config.import_existing_workspace_signing(str(ws['root']), str(ws['db']), loaded)
+    assert path == ws['file'] and loaded == ws['loaded']
+    assert ws['db'].read_bytes() == before
+    activated = {}
+    signing_config.activate_workspace_signing(str(ws['root']), str(ws['db']), activated)
+    assert activated == loaded
+    migrations.backup_database_to_path(ws['destination'])
+    restored = tmp_path / 'restored-legacy-signer'
+    migrations.restore_database_to_directory(ws['destination'], restored)
+    recovered = {}
+    signing_config.activate_workspace_signing(str(restored), str(restored / 'monitor.db'), recovered)
+    assert recovered == loaded
+
+
+def test_activation_imports_registered_environment_signer_without_changing_evidence(signed_workspace):
+    ws = signed_workspace
+    before = ws['db'].read_bytes()
+    ws['file'].unlink()
+    loaded = dict(ws['loaded'])
+
+    path = signing_config.activate_workspace_signing(str(ws['root']), str(ws['db']), loaded)
+
+    assert path == ws['file'] and path.is_file()
+    assert loaded == ws['loaded']
+    assert ws['db'].read_bytes() == before
+
+
+@pytest.mark.parametrize('failure', ['missing_ring', 'missing_active', 'wrong_key'])
+def test_activation_refuses_unverified_environment_signer_without_writing(signed_workspace, failure):
+    ws = signed_workspace
+    before = ws['db'].read_bytes()
+    ws['file'].unlink()
+    loaded = dict(ws['loaded'])
+    if failure == 'missing_ring':
+        loaded.pop('LUMENIS_EVIDENCE_HMAC_KEY_RING')
+    elif failure == 'missing_active':
+        loaded.pop('LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID')
+    else:
+        active = loaded['LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID']
+        loaded['LUMENIS_EVIDENCE_HMAC_KEY_RING'] = json.dumps({active: 'x' * 48})
+
+    with pytest.raises(signing_config.WorkspaceSigningError):
+        signing_config.activate_workspace_signing(str(ws['root']), str(ws['db']), loaded)
+
+    assert not ws['file'].exists()
+    assert ws['db'].read_bytes() == before
+
+
+@pytest.mark.parametrize('failure', ['no_key', 'wrong_key', 'missing_id', 'short_key', 'tampered_record'])
+def test_explicit_signer_import_refuses_unverified_material(signed_workspace, failure):
+    ws = signed_workspace
+    ws['file'].unlink()
+    loaded = dict(ws['loaded'])
+    active = loaded['LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID']
+    if failure == 'no_key':
+        loaded.clear()
+    elif failure == 'wrong_key':
+        loaded['LUMENIS_EVIDENCE_HMAC_KEY_RING'] = json.dumps({active: 'x' * 48})
+    elif failure == 'missing_id':
+        loaded['LUMENIS_EVIDENCE_HMAC_KEY_RING'] = json.dumps({'other-key': 'x' * 48})
+        loaded['LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID'] = 'other-key'
+    elif failure == 'short_key':
+        loaded['LUMENIS_EVIDENCE_HMAC_KEY_RING'] = json.dumps({active: 'short'})
+    else:
+        with sqlite3.connect(ws['db']) as connection:
+            connection.execute("UPDATE app_evidence_records SET source='tampered-test-source'")
+    before = ws['db'].read_bytes()
+    with pytest.raises(signing_config.WorkspaceSigningError):
+        signing_config.import_existing_workspace_signing(str(ws['root']), str(ws['db']), loaded)
+    assert not ws['file'].exists()
+    assert ws['db'].read_bytes() == before
+
+
+def test_explicit_signer_import_never_replaces_existing_configuration(signed_workspace):
+    ws = signed_workspace
+    before = ws['file'].read_bytes()
+    with pytest.raises(signing_config.WorkspaceSigningError, match='ALREADY_EXISTS'):
+        signing_config.import_existing_workspace_signing(str(ws['root']), str(ws['db']), ws['loaded'])
+    assert ws['file'].read_bytes() == before
+
+
 @pytest.fixture
 def keyless_workspace(tmp_path, monkeypatch, request):
     root = tmp_path / 'unsigned-source'

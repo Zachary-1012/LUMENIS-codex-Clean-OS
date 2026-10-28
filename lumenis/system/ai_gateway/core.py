@@ -62,6 +62,27 @@ def bind_owned_service(binding):
     return bind(binding)
 
 
+def restore_owned_service_bindings(binding_resolver):
+    """Restore exact service slots from fresh server-owned admission readback."""
+    from .owned_service import restore_owned_service_bindings as restore
+
+    return restore(binding_resolver)
+
+
+def bind_owned_pretrained_service(profile):
+    """Load and bind one exact admitted CPU pretrained runtime through the Gateway."""
+    from .owned_service import bind_owned_pretrained_service as bind
+
+    return bind(profile)
+
+
+def restore_owned_pretrained_service_bindings(profile_resolver):
+    """Restore exact CPU pretrained profiles using existing owner readbacks."""
+    from .owned_service import restore_owned_pretrained_service_bindings as restore
+
+    return restore(profile_resolver)
+
+
 def clear_owned_service(domain_id, expected_binding_sha256):
     """Safety-stop one domain binding without retrying or replaying work."""
     from .owned_service import clear_owned_service as clear

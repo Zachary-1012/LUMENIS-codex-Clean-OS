@@ -51,6 +51,7 @@ _MAX_PROJECT_JSON_BYTES = 8 * 1024 * 1024
 _MAX_CONTENT_SOURCE_METADATA_BYTES = 64 * 1024
 _MAX_CONTENT_SOURCE_DURATION_SEC = 24 * 60 * 60
 _CONTENT_SOURCE_ARTIFACT_ID = re.compile(r"ART-(?:[0-9a-f]{16}|[0-9a-f]{32})\Z")
+CONTENT_PROJECT_EXPORT_TASK_TYPE = "shared_content_project_export"
 _ARTIFACT_TABLE = "lumenis_shared_artifacts"
 _CONTENT_PROJECT_LIST_SCAN_LIMIT = 100
 _CONTENT_PROJECT_LIST_VERIFY_BYTES = 64 * 1024 * 1024
@@ -561,11 +562,14 @@ def _content_project_export_resource_for_context(
     source_refs: list[str], output_kind: str, previous_artifact_id: str | None,
     render_options: dict | None = None, delivery_options: dict | None = None,
     title: str | None = None, render_media: bool = True,
+    source_project_artifact_refs: list[str] | None = None,
 ) -> str:
     return "content-project-export:v1:" + hashlib.sha256(_json_bytes({
         "context": dict(context), "timeline": dict(timeline_data),
         "source_refs": list(source_refs), "output_kind": output_kind,
         "parent_artifact_id": previous_artifact_id,
+        **({"source_project_artifact_refs": list(source_project_artifact_refs)}
+           if source_project_artifact_refs else {}),
         **({"render_options": render_options} if render_options else {}),
         **({"delivery_options": delivery_options} if delivery_options else {}),
         **({"title": title} if title is not None else {}),
@@ -581,6 +585,7 @@ def content_project_export_resource(
     brand_focus_id: str | None = None, global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
     title: str | None = None, render_media: bool = True,
+    source_project_artifact_refs: list[str] | None = None,
 ) -> str:
     """Bind the existing export Permission request to the exact project inputs."""
     from lumenis.shared.content_creation.rendering import validate_render_options
@@ -604,10 +609,27 @@ def content_project_export_resource(
         brand_focus_id=brand_focus_id, global_scope=global_scope,
         shared_workspace_scope=shared_workspace_scope,
     )
+    parent_project = None
+    if previous_artifact_id is not None:
+        if (not isinstance(previous_artifact_id, str)
+                or _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(previous_artifact_id) is None):
+            raise LocalArtifactError("CONTENT_PROJECT_NOT_FOUND")
+        parent_project, _, _, _ = _verified_content_project(
+            previous_artifact_id, actor=actor, domain_id=domain_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+            global_scope=global_scope, shared_workspace_scope=shared_workspace_scope,
+            read_only_registry=True,
+        )
+        if parent_project.get("output_kind") != output_kind:
+            raise LocalArtifactError("CONTENT_PROJECT_TYPE_CHANGE_REQUIRES_NEW_PROJECT")
+    project_refs, _ = _resolve_content_project_source_refs(
+        source_project_artifact_refs, parent_project=parent_project,
+        previous_artifact_id=previous_artifact_id, actor=actor, scope=scope,
+    )
     return _content_project_export_resource_for_context(
         _content_artifact_context(actor, actor_id, scope), timeline_data,
         refs, output_kind, previous_artifact_id, render_options, delivery_options,
-        title, render_media,
+        title, render_media, project_refs,
     )
 
 
@@ -639,6 +661,55 @@ def _artifact_record(artifact_id: str, *, read_only: bool = False) -> Optional[D
     finally:
         conn.close()
     return dict(row) if row else None
+
+
+def _content_project_artifact_for_execution(source_execution_id: str, *, actor,
+                                            domain_id=None, subject_id=None,
+                                            brand_focus_id=None, global_scope=False,
+                                            shared_workspace_scope=None):
+    """Find one same-scope saved project for explicit export recovery.
+
+    The TaskQueue and Artifact registry are separate owners and databases. A
+    process can exit after the Artifact commits but before its queue result
+    reference commits. Recovery therefore searches by the immutable execution
+    binding and then reopens/verifies the package under the current actor.
+    """
+    if not isinstance(source_execution_id, str) or not source_execution_id.strip():
+        raise LocalArtifactError("SOURCE_EXECUTION_ID_REQUIRED")
+    _actor_id, scope = _authorize_content_project(
+        actor, domain_id=domain_id, subject_id=subject_id,
+        brand_focus_id=brand_focus_id, global_scope=global_scope,
+        shared_workspace_scope=shared_workspace_scope, action="read",
+    )
+    product_id, artifact_domain = _content_project_storage_identity(scope)
+    connection = get_repository().connect(timeout=10, read_only=True, wal=False)
+    connection.row_factory = sqlite3.Row
+    try:
+        exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (_ARTIFACT_TABLE,),
+        ).fetchone()
+        if not exists:
+            return None
+        rows = connection.execute(
+            f"SELECT artifact_id FROM {_ARTIFACT_TABLE} "
+            "WHERE kind='content_project' AND product_id=? AND domain_id=? "
+            "AND source_execution_id=? ORDER BY created_at,artifact_id LIMIT 2",
+            (product_id, artifact_domain, source_execution_id),
+        ).fetchall()
+    finally:
+        connection.close()
+    if not rows:
+        return None
+    if len(rows) != 1:
+        raise LocalArtifactError("CONTENT_EXPORT_RECOVERY_CONFLICT")
+    project, render, record, _package_path = _verified_content_project(
+        rows[0]["artifact_id"], actor=actor, domain_id=domain_id,
+        subject_id=subject_id, brand_focus_id=brand_focus_id,
+        global_scope=global_scope, shared_workspace_scope=shared_workspace_scope,
+        read_only_registry=True,
+    )
+    return {"project": project, "render": render, "record": record}
 
 
 def _contains_local_path_field(value: Any) -> bool:
@@ -687,6 +758,7 @@ def _verified_content_project(
     global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
     read_only_registry: bool = False,
+    verify_source_project_refs: bool = True,
 ) -> tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Path]:
     actor_id, scope = _authorize_content_project(
         actor,
@@ -761,6 +833,8 @@ def _verified_content_project(
         raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID") from exc
 
     source_artifact_refs = project_data.get("source_artifact_refs", []) if isinstance(project_data, dict) else None
+    source_project_artifact_refs = (project_data.get("source_project_artifact_refs", [])
+                                    if isinstance(project_data, dict) else None)
     if (
         not isinstance(project_data, dict)
         or type(project_data.get("schema_version")) is not int
@@ -779,6 +853,12 @@ def _verified_content_project(
         or any(not isinstance(ref, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(ref)
                for ref in source_artifact_refs)
         or len(set(source_artifact_refs)) != len(source_artifact_refs)
+        or not isinstance(source_project_artifact_refs, list)
+        or len(source_project_artifact_refs) > 64
+        or any(not isinstance(ref, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(ref)
+               for ref in source_project_artifact_refs)
+        or len(set(source_project_artifact_refs)) != len(source_project_artifact_refs)
+        or artifact_id in source_project_artifact_refs
         or not isinstance(render_data, dict)
         or render_data.get("output_kind") != project_data.get("output_kind")
         or _contains_local_path_field(render_data)
@@ -791,10 +871,18 @@ def _verified_content_project(
                 or project_data["project_revision"] < 1):
             raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
     if draft:
+        source_annotation_names={name for name in names if name in {
+            'transcription.json','transcript-words.json','transcript-asr.vtt','transcript-asr.srt',
+            'transcript-timeline.json','transcript-timeline.vtt','transcript-timeline.srt'} or re.fullmatch(
+                r'transcription(?:-reviewed)?-MEDIA-[a-f0-9]{16}\.(?:json|vtt|srt)',name)}
+        draft_reports=render_data.get('delivery_reports',{})
         if (project_data["schema_version"] != 2 or not source_artifact_refs or media_infos
-                or set(names) - {"project.json", "render.json", "credits.json", "credits.txt"}
-                or render_data != {"state": "not_rendered", "output_kind": project_data["output_kind"],
-                                   "timeline_version": project_data["timeline"].get("version")}):
+                or set(names) - {"project.json", "render.json", "credits.json", "credits.txt"} - source_annotation_names
+                or not isinstance(draft_reports,dict)
+                or set(draft_reports)-{'transcript_annotations','timeline_transcription'}
+                or {key:value for key,value in render_data.items() if key!='delivery_reports'} != {
+                    "state": "not_rendered", "output_kind": project_data["output_kind"],
+                    "timeline_version": project_data["timeline"].get("version")}):
             raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
     elif (render_data.get("state") != "rendered_verified" or len(media_infos) != 1
           or not isinstance(render_data.get("measurement"), dict)):
@@ -807,6 +895,11 @@ def _verified_content_project(
         global_scope=scope.get("global_scope", False),
         shared_workspace_scope=scope.get("shared_workspace_scope"),
     )
+    if verify_source_project_refs:
+        _validate_content_project_source_refs(
+            source_project_artifact_refs, actor=actor, scope=scope,
+            read_only_registry=read_only_registry,
+        )
     expected_credits = _content_license_credits(verified_sources, project_data["timeline"], project_data.get("render_options"))
     if project_data.get("media_credits") != expected_credits:
         raise LocalArtifactError("CONTENT_MEDIA_CREDITS_MISMATCH")
@@ -815,6 +908,17 @@ def _verified_content_project(
         if ({name for name in names if name in {"credits.json", "credits.txt"}} != set(expected_credit_files)
                 or any(archive.read(name) != data for name, data in expected_credit_files.items())):
             raise LocalArtifactError("CONTENT_MEDIA_CREDITS_MISMATCH")
+        from lumenis.shared.content_creation.speech_transcription import validate_project_transcription_files
+        transcript_names=[name for name in names if name in {'transcription.json','transcript-timeline.json',
+            'transcript-timeline.vtt','transcript-timeline.srt'} or re.fullmatch(
+                r'transcription(?:-reviewed)?-MEDIA-[a-f0-9]{16}\.json',name)]
+        try:
+            validate_project_transcription_files(project_data,render_data,
+                [{'asset':entry['metadata']['asset'],'artifact_ref':entry['record']['artifact_id']}
+                 for entry in verified_sources],{name:archive.read(name) for name in transcript_names})
+        except (KeyError,TypeError,ValueError) as exc:
+            raise LocalArtifactError(str(exc) if re.fullmatch(r'[A-Z][A-Z0-9_]{0,100}',str(exc)) else
+                'CONTENT_TRANSCRIPT_PROJECT_BINDING_CHANGED') from exc
     project_data["source_artifact_refs"] = list(source_artifact_refs)
     expected_media = "media.mp4" if project_data["output_kind"] == "video" else "media.wav"
     claimed_media_hash = render_data.get("media_sha256")
@@ -1424,6 +1528,59 @@ def _validate_content_source_refs(
         entries.append({"metadata": metadata, "record": record, "package_path": package_path,
                         "source_context": source_context})
     return list(artifact_refs), entries, total_size
+
+
+def _validate_content_project_source_refs(
+    artifact_refs: Any,
+    *,
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
+    scope: Mapping[str, Any],
+    read_only_registry: bool = False,
+) -> list[dict[str, Any]]:
+    """Reopen same-scope project lineage refs without turning them into media inputs."""
+    if (not isinstance(artifact_refs, list) or len(artifact_refs) > 64
+            or any(not isinstance(ref, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(ref)
+                   for ref in artifact_refs)):
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REFS_INVALID")
+    if len(set(artifact_refs)) != len(artifact_refs):
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REF_DUPLICATE")
+    verified = []
+    for artifact_id in artifact_refs:
+        project, render, record, package_path = _verified_content_project(
+            artifact_id, actor=actor, read_only_registry=read_only_registry,
+            verify_source_project_refs=False, **dict(scope),
+        )
+        verified.append({"artifact_id": artifact_id, "project": project,
+                         "render": render, "record": record,
+                         "package_path": package_path})
+    return verified
+
+
+def _resolve_content_project_source_refs(
+    artifact_refs: Any,
+    *,
+    parent_project: Mapping[str, Any] | None,
+    previous_artifact_id: str | None,
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
+    scope: Mapping[str, Any],
+) -> tuple[list[str], list[dict[str, Any]]]:
+    inherited = (parent_project or {}).get("source_project_artifact_refs", [])
+    if not isinstance(inherited, list):
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REFS_INVALID")
+    if artifact_refs is None:
+        refs = list(inherited)
+    elif isinstance(artifact_refs, list):
+        refs = list(artifact_refs)
+    else:
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REFS_INVALID")
+    if parent_project is not None and refs != inherited:
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_LINEAGE_CHANGED")
+    if previous_artifact_id is not None and previous_artifact_id in refs:
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REF_IS_PARENT")
+    verified = _validate_content_project_source_refs(
+        refs, actor=actor, scope=scope, read_only_registry=True,
+    )
+    return refs, verified
 
 
 def stage_content_source_artifact(
@@ -2063,9 +2220,11 @@ def stage_timeline_artifact(
     output_kind: str = "video",
     previous_artifact_id: Optional[str] = None,
     source_artifact_refs: Optional[List[str]] = None,
+    source_project_artifact_refs: Optional[List[str]] = None,
     render_options: dict | None = None,
     delivery_options: dict | None = None,
     operation_binding: dict | None = None,
+    task_control: dict | None = None,
     title: str | None = None,
     render_media: bool = True,
 ) -> Dict[str, Any]:
@@ -2079,6 +2238,18 @@ def stage_timeline_artifact(
     render_options = validate_render_options(render_options)
     delivery_options = _validate_content_delivery_options(delivery_options)
     _validate_content_project_save(title, render_media, delivery_options)
+    if task_control is not None:
+        from lumenis.system.collector.guard.task_queue import TaskQueue
+        required = {"queue", "task_id", "request_key", "run_id", "worker_id", "lease_owner"}
+        if (type(task_control) is not dict or set(task_control) != required
+                or type(task_control.get("queue")) is not TaskQueue
+                or type(task_control.get("task_id")) is not int or task_control["task_id"] <= 0
+                or not isinstance(task_control.get("request_key"), str)
+                or not isinstance(task_control.get("run_id"), str)
+                or not isinstance(task_control.get("worker_id"), str)
+                or not isinstance(task_control.get("lease_owner"), str)
+                or source_execution_id != str(task_control["task_id"])):
+            raise LocalArtifactError("CONTENT_EXPORT_TASK_BINDING_INVALID")
     if operation_binding and (title is not None or not render_media):
         raise LocalArtifactError("CONTENT_EDL_OPERATION_BINDING_INVALID")
     actor_id, scope = _authorize_content_project(
@@ -2131,6 +2302,7 @@ def stage_timeline_artifact(
         source_assets = [entry["metadata"]["asset"] for entry in source_entries]
         if [asset.to_dict() for asset in timeline.assets] != source_assets:
             raise LocalArtifactError("CONTENT_SOURCE_TIMELINE_MISMATCH")
+    _validate_podcast_plan_timeline(timeline, delivery_options)
 
     expected_context = _content_artifact_context(actor, actor_id, scope)
     parent_project: Optional[Dict[str, Any]] = None
@@ -2145,11 +2317,10 @@ def stage_timeline_artifact(
             global_scope=global_scope,
             shared_workspace_scope=shared_workspace_scope,
         )
-        if (
-            parent_project.get("context") != expected_context
-            or parent_project.get("output_kind") != output_kind
-        ):
+        if parent_project.get("context") != expected_context:
             raise LocalArtifactError("CONTENT_PROJECT_PARENT_SCOPE_MISMATCH")
+        if parent_project.get("output_kind") != output_kind:
+            raise LocalArtifactError("CONTENT_PROJECT_TYPE_CHANGE_REQUIRES_NEW_PROJECT")
         parent_timeline = parent_project.get("timeline")
         parent_version = parent_timeline.get("version") if isinstance(parent_timeline, dict) else None
         current_version = getattr(timeline, "version", None)
@@ -2168,6 +2339,11 @@ def stage_timeline_artifact(
         ):
             raise LocalArtifactError("CONTENT_PROJECT_PARENT_REVISION_REQUIRED")
 
+    project_source_refs, project_source_entries = _resolve_content_project_source_refs(
+        source_project_artifact_refs, parent_project=parent_project,
+        previous_artifact_id=previous_artifact_id, actor=actor, scope=scope,
+    )
+
     stored_title = title if title is not None else (parent_project or {}).get("title")
 
     from lumenis.system.security.permission import OperationType, get_permission_gate, is_testing_bypass_enabled
@@ -2176,7 +2352,7 @@ def stage_timeline_artifact(
         raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_UNVERIFIED")
     export_resource = _content_project_export_resource_for_context(
         expected_context, timeline_data, source_refs, output_kind, previous_artifact_id, render_options, delivery_options,
-        title, render_media,
+        title, render_media, project_source_refs,
     )
     gate = get_permission_gate()
     caller = expected_context["principal_ref"] if actor_id is None else f"actor:{actor_id}"
@@ -2195,8 +2371,21 @@ def stage_timeline_artifact(
     if not export_permission.allowed:
         raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_DENIED")
 
-    def check_export_permission() -> None:
+    def check_export_permission(*, check_task: bool = True) -> None:
         # Use the canonical owner throughout encoding, not a copied authorization.
+        if task_control is not None and check_task:
+            from lumenis.system.collector.guard.task_queue import TaskQueue
+            queue = task_control["queue"]
+            current = queue.get(task_control["task_id"])
+            payload = current.get("payload") if isinstance(current, dict) else None
+            if (not isinstance(current, dict) or current.get("task_type") != CONTENT_PROJECT_EXPORT_TASK_TYPE
+                    or current.get("status") != "running"
+                    or not isinstance(payload, dict)
+                    or payload.get("request_key") != task_control["request_key"]
+                    or payload.get("cancel_requested") is True
+                    or not queue.heartbeat(task_control["task_id"], task_control["worker_id"],
+                        run_id=task_control["run_id"], lease_owner=task_control["lease_owner"])):
+                raise InterruptedError("CONTENT_EXPORT_CANCELLED_OR_LEASE_LOST")
         _authorize_content_project(actor, action="write", **scope)
         for entry in source_entries:
             source_context = entry.get("source_context")
@@ -2206,6 +2395,13 @@ def stage_timeline_artifact(
                     record_domain=entry["record"].get("domain_id"),
                     record_product=entry["record"].get("product_id"), action="read",
                 )
+        for entry in project_source_entries:
+            _project, _render, current_record, _path = _verified_content_project(
+                entry["artifact_id"], actor=actor, read_only_registry=True,
+                verify_source_project_refs=False, **scope,
+            )
+            if current_record.get("sha256") != entry["record"].get("sha256"):
+                raise LocalArtifactError("CONTENT_PROJECT_SOURCE_CHANGED")
         if "shared_workspace_scope" in scope:
             current = check_shared_workspace_effect(
                 actor, scope["shared_workspace_scope"], OperationType.DATA_EXPORT,
@@ -2222,6 +2418,71 @@ def stage_timeline_artifact(
                 OperationType.DATA_EXPORT.value, operation_binding["resource"], exact=True):
             raise LocalArtifactError("CONTENT_EDL_EXACT_APPROVAL_REQUIRED")
 
+    if task_control is not None:
+        # A prior attempt may have committed the Artifact but exited before
+        # TaskQueue stored its result reference. Reopen that exact execution
+        # result before any render work; never repeat expensive processing or
+        # create a second project for an uncertain cross-database outcome.
+        check_export_permission()
+        prior = _content_project_artifact_for_execution(
+            source_execution_id.strip(), actor=actor, domain_id=domain_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+            global_scope=global_scope, shared_workspace_scope=shared_workspace_scope,
+        )
+        if prior is not None:
+            prior_project = prior["project"]
+            expected_revision = (
+                (parent_project or {}).get("project_revision", 0) + 1
+                if stored_title is not None else None
+            )
+            matches = (
+                prior_project.get("context") == expected_context
+                and prior_project.get("timeline") == timeline_data
+                and prior_project.get("source_artifact_refs") == source_refs
+                and prior_project.get("source_project_artifact_refs", []) == project_source_refs
+                and prior_project.get("output_kind") == output_kind
+                and prior_project.get("parent_artifact_id") == previous_artifact_id
+                and prior_project.get("title") == stored_title
+                and prior_project.get("render_options", {}) == render_options
+                and prior_project.get("delivery_options", {}) == delivery_options
+                and prior_project.get("project_revision") == expected_revision
+                and prior["record"].get("source_execution_id") == source_execution_id.strip()
+            )
+            if not matches:
+                raise LocalArtifactError("CONTENT_EXPORT_RECOVERY_INPUT_MISMATCH")
+            check_export_permission(check_task=False)
+            record = prior["record"]
+            result_ref = {
+                "artifact_id": record["artifact_id"],
+                "sha256": record["sha256"],
+                "source_execution_id": record["source_execution_id"],
+                "status": ("rendered_staged" if prior["render"].get("state") == "rendered_verified"
+                           else "project_saved"),
+                "project_revision": prior_project.get("project_revision"),
+                "timeline_version": timeline_data.get("version"),
+            }
+            committed = task_control["queue"].commit_result(
+                task_control["task_id"], lambda: result_ref,
+                task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                request_key=task_control["request_key"],
+                run_id=task_control["run_id"], worker_id=task_control["worker_id"],
+                lease_owner=task_control["lease_owner"],
+            )
+            if not committed:
+                raise InterruptedError("CONTENT_EXPORT_CANCELLED_OR_LEASE_LOST")
+            public_record = {key: record[key] for key in (
+                "artifact_id", "kind", "product_id", "domain_id", "source_execution_id",
+                "filename", "media_type", "size_bytes", "sha256", "status",
+                "approval_required", "approval_status", "created_at", "updated_at",
+            )}
+            return {
+                "status": "rendered_staged" if prior["render"].get("state") == "rendered_verified" else "project_saved",
+                "artifact": public_record, "project": prior_project,
+                "render": prior["render"], "rights_state": "unknown",
+                "approval_required": True, "publish_status": "not_performed",
+                "recovered_existing_artifact": True,
+            }
+
     root = artifact_root()
     root.mkdir(parents=True, exist_ok=True)
     artifact_id = _content_edl_artifact_id(operation_binding["operation_id"]) if operation_binding else _new_artifact_id()
@@ -2231,6 +2492,7 @@ def stage_timeline_artifact(
     product_id, artifact_domain = _content_project_storage_identity(scope)
     render_result: Optional[Mapping[str, Any]] = None
     package_created = False
+    artifact_registered = False
     try:
         with tempfile.TemporaryDirectory(prefix="content-project-", dir=str(root)) as work_dir:
             rendered_path = Path(work_dir) / media_name
@@ -2272,7 +2534,8 @@ def stage_timeline_artifact(
                     render_result["subtitle_export"] = {"state": "unsupported", "reason": str(exc), "files": []}
                 delivery_files, delivery_reports = _build_content_delivery(
                     timeline, rendered_path, output_kind=output_kind, options=delivery_options,
-                    render_options=render_options, check_continue=check_export_permission)
+                    render_options=render_options, check_continue=check_export_permission,
+                    source_annotations=annotation_files)
             else:
                 render_result = {"state": "not_rendered", "output_kind": output_kind,
                                  "timeline_version": timeline.version}
@@ -2283,6 +2546,20 @@ def stage_timeline_artifact(
                 delivery_files[name] = data
             if annotation_reports:
                 delivery_reports['transcript_annotations'] = annotation_reports
+            from lumenis.shared.content_creation.speech_transcription import (
+                build_project_transcription_files,project_transcription_summary)
+            mapped_transcripts=build_project_transcription_files(timeline,delivery_files,
+                rendered_sha256=render_result.get('media_sha256') if render_media else None,
+                source_artifact_refs={entry['metadata']['asset']['asset_id']:entry['record']['artifact_id']
+                                      for entry in source_entries},check_cancel=check_export_permission)
+            if mapped_transcripts['report'] is not None:
+                # These are fresh derivatives of this exact revision, never
+                # inherited timecodes or a rerun of a recognition model.
+                for name in ('transcript-timeline.json','transcript-timeline.vtt','transcript-timeline.srt'):
+                    delivery_files.pop(name,None)
+                delivery_files.update(mapped_transcripts['files'])
+                delivery_reports['timeline_transcription']=project_transcription_summary(
+                    mapped_transcripts['report'],mapped_transcripts['files']['transcript-timeline.json'])
             credits = _content_license_credits(source_entries, timeline_data, render_options)
             if credits is not None:
                 delivery_files.update(_content_license_credit_files(credits))
@@ -2302,6 +2579,8 @@ def stage_timeline_artifact(
                 **({"render_options": render_options} if render_options else {}),
                 "timeline": timeline_data,
                 "source_artifact_refs": source_refs,
+                **({"source_project_artifact_refs": project_source_refs}
+                   if project_source_refs else {}),
                 "context": expected_context,
                 "parent_artifact_id": previous_artifact_id,
                 "rights": {
@@ -2342,19 +2621,69 @@ def stage_timeline_artifact(
         if package_size > content_media_resource_budget()["storage_capacity_bytes"]:
             raise LocalArtifactError("CONTENT_PROJECT_PACKAGE_TOO_LARGE")
         check_export_permission()
-        record = _register_artifact(
-            artifact_id=artifact_id,
-            kind="content_project",
-            product_id=product_id,
-            domain_id=artifact_domain,
-            source_execution_id=source_execution_id.strip(),
-            evidence_id="",
-            note_id="",
-            path=package_path,
-            media_type="application/zip",
-        )
+
+        def register_artifact() -> dict[str, Any]:
+            # commit_result holds TaskQueue's non-reentrant write reservation.
+            # It already checked cancellation and the active lease before
+            # calling this effect; do not re-enter the queue from this callback.
+            check_export_permission(check_task=task_control is None)
+            return _register_artifact(
+                artifact_id=artifact_id,
+                kind="content_project",
+                product_id=product_id,
+                domain_id=artifact_domain,
+                source_execution_id=source_execution_id.strip(),
+                evidence_id="",
+                note_id="",
+                path=package_path,
+                media_type="application/zip",
+            )
+
+        def register_and_verify() -> dict[str, Any]:
+            nonlocal artifact_registered
+            # The TaskQueue commit fence already holds its write reservation.
+            # Recheck Permission/SourceUse here without reentering that queue.
+            registered = register_artifact()
+            artifact_registered = True
+            verified_project, verified_render, verified_record, _ = _verified_content_project(
+                artifact_id, actor=actor, **scope,
+            )
+            if (verified_record["sha256"] != registered["sha256"]
+                    or verified_project != project or verified_render != render_result):
+                raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
+            return registered
+
+        if task_control is None:
+            record = register_artifact()
+        else:
+            def commit_export_result():
+                registered = register_and_verify()
+                return {
+                    key: registered[key]
+                    for key in ("artifact_id", "sha256", "source_execution_id")
+                } | {
+                    "status": "rendered_staged" if render_media else "project_saved",
+                    "project_revision": project.get("project_revision"),
+                    "timeline_version": timeline_data.get("version"),
+                }
+
+            committed = task_control["queue"].commit_result(
+                task_control["task_id"],
+                commit_export_result,
+                task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                request_key=task_control["request_key"],
+                run_id=task_control["run_id"], worker_id=task_control["worker_id"],
+                lease_owner=task_control["lease_owner"],
+            )
+            if not committed:
+                if artifact_registered:
+                    raise LocalArtifactError("CONTENT_EXPORT_COMMIT_OUTCOME_UNKNOWN")
+                raise InterruptedError("CONTENT_EXPORT_CANCELLED_OR_LEASE_LOST")
+            record = _artifact_record(artifact_id, read_only=True)
+            if not record or record.get("source_execution_id") != source_execution_id.strip():
+                raise LocalArtifactError("CONTENT_EXPORT_COMMIT_READBACK_FAILED")
     except Exception:
-        if package_created:
+        if package_created and not artifact_registered:
             try:
                 package_path.unlink(missing_ok=True)
             except OSError:
@@ -2528,6 +2857,7 @@ def list_content_projects(*, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
             "output_kind": project["output_kind"],
             "title": project.get("title"),
             "project_revision": project.get("project_revision"),
+            "source_project_artifact_refs": list(project.get("source_project_artifact_refs", [])),
             "render_state": render["state"],
             "created_at": record["created_at"],
             "updated_at": record["updated_at"],
@@ -3202,6 +3532,42 @@ def _validate_content_delivery_options(value=None):
     return value
 
 
+def _validate_podcast_plan_timeline(timeline, options):
+    """Keep the authored transcript and chapter plan bound to audible dialogue.
+
+    A PodcastPlan is rendered into the voiceover lanes. Timeline track controls
+    and per-clip gains are part of the saved edit, so comparing clip identities
+    alone can otherwise publish a transcript for dialogue that the mix muted.
+    Run this before encoding and reuse the same check at delivery construction.
+    """
+    if "podcast_plan" not in options:
+        return
+    from podcast.intelligence.episode_runtime import PodcastPlan
+
+    plan = PodcastPlan.from_dict(options["podcast_plan"])
+    voice_tracks = {track.track_id for track in timeline.tracks
+                    if track.kind == "voiceover" and track.clips}
+    separate = voice_tracks != {"podcast_voice"}
+    expected = plan.build_timeline(tuple(timeline.assets), separate_speakers=separate)
+
+    def spans(value):
+        return sorted((track.track_id, clip.purpose, clip.media_asset_id, clip.source_in,
+                       clip.source_out, clip.timeline_start, clip.audio_stream_index)
+                      for track in value.tracks if track.kind == "voiceover" for clip in track.clips)
+
+    if (spans(expected) != spans(timeline)
+            or any(track.clips and track.kind not in {"voiceover", "bgm", "sfx"}
+                   for track in timeline.tracks)):
+        raise LocalArtifactError("PODCAST_PLAN_TIMELINE_MISMATCH")
+
+    audible_tracks = {track.track_id for track in timeline.audible_tracks()}
+    dialogue = [(track, clip) for track in timeline.tracks if track.kind == "voiceover"
+                for clip in track.clips]
+    if any(track.track_id not in audible_tracks or clip.audio_mix.volume <= 0
+           for track, clip in dialogue):
+        raise LocalArtifactError("PODCAST_PLAN_DIALOGUE_NOT_AUDIBLE")
+
+
 def _content_delivery_filename(name):
     fixed = {"credits.json", "credits.txt", "episode.mp3", "episode.m4a", "podcast-plan.json", "script.txt", "transcript-original.vtt",
              "transcript-corrected.vtt", "chapters.json", "corrections.json", "metadata.json", "show-notes.txt", "feed.xml",
@@ -3216,16 +3582,22 @@ def _build_transcript_annotations(timeline, options, *, parent_project, parent_p
     from lumenis.shared.content_creation.transcript_editing import (
         build_manual_transcript_files,review_source_transcript,transcript_annotation_files)
     files,reports={},[]
+    assets={asset.asset_id:asset for asset in timeline.assets}
     if parent_project and parent_path:
         with zipfile.ZipFile(parent_path) as archive:
+            legacy=parent_project.get('delivery_manifest',{}).get('transcription.json')
+            legacy_asset=json.loads(archive.read('transcription.json')).get('source_asset_id') if legacy else None
             for name,entry in parent_project.get('delivery_manifest',{}).items():
                 if name in {'transcription.json','transcript-words.json','transcript-asr.vtt','transcript-asr.srt'} or re.fullmatch(
                         r'transcription(?:-reviewed)?-MEDIA-[a-f0-9]{16}\.(?:json|vtt|srt)',name):
+                    identity=re.search(r'MEDIA-[a-f0-9]{16}',name)
+                    if (identity and identity.group() not in assets
+                            or identity is None and legacy_asset is not None and legacy_asset not in assets):
+                        continue  # The immutable parent retains removed assets' annotations.
                     check_continue();raw=archive.read(name)
                     if hashlib.sha256(raw).hexdigest() != entry['sha256']:
                         raise LocalArtifactError('CONTENT_TRANSCRIPT_ORIGINAL_CHANGED')
                     files[name]=raw
-    assets={asset.asset_id:asset for asset in timeline.assets}
     for item in options.get('manual_transcripts',[]):
         check_continue()
         asset=assets.get(item['asset_id'])
@@ -3259,18 +3631,53 @@ def _build_transcript_annotations(timeline, options, *, parent_project, parent_p
     return files,reports
 
 
-def _build_content_delivery(timeline, rendered_path, *, output_kind, options, render_options, check_continue):
+def _build_content_delivery(timeline, rendered_path, *, output_kind, options, render_options,
+                            check_continue, source_annotations=None):
     from lumenis.shared.content_creation.rendering import encode_audio_delivery
     files, reports = {}, {}
     if "transcription" in options:
-        from lumenis.shared.content_creation.speech_transcription import build_transcription_files, build_timeline_transcription_files
+        from lumenis.shared.content_creation.speech_transcription import build_transcription_files
         selected=next((asset for asset in timeline.assets if asset.asset_id==options["transcription"]["asset_id"]),None)
         if selected is None:raise LocalArtifactError("CONTENT_TRANSCRIPTION_SOURCE_SCOPE_MISMATCH")
-        item=build_transcription_files(selected,check_cancel=check_continue,**{key:value for key,value in options["transcription"].items() if key!="asset_id"})
-        if item["report"].get("review_state")=="NO_RECOGNIZED_SPEECH":raise LocalArtifactError("CONTENT_ASR_NO_RECOGNIZED_SPEECH")
-        files.update(item["files"]);reports["transcription"]=item["report"]
-        edited=build_timeline_transcription_files(timeline,item,rendered_sha256=_hash_file(Path(rendered_path)),check_cancel=check_continue)
-        files.update(edited["files"]);reports["timeline_transcription"]=edited["report"]
+        transcription_options={key:value for key,value in options["transcription"].items() if key!="asset_id"}
+        requested_stream=transcription_options.get('audio_stream_index')
+        if requested_stream is None and selected.audio_stream_count==1:requested_stream=0
+        requested_language=transcription_options.get('language_hint')
+        existing=None
+        for member,raw in (source_annotations or {}).items():
+            if member not in {'transcription.json',f'transcription-{selected.asset_id}.json'}:
+                continue
+            try:
+                report=json.loads(raw)
+            except (TypeError,ValueError,UnicodeError):
+                continue
+            if (not isinstance(report,dict)
+                    or report.get('source_annotation')!='model_estimated_unreviewed_derivative'
+                    or report.get('source_asset_id')!=selected.asset_id
+                    or report.get('original_source_sha256')!=selected.sha256
+                    or report.get('selected_audio_stream_index')!=requested_stream
+                    or report.get('declared_language')!=requested_language):
+                continue
+            existing=(member,raw,report)
+            break
+        if existing is not None:
+            member,raw,report=existing
+            if report.get('review_state')=='NO_RECOGNIZED_SPEECH':
+                raise LocalArtifactError("CONTENT_ASR_NO_RECOGNIZED_SPEECH")
+            reports['transcription']={
+                'state':'reused_existing_source_annotation',
+                'source_asset_id':selected.asset_id,
+                'source_sha256':selected.sha256,
+                'selected_audio_stream_index':requested_stream,
+                'source_transcription_member':member,
+                'source_transcription_sha256':hashlib.sha256(raw).hexdigest(),
+                'new_model_execution':'NOT_RUN',
+                'review_state':report.get('review_state'),
+            }
+        else:
+            item=build_transcription_files(selected,check_cancel=check_continue,**transcription_options)
+            if item["report"].get("review_state")=="NO_RECOGNIZED_SPEECH":raise LocalArtifactError("CONTENT_ASR_NO_RECOGNIZED_SPEECH")
+            files.update(item["files"]);reports["transcription"]=item["report"]
     if "podcast_analysis" in options:
         from podcast.intelligence.episode_analysis import build_episode_analysis_files
         from lumenis.shared.content_creation.video_editing import fingerprint_local_media
@@ -3307,17 +3714,8 @@ def _build_content_delivery(timeline, rendered_path, *, output_kind, options, re
         files.update(item["files"]); reports[format] = item["report"]
     if "podcast_plan" in options:
         from podcast.intelligence.episode_runtime import PodcastPlan, build_offline_publication_documents
+        _validate_podcast_plan_timeline(timeline, options)
         plan = PodcastPlan.from_dict(options["podcast_plan"])
-        voice_tracks = {t.track_id for t in timeline.tracks if t.kind == "voiceover" and t.clips}
-        separate = voice_tracks != {"podcast_voice"}
-        expected = plan.build_timeline(tuple(timeline.assets), separate_speakers=separate)
-        def spans(value):
-            return sorted((t.track_id, c.purpose, c.media_asset_id, c.source_in, c.source_out,
-                           c.timeline_start, c.audio_stream_index)
-                          for t in value.tracks if t.kind == "voiceover" for c in t.clips)
-        if (spans(expected) != spans(timeline)
-                or any(t.clips and t.kind not in {"voiceover", "bgm", "sfx"} for t in timeline.tracks)):
-            raise LocalArtifactError("PODCAST_PLAN_TIMELINE_MISMATCH")
         name = "episode." + formats[0]
         item = build_offline_publication_documents(plan,audio_filename=name,audio_size=_delivery_file_size(files[name]),
                                                    urls=options.get("publication_urls"))

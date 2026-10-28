@@ -8,6 +8,186 @@ account/skills.py — Skill/Agent 能力统一管理
 import json
 from .models import get_db
 
+
+def _builtin_status_identity(actor, connection):
+    """Reopen only the existing owner or sealed local skills/write identity."""
+    from lumenis.auth.service import get_current_user
+    from lumenis.system.security.permission import (_is_server_local_workspace_principal,
+        resolve_local_workspace_principal)
+    if _is_server_local_workspace_principal(actor):
+        if resolve_local_workspace_principal(module='skills', action='write') is None:
+            raise PermissionError('SKILL_STATUS_WORKSPACE_UNAVAILABLE')
+        return 'workspace:local'
+    current = get_current_user(read_only=True)
+    actor_id = actor.get('id') if isinstance(actor, dict) else None
+    if (type(actor_id) is not int or not isinstance(current, dict) or current.get('id') != actor_id):
+        raise PermissionError('SKILL_STATUS_OWNER_REQUIRED')
+    row = connection.execute('SELECT role,status FROM v4_users WHERE id=?', (actor_id,)).fetchone()
+    if not row or row['role'] != 'owner' or row['status'] != 'active':
+        raise PermissionError('SKILL_STATUS_OWNER_REQUIRED')
+    return 'actor:' + str(actor_id)
+
+
+def _builtin_status_row(connection, skill_id):
+    from lumenis.shared.agents.skills.execution import _BACKGROUND_INPUTS
+    if type(skill_id) is not str or skill_id not in _BACKGROUND_INPUTS or not skill_id.startswith('shared.'):
+        raise ValueError('SKILL_STATUS_BOUNDED_BUILTIN_REQUIRED')
+    row = connection.execute('SELECT * FROM skills_registry WHERE skill_id=?', (skill_id,)).fetchone()
+    if row is None:
+        raise LookupError('SKILL_NOT_REGISTERED')
+    value = dict(row)
+    if (value.get('product') != 'SHARED' or value.get('status') not in {'enabled', 'disabled'}
+            or str(value.get('runtime') or 'builtin').lower() != 'builtin'
+            or str(value.get('source') or 'builtin').lower() != 'builtin'
+            or str(value.get('source_type') or 'builtin').lower() != 'builtin'):
+        raise PermissionError('SKILL_STATUS_BOUNDED_BUILTIN_REQUIRED')
+    return value
+
+
+def _builtin_status_hash(value):
+    import hashlib
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+        separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+
+
+def _builtin_status_request(skill_id, status, *, operation_id, expected_binding=None):
+    import re
+    import uuid
+    if status not in {'enabled', 'disabled'}:
+        raise ValueError('SKILL_STATUS_INVALID')
+    try:
+        parsed = uuid.UUID(operation_id) if type(operation_id) is str else None
+    except ValueError:
+        parsed = None
+    if parsed is None or str(parsed) != operation_id or parsed.variant != uuid.RFC_4122:
+        raise ValueError('SKILL_STATUS_OPERATION_ID_INVALID')
+    if expected_binding is not None and (type(expected_binding) is not str
+            or re.fullmatch('[0-9a-f]{64}', expected_binding) is None):
+        raise ValueError('SKILL_STATUS_BINDING_INVALID')
+    return {'schema': 'builtin-skill-status/v1', 'skill_id': skill_id, 'status': status,
+            'operation_id': operation_id, 'expected_binding': expected_binding}
+
+
+def _builtin_status_event(connection, operation_id):
+    rows = connection.execute("SELECT detail FROM v4_audit_logs WHERE action='builtin_skill_status_confirm' "
+                              "AND resource='skill' AND resource_id=? ORDER BY id LIMIT 2", (operation_id,)).fetchall()
+    if len(rows) > 1:
+        raise RuntimeError('SKILL_STATUS_OPERATION_DUPLICATE')
+    return json.loads(rows[0]['detail']) if rows else None
+
+
+def _prepare_builtin_status(connection, skill_id, status, actor, operation_id, expected_binding=None):
+    value = _builtin_status_request(skill_id, status, operation_id=operation_id, expected_binding=expected_binding)
+    caller = _builtin_status_identity(actor, connection)
+    row = _builtin_status_row(connection, skill_id)
+    event = _builtin_status_event(connection, operation_id)
+    if event:
+        if (event.get('skill_id') != skill_id or event.get('status') != status
+                or event.get('caller') != caller or (expected_binding is not None
+                    and event.get('expected_binding') != expected_binding)):
+            raise RuntimeError('SKILL_STATUS_OPERATION_CONFLICT')
+        binding = event['expected_binding']
+    else:
+        binding = _builtin_status_hash(row)
+        if expected_binding is not None and expected_binding != binding:
+            raise RuntimeError('SKILL_STATUS_REGISTRY_CHANGED')
+    value.update(expected_binding=binding, caller=caller)
+    resource = 'builtin-skill-status:v1:' + _builtin_status_hash(value)
+    if event and event.get('resource') != resource:
+        raise RuntimeError('SKILL_STATUS_OPERATION_CONFLICT')
+    return {**value, 'resource': resource, 'current_status': row['status'],
+            'state': 'ALREADY_APPLIED' if event else 'PREPARED', 'effect_performed': False,
+            'idempotent_hit': event is not None}
+
+
+def prepare_builtin_skill_status(skill_id, status, *, actor, operation_id):
+    """Read the exact registered builtin and owner; never enable, install or grant."""
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security.permission import authorize_shared_workspace
+    with get_repository().connection(read_only=True, wal=False) as connection:
+        authorize_shared_workspace(actor, {'scope_kind': 'shared_workspace', 'version': 1},
+                                   module='skills', action='write', connection=connection)
+        return _prepare_builtin_status(connection, skill_id, status, actor, operation_id)
+
+
+def validate_builtin_skill_status_resource(resource, *, actor, scope, connection=None):
+    """Pure callback for the Gate's exact confirmed original status request."""
+    from flask import request
+    from lumenis.shared.database import get_repository
+    try:
+        if scope != {'scope_kind': 'shared_workspace', 'version': 1} or request.method != 'POST':
+            return False
+        status = {'account.api_enable_skill': 'enabled', 'account.api_disable_skill': 'disabled'}.get(request.endpoint)
+        data = request.get_json(silent=True)
+        skill_id = (request.view_args or {}).get('skill_id')
+        if (status is None or type(data) is not dict or data.get('mode') != 'confirm'
+                or set(data) != {'mode', 'operation_id', 'expected_binding', 'confirm', 'confirmed_resource'}
+                or data.get('confirm') is not True or data.get('confirmed_resource') != resource):
+            return False
+        def valid(con):
+            value = _prepare_builtin_status(con, skill_id, status, actor, data['operation_id'], data['expected_binding'])
+            return value['resource'] == resource
+        if connection is not None:
+            return valid(connection)
+        with get_repository().connection(read_only=True, wal=False) as con:
+            return valid(con)
+    except (ValueError, TypeError, LookupError, PermissionError, RuntimeError):
+        return False
+
+
+def confirm_builtin_skill_status(skill_id, status, *, actor, operation_id, expected_binding,
+                                 confirmed_resource, confirm, same_origin):
+    """Apply one explicit builtin opt-in through the current Gate and atomic audit."""
+    from flask import request
+    from lumenis.shared.database import get_repository
+    from lumenis.system.security import permission
+    if confirm is not True or same_origin is not True:
+        raise PermissionError('SKILL_STATUS_EXACT_CONFIRMATION_REQUIRED')
+    gate = permission.get_permission_gate()
+    if (not gate.fail_closed or permission.is_testing_bypass_enabled()
+            or not gate.has_permission(permission.PermissionLevel.HUMAN_APPROVAL)
+            or not gate.has_permission(permission.PermissionLevel.COMMIT)):
+        raise PermissionError('SKILL_STATUS_MANUAL_AUTHORITY_REQUIRED')
+    scope = {'scope_kind': 'shared_workspace', 'version': 1}
+    token, issued = None, False
+    try:
+        with get_repository().transaction(timeout=10) as connection:
+            connection.execute('BEGIN IMMEDIATE')
+            permission.authorize_shared_workspace(actor, scope, module='skills', action='write', connection=connection)
+            prepared = _prepare_builtin_status(connection, skill_id, status, actor, operation_id, expected_binding)
+            resource = prepared['resource']
+            if confirmed_resource != resource:
+                raise PermissionError('SKILL_STATUS_EXACT_RESOURCE_REQUIRED')
+            token = gate.get_valid_approval_token(permission.OperationType.CONFIG_MODIFY.value, resource, exact=True)
+            issued = token is None
+            if issued:
+                token = gate.grant_approval(permission.OperationType.CONFIG_MODIFY.value,
+                    resource=resource, duration_minutes=5, granted_by=prepared['caller'])
+            decision = permission.check_shared_workspace_effect(actor, scope, operation=permission.OperationType.CONFIG_MODIFY,
+                resource=resource, module='skills', action='write', connection=connection, gate=gate)
+            if not decision.allowed or not decision.audit_id:
+                raise PermissionError('SKILL_STATUS_EFFECT_PERMISSION_DENIED')
+            if not prepared['idempotent_hit']:
+                connection.execute("UPDATE skills_registry SET status=?,updated_at=datetime('now','localtime') WHERE skill_id=?",
+                                   (status, skill_id))
+                event = {key: prepared[key] for key in ('schema', 'skill_id', 'status', 'operation_id',
+                                                        'expected_binding', 'caller', 'resource')}
+                connection.execute("INSERT INTO v4_audit_logs (user_id,username,action,resource,resource_id,detail,ip) "
+                    "VALUES(?,?,'builtin_skill_status_confirm','skill',?,?,?)",
+                    (actor.get('id') if isinstance(actor, dict) else None, prepared['caller'], operation_id,
+                     json.dumps(event, ensure_ascii=False, sort_keys=True), request.remote_addr))
+            _builtin_status_identity(actor, connection)
+            permission.authorize_shared_workspace(actor, scope, module='skills', action='write', connection=connection)
+            with gate.builtin_skill_status_commit_lease(token, resource=resource, caller=prepared['caller']):
+                connection.commit()
+            current = _builtin_status_row(connection, skill_id)
+        return {**prepared, 'state': 'ALREADY_APPLIED' if prepared['idempotent_hit'] else 'APPLIED',
+                'effect_performed': not prepared['idempotent_hit'], 'current_status': current['status']}
+    except Exception:
+        if issued and token is not None:
+            gate.revoke_approval(token)
+        raise
+
 # 内置技能清单（从现有模块提取的能力）
 BUILTIN_SKILLS = [
     {"skill_id": "ai_analyzer", "name": "AI分析", "description": "舆情AI分析与摘要", "product": "SYSTEM", "domain": "global", "version": "1.0"},

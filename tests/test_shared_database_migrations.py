@@ -368,8 +368,8 @@ def test_canonical_root_init_v0_path_still_migrates(tmp_path, monkeypatch):
     _bind_migration_db(monkeypatch, migrations, db_path, backup_dir)
     monkeypatch.setattr(database, "DB_PATH", str(db_path))
 
-    database.init_db()
     assert migrations.migrate() is True
+    database.init_db()
 
     with sqlite3.connect(db_path) as conn:
         version = conn.execute(
@@ -381,3 +381,112 @@ def test_canonical_root_init_v0_path_still_migrates(tmp_path, monkeypatch):
 
     assert version == migrations.CURRENT_VERSION
     assert {"publish_datetime", "captured_at", "rule_version"} <= note_columns
+
+
+def test_real_backup_refusal_precedes_root_business_schema_initialization(
+    tmp_path, monkeypatch, capsys
+):
+    import ast
+    from pathlib import Path
+
+    from lumenis.shared.database import migrations
+
+    data_root = tmp_path / "workspace"
+    data_root.mkdir()
+    db_path = data_root / "monitor.sqlite3"
+    backup_dir = data_root / "backups"
+    _bind_migration_db(monkeypatch, migrations, db_path, backup_dir)
+    monkeypatch.setenv("ZBC_DATA_DIR", str(data_root))
+
+    # A v21 workspace with a signed Evidence key ID but no signing companion
+    # exercises the real pre-migration backup refusal without any real key.
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+        conn.execute("INSERT INTO schema_version(version) VALUES (21)")
+        conn.execute(
+            """CREATE TABLE notes (
+                note_id TEXT PRIMARY KEY, content TEXT, body TEXT, status TEXT,
+                last_seen_at TEXT, collected_at TEXT, source_platform TEXT,
+                relevance_status TEXT
+            )"""
+        )
+        conn.execute(
+            """INSERT INTO notes VALUES
+               ('note-1', 'content', '', NULL, '', 'captured-at', '', '')"""
+        )
+        conn.execute(
+            """CREATE TABLE app_evidence_records (
+                id INTEGER PRIMARY KEY, integrity_version INTEGER,
+                integrity_algorithm TEXT, integrity_digest TEXT,
+                integrity_key_id TEXT
+            )"""
+        )
+        conn.execute(
+            """INSERT INTO app_evidence_records VALUES
+               (1, 1, 'hmac-sha256', 'test-digest', 'unavailable-test-key')"""
+        )
+
+    app_source = Path(__file__).resolve().parents[1] / "app.py"
+    app_tree = ast.parse(app_source.read_text(encoding="utf-8"))
+    call_lines = {}
+    for node in ast.walk(app_tree):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        receiver = node.func.value
+        if isinstance(receiver, ast.Name) and (receiver.id, node.func.attr) in {
+            ("db", "init_db"), ("_dm", "migrate")
+        }:
+            call_lines[(receiver.id, node.func.attr)] = node.lineno
+    assert call_lines[("_dm", "migrate")] < call_lines[("db", "init_db")]
+
+    with sqlite3.connect(db_path) as conn:
+        schema_before = conn.execute(
+            "SELECT type, name, sql FROM sqlite_master ORDER BY type, name"
+        ).fetchall()
+        note_before = conn.execute(
+            "SELECT status, last_seen_at, source_platform, relevance_status, body "
+            "FROM notes WHERE note_id='note-1'"
+        ).fetchone()
+
+    assert migrations.migrate() is False
+    assert "WORKSPACE_SIGNING_KEY_RECOVERY_REQUIRED" in capsys.readouterr().out
+
+    with sqlite3.connect(db_path) as conn:
+        assert conn.execute(
+            "SELECT type, name, sql FROM sqlite_master ORDER BY type, name"
+        ).fetchall() == schema_before
+        assert conn.execute(
+            "SELECT status, last_seen_at, source_platform, relevance_status, body "
+            "FROM notes WHERE note_id='note-1'"
+        ).fetchone() == note_before
+    assert not list(backup_dir.glob("before_migration_v21_to_v22.db"))
+    assert not list(backup_dir.glob(".before_migration_v21_to_v22.db.*.tmp"))
+
+
+def test_fresh_empty_business_registry_accepts_first_explicit_user_input(tmp_path, monkeypatch):
+    import database
+    from lumenis.shared.database import migrations
+
+    db_path = tmp_path / "empty-business-workspace.sqlite3"
+    _bind_migration_db(monkeypatch, migrations, db_path, tmp_path / "backups")
+    monkeypatch.setattr(database, "DB_PATH", str(db_path))
+
+    database.init_db()
+    assert migrations.migrate() is True
+
+    import subject_registry
+
+    assert subject_registry.list_subjects() == []
+
+    supplied_input = {
+        "domain_id": "CTH",
+        "subject_type": "company",
+        "name_en": "North Star Operations",
+        "name_zh": "北辰运营",
+        "industry": "零售服务",
+    }
+    subject, created = subject_registry.add_subject(supplied_input)
+
+    assert created is True
+    assert subject["name_en"] == supplied_input["name_en"]
+    assert subject_registry.list_subjects("CTH") == [subject]

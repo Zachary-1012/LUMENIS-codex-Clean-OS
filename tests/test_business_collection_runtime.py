@@ -118,6 +118,118 @@ def test_unissued_actor_and_cross_domain_scope_are_rejected():
         entry._business_batch_binding({'id': 101}, {'cth': {'domain_id': 'bmp', 'global_scope': True}}, 'human', None)
 
 
+@pytest.mark.parametrize(
+    ('scope', 'legacy_scope'),
+    [
+        ({'domain_id': 'cth', 'global_scope': False, 'subject_id': 'SUBJ-1',
+          'brand_focus_id': None}, None),
+        ({'domain_id': 'bmp', 'global_scope': False, 'subject_id': 'SUBJ-1',
+          'brand_focus_id': 'BRAND-1'},
+         {'domain_id': 'bmp', 'global_scope': False, 'subject_id': None,
+          'brand_focus_id': 'BRAND-1'}),
+    ],
+)
+def test_subject_removal_cancels_only_same_actor_and_exact_scope_tasks(
+    scope, legacy_scope, tmp_path, monkeypatch,
+):
+    from lumenis.system.collector.guard import task_queue
+
+    monkeypatch.setattr(task_queue, 'DEFAULT_PATH', str(tmp_path / 'directory-cancel.db'))
+    queue = task_queue.TaskQueue()
+
+    def enqueue(identity, task_scope, key):
+        return queue.enqueue_once('collector_manual_request', {
+            'binding': {'identity': identity, 'scope': task_scope},
+            'operation_id': key,
+        }, key)
+
+    actor_identity = {'actor_id': 101}
+    exact_pending = enqueue(actor_identity, scope, 'exact-pending')
+    exact_running = enqueue(actor_identity, legacy_scope or scope, 'exact-running')
+    claimed = queue.dequeue(worker_id='worker-1', lease_owner='worker-1', task_id=exact_running)
+    assert claimed is not None and claimed['status'] == 'running'
+    exact_done = enqueue(actor_identity, scope, 'exact-done')
+    terminal = queue.dequeue(worker_id='worker-2', lease_owner='worker-2', task_id=exact_done)
+    assert terminal is not None and queue.ack(exact_done, run_id=terminal['run_id'],
+        worker_id=terminal['worker_id'], lease_owner=terminal['lease_owner'])
+
+    other_actor = enqueue({'actor_id': 202}, scope, 'other-actor')
+    other_subject = dict(scope, subject_id='SUBJ-OTHER', brand_focus_id='BRAND-OTHER'
+        if scope['domain_id'] == 'bmp' else None)
+    other_scope = enqueue(actor_identity, other_subject, 'other-scope')
+    global_scope = {'domain_id': scope['domain_id'], 'global_scope': True,
+                    'subject_id': None, 'brand_focus_id': None}
+    discovery = enqueue(actor_identity, global_scope, 'global-discovery')
+    actorless = enqueue({'maintenance_plan': 'system-plan'}, scope, 'actorless-plan')
+    queue.close()
+
+    result = entry.cancel_subject_collection_requests(
+        actor={'id': 101}, scope=scope,
+    )
+
+    assert result == {
+        'state': 'CANCELLATION_PENDING', 'matched': 3,
+        'cancelled': 1, 'cancellation_pending': 1,
+        'already_terminal': 1, 'failed': 0, 'network_attempted': False,
+    }
+    queue = task_queue.TaskQueue()
+    assert queue.get(exact_pending)['status'] == 'cancelled'
+    assert queue.get(exact_running)['status'] == 'cancel_requested'
+    assert queue.get(exact_done)['status'] == 'done'
+    for task_id in (other_actor, other_scope, discovery, actorless):
+        assert queue.get(task_id)['status'] == 'pending'
+    queue.close()
+
+
+def test_removed_query_is_deferred_without_blocking_another_entity(monkeypatch):
+    registry_rows = [
+        {'subject_id': 'SUBJ-REMOVED', 'subject_type': 'brand', 'domain_id': 'BMP',
+         'brand_focus_id': 'BRAND-REMOVED', 'registry_id': 'BRAND-REMOVED',
+         'name_en': 'Removed Brand', 'name_zh': '移除品牌', 'status': 'active'},
+        {'subject_id': 'SUBJ-READY', 'subject_type': 'brand', 'domain_id': 'BMP',
+         'brand_focus_id': 'BRAND-READY', 'registry_id': 'BRAND-READY',
+         'name_en': 'Ready Brand', 'name_zh': '在用品牌', 'status': 'active'},
+    ]
+    reqs = [
+        {'domain_id': 'BMP', 'scope_key': row['brand_focus_id'],
+         'aliases': [row['name_en']], 'purpose': '中国新品与消费者反馈',
+         'dimension': 'market_activity', 'platforms': ['x'], 'geography_terms': ['中国'],
+         'topic_terms': ['新品']}
+        for row in registry_rows
+    ]
+    build = planner.build_acquisition_plan
+    monkeypatch.setattr(planner, 'build_acquisition_plan',
+        lambda *args, **kwargs: build(*args, registry_loader=lambda: registry_rows, **kwargs))
+    monkeypatch.setattr(entry, '_subject_directory_decision', lambda actor, scope: (
+        {'allowed': False, 'status': 'SUBJECT_REMOVED_FROM_DIRECTORY'}
+        if scope.get('brand_focus_id') == 'BRAND-REMOVED'
+        else {'allowed': True, 'status': 'IN_WORKING_SET'}
+    ))
+    calls = []
+
+    def collect(platform, keyword, **kwargs):
+        with kwargs['attempt_guard']() as active:
+            assert active is True
+        calls.append((platform, keyword, kwargs['scope']))
+        return {'ok': True, 'status': 'SUCCESS', 'network_attempted': False}
+
+    monkeypatch.setattr(entry, 'collect_search', collect)
+    scope = {'domain_id': 'bmp', 'global_scope': True,
+             'subject_id': None, 'brand_focus_id': None}
+
+    result = entry._execute_business_queries(
+        reqs, actor={'id': 101}, scopes={'bmp': scope},
+    )
+
+    assert result['status'] == 'PARTIAL'
+    assert len(result['runs']) == 2
+    assert len(result['deferred_queries']) == 1
+    assert result['deferred_queries'][0]['reason'] == 'SUBJECT_REMOVED_FROM_DIRECTORY'
+    assert len(calls) == 1
+    assert calls[0][2]['brand_focus_id'] == 'BRAND-READY'
+    assert result['checkpoint']['completed_query_keys']
+
+
 def test_first_response_crash_recovers_same_server_task_without_repeating_completed_queries(monkeypatch, tmp_path):
     from lumenis.system.collector.guard import task_queue
     monkeypatch.setattr(task_queue, 'DEFAULT_PATH', str(tmp_path/'recovery.db'))

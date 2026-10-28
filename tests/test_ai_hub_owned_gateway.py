@@ -15,6 +15,16 @@ def _unavailable(**_kwargs):
     }
 
 
+def test_ai_hub_guidance_supports_real_creation_and_does_not_assume_fixed_focus():
+    assert "可修改的有来源答案、分析或原创草稿" in service.SYSTEM_ROLE
+    assert "普通草稿保存、修订与版本" in service.SYSTEM_ROLE
+    assert "影子队列" not in service.SYSTEM_ROLE
+    assert "广州太古汇15周年" not in service.MODULE_HINTS["topics"]
+    assert "默认任何参考主体" in service.MODULE_HINTS["topics"]
+    assert "三级角色" not in service.MODULE_HINTS["account"]
+    assert "安全问答" not in service.MODULE_HINTS["account"]
+
+
 def test_ai_hub_status_reports_owned_runtime_without_provider_discovery(monkeypatch):
     monkeypatch.setattr(
         service.intelligence,

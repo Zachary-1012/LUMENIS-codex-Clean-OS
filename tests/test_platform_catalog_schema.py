@@ -195,7 +195,8 @@ class TestFieldMapping:
     def test_reddit_mapping_score_to_like(self):
         raw = {"post_id": "abc", "score": 500, "num_comments": 100, "num_crossposts": 5}
         norm = map_raw_to_normalized(raw, "reddit")
-        assert norm["like_count"] == 500  # score -> like_count
+        assert norm["like_count"] is None
+        assert norm['raw_data']['score'] == 500
         assert norm["comment_count"] == 100
         assert norm["share_count"] == 5
 
@@ -208,9 +209,10 @@ class TestFieldMapping:
     def test_github_mapping_stargazers_to_like(self):
         raw = {"repo_id": 123, "stargazers_count": 1000, "forks_count": 200, "watchers_count": 500}
         norm = map_raw_to_normalized(raw, "github")
-        assert norm["like_count"] == 1000  # stargazers_count -> like_count
-        assert norm["share_count"] == 200  # forks_count -> share_count
-        assert norm["view_count"] == 500  # watchers_count -> view_count
+        assert norm["like_count"] is None
+        assert norm["share_count"] is None
+        assert norm["view_count"] is None
+        assert norm['raw_data'] is raw and raw['stargazers_count'] == 1000
 
     def test_missing_fields_are_none_not_zero(self):
         raw = {"video_id": "test"}
@@ -1030,13 +1032,13 @@ with patch.object(socket.socket, 'connect', side_effect=AssertionError('network 
     for key in ('channels','youtube','tiktok','reddit','linkedin'):
         adapter = get_adapter(key)
         assert adapter.enabled is False
-        assert adapter.healthcheck().status.value == 'NOT_CONFIGURED'
-        assert adapter.healthcheck().ok is False
-        for method in ('search','detail','comments','author','author_posts'):
-            result = getattr(adapter, method)('isolated')
-            assert result.status.value == 'NOT_SUPPORTED', (key, method, result)
-            assert result.ok is False and not result.items
-            assert adapter.capability_map()[method] == 'not_supported'
+        if key in ('channels','youtube','reddit','linkedin'):
+            health = adapter.healthcheck(provider_mode='public')
+            assert health.ok and health.metadata['network_attempted'] is False
+            assert health.access_class is health.backend is None
+            assert PLATFORM_CAPABILITIES[key]['default_provider_mode'] == 'public'
+        assert PLATFORM_CAPABILITIES[key]['default_collection_mode'] == 'MANUAL'
+        assert PLATFORM_CAPABILITIES[key]['schedule_enabled'] is False
     assert get_adapter('yt').platform == 'youtube'
     assert get_adapter('wechat_channels').platform == 'channels'
     assert get_adapter('微信公众号').platform == 'wechat'
@@ -1051,7 +1053,7 @@ with patch.object(socket.socket, 'connect', side_effect=AssertionError('network 
         from lumenis.system.collector.adapters.registry import capability_matrix
         catalog = {item['platform_id']: item for item in get_platform_registry_catalog()}
         assert set(catalog) == {c['canonical_id'] for c in PLATFORM_CAPABILITIES.values()}
-        planned = {'channels','youtube','tiktok','reddit','linkedin'}
+        planned = set()
         for key, cap in PLATFORM_CAPABILITIES.items():
             row = catalog[cap['canonical_id']]
             assert row['adapter_module'] == cap['adapter_module']
@@ -1061,6 +1063,11 @@ with patch.object(socket.socket, 'connect', side_effect=AssertionError('network 
                 assert row['status'] == 'PLANNED'
                 assert row['has_collector'] == row['has_api_routes'] == 0
                 assert cap['enabled'] is cap['manual_collection_enabled'] is False
+            else:
+                assert row['has_collector'] == row['has_api_routes'] == 1
+                assert cap['enabled'] is False and cap['manual_collection_enabled'] is True
+            assert cap['product_owner'] == 'SYSTEM'
+            assert cap['default_collection_mode'] == 'MANUAL' and cap['schedule_enabled'] is False
         assert get_platform_capabilities('yt')['canonical_id'] == 'youtube'
         original = list(PLATFORM_CAPABILITIES['youtube']['raw_tables'])
         capability_matrix()['youtube']['raw_tables'].append('not-real')

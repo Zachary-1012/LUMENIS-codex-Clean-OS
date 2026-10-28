@@ -328,7 +328,7 @@ def _approved_training_inputs(root: Path):
     return model, manifest, train, heldout, root / "candidate-output"
 
 
-def test_denied_verifier_stops_training_before_cuda_or_output(scope_db, tmp_path, monkeypatch):
+def test_withdrawn_gpu_training_stops_before_permission_or_output(scope_db, tmp_path, monkeypatch):
     _grant(scope_db, 1, "CTH", {"global": True})
     gate = _gate()
     verifier = p.make_owned_training_approval_verifier(
@@ -341,7 +341,7 @@ def test_denied_verifier_stops_training_before_cuda_or_output(scope_db, tmp_path
         raise AssertionError("CUDA/training was reached without approval")
 
     monkeypatch.setattr(training, "_require_cuda", cuda_must_not_run)
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
         training.run_owned_lora_training(
             model, train, heldout, output, manifest_path=manifest,
             execute=True, approval_verifier=verifier,

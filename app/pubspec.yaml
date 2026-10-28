@@ -24,6 +24,8 @@ dependencies:
   macos_window_utils: ^1.9.1
   video_player: 2.14.0
   video_player_win: 3.3.0
+  flutter_animate: 4.5.2
+  pixel_snap: 0.1.5
 
 dev_dependencies:
   flutter_test:
@@ -37,8 +39,6 @@ flutter:
     - assets/fonts/NotoSansSC-OFL.txt
     - assets/fonts/NotoSansKR-OFL.txt
     - assets/fonts/NotoColorEmoji-OFL.txt
-    - assets/wallpapers/crimson-sunset.jpg
-    - assets/wallpapers/cobalt-dusk.jpg
   fonts:
     - family: LumenisSansSC
       fonts:

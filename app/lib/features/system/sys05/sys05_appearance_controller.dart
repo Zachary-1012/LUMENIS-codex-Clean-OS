@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../core/lumenis_theme.dart';
 
 enum WaitingTone { playful, simple, off }
 
@@ -64,7 +63,7 @@ class Sys05AppearanceController extends ChangeNotifier {
     WorkspaceBackdrop.black => Colors.black,
     WorkspaceBackdrop.solid => solidColor,
     WorkspaceBackdrop.desktop => Colors.transparent,
-    _ => isDark ? LumenisTheme.darkPalette.canvas : LumenisTheme.canvas,
+    _ => isDark ? Colors.black : Colors.white,
   };
 
   Future<void> restore() async {

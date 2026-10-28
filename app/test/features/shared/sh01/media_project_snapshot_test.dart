@@ -201,6 +201,36 @@ Map<String, Object?> pythonTimelinePayload() => <String, Object?>{
 };
 
 void main() {
+  test(
+    'speed-adjusted project retains source time through split and reopen',
+    () {
+      final original = _videoProject(clipCount: 1);
+      final payload = original.toJson();
+      final tracks = payload['tracks'] as List;
+      final clip = ((tracks.first as Map)['clips'] as List).first as Map;
+      clip['playback_rate'] = 2.0;
+      final loaded = MediaProjectSnapshot.fromJson(
+        payload,
+        inspectedAssets: original.assets,
+      );
+      expect(loaded.durationSec, 2.5);
+      final split = loaded.splitClip('video-0', atSec: 3);
+      final clips = split.tracks.first.clips;
+      expect(clips.map((clip) => clip.playbackRate), [2.0, 2.0]);
+      expect(clips.map((clip) => clip.durationSec), [1.0, 1.5]);
+      expect(clips.last.timelineStart, 1.0);
+      expect(split.durationSec, 2.5);
+      final reopened = MediaProjectSnapshot.fromJson(
+        split.toJson(),
+        inspectedAssets: original.assets,
+      );
+      expect(reopened.toJson(), split.toJson());
+      final undone = split.undo();
+      expect(undone.toJson()['tracks'], loaded.toJson()['tracks']);
+      expect(undone.version, greaterThan(split.version));
+    },
+  );
+
   test('format edits preserve sources and survive serialization and undo', () {
     final original = _videoProject();
     for (final ratio in MediaProjectSnapshot.formatRatios) {

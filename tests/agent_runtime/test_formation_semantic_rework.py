@@ -10,6 +10,21 @@ from lumenis.shared.evaluation.trajectory import OutcomeAssertion, TrajectoryEva
 from agent_capability.formation import BoundToolExecutor, FormationError
 
 
+def test_literal_slice_handlers_have_typed_identity_and_changed_bounds_never_match():
+    from agent_capability.formation import implementation_identity, _code_value
+    handlers = []
+    for bound in (160, 161):
+        namespace = {'__name__': 'literal_slice_identity_fixture'}
+        exec(compile('def trim(value):\n    return value[:' + str(bound) + ']\n',
+                     '<literal-slice-identity>', 'exec'), namespace)
+        handlers.append(namespace['trim'])
+    assert len(handlers[0]('x' * 200)) == 160
+    assert implementation_identity(handlers[0]) != implementation_identity(handlers[1])
+    assert implementation_identity(handlers[0]) == implementation_identity(handlers[0])
+    with pytest.raises(FormationError, match='TOOL_IMPLEMENTATION_IDENTITY_UNAVAILABLE'):
+        _code_value(slice(object(), 3, None))
+
+
 def generated_requirement():
     return {"schema": "canonical-committed-artifact:v1", "domain_id": "bmp",
             "scope": {"global_scope": True, "subject_id": None, "brand_focus_id": None},

@@ -5,6 +5,20 @@ import uuid
 from pathlib import Path
 from types import MappingProxyType
 
+def _reject_unittest_app_tool_package_collision(module_name, arguments):
+    if module_name != 'app':
+        return
+    if any(argument == 'app.tool' or argument.startswith('app.tool.')
+           for argument in arguments if isinstance(argument, str)):
+        raise ImportError(
+            'The unittest target app.tool.* resolves this root app.py as a module, not a package. '
+            'Run python app/tool/test_build_windows.py <test-name> or '
+            'python -m unittest discover -s app/tool'
+        )
+
+
+_reject_unittest_app_tool_package_collision(__name__, sys.argv[1:])
+
 _CORE_SERVER_KIND = 'not_started'
 
 
@@ -656,7 +670,7 @@ def _internal_beta_browser_outcome_request_allowed():
         'experience_runtime.search_shared_work': {'GET'},
         'experience_runtime.read_shared_work': {'GET'},
         'experience_runtime.revise_shared_work': {'POST'},
-        'experience_runtime.export_shared_work': {'GET'},
+        'experience_runtime.export_shared_work': {'GET', 'POST'},
     }
     return (INTERNAL_BETA_BROWSER_OUTCOME_ACCEPTANCE
             and request.method in methods.get(request.endpoint, set()))
@@ -1638,6 +1652,10 @@ def auth_config_api():
 
 
 def _owner_authorized_root_request():
+    if request.blueprint == 'account':
+        from account.api import authorize_builtin_skill_status_root_request
+        if authorize_builtin_skill_status_root_request():
+            return True
     if request.endpoint in {'experience_runtime.research_learning', 'experience_runtime.research_reference_library', 'experience_runtime.research_hypothesis_review'}:
         from experience_runtime import _shared_research_route_allowed
         return _shared_research_route_allowed()
@@ -1733,7 +1751,7 @@ def _owner_authorized_root_request():
         'experience_runtime.edit_office_document': ('/api/experience/saved-work/<artifact_id>/office/edit', {'POST'}),
         'experience_runtime.download_work_attachment': ('/api/experience/saved-work/<artifact_id>/attachments/<name>', {'GET'}),
         'experience_runtime.revise_shared_work': ('/api/experience/saved-work/<artifact_id>/revise', {'POST'}),
-        'experience_runtime.export_shared_work': ('/api/experience/saved-work/<artifact_id>/export', {'GET'}),
+        'experience_runtime.export_shared_work': ('/api/experience/saved-work/<artifact_id>/export', {'GET', 'POST'}),
         'experience_runtime.read_reporting_preferences': ('/api/experience/saved-work/preferences', {'GET'}),
         'experience_runtime.save_reporting_preferences': ('/api/experience/saved-work/preferences', {'POST'}),
         'experience_runtime.read_reporting_notifications': ('/api/experience/saved-work/notifications', {'GET'}),
@@ -2071,6 +2089,10 @@ def _permission_gate_write_check():
         pass
     if request.method not in _PG_WRITE_METHODS:
         return None
+    if request.blueprint == 'account':
+        from account.api import authorize_builtin_skill_status_root_request
+        if authorize_builtin_skill_status_root_request():
+            return None
     if (request.method == 'POST' and request.url_rule is not None
             and (request.endpoint, request.url_rule.rule) in {
                 ('intelligence_library.comment_page_source_use', '/api/intelligence/library/comments/<int:evidence_id>/source-use'),
@@ -2340,7 +2362,6 @@ class ProxyPrefixMiddleware:
             if path.startswith(prefix): environ['PATH_INFO']=path[len(prefix):] or '/'; break
         return self.wsgi_app(environ,start_response)
 app.wsgi_app=ProxyPrefixMiddleware(app.wsgi_app)
-db.init_db()
 
 # P0-3/P0-4/P1-2/P1-3/P1-4: Evidence Chain + Canonical Data 旁路接入 + Collector Health + 双域隔离迁移
 try:
@@ -2350,6 +2371,10 @@ try:
     print("[db_migrations] migration completed (canonical Shared Database migrations)")
 except Exception as _e:
     raise RuntimeError(f"canonical Shared Database migration failed; application startup stopped: {_e}") from _e
+
+# Apply the idempotent current business schema only after the Shared Database
+# migration owner has secured its pre-migration snapshot and accepted the path.
+db.init_db()
 
 # Session statistics depend on the canonical notes schema, never import order.
 # This restores local counters only; no session, browser or collection is started.

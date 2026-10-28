@@ -60,6 +60,10 @@ def _code_value(value):
         return {"bytes": value.hex()}
     if isinstance(value, tuple):
         return {"tuple": [_code_value(v) for v in value]}
+    if isinstance(value, slice):
+        # Python 3.14 stores literal slices in co_consts. Bind all three typed
+        # components; repr/hash or ignoring the constant would lose semantics.
+        return {"slice": [_code_value(value.start), _code_value(value.stop), _code_value(value.step)]}
     if isinstance(value, frozenset):
         return {"frozenset": sorted((_code_value(v) for v in value), key=canonical_bytes)}
     if isinstance(value, float):

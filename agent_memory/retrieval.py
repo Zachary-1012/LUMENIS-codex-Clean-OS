@@ -11,40 +11,79 @@ import re
 import unicodedata
 from collections import Counter
 
+# BM25 initialization and term-frequency scoring adapted from rank_bm25
+# by Dorian Brown and contributors, Apache-2.0, revision
+# 47aa3ddf8dc1ebeb7ef4e65f2b4536af44594099 (rank_bm25.py).
+# OEVIRA modifications: query-specific sparse postings, positive Lucene IDF,
+# deterministic ties, multilingual original-text windows, no NumPy/process pool.
+# Full upstream license/attribution is retained in THIRD_PARTY_NOTICES.md.
+_BM25_UPSTREAM = 'dorianbrown/rank_bm25@47aa3ddf8dc1ebeb7ef4e65f2b4536af44594099'
+
 
 def terms(text):
-    """Unicode words plus CJK bigrams; keep negations, dates and numbers."""
+    """Unicode words and CJK/Hangul ngrams; this is lexical tokenization."""
     text = unicodedata.normalize('NFKC', text).casefold()
     result = []
-    for token in re.findall(r"[\u3400-\u9fff]+|[^\W_]+(?:[-'][^\W_]+)*", text):
+    for token in re.findall(r"[\u3400-\u9fff]+|[\uac00-\ud7a3]+|[^\W_]+(?:[-'][^\W_]+)*", text):
         if any('\u3400' <= char <= '\u9fff' for char in token):
             result.extend(token)
             result.extend(token[index:index + 2] for index in range(len(token) - 1))
+        elif any('\uac00' <= char <= '\ud7a3' for char in token):
+            # Retain the exact word and overlapping syllable pairs, so Korean
+            # grammatical particles do not hide an otherwise exact lexical hit.
+            result.append(token)
+            if len(token) > 2:
+                result.extend(token[index:index + 2] for index in range(len(token) - 1))
         else:
             result.append(token)
     return result
 
 
-def bm25(query, documents, *, k1=1.2, b=0.75):
+class _BM25Index:
+    """Ephemeral rank_bm25 derivative over one already authorized snapshot.
+
+    Each document is tokenized once. Only query-term postings survive indexing;
+    no source body, cross-user cache or independent Canonical store is retained.
+    """
+
+    def __init__(self, documents, query_terms, *, is_cancelled=None):
+        self.doc_len = []
+        self.postings = {term: [] for term in query_terms}
+        self.is_cancelled = is_cancelled
+        for index, document in enumerate(documents):
+            self.check_cancelled()
+            frequencies = Counter(terms(document))
+            self.doc_len.append(sum(frequencies.values()))
+            for term in frequencies.keys() & self.postings.keys():
+                self.postings[term].append((index, frequencies[term]))
+        self.corpus_size = len(self.doc_len)
+        self.avgdl = sum(self.doc_len) / self.corpus_size if self.corpus_size else 0
+
+    def check_cancelled(self):
+        if self.is_cancelled is not None and self.is_cancelled():
+            raise RuntimeError('MEMORY_SEARCH_CANCELLED')
+
+    def get_scores(self, *, k1=1.2, b=0.75):
+        scores = {}
+        average = self.avgdl or 1
+        for postings in self.postings.values():
+            self.check_cancelled()
+            idf = math.log1p((self.corpus_size - len(postings) + 0.5) / (len(postings) + 0.5))
+            for index, frequency in postings:
+                normalization = k1 * (1 - b + b * self.doc_len[index] / average)
+                scores[index] = scores.get(index, 0.0) + idf * frequency * (k1 + 1) / (frequency + normalization)
+        return sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+
+
+def bm25(query, documents, *, k1=1.2, b=0.75, is_cancelled=None):
     """Return (source index, positive score), largest score first."""
-    query_terms = set(terms(query))
-    if not query_terms or not documents:
+    if (type(k1) not in (int, float) or not math.isfinite(k1) or k1 <= 0
+            or type(b) not in (int, float) or not math.isfinite(b) or not 0 <= b <= 1):
+        raise ValueError('MEMORY_BM25_PARAMETERS_INVALID')
+    query_terms = list(dict.fromkeys(terms(query)))
+    if not query_terms:
         return []
-    counters = [Counter(terms(document)) for document in documents]
-    lengths = [sum(counter.values()) for counter in counters]
-    average = sum(lengths) / len(lengths) or 1
-    frequencies = {term: sum(term in counter for counter in counters) for term in query_terms}
-    scored = []
-    for index, counter in enumerate(counters):
-        score = 0.0
-        for term in query_terms:
-            frequency = counter[term]
-            if frequency:
-                idf = math.log1p((len(counters) - frequencies[term] + 0.5) / (frequencies[term] + 0.5))
-                score += idf * frequency * (k1 + 1) / (frequency + k1 * (1 - b + b * lengths[index] / average))
-        if score:
-            scored.append((index, score))
-    return sorted(scored, key=lambda item: (-item[1], item[0]))
+    return _BM25Index(documents, query_terms, is_cancelled=is_cancelled).get_scores(k1=k1, b=b)
 
 
 def dense_cosine(query_vector, document_vectors):
@@ -108,11 +147,7 @@ def original_passage(query, text, *, maximum_characters=1200, overlap=160):
         raise ValueError('MEMORY_PASSAGE_PARAMETERS_INVALID')
     if not text:
         return None
-    last = max(0, len(text) - maximum_characters)
-    starts = list(range(0, last + 1, maximum_characters - overlap))
-    if starts[-1] != last:
-        starts.append(last)
-    ranges = [(start, min(len(text), start + maximum_characters)) for start in starts]
+    ranges = list(_passage_ranges(text, maximum_characters=maximum_characters, overlap=overlap))
     ranked = bm25(query, [text[start:end] for start, end in ranges])
     index = ranked[0][0] if ranked else 0
     start, end = ranges[index]
@@ -121,20 +156,76 @@ def original_passage(query, text, *, maximum_characters=1200, overlap=160):
             'offset_unit': 'unicode_codepoint', 'source_characters': len(text)}
 
 
-def lexical_search(query, rows, *, limit):
+def _passage_ranges(text, *, maximum_characters=1200, overlap=160):
+    last = max(0, len(text) - maximum_characters)
+    previous = None
+    for start in range(0, last + 1, maximum_characters - overlap):
+        yield start, min(len(text), start + maximum_characters)
+        previous = start
+    if previous != last:
+        yield last, len(text)
+
+
+def _source_parts(row):
+    # Some compatibility records repeat their complete body in summary/content.
+    # Repetition must not increase their relevance or triple tokenization work.
+    body = next((row[key] for key in ('text', 'content', 'summary')
+                 if type(row.get(key)) is str and row[key].strip()), '')
+    metadata = []
+    for key in ('title', 'tags'):
+        value = row.get(key)
+        if type(value) is list:
+            value = ' '.join(item for item in value if type(item) is str)
+        if type(value) is str and value.strip() and value != body:
+            metadata.append(value)
+    return body, '\n'.join(metadata)
+
+
+def lexical_search(query, rows, *, limit, is_cancelled=None):
+    """Rank original passages, then return each source once with its identity.
+
+    A long document competes by its relevant passages rather than its total
+    length. Sources with identical text retain separate provenance. The complete
+    snapshot is authorized by the caller before ranking and rechecked afterward.
+    """
+    if type(limit) is not int or limit < 0:
+        raise ValueError('MEMORY_SEARCH_LIMIT_INVALID')
     from lumenis.system.ai_gateway.core import owned_retrieval_status
     capability = owned_retrieval_status()
-    documents = ['\n'.join(str(row.get(key) or '') for key in
-                 ('title', 'summary', 'content', 'text', 'tags')) for row in rows]
-    lexical = bm25(query, documents)
-    selected = reciprocal_rank_fusion(lexical) if terms(query) else [(index, None) for index in range(len(rows))]
+    locations = []
+    def passages():
+        for source_index, row in enumerate(rows):
+            body, metadata = _source_parts(row)
+            if metadata:
+                locations.append((source_index, None, None))
+                yield metadata
+            for start, end in _passage_ranges(body):
+                locations.append((source_index, start, end))
+                yield body[start:end]
+    lexical = bm25(query, passages(), is_cancelled=is_cancelled)
+    source_ranked, seen, previews = [], set(), {}
+    for passage_index, score in lexical:
+        source_index, start, end = locations[passage_index]
+        if source_index in seen:
+            continue
+        seen.add(source_index)
+        source_ranked.append((source_index, score))
+        body = _source_parts(rows[source_index])[0]
+        previews[source_index] = (original_passage(query, body) if start is None else
+            {'start': start, 'end': end, 'offset_unit': 'unicode_codepoint', 'body_query_match': True,
+             'selection': 'BM25_ORIGINAL_SOURCE_WINDOW', 'source_characters': len(body)})
+    # An explicitly empty query lists the authorized source set. Punctuation-only
+    # input is an unmatched query, not implicit permission to list everything.
+    selected = reciprocal_rank_fusion(source_ranked) if query.strip() else [(index, None) for index in range(len(rows))]
     report = {
         'mode': 'BM25_ONLY', 'lexical': 'BM25', 'fusion': 'RRF',
         'dense': capability['embedding']['state'], 'cross_encoder': capability['cross_encoder']['state'],
         'gateway_capabilities': capability,
-        'authorized_candidates': len(rows), 'lexical_matches': len(lexical),
+        'authorized_candidates': len(rows), 'lexical_matches': len(source_ranked),
+        'scored_passages': len(locations), 'matched_passages': len(lexical),
         'neural_retrieval_performed': False, 'index_persistence': 'REBUILT_FROM_VERIFIED_SOURCES',
-        'tokenization': 'unicode_words_cjk_unigrams_bigrams_v1',
+        'tokenization': 'unicode_words_cjk_hangul_ngrams_v2', 'lexical_implementation': _BM25_UPSTREAM,
+        'ranked_passages': [previews.get(index) for index, _ in selected[:limit]],
     }
     from lumenis.ai_hub.context_pack import digest
     report['source_snapshot_sha256'] = digest(rows)

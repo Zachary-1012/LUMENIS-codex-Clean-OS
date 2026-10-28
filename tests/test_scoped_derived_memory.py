@@ -135,6 +135,62 @@ def test_http_memory_explicit_correction_can_restore_current_forgotten_revision(
     assert api.get(url + '?key=restore', headers=own).get_json()['records'][0]['value'] == {'text': 'restored'}
 
 
+def test_same_task_human_correction_is_bound_into_gateway_context_and_forget_invalidates(agent_client):
+    from ai_task_engine import get_task_engine
+    from agent_runtime import task_binding
+    from agent_runtime.planner import Planner, _PLANNER_SYSTEM_PROMPT
+    from agent_capability.formation import FormationError
+    api, app, _path = agent_client
+    task_id = submit(api)
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    url = f'/api/ai/tasks/{task_id}/memory'
+    created = api.post(url, headers=own, json={'layer': 'episodic', 'key': 'writing-style',
+        'value': {'preference': '保留原稿，先给可编辑版本'}, 'expected_revision': 0})
+    assert created.status_code == 200, created.get_json()
+
+    with app.test_request_context('/', headers=own):
+        task = get_task_engine().get_task(task_id)
+        current = task_binding.authorized_context(task, {'id': 1})
+        context = task_binding._planner_context(task, current)
+        memory = context['human_correction_memory']
+        assert memory['state'] == 'AVAILABLE' and memory['record_count'] == 1
+        assert memory['records'][0]['value'] == {'preference': '保留原稿，先给可编辑版本'}
+        assert memory['records'][0]['truth_kind'] == 'user_authored_unverified_correction'
+        prompt = Planner()._build_user_prompt(task['user_input'], context, 8)
+        assert '保留原稿，先给可编辑版本' in prompt
+        request = task_binding._gateway_request(task_id, _PLANNER_SYSTEM_PROMPT, prompt, context)
+        assert request.source_evidence_refs[-1] == (
+            'task-human-corrections:' + task_id + ':' + memory['snapshot_sha256'])
+        assert request.source_use_policy_version == 'agent-planner-current-context-v3'
+        expected_snapshot = memory['snapshot_sha256']
+        skill_id = next(iter(current['agent_runtime']['registry_bindings']))
+        identity = task_binding._bound_identity(task_id, skill_id, None, expected_snapshot)
+        assert identity()['configuration']['human_correction_memory_sha256'] == expected_snapshot
+
+    forgotten = api.delete(url, headers=own, json={'layer': 'episodic', 'key': 'writing-style',
+        'expected_revision': 1})
+    assert forgotten.status_code == 200, forgotten.get_json()
+    with app.test_request_context('/', headers=own):
+        with pytest.raises(FormationError, match='AGENT_TASK_MEMORY_CHANGED'):
+            task_binding._assert_task_human_correction_snapshot(task_id, expected_snapshot)
+        with pytest.raises(FormationError, match='AGENT_TASK_MEMORY_CHANGED'):
+            identity()
+        task = get_task_engine().get_task(task_id)
+        context = task_binding._planner_context(task, task_binding.authorized_context(task, {'id': 1}))
+        assert context['human_correction_memory']['state'] == 'EMPTY'
+        assert context['human_correction_memory']['records'] == []
+
+
+def test_user_memory_correction_rejects_credential_shaped_values(agent_client):
+    api, _app, _path = agent_client
+    task_id = submit(api)
+    response = api.post(f'/api/ai/tasks/{task_id}/memory', headers={
+        'Authorization': 'Bearer fixture-session-one'}, json={'key': 'secret',
+        'value': {'api_key': 'sk-1234567890-example'}, 'expected_revision': 0})
+    assert response.status_code == 400
+    assert response.get_json()['code'] == 'MEMORY_SENSITIVE_CONTENT_REJECTED'
+
+
 def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkeypatch):
     """FIX-058: expired rows must not hide valid bound memory from either caller."""
     from datetime import datetime, timedelta, timezone
@@ -162,7 +218,14 @@ def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkey
     assert [row['key'] for row in api_result.get_json()['records']] == ['valid-older']
 
     captured_contexts = []
+    memory_reads = []
     original_run = AgentLoop.run
+    original_query = EpisodicMemory.query
+
+    def track_memory_read(self, *args, **kwargs):
+        records = original_query(self, *args, **kwargs)
+        memory_reads.append([row.key for row in records])
+        return records
 
     def capture_context(self, goal, context=None, agent_id=None, _resume_state=None,
                         _existing_task_id=None):
@@ -171,11 +234,55 @@ def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkey
                             _resume_state=_resume_state, _existing_task_id=_existing_task_id)
 
     monkeypatch.setattr(AgentLoop, 'run', capture_context)
+    monkeypatch.setattr(EpisodicMemory, 'query', track_memory_read)
     run_result = api.post(f'/api/ai/tasks/{task_id}/run', headers=headers)
     assert run_result.status_code == 200, run_result.get_json()
     assert run_result.get_json()['task']['status'] == 'succeeded'
     assert len(captured_contexts) == 1
-    assert [row['key'] for row in captured_contexts[0]['derived_memory']] == ['valid-older']
+    assert memory_reads and memory_reads[0] == ['valid-older']
+    # The current Agent SourceUse contract is input-only. A successful scoped
+    # memory read must not export arbitrary derived bodies into model context.
+    assert 'derived_memory' not in captured_contexts[0]
+
+
+def test_expired_user_corrections_are_not_reintroduced_into_agent_context():
+    from datetime import datetime, timezone
+    from agent_memory.base import MemoryRecord, active_user_correction_records
+
+    now = datetime(2026, 10, 27, 12, 0, tzinfo=timezone.utc).timestamp()
+    expired = MemoryRecord(layer='episodic', key='expired-style',
+        value={'text': 'temporary preference'}, metadata={'type': 'user_correction'},
+        timestamp=datetime.fromtimestamp(now - 61, timezone.utc).isoformat(), ttl_seconds=60)
+    active = MemoryRecord(layer='episodic', key='active-style',
+        value={'text': 'current preference'}, metadata={'type': 'user_correction'},
+        timestamp=datetime.fromtimestamp(now - 30, timezone.utc).isoformat(), ttl_seconds=60)
+    unrelated = MemoryRecord(layer='episodic', key='derived-case',
+        value={'text': 'not a correction'}, metadata={'type': 'episodic_case'})
+    malformed = MemoryRecord(layer='episodic', key='unknown-time',
+        value={'text': 'must not become permanent'}, metadata={'type': 'user_correction'},
+        timestamp='not-a-timestamp', ttl_seconds=60)
+
+    assert active_user_correction_records([expired, active, unrelated, malformed], now=now) == [active]
+
+
+def test_expiring_memory_uses_utc_for_naive_times_and_respects_epoch_zero():
+    from agent_memory.base import MemoryRecord
+
+    epoch_memory = MemoryRecord(layer='episodic', key='epoch', value={},
+        timestamp='1970-01-01T00:00:00', ttl_seconds=1)
+    assert not epoch_memory.is_expired(now=0)
+    assert epoch_memory.is_expired(now=2)
+    malformed_ttl = MemoryRecord(layer='episodic', key='bad-ttl', value={},
+        timestamp='1970-01-01T00:00:00+00:00', ttl_seconds=-1)
+    assert malformed_ttl.is_expired(now=0)
+
+
+def test_correction_context_orders_latest_absolute_time_first():
+    from agent_memory.base import order_user_correction_context
+
+    earlier = {'layer': 'episodic', 'key': 'tone', 'timestamp': '2026-10-27T09:30:00+00:00'}
+    later = {'layer': 'semantic', 'key': 'tone', 'timestamp': '2026-10-27T18:00:00+08:00'}
+    assert order_user_correction_context([earlier, later]) == [later, earlier]
 
 
 def test_authorized_memory_methods_use_real_signed_sources_and_task_owner(agent_client, monkeypatch):

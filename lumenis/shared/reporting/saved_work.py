@@ -37,6 +37,14 @@ _MAX_OOXML_ENTRIES = 4096
 _MAX_OOXML_MEMBER_BYTES = 8 * 1024 * 1024
 _MAX_OOXML_TOTAL_BYTES = 64 * 1024 * 1024
 _MAX_OOXML_METADATA_BYTES = 2 * 1024 * 1024
+_GENERIC_SAVED_WORK_CONTRACT = {
+    "id": "lumenis.saved-work", "version": "1", "required_payload_paths": [],
+}
+_OWNER_TYPED_PAYLOAD_KEYS = frozenset({
+    "comment_research", "domain_report_adoption", "fact_wall",
+    "hypothesis_review_reference", "research_hypothesis_review",
+    "source_brief_reference", "work_dependencies",
+})
 _ATTACHMENT_NAME = re.compile(r"[A-Za-z0-9_-]{1,80}\.(docx|xlsx|pptx|pdf|txt|csv|doc|xls|html|htm|json|xml|xbrl)\Z")
 _OFFICE_FORMATS = {
     "docx": {
@@ -444,9 +452,24 @@ def _safe_payload(value: Any) -> None:
             _safe_payload(item)
 
 
+def _is_generic_saved_report(document: Any) -> bool:
+    if not isinstance(document, dict):
+        return False
+    payload = document.get("payload")
+    return (
+        document.get("schema") == SCHEMA
+        and document.get("kind") == "report"
+        and document.get("contract") == _GENERIC_SAVED_WORK_CONTRACT
+        and document.get("task_id") is None
+        and document.get("assertion_id") is None
+        and isinstance(payload, dict)
+        and not (_OWNER_TYPED_PAYLOAD_KEYS & payload.keys())
+    )
+
+
 def _validate_contract(contract: Any, payload: dict) -> dict:
     if contract is None:
-        contract = {"id": "lumenis.saved-work", "version": "1", "required_payload_paths": []}
+        contract = dict(_GENERIC_SAVED_WORK_CONTRACT)
     if (not isinstance(contract, dict) or set(contract) != {"id", "version", "required_payload_paths"}
             or not all(isinstance(contract[k], str) and 0 < len(contract[k]) <= 200 for k in ("id", "version"))
             or not isinstance(contract["required_payload_paths"], list)
@@ -769,6 +792,57 @@ def work_write_resource(*, title: str, markdown: str, kind: str, payload: dict,
                                      "task_id": task_id, "assertion_id": assertion_id})
 
 
+def prepare_work_write(*, actor, scope, **values):
+    """Prepare the same normalized work identity that save_work will commit."""
+    values = json.loads(_json(values))
+    if values.get('kind') == 'note':
+        values['markdown'] = _note_markdown(values.get('payload'))
+    if 'visual_document' in values.get('payload', {}):
+        from lumenis.shared.content_creation.audio_visuals import visual_document_markdown
+        if values.get('kind') != 'report':
+            raise SavedWorkError('WORK_VISUAL_KIND_INVALID')
+        values['markdown'] = visual_document_markdown(values['payload']['visual_document'])
+    values.setdefault('work_id', None)
+    values.setdefault('previous_artifact_id', None)
+    resource = work_write_resource(actor=actor, scope=scope, **values)
+    return {'resource': resource, 'draft': values, 'state': 'PREPARED', 'saved': False,
+            'effect_performed': False}
+
+
+def confirmed_work_operation(*, mode, resource, actor, scope, execute,
+                             confirm=None, confirmed_resource=None, same_origin=False):
+    """Reuse the canonical manual approval for one explicitly confirmed work.
+
+    This is the existing reports permission/effect contract. Preparation does
+    not execute, grant or save anything. No caller receives the approval token.
+    """
+    if mode not in {'prepare', 'confirm'} or type(resource) is not str:
+        raise SavedWorkError('WORK_CONFIRMATION_REQUEST_INVALID')
+    context = authorize_saved_work(actor, scope, action='write')
+    if mode == 'prepare':
+        if confirm is not None or confirmed_resource is not None:
+            raise SavedWorkError('WORK_CONFIRMATION_REQUEST_INVALID')
+        return {'state': 'PREPARED', 'resource': resource, 'effect_performed': False, 'saved': False}
+    if same_origin is not True or confirm is not True or confirmed_resource != resource:
+        raise PermissionError('WORK_EXACT_CONFIRMATION_REQUIRED')
+    gate = permission.get_permission_gate()
+    if (not gate.has_permission(permission.PermissionLevel.HUMAN_APPROVAL)
+            or not gate.has_permission(permission.PermissionLevel.COMMIT)):
+        raise PermissionError('WORK_MANUAL_AUTHORITY_REQUIRED')
+    token = gate.get_valid_approval_token(permission.OperationType.DATA_EXPORT.value, resource, exact=True)
+    created = token is None
+    if created:
+        caller = context.get('principal_ref') or 'actor:' + str(context['actor_id'])
+        token = gate.grant_approval(permission.OperationType.DATA_EXPORT.value,
+            resource=resource, duration_minutes=5, granted_by=caller)
+    try:
+        return execute()
+    except Exception:
+        if created:
+            gate.revoke_approval(token)
+        raise
+
+
 def _note_markdown(payload: dict) -> str:
     """Typed user-owned notes; rendered labels never claim factual verification."""
     note = payload.get("note")
@@ -859,7 +933,8 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
               work_id: str | None = None, previous_artifact_id: str | None = None,
               expected_draft_digest: str | None = None, contract: dict | None = None,
               task_id: str | None = None, assertion_id: str | None = None,
-              before_commit=None, attachments: list | None = None) -> dict:
+              before_commit=None, attachments: list | None = None,
+              continue_as_report: bool = False) -> dict:
     """Save or revise an exact document; optional payload retains the W4 snapshot.
 
     PodcastPlan/script/original transcript/corrections/chapters/source refs/version/
@@ -869,7 +944,7 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     approve or publish anything.
     """
     if (not isinstance(title, str) or not title.strip() or len(title) > 300
-            or not isinstance(markdown, str) or not markdown.strip() or not isinstance(kind, str) or kind not in _KINDS
+            or not isinstance(markdown, str) or not isinstance(kind, str) or kind not in _KINDS
             or not isinstance(payload, dict) or not isinstance(request_id, str)
             or not re.fullmatch(r"[A-Za-z0-9_-]{8,128}", request_id)):
         raise SavedWorkError("WORK_INPUT_INVALID")
@@ -881,6 +956,8 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     if any(value is not None and (not isinstance(value, str) or not 0 < len(value) <= 128)
            for value in (task_id, assertion_id)):
         raise SavedWorkError("WORK_ASSERTION_INVALID")
+    if type(continue_as_report) is not bool:
+        raise SavedWorkError("WORK_VISUAL_CONTINUE_MODE_INVALID")
     _safe_payload(payload)
     if 'domain_report_adoption' in payload and not callable(before_commit):
         raise SavedWorkError('WORK_REPORT_ADOPTION_OWNER_REQUIRED')
@@ -909,6 +986,10 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     # Detach mutable caller data before hashing, validation and persistence.
     payload, citations = json.loads(_json(payload)), json.loads(_json(citations))
     contract = json.loads(_json(_validate_contract(contract, payload)))
+    if continue_as_report and (
+            kind != "report" or contract != _GENERIC_SAVED_WORK_CONTRACT
+            or _OWNER_TYPED_PAYLOAD_KEYS & payload.keys() or "visual_document" in payload):
+        raise SavedWorkError("WORK_VISUAL_CONTINUE_NOT_APPLICABLE")
     if kind == "note":
         markdown = _note_markdown(payload)
     if 'visual_document' in payload:
@@ -916,6 +997,8 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
         if kind != 'report':
             raise SavedWorkError('WORK_VISUAL_KIND_INVALID')
         markdown = visual_document_markdown(payload['visual_document'])
+    if not markdown.strip():
+        raise SavedWorkError("WORK_INPUT_INVALID")
     if kind == "podcast_episode" and not contract["required_payload_paths"]:
         raise SavedWorkError("WORK_EPISODE_CONTRACT_REQUIRED")
     if kind == "podcast_episode" and "podcast_plan" in payload:
@@ -934,7 +1017,10 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
     # Export admission does not replace the write scope check.
     authorize_saved_work(actor, scope, action="write")
     assigned_work = work_id or "WORK-" + _digest({"context": context, "request_id": request_id})[:24]
-    input_hash = _digest({k: v for k, v in args.items() if k not in {"actor", "scope"}})
+    input_material = {k: v for k, v in args.items() if k not in {"actor", "scope"}}
+    if continue_as_report:
+        input_material["continue_as_report"] = True
+    input_hash = _digest(input_material)
     if attachment_bytes:
         input_hash = _digest({"request": input_hash, "attachments": [
             {"name": a["name"], "media_type": a["media_type"],
@@ -975,9 +1061,17 @@ def save_work(*, title: str, markdown: str, kind: str, payload: dict,
                 raise SavedWorkError("WORK_KIND_CHANGE_FORBIDDEN")
             if versions and versions[-1]["document"]["contract"] != contract:
                 raise SavedWorkError("WORK_CONTRACT_CHANGE_FORBIDDEN")
-            if versions and 'visual_document' in versions[-1]['document']['payload']:
+            parent_has_visual_document = bool(versions and
+                'visual_document' in versions[-1]['document']['payload'])
+            if continue_as_report:
+                if (not parent_has_visual_document or not _is_generic_saved_report(versions[-1]['document'])
+                        or 'visual_document' in payload):
+                    raise SavedWorkError('WORK_VISUAL_CONTINUE_NOT_APPLICABLE')
+            elif parent_has_visual_document:
+                if 'visual_document' not in payload:
+                    raise SavedWorkError('WORK_VISUAL_DOCUMENT_CONTINUE_MODE_REQUIRED')
                 from lumenis.shared.content_creation.audio_visuals import validate_visual_document
-                validate_visual_document(payload.get('visual_document'),
+                validate_visual_document(payload['visual_document'],
                     previous=versions[-1]['document']['payload']['visual_document'])
             effects.enter_context(staging_write(resource))
             document = {"schema": SCHEMA, "context": context, "work_id": assigned_work,
@@ -1341,7 +1435,8 @@ def _apply_work_edits(document: dict, edits: list) -> list:
 
 def _prepare_work_revision(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str,
                 expected_sha256: str, reason: str, edits: list, citations: list | None = None,
-                source_adoptions: list | None = None) -> dict:
+                source_adoptions: list | None = None,
+                continue_as_report: bool = False) -> dict:
     """Apply explicit local user edits to a current generic research/report owner.
 
     Creation and Task-owned contracts retain their dedicated revision service.
@@ -1350,13 +1445,15 @@ def _prepare_work_revision(artifact_id: str, *, actor: Any, scope: Mapping, requ
     if (not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256)
             or not isinstance(reason, str) or not reason.strip() or len(reason) > 4000):
         raise SavedWorkError("WORK_REVISION_INPUT_INVALID")
+    if type(continue_as_report) is not bool:
+        raise SavedWorkError("WORK_VISUAL_CONTINUE_MODE_INVALID")
     item = read_committed_work(artifact_id, actor=actor, scope=scope)
     if item["artifact"]["sha256"] != expected_sha256:
         raise SavedWorkError("WORK_REVISION_SOURCE_CHANGED")
     document = json.loads(_json(item["document"]))
     if (document["kind"] not in {"research", "report", "note"} or document.get("task_id") is not None
             or document.get("assertion_id") is not None
-            or document["contract"] != {"id": "lumenis.saved-work", "version": "1", "required_payload_paths": []}):
+            or document["contract"] != _GENERIC_SAVED_WORK_CONTRACT):
         raise SavedWorkError("WORK_REVISION_OWNER_REQUIRED")
     edits = json.loads(_json(edits))
     chosen_citations = document["citations"] if citations is None else json.loads(_json(citations))
@@ -1380,7 +1477,20 @@ def _prepare_work_revision(artifact_id: str, *, actor: Any, scope: Mapping, requ
         raise SavedWorkError("WORK_SOURCE_ADOPTION_REQUIRED")
     if document["kind"] == "note" and any(isinstance(edit, dict) and edit.get("pointer") == "/markdown" for edit in edits):
         raise SavedWorkError("WORK_NOTE_EDIT_BLOCK_REQUIRED")
+    original_markdown = document['markdown']
+    has_visual_document = 'visual_document' in document['payload']
+    if continue_as_report and (not _is_generic_saved_report(document) or not has_visual_document):
+        raise SavedWorkError('WORK_VISUAL_CONTINUE_NOT_APPLICABLE')
     applied = _apply_work_edits(document, edits)
+    markdown_changed = document['markdown'] != original_markdown
+    if continue_as_report:
+        if any(isinstance(edit, dict) and isinstance(edit.get('pointer'), str)
+               and (edit['pointer'] == '/payload/visual_document'
+                    or edit['pointer'].startswith('/payload/visual_document/')) for edit in applied):
+            raise SavedWorkError('WORK_VISUAL_CONTINUE_OBJECT_EDIT_CONFLICT')
+        document['payload'].pop('visual_document')
+    elif has_visual_document and markdown_changed:
+        raise SavedWorkError('WORK_VISUAL_DOCUMENT_CONTINUE_MODE_REQUIRED')
     document["payload"]["revision_note"] = {
         "schema": "lumenis.user-work-local-revision/v1", "reason": reason,
         "parent": {"artifact_id": artifact_id, "sha256": expected_sha256, "version": item["document"]["version"]},
@@ -1393,11 +1503,13 @@ def _prepare_work_revision(artifact_id: str, *, actor: Any, scope: Mapping, requ
 
 def revise_work(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str,
                 expected_sha256: str, reason: str, edits: list, citations: list | None = None,
-                source_adoptions: list | None = None) -> dict:
+                source_adoptions: list | None = None,
+                continue_as_report: bool = False) -> dict:
     """Generic revision never grants another owner's signed dependency semantics."""
     item, document = _prepare_work_revision(artifact_id, actor=actor, scope=scope,
         request_id=request_id, expected_sha256=expected_sha256, reason=reason, edits=edits,
-        citations=citations, source_adoptions=source_adoptions)
+        citations=citations, source_adoptions=source_adoptions,
+        continue_as_report=continue_as_report)
     adoption_guard = None
     if 'domain_report_adoption' in item['document']['payload']:
         original = item['document']['payload']['domain_report_adoption']
@@ -1410,7 +1522,7 @@ def revise_work(artifact_id: str, *, actor: Any, scope: Mapping, request_id: str
                      payload=document["payload"], citations=document["citations"], request_id=request_id,
                      actor=actor, scope=scope, work_id=document["work_id"], previous_artifact_id=artifact_id,
                      expected_draft_digest=item["document"]["draft_digest"], contract=document["contract"],
-                     before_commit=adoption_guard)
+                     before_commit=adoption_guard, continue_as_report=continue_as_report)
 
 
 def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
@@ -1515,8 +1627,8 @@ def search_work(*, actor: Any, scope: Mapping, query: str = "", limit: int = 30,
             if has_more else None, "verification_complete": unavailable_count == 0}
 
 
-def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "json",
-                purpose: str = "audit_snapshot") -> dict:
+def prepare_work_export(artifact_id: str, *, actor: Any, scope: Mapping, format: str = 'json',
+                        purpose: str = 'audit_snapshot') -> dict:
     if not isinstance(format, str) or format not in {"json", "md", "txt", "docx", "pdf", "xlsx", "pptx", "png", "svg"}:
         raise SavedWorkError("WORK_EXPORT_FORMAT_INVALID")
     if (not isinstance(purpose, str) or purpose not in {"delivery", "audit_snapshot"}
@@ -1527,6 +1639,18 @@ def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "
     if purpose == "delivery":
         binding["purpose"] = purpose
     resource = "saved-work-export:v1:" + _digest(binding)
+    return {'state': 'PREPARED', 'resource': resource, 'artifact_id': artifact_id,
+            'artifact_sha256': item['artifact']['sha256'], 'format': format, 'purpose': purpose,
+            'effect_performed': False}
+
+
+def export_work(artifact_id: str, *, actor: Any, scope: Mapping, format: str = "json",
+                purpose: str = "audit_snapshot") -> dict:
+    prepared = prepare_work_export(artifact_id, actor=actor, scope=scope, format=format, purpose=purpose)
+    resource = prepared['resource']
+    item = read_committed_work(artifact_id, actor=actor, scope=scope)
+    if item['artifact']['sha256'] != prepared['artifact_sha256']:
+        raise SavedWorkError('WORK_EXPORT_SOURCE_CHANGED')
     _check_effect(actor, scope, permission.OperationType.DATA_EXPORT, resource)
     visual = item['document']['payload'].get('visual_document')
     if format in {'png','svg'} and visual is None:

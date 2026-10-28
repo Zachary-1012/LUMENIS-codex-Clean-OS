@@ -44,24 +44,40 @@ def conversation_pack(rows, *, context_turn=None):
     excluded_sequences = [row.get('sequence', index) for index, row in enumerate(rows)
                           if row['turn_id'] in excluded]
     history, coverage = [], []
+    omitted_characters = 0
     for index, row in enumerate(rows):
-        text = row['content']['text']
+        content = row.get('content') if type(row.get('content')) is dict else {}
+        text = content.get('text') if type(content.get('text')) is str else ''
         omitted = row['turn_id'] in excluded
         reason = 'explicit_human_correction_or_forget' if omitted else 'complete_original_text'
+        if (not omitted and row.get('origin_kind') == 'model_output'
+                and content.get('source_policy') != 'source_free_conversation'):
+            omitted, reason = True, 'source_use_not_revalidated'
         if row.get('origin_kind') == 'model_output' and not omitted and excluded:
-            dependencies = row['content'].get('context_accounting', {}).get('coverage')
-            if (row['content'].get('in_reply_to') in excluded
+            dependencies = content.get('context_accounting', {}).get('coverage')
+            if (content.get('in_reply_to') in excluded
                     or type(dependencies) is list and any(item.get('turn_id') in excluded
                         and item.get('included') is True for item in dependencies if type(item) is dict)):
                 omitted, reason = True, 'derived_from_excluded_input'
             elif dependencies is None and excluded_sequences and row.get('sequence', index) > min(excluded_sequences):
                 omitted, reason = True, 'legacy_output_dependency_unknown_after_excluded_input'
-            if omitted:
-                excluded.add(row['turn_id'])
+        if not omitted and not text:
+            omitted = True
+            reason = 'stored_turn_text_unavailable'
+        # Every omitted turn is a taint root for later model outputs. This is
+        # essential for source-bound answers: excluding only the direct answer
+        # still allowed a later source-free reply to inherit its content.
+        if omitted:
+            excluded.add(row['turn_id'])
+            sequence = row.get('sequence', index)
+            if sequence not in excluded_sequences:
+                excluded_sequences.append(sequence)
         coverage.append({'turn_id': row['turn_id'], 'revision': row['revision'],
             'sha256': digest(row['content']), 'included': not omitted,
             'reason': reason})
-        if not omitted:
+        if omitted:
+            omitted_characters += len(text)
+        else:
             history.append({'role': row['role'], 'content': text})
     if state:
         # This remains user data in the user payload, never a system instruction.
@@ -71,7 +87,7 @@ def conversation_pack(rows, *, context_turn=None):
     accounting = {'history_turns_total': len(rows),
         'history_turns_included': sum(item['included'] for item in coverage),
         'history_turns_omitted': sum(not item['included'] for item in coverage),
-        'history_characters_omitted': sum(len(row['content']['text']) for row in rows if row['turn_id'] in excluded),
+        'history_characters_omitted': omitted_characters,
         'user_turn_complete': True, 'stored_history_complete': True,
         'context_policy': 'versioned_complete_source_free_context_pack_v1',
         'token_budget_verified': False, 'token_count_status': 'UNAVAILABLE_NO_ADMITTED_CONVERSATION_TOKENIZER',
@@ -126,7 +142,8 @@ def run_budgeted_owned_request(request, *, optional_sections=(), is_cancelled=No
     from lumenis.system.ai_gateway.owned_service import run_owned_request
     packed = budget_owned_request(request, optional_sections=optional_sections, is_cancelled=is_cancelled)
     if not packed['ok']:
-        return {'ok': False, 'status': 'BLOCKED', 'code': packed['code'], 'provider': 'owned',
+        status = 'CANCELLED' if packed.get('code') == 'CONTEXT_CANCELLED' else 'BLOCKED'
+        return {'ok': False, 'status': status, 'code': packed['code'], 'provider': 'owned',
                 'analysis': None, 'context_accounting': {key: value for key, value in packed.items() if key != 'request'}}
     result = run_owned_request(packed['request'], is_cancelled=is_cancelled,
                               expected_binding_sha256=packed['measurement']['binding_sha256'])

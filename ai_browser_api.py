@@ -408,6 +408,45 @@ def register_ai_browser_api(app):
             url = url_value.strip() if isinstance(url_value, str) else ""
             if not url or len(url) > 2048:
                 return jsonify({"ok": False, "error_code": "BROWSER_URL_REQUIRED"}), 400
+            confirmation = session.prepare_human_navigation(
+                url=url,
+                human_control_token=request.headers.get("X-LUMENIS-Human-Control-Lease"),
+                frame_binding=data.get("frame_binding"),
+                confirmation_id=data.get("confirmation_id"),
+                task_id=data.get("task_id"),
+                run_id=data.get("run_id"),
+                step_id=data.get("step_id"),
+            )
+            if confirmation.get("status") == "confirmation_required":
+                response = jsonify({
+                    "ok": False,
+                    "error_code": "BROWSER_NAVIGATION_CONFIRMATION_REQUIRED",
+                    "confirmation_id": confirmation["confirmation_id"],
+                    "confirmation_target": confirmation["confirmation_target"],
+                    "confirmation_ttl_seconds": confirmation["confirmation_ttl_seconds"],
+                    "target_id": session._target_id,
+                    "page_revision": session._page_revision,
+                })
+                response.status_code = 409
+                response.headers["Cache-Control"] = "no-store, private"
+                response.headers["Pragma"] = "no-cache"
+                return response
+            if confirmation.get("status") in {"blocked", "stale"}:
+                error_code = confirmation.get("error_code", "BROWSER_NAVIGATION_BLOCKED")
+                status_code = (
+                    503 if error_code == "BROWSER_NAVIGATION_POLICY_UNAVAILABLE"
+                    else 409 if confirmation.get("status") == "stale"
+                    else 403 if error_code == "BROWSER_NAVIGATION_BLOCKED"
+                    else 400
+                )
+                response = jsonify({
+                    "ok": False,
+                    "error_code": error_code,
+                    **({"reason": confirmation["reason"]} if confirmation.get("reason") else {}),
+                })
+                response.status_code = status_code
+                response.headers["Cache-Control"] = "no-store, private"
+                return response
             result = session.navigate(
                 url=url,
                 expected=_parse_expected_state(data),
@@ -417,15 +456,36 @@ def register_ai_browser_api(app):
                 control_mode="human",
                 human_control_token=request.headers.get("X-LUMENIS-Human-Control-Lease"),
                 frame_binding=data.get("frame_binding"),
+                human_navigation_confirmation_url=(
+                    url if confirmation.get("status") == "confirmed" else None
+                ),
             )
-            return jsonify({
+            response_body = {
                 "ok": result.success,
                 "page_revision": session._page_revision,
                 "target_id": session._target_id,
                 "task_binding_status": session.task_binding_status,
                 "task_binding_verified": False,
                 **_action_result_to_dict(result),
-            })
+            }
+            response_status = 200
+            if result.error == "BROWSER_NAVIGATION_REDIRECT_BLOCKED":
+                response_status = 409
+                response_body["error_code"] = result.error
+            elif result.error == "BROWSER_NAVIGATION_BLOCKED":
+                response_status = 403
+                response_body["error_code"] = result.error
+            elif result.error in {
+                "BROWSER_NAVIGATION_GUARD_FAILED",
+                "BROWSER_NAVIGATION_GUARD_CLEANUP_FAILED",
+                "BROWSER_NAVIGATION_GUARD_UNAVAILABLE",
+            }:
+                response_status = 503
+                response_body["error_code"] = result.error
+            response = jsonify(response_body)
+            response.status_code = response_status
+            response.headers["Cache-Control"] = "no-store, private"
+            return response
         except (BrowserHumanControlError, BrowserFrameStaleError, BrowserSessionBindingError) as exc:
             return jsonify({"ok": False, "error_code": exc.code}), 409
         except Exception:
@@ -648,6 +708,21 @@ def register_ai_browser_api(app):
             url = (data.get("url") or "").strip()
             if not url:
                 return jsonify({"ok": False, "error": "url is required"}), 400
+
+            import browser_surface
+            navigation_policy = browser_surface.evaluate_navigation(url)
+            if not navigation_policy.get("allowed"):
+                needs_confirmation = navigation_policy.get("status") == "need_confirmation"
+                return jsonify({
+                    "ok": False,
+                    "error_code": (
+                        "BROWSER_NAVIGATION_CONFIRMATION_REQUIRED"
+                        if needs_confirmation else "BROWSER_NAVIGATION_BLOCKED"
+                    ),
+                    "manual_confirmation_available": needs_confirmation,
+                    **({"reason": sanitize_sensitive(str(navigation_policy.get("reason") or "")[:240])}
+                       if navigation_policy.get("reason") else {}),
+                }), 409 if needs_confirmation else 403
 
             expected = _parse_expected_state(data)
             result = session.navigate(
@@ -905,6 +980,19 @@ def register_ai_browser_api(app):
                 }), 400
 
             expected = _parse_expected_state(data)
+            if action_type in {BrowserActionType.NAVIGATE, BrowserActionType.TAB_NEW} and data.get("url"):
+                import browser_surface
+                navigation_policy = browser_surface.evaluate_navigation(data.get("url"))
+                if not navigation_policy.get("allowed"):
+                    needs_confirmation = navigation_policy.get("status") == "need_confirmation"
+                    return jsonify({
+                        "ok": False,
+                        "error_code": (
+                            "BROWSER_NAVIGATION_CONFIRMATION_REQUIRED"
+                            if needs_confirmation else "BROWSER_NAVIGATION_BLOCKED"
+                        ),
+                        "manual_confirmation_available": needs_confirmation,
+                    }), 409 if needs_confirmation else 403
             result = session.execute_action(
                 action_type=action_type,
                 target=data.get("target", ""),

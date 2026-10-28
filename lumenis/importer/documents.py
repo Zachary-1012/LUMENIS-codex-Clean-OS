@@ -539,7 +539,8 @@ def _verify_collected_source(con, evidence, raw, record):
         # Native identity/lineage/public URL validation remains Collector-owned.
         # This pure reader makes no collection, session or network invocation.
         from lumenis.system.collector.adapters.secondary_collection import (
-            NativePublicCapture, _native_capture_record, validate_public_source_original)
+            NativePublicCapture, _native_capture_record, validate_public_source_original,
+            PUBLIC_ORIGINAL_PLATFORMS)
         original = (validate_public_source_original(raw, record['sha256']) if public_mode else
                     _native_capture_record(NativePublicCapture(binding['platform'], raw, record['sha256'])))
     except (TypeError, ValueError, UnicodeError) as exc:
@@ -548,7 +549,10 @@ def _verify_collected_source(con, evidence, raw, record):
         raise SavedWorkError('COLLECTED_SOURCE_ORIGINAL_INVALID')
     source = signed.get('provenance')
     body = original.get('body')
-    if (not isinstance(source, dict) or not isinstance(body, str) or not body.strip()
+    from lumenis.system.collector.adapters.public_http import has_observed_media_source
+    media_only=(public_mode and binding.get('platform')=='public_http' and body==''
+        and original.get('body_state')=='EMPTY' and has_observed_media_source(original.get('native_record') or {}))
+    if (not isinstance(source, dict) or not isinstance(body, str) or not body.strip() and not media_only
             or signed.get('parsed_text') != body
             or not isinstance(binding['platform'], str)
             or not isinstance(binding['native_id'], str) or not binding['native_id']
@@ -582,7 +586,7 @@ def _verify_collected_source(con, evidence, raw, record):
     if (live_mode != live_version or pending_mode != pending_version
             or (pending_version and not pending_mode)
             or public_mode != (capture_mode == 'live_public_response_intake')
-            or (public_mode and binding['platform'] != 'public_http')):
+            or (public_mode and binding['platform'] not in PUBLIC_ORIGINAL_PLATFORMS)):
         raise SavedWorkError('COLLECTED_SOURCE_PARENT_INVALID')
     if pending_mode:
         assignment = signed.get('entity_assignment')

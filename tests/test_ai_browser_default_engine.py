@@ -2,7 +2,9 @@
 
 import threading
 import struct
+import hashlib
 from concurrent.futures import ThreadPoolExecutor
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -123,6 +125,31 @@ def _valid_png(width=640, height=360):
             + chunk(b"IDAT", zlib.compress((b"\0" + b"\x80" * width * 3) * height)) + chunk(b"IEND", b""))
 
 
+def _install_current_frame(session):
+    png = _valid_png()
+    page = MagicMock()
+    page.url = "https://origin.example/work"
+    page.evaluate.side_effect = lambda script, *_args: (
+        {"width": 640, "height": 360, "dpr": 1}
+        if "window.innerWidth" in script else "safe page text"
+    )
+    page.screenshot.return_value = png
+    session._page = page
+    session._context = MagicMock()
+    session._target_id = "bt_confirmation"
+    session._page_revision = 7
+    binding = {
+        "frame_id": "bf_confirmation",
+        "target_id": session._target_id,
+        "page_revision": session._page_revision,
+        "viewport": {"width": 640, "height": 360, "dpr": 1},
+    }
+    session._latest_frame_binding = binding
+    session._latest_frame_image_sha256 = hashlib.sha256(png).hexdigest()
+    session._latest_frame_document_url = page.url
+    return binding
+
+
 def test_frame_capture_has_fresh_id_and_real_png_dimensions(isolated_runtime):
     session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
     session.status = runtime.SessionStatus.RUNNING
@@ -155,10 +182,245 @@ def test_frame_capture_has_fresh_id_and_real_png_dimensions(isolated_runtime):
 def test_navigation_respects_existing_browser_policy(isolated_runtime):
     session = isolated_runtime.create_session()
     session._page = MagicMock()
-    with pytest.raises(PermissionError, match="browser policy"):
+    with pytest.raises(runtime.BrowserNavigationPolicyError, match="BROWSER_NAVIGATION_BLOCKED"):
         session._do_execute(runtime.BrowserActionType.NAVIGATE,
                             url="file:///C:/Users/personal")
     session._page.goto.assert_not_called()
+
+
+def test_human_navigation_confirmation_is_bound_one_use_and_redacted(monkeypatch, isolated_runtime):
+    import browser_surface
+
+    monkeypatch.setattr(browser_surface, "_is_internal_host", lambda _host: False)
+    client, _actor = _authorized_client(monkeypatch, isolated_runtime)
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    session.status = runtime.SessionStatus.RUNNING
+    binding = _install_current_frame(session)
+    lease = session.acquire_human_control()["lease_token"]
+    path = f"/api/browser/sessions/{session.session_id}/human-control/navigate"
+    headers = {"X-LUMENIS-Human-Control-Lease": lease}
+    url = "https://needs-confirmation.example/path?access_token=secret#private"
+    original_navigate = session.navigate
+    calls = []
+
+    def fake_navigate(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(
+            success=True,
+                error="",
+            to_dict=lambda: {"success": True, "action": "navigate", "error": ""},
+            before_state=None,
+            after_state=None,
+        )
+
+    session.navigate = fake_navigate
+    try:
+        prepared = client.post(path, headers=headers, json={"url": url, "frame_binding": binding})
+        assert prepared.status_code == 409
+        body = prepared.get_json()
+        assert body["error_code"] == "BROWSER_NAVIGATION_CONFIRMATION_REQUIRED"
+        assert body["confirmation_target"] == "https://needs-confirmation.example/path"
+        assert "secret" not in str(body) and "#private" not in str(body)
+        assert calls == []
+        assert session._page.goto.call_count == 0
+
+        confirmed = client.post(path, headers=headers, json={
+            "url": url,
+            "frame_binding": binding,
+            "confirmation_id": body["confirmation_id"],
+        })
+        assert confirmed.status_code == 200, confirmed.get_json()
+        assert calls[0]["human_navigation_confirmation_url"] == url
+
+        replay = client.post(path, headers=headers, json={
+            "url": url,
+            "frame_binding": binding,
+            "confirmation_id": body["confirmation_id"],
+        })
+        assert replay.status_code == 409
+        assert replay.get_json()["error_code"] == "BROWSER_NAVIGATION_CONFIRMATION_STALE"
+        assert len(calls) == 1
+    finally:
+        session.navigate = original_navigate
+        isolated_runtime.close_session(session.session_id)
+
+
+def test_human_navigation_confirmation_rejects_changed_url_and_lease(monkeypatch, isolated_runtime):
+    import browser_surface
+
+    monkeypatch.setattr(browser_surface, "_is_internal_host", lambda _host: False)
+    client, _actor = _authorized_client(monkeypatch, isolated_runtime)
+    session = isolated_runtime.create_session(owner_actor_id=101, owner_account_session_id=501)
+    session.status = runtime.SessionStatus.RUNNING
+    binding = _install_current_frame(session)
+    first_lease = session.acquire_human_control()["lease_token"]
+    path = f"/api/browser/sessions/{session.session_id}/human-control/navigate"
+    first_headers = {"X-LUMENIS-Human-Control-Lease": first_lease}
+    url = "https://needs-confirmation.example/path?one=1"
+    prepared = client.post(path, headers=first_headers, json={"url": url, "frame_binding": binding})
+    confirmation_id = prepared.get_json()["confirmation_id"]
+
+    changed = client.post(path, headers=first_headers, json={
+        "url": "https://needs-confirmation.example/other?one=1",
+        "frame_binding": binding,
+        "confirmation_id": confirmation_id,
+    })
+    assert changed.status_code == 409
+    assert changed.get_json()["error_code"] == "BROWSER_NAVIGATION_CONFIRMATION_STALE"
+    assert session._page.goto.call_count == 0
+
+    second_id = client.post(path, headers=first_headers, json={"url": url, "frame_binding": binding}).get_json()["confirmation_id"]
+    assert session.release_human_control(first_lease)
+    second_lease = session.acquire_human_control()["lease_token"]
+    stale_lease = client.post(path, headers={"X-LUMENIS-Human-Control-Lease": second_lease}, json={
+        "url": url,
+        "frame_binding": binding,
+        "confirmation_id": second_id,
+    })
+    assert stale_lease.status_code == 409
+    assert stale_lease.get_json()["error_code"] == "BROWSER_NAVIGATION_CONFIRMATION_STALE"
+    assert session._page.goto.call_count == 0
+
+    third_id = client.post(path, headers={"X-LUMENIS-Human-Control-Lease": second_lease}, json={
+        "url": url, "frame_binding": binding,
+    }).get_json()["confirmation_id"]
+    changed_binding = {
+        **binding,
+        "frame_id": "bf_new_revision",
+        "page_revision": binding["page_revision"] + 1,
+    }
+    session._page_revision = changed_binding["page_revision"]
+    session._latest_frame_binding = changed_binding
+    stale_frame = client.post(path, headers={"X-LUMENIS-Human-Control-Lease": second_lease}, json={
+        "url": url,
+        "frame_binding": changed_binding,
+        "confirmation_id": third_id,
+    })
+    assert stale_frame.status_code == 409
+    assert stale_frame.get_json()["error_code"] == "BROWSER_NAVIGATION_CONFIRMATION_STALE"
+    assert session._page.goto.call_count == 0
+    isolated_runtime.close_session(session.session_id)
+
+
+def test_confirmed_navigation_does_not_authorize_an_unapproved_redirect(monkeypatch, isolated_runtime):
+    import browser_surface
+
+    requested = "https://manual.example/confirmed?token=private"
+    redirected = "https://different.example/landing"
+
+    def policy(url, mode=None):
+        if url == "https://approved.example/":
+            return {"allowed": True, "status": "allowed", "mode": mode or "strict", "host": "approved.example"}
+        return {"allowed": False, "status": "need_confirmation", "mode": mode or "strict", "host": "unknown.example"}
+
+    monkeypatch.setattr(browser_surface, "evaluate_navigation", policy)
+
+    class FakeCdp:
+        def __init__(self):
+            self.callback = None
+            self.calls = []
+
+        def on(self, _event, callback):
+            self.callback = callback
+
+        def send(self, method, params=None):
+            self.calls.append((method, params))
+            if method == "Page.getFrameTree":
+                return {"frameTree": {"frame": {"id": "main-frame"}}}
+            if method == "Fetch.enable":
+                self.callback({
+                    "requestId": "initial",
+                    "resourceType": "Document",
+                    "frameId": "main-frame",
+                    "request": {"url": requested},
+                })
+                self.callback({
+                    "requestId": "redirect",
+                    "resourceType": "Document",
+                    "frameId": "main-frame",
+                    "request": {"url": redirected},
+                })
+            return {}
+
+        def detach(self):
+            self.calls.append(("detach", None))
+
+    session = isolated_runtime.create_session()
+    session._page = MagicMock()
+    cdp = FakeCdp()
+    session._context = SimpleNamespace(new_cdp_session=lambda _page: cdp)
+    result = runtime.ActionExecutionResult(
+        success=True, action="navigate", result=runtime.ActionResult.PASS,
+    )
+    guarded = session._run_with_navigation_guard(
+        lambda: result,
+        confirmed_target_url=requested,
+    )
+
+    assert guarded.success is False
+    assert guarded.error == "BROWSER_NAVIGATION_REDIRECT_BLOCKED"
+    assert ("Fetch.continueRequest", {"requestId": "initial"}) in cdp.calls
+    assert any(method == "Fetch.failRequest" and params.get("requestId") == "redirect"
+               for method, params in cdp.calls)
+    isolated_runtime.close_session(session.session_id)
+
+
+def test_confirmation_does_not_override_a_new_ssrf_policy_block(monkeypatch, isolated_runtime):
+    import browser_surface
+
+    requested = "https://manual.example/confirmed"
+    calls = []
+
+    def policy(url, mode=None):
+        calls.append(url)
+        if len(calls) == 1:
+            return {"allowed": False, "status": "need_confirmation", "mode": "strict"}
+        return {"allowed": False, "status": "blocked", "mode": "strict", "reason": "SSRF"}
+
+    monkeypatch.setattr(browser_surface, "evaluate_navigation", policy)
+
+    class FakeCdp:
+        def __init__(self):
+            self.callback = None
+            self.calls = []
+
+        def on(self, _event, callback):
+            self.callback = callback
+
+        def send(self, method, params=None):
+            self.calls.append((method, params))
+            if method == "Page.getFrameTree":
+                return {"frameTree": {"frame": {"id": "main-frame"}}}
+            if method == "Fetch.enable":
+                self.callback({
+                    "requestId": "initial",
+                    "resourceType": "Document",
+                    "frameId": "main-frame",
+                    "request": {"url": requested},
+                })
+            return {}
+
+        def detach(self):
+            self.calls.append(("detach", None))
+
+    session = isolated_runtime.create_session()
+    session._page = MagicMock()
+    cdp = FakeCdp()
+    session._context = SimpleNamespace(new_cdp_session=lambda _page: cdp)
+    result = runtime.ActionExecutionResult(
+        success=True, action="navigate", result=runtime.ActionResult.PASS,
+    )
+    guarded = session._run_with_navigation_guard(
+        lambda: result,
+        requested_target_url=requested,
+        confirmed_target_url=requested,
+    )
+
+    assert guarded.success is False
+    assert guarded.error == "BROWSER_NAVIGATION_BLOCKED"
+    assert any(method == "Fetch.failRequest" and params.get("requestId") == "initial"
+               for method, params in cdp.calls)
+    isolated_runtime.close_session(session.session_id)
 
 
 def _authorized_client(monkeypatch, manager=None):

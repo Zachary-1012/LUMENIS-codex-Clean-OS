@@ -1,77 +1,49 @@
-# LUMENIS tools
+# Repository scripts｜仓库脚本
 
-Current product: LUMENIS. Guangzhou-specific scripts are scoped compatibility tools, not the product default.
+`scripts/` contains existing Python and PowerShell engineering, verification, and runtime entrypoints. It is a tooling directory, not a product surface or a separate owner of business, data, permission, or runtime truth.
 
-## 脚本列表
+`scripts/` 存放现有 Python 与 PowerShell 工程、验证及运行入口。它是工具目录，不是产品表面，也不另行拥有业务、数据、权限或运行时事实。
 
-### 1. init_db.py - 初始化数据库
-创建所有必需的数据库表和索引，插入默认配置。
+## Directory map｜目录导航
 
-```bash
-python scripts/init_db.py
+| Path / 路径 | Contents / 内容 |
+| --- | --- |
+| `scripts/audit_tools/` | Governance, boundary, database-authority, and Experience validators / 治理、边界、数据库权威与体验校验器 |
+| `scripts/inventory/` | Repository asset inventory utilities / 仓库资源清单工具 |
+| `scripts/data_candidates/` | Candidate data and manifests, not executable entrypoints / 候选数据与清单，不是可执行入口 |
+| `scripts/` | Existing focused Python and PowerShell tools / 现有 Python 与 PowerShell 专项工具 |
+
+Use each script's source or `--help` for its exact arguments and effects. Examples of current entrypoints:
+
+```powershell
+# From the repository root: validate the AI-native constitution gate
+python scripts/audit_tools/verify_ai_native_constitution.py
+
+# From the repository root: run the repository test entrypoint
+powershell -ExecutionPolicy Bypass -File scripts/run_tests.ps1 -Quick
 ```
 
-### 2. backup_db.py - 数据库备份
-备份、列出、恢复数据库。
+`run_tests.ps1` uses the repository `.venv` and runs Python syntax checks plus pytest; `-Quick` enables fail-fast behavior and a per-test timeout, while `-StagingUrl` additionally probes the supplied URL. The canonical Windows Product Core launcher is [`start_production.ps1`](start_production.ps1), whose package runtime dependencies are declared in [`../requirements.txt`](../requirements.txt).
 
-```bash
-# 备份数据库
-python scripts/backup_db.py backup
+`run_tests.ps1` 使用仓库 `.venv`，执行 Python 语法检查与 pytest；`-Quick` 启用遇错即停和单测超时限制，传入 `-StagingUrl` 还会探测对应地址。Windows Product Core 的规范启动入口是 [`start_production.ps1`](start_production.ps1)，其运行依赖声明在 [`../requirements.txt`](../requirements.txt)。
 
-# 列出所有备份
-python scripts/backup_db.py list
+Python dependency manifests at the repository root:
 
-# 恢复数据库
-python scripts/backup_db.py restore <backup_name>
-```
+- [`requirements.txt`](../requirements.txt) — Product Core/runtime dependencies.
+- [`requirements-dev.txt`](../requirements-dev.txt) — development and test dependencies layered over runtime dependencies.
+- [`requirements-browser-use.txt`](../requirements-browser-use.txt) — isolated browser-use dependency set; it is separate from the Product Core runtime.
 
-### 3. check_system.py - 系统检查
-检查系统运行状态、数据库、配置文件等。
+仓库根目录的 Python 依赖清单：
 
-```bash
-python scripts/check_system.py
-```
+- [`requirements.txt`](../requirements.txt) — Product Core/运行依赖。
+- [`requirements-dev.txt`](../requirements-dev.txt) — 在运行依赖之上的开发与测试依赖。
+- [`requirements-browser-use.txt`](../requirements-browser-use.txt) — 隔离的 browser-use 依赖，与 Product Core 运行环境分开。
 
-### 4. collect_now.py - focused CTH compatibility collection
-This legacy helper is only for an explicitly focused reference Subject; current product collection uses the SYSTEM Collector with exact Scope and Permission.
+## Product and engineering references｜产品与工程权威
 
-```bash
-# 指定关键词
-python scripts/collect_now.py "广州太古汇 投诉"
+- [Repository instructions](../AGENTS.md)
+- [Current source and acceptance](../00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)
+- [Product Architecture](../00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)
+- [Experience Constitution](../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)
 
-# 指定参数
-python scripts/collect_now.py "广州太古汇" 5 20
-```
-
-### 5. export_report.py - 报告导出
-导出日报、周报、月报、年报。
-
-```bash
-# 导出日报（Word格式）
-python scripts/export_report.py daily
-
-# 导出周报（Excel格式）
-python scripts/export_report.py weekly 2026-08-27 excel
-
-# 导出月报
-python scripts/export_report.py monthly 2026-08
-
-# 导出年报
-python scripts/export_report.py yearly 2026
-```
-
-## 使用说明
-
-所有脚本都需要在项目根目录下运行，或者将项目根目录添加到Python路径中。
-
-```bash
-cd /path/to/LUMENIS-codex-Clean-OS
-python scripts/<script_name>.py [arguments]
-```
-
-## 注意事项
-
-1. 运行脚本前请确保已安装所有依赖（`pip install -r requirements.txt`）
-2. 数据库备份会自动保留最近10个备份
-3. 采集脚本会检查每日采集次数限制（手动3次/自动9次）
-4. 报告导出需要report_engine或daily_report模块
+具体脚本的职责和边界以源码及以上唯一权威为准；本 README 仅提供目录与依赖入口。

@@ -73,15 +73,6 @@ def _inputs(tmp_path: Path, monkeypatch):
 def _run(paths, *, execute=False, approval_verifier=None, manifest=None, recipe=training.H100_RECIPE):
     model, canonical_manifest, train, heldout, output = paths
     phase_client = None
-    if execute and callable(approval_verifier):
-        from tests.test_owned_training_callback_v3 import _unit_phase_client
-        preflight = training.run_owned_lora_training(
-            model, train, heldout, output, manifest_path=manifest or canonical_manifest, recipe=recipe)
-        request = training.TrainingApprovalRequest(
-            preflight["model_id"], preflight["model_revision"], preflight["train_sha256"],
-            preflight["heldout_sha256"], tuple(preflight["scopes"]), preflight["training_recipe"],
-            preflight["manifest_sha256"], preflight["domain_id"])
-        phase_client, _ = _unit_phase_client(request)
     return training.run_owned_lora_training(
         model, train, heldout, output, manifest_path=manifest or canonical_manifest,
         execute=execute, approval_verifier=approval_verifier, recipe=recipe, phase_client=phase_client,
@@ -175,7 +166,7 @@ def test_preflight_rejects_empty_split_and_output_inside_model_snapshot(tmp_path
         _run(unsafe_paths)
 
 
-def test_execute_without_learning_approval_fails_before_imports_or_output(tmp_path, monkeypatch):
+def test_withdrawn_gpu_training_rejects_before_model_imports_or_output(tmp_path, monkeypatch):
     paths = _inputs(tmp_path, monkeypatch)
     original_import = builtins.__import__
 
@@ -185,12 +176,12 @@ def test_execute_without_learning_approval_fails_before_imports_or_output(tmp_pa
         return original_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", reject_training_import)
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
         _run(paths, execute=True)
     assert not paths[-1].exists()
 
 
-def test_execute_approval_is_bound_to_exact_dataset_hashes_and_scope(tmp_path, monkeypatch):
+def test_withdrawn_gpu_training_does_not_consume_or_check_approval(tmp_path, monkeypatch):
     paths = _inputs(tmp_path, monkeypatch)
     seen = []
 
@@ -198,13 +189,9 @@ def test_execute_approval_is_bound_to_exact_dataset_hashes_and_scope(tmp_path, m
         seen.append(request)
         return False
 
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
         _run(paths, execute=True, approval_verifier=reject_approval)
-    request = seen[0]
-    assert request.train_sha256 == hashlib.sha256(paths[2].read_bytes()).hexdigest()
-    assert request.heldout_sha256 == hashlib.sha256(paths[3].read_bytes()).hexdigest()
-    assert request.scopes == ("GLOBAL / ALL",)
-    assert request.domain_id == "cth"
+    assert seen == []
     assert not paths[-1].exists()
 
 
@@ -214,168 +201,19 @@ def test_same_global_label_does_not_merge_cth_and_bmp_training_scopes(tmp_path, 
     heldout["domain"] = "BMP"
     _write_jsonl(paths[3], [heldout])
     with pytest.raises(training.TrainingBlocked, match="MIXED_DOMAIN_TRAINING"):
-        _run(paths, execute=True)
+        _run(paths)
     assert not paths[-1].exists()
 
 
-def _mock_training_stack(monkeypatch, *, steps=1, save_adapter=True, boundary=None):
-    """Observe execution fences without optional packages, a GPU or model calls."""
-    observed = {"train_calls": 0, "optimizer_steps": 0, "save_calls": 0, "boundaries": []}
-
-    def reach(name):
-        observed["boundaries"].append(name)
-        if boundary is not None:
-            boundary(name)
-
-    class Tokenizer:
-        def apply_chat_template(self, messages, **kwargs):
-            return json.dumps(messages)
-
-        def __call__(self, text, **kwargs):
-            return {"input_ids": [1, 2]}
-
-        def save_pretrained(self, path):
-            (Path(path) / "tokenizer_config.json").write_text("{}")
-            reach("tokenizer_saved")
-
-    def load_tokenizer(path, **kwargs):
-        assert kwargs["local_files_only"] is True
-        assert kwargs["trust_remote_code"] is False
-        assert training.os.environ["HF_HUB_OFFLINE"] == "1"
-        return Tokenizer()
-
-    def load_model(path, **kwargs):
-        assert kwargs["local_files_only"] is True
-        assert kwargs["trust_remote_code"] is False
-        assert kwargs["use_safetensors"] is True
-        return object()
-
-    class Trainer:
-        def __init__(self, **kwargs):
-            observed["dataset"] = kwargs["train_dataset"]
-            observed["args"] = kwargs["args"]
-            self.callbacks = kwargs["callbacks"]
-
-        def train(self):
-            observed["train_calls"] += 1
-            for index in range(steps):
-                state = SimpleNamespace(global_step=index)
-                for event in ("on_step_begin", "on_substep_end", "on_pre_optimizer_step"):
-                    reach(f"{index}:{event}")
-                    for callback in self.callbacks:
-                        getattr(callback, event)(observed["args"], state, None)
-                observed["optimizer_steps"] += 1
-            reach("training_returned")
-            return SimpleNamespace(global_step=steps)
-
-        def save_model(self, path):
-            observed["save_calls"] += 1
-            if save_adapter:
-                (Path(path) / "adapter_config.json").write_text("{}")
-                (Path(path) / "adapter_model.safetensors").write_bytes(b"synthetic-unit-artifact")
-            reach("adapter_saved")
-
-    monkeypatch.setattr(training, "_require_cuda", lambda: (
-        SimpleNamespace(bfloat16="synthetic-bfloat16"), "synthetic-test-device", 80 * 1024**3,
-    ))
-    monkeypatch.setitem(sys.modules, "datasets", SimpleNamespace(
-        Dataset=SimpleNamespace(from_list=lambda rows: rows),
-    ))
-    monkeypatch.setitem(sys.modules, "transformers", SimpleNamespace(
-        AutoTokenizer=SimpleNamespace(from_pretrained=load_tokenizer),
-        AutoModelForCausalLM=SimpleNamespace(from_pretrained=load_model),
-        Mxfp4Config=lambda **kwargs: kwargs,
-        TrainerCallback=object,
-    ))
-    monkeypatch.setitem(sys.modules, "peft", SimpleNamespace(
-        LoraConfig=lambda **kwargs: kwargs, get_peft_model=lambda model, config: model,
-    ))
-    monkeypatch.setitem(sys.modules, "trl", SimpleNamespace(
-        SFTConfig=lambda **kwargs: SimpleNamespace(**kwargs), SFTTrainer=Trainer,
-    ))
-    return observed
-
-
-@pytest.mark.parametrize("revoke_at,completed_steps,saved", [
-    ("1:on_step_begin", 1, False),
-    ("0:on_substep_end", 0, False),
-    ("0:on_pre_optimizer_step", 0, False),
-    ("training_returned", 2, False),
-    ("adapter_saved", 2, True),
-    ("tokenizer_saved", 2, True),
-])
-def test_revocation_at_training_or_save_boundary_never_issues_usable_candidate(
-        tmp_path, monkeypatch, revoke_at, completed_steps, saved):
-    """Simulated compute only: drive the real caller's registered callback and save fences."""
+def test_withdrawn_gpu_training_does_not_load_cuda_or_call_approval(tmp_path, monkeypatch):
+    called = []
+    monkeypatch.setattr(training, "_require_cuda", lambda *_args, **_kwargs: pytest.fail("CUDA path reached"))
+    monkeypatch.setattr(training, "_verify_training_boundary", lambda *_args, **_kwargs: called.append("permission"))
     paths = _inputs(tmp_path, monkeypatch)
-    approved = True
-
-    def boundary(name):
-        nonlocal approved
-        if name == revoke_at:
-            approved = False
-
-    observed = _mock_training_stack(monkeypatch, steps=2, boundary=boundary)
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
-        _run(paths, execute=True, approval_verifier=lambda request: approved)
-    status = json.loads((paths[-1] / "training_status.json").read_text())
-    assert status["execution_state"] == "TRAINING_APPROVAL_REQUIRED"
-    assert status["candidate_status"] == "NOT_EVALUATED"
-    assert observed["optimizer_steps"] == completed_steps
-    assert observed["save_calls"] == int(saved)
-    # Already-written weights remain diagnostic artifacts; their denied status
-    # prevents the existing evaluation/loader from accepting them as trained.
-    assert (paths[-1] / "adapter_model.safetensors").exists() is saved
-
-
-def test_approval_transport_failure_during_training_is_recorded_without_save(tmp_path, monkeypatch):
-    paths = _inputs(tmp_path, monkeypatch)
-    transport_available = True
-
-    def boundary(name):
-        nonlocal transport_available
-        if name == "0:on_substep_end":
-            transport_available = False
-
-    def verify(request):
-        if not transport_available:
-            raise ConnectionError("isolated approval transport unavailable")
-        return True
-
-    observed = _mock_training_stack(monkeypatch, boundary=boundary)
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_VERIFIER_FAILED"):
-        _run(paths, execute=True, approval_verifier=verify)
-    assert observed["optimizer_steps"] == observed["save_calls"] == 0
-    assert json.loads((paths[-1] / "training_status.json").read_text())["execution_state"] == "TRAINING_APPROVAL_VERIFIER_FAILED"
-
-
-def test_execution_rechecks_revocation_before_first_write(tmp_path, monkeypatch):
-    paths = _inputs(tmp_path, monkeypatch)
-    observed = _mock_training_stack(monkeypatch)
-    decisions = iter([True, False])
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
-        _run(paths, execute=True, approval_verifier=lambda request: next(decisions))
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
+        _run(paths, execute=True, approval_verifier=lambda _request: called.append("approval"))
+    assert called == []
     assert not paths[-1].exists()
-    assert observed["train_calls"] == 0
-
-
-@pytest.mark.parametrize("steps,save_adapter,reason", [
-    (0, True, "WITHOUT_OPTIMIZER_STEPS"),
-    (1, False, "ARTIFACT_MISSING_OR_EMPTY"),
-])
-def test_failed_training_never_claims_trained(tmp_path, monkeypatch, steps, save_adapter, reason):
-    paths = _inputs(tmp_path, monkeypatch)
-    observed = _mock_training_stack(monkeypatch, steps=steps, save_adapter=save_adapter)
-    with pytest.raises(training.TrainingBlocked, match=reason):
-        _run(paths, execute=True, approval_verifier=lambda request: True)
-    status = json.loads((paths[-1] / "training_status.json").read_text())
-    assert status["execution_state"] != "TRAINED_NOT_EVALUATED"
-    assert status["candidate_status"] == "NOT_EVALUATED"
-    assert len(observed["dataset"]) == 1
-    assert "Question A" in observed["dataset"][0]["text"]
-    assert "Question B" not in observed["dataset"][0]["text"]
-    assert observed["args"].push_to_hub is False
-    assert observed["args"].report_to == "none"
 
 
 def _t4_inputs(tmp_path, monkeypatch):
@@ -415,11 +253,9 @@ def test_t4_preflight_keeps_derivative_identity_and_requires_exact_approval(tmp_
     def deny(request):
         seen.append(request)
         return False
-    with pytest.raises(training.TrainingBlocked, match="TRAINING_APPROVAL_REQUIRED"):
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
         _run(paths, recipe=training.T4_RECIPE, execute=True, approval_verifier=deny)
-    assert seen[0].recipe == training.T4_RECIPE
-    assert seen[0].model_id == training.T4_MODEL_ID
-    assert seen[0].manifest_sha256 == hashlib.sha256(paths[1].read_bytes()).hexdigest()
+    assert seen == []
     assert not paths[-1].exists()
 
 
@@ -474,40 +310,11 @@ def test_t4_precision_and_offline_environment_are_scoped_and_restored(monkeypatc
     assert "UNSLOTH_DISABLE_STATISTICS" not in training.os.environ
 
 
-@pytest.mark.parametrize("loss,accepted", [(1.0, True), (float("nan"), False), (float("inf"), False)])
-def test_t4_execution_checks_loss_and_preserves_dataset_and_output_fences(tmp_path, monkeypatch, loss, accepted):
-    from importlib import metadata
+def test_t4_training_preflight_is_read_only_and_execution_is_withdrawn(tmp_path, monkeypatch):
     paths = _t4_inputs(tmp_path, monkeypatch)
-    observed = _mock_training_stack(monkeypatch)
-    monkeypatch.setattr(training, "_require_cuda", lambda recipe: (object(), "synthetic-t4", 15637086208))
-    versions = {"unsloth": "2026.9.12", "unsloth_zoo": "2026.9.8", "transformers": "4.56.2", "trl": "0.22.2",
-                "torch": "2.11.0+cu128", "bitsandbytes": "0.50.2", "tokenizers": "0.22.2", "triton": "3.6.0"}
-    monkeypatch.setattr(metadata, "version", versions.__getitem__)
-    def load(**kwargs):
-        assert kwargs["local_files_only"] is True and kwargs["trust_remote_code"] is False
-        assert kwargs["token"] is False
-        assert training.os.environ["UNSLOTH_FORCE_FLOAT32"] == "1"
-        model = SimpleNamespace(config=SimpleNamespace(_name_or_path=str(paths[0]), quantization_config={"bnb_4bit_quant_type": "nf4"}))
-        tokenizer = sys.modules["transformers"].AutoTokenizer.from_pretrained(str(paths[0]), local_files_only=True, trust_remote_code=False)
-        return model, tokenizer
-    monkeypatch.setitem(sys.modules, "unsloth", SimpleNamespace(FastLanguageModel=SimpleNamespace(
-        from_pretrained=load, get_peft_model=lambda model, **kwargs: model)))
-    trainer_class = sys.modules["trl"].SFTTrainer
-    original_train = trainer_class.train
-    def train(self):
-        result = original_train(self)
-        return SimpleNamespace(global_step=result.global_step, metrics={"train_loss": loss})
-    monkeypatch.setattr(trainer_class, "train", train)
-    if accepted:
-        result = _run(paths, execute=True, approval_verifier=lambda _: True, recipe=training.T4_RECIPE)
-        assert result["execution_state"] == "TRAINED_NOT_EVALUATED"
-        assert result["candidate_status"] == "NOT_EVALUATED"
-        assert result["training_packages"] == versions
-    else:
-        with pytest.raises(training.TrainingBlocked, match="LOSS_UNAVAILABLE_OR_NONFINITE"):
-            _run(paths, execute=True, approval_verifier=lambda _: True, recipe=training.T4_RECIPE)
-        assert not (paths[-1] / "adapter_model.safetensors").exists()
-    assert observed["args"].bf16 is False and observed["args"].fp16 is False
-    assert observed["args"].max_length == 1024
-    assert observed["args"].per_device_train_batch_size == 1
-    assert "Question B" not in observed["dataset"][0]["text"]
+    preflight = _run(paths, recipe=training.T4_RECIPE)
+    assert preflight["execution_state"] == "PREFLIGHT_ONLY"
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
+        _run(paths, execute=True, approval_verifier=lambda _request: pytest.fail("approval called"),
+            recipe=training.T4_RECIPE)
+    assert not paths[-1].exists()

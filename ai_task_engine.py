@@ -1257,7 +1257,11 @@ class TaskEngine:
         user_input: str,
         context: Optional[Dict[str, Any]] = None,
         created_by: str = "system",
-    ) -> Dict[str, Any]:
+        *,
+        request_idempotency_key: Optional[str] = None,
+        request_payload_sha256: Optional[str] = None,
+        return_created: bool = False,
+    ) -> Any:
         """创建 AI Task。
 
         Returns:
@@ -1271,10 +1275,107 @@ class TaskEngine:
             raise PermissionError(
                 "training receipt tasks are created only through training-receipt methods"
             )
+        ctx = context or {}
+        if (request_idempotency_key is None) != (request_payload_sha256 is None):
+            raise ValueError("TASK_REQUEST_IDEMPOTENCY_BINDING_INVALID")
+
+        if request_idempotency_key is not None:
+            if (not isinstance(request_idempotency_key, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", request_idempotency_key) is None
+                    or not isinstance(request_payload_sha256, str)
+                    or re.fullmatch(r"[0-9a-f]{64}", request_payload_sha256) is None
+                    or not isinstance(ctx, dict)):
+                raise ValueError("TASK_REQUEST_IDEMPOTENCY_BINDING_INVALID")
+            request_binding = ctx.get("agent_task_request")
+            if (not isinstance(request_binding, dict)
+                    or request_binding.get("idempotency_sha256") != request_idempotency_key
+                    or request_binding.get("payload_sha256") != request_payload_sha256
+                    or not isinstance(request_binding.get("request_id"), str)
+                    or re.fullmatch(r"[0-9a-f]{32}", request_binding["request_id"]) is None
+                    or request_binding.get("actor_ref") not in {"workspace:local"}
+                        and (not isinstance(request_binding.get("actor_ref"), str)
+                             or re.fullmatch(r"actor:[1-9][0-9]{0,18}", request_binding["actor_ref"]) is None)
+                    or not isinstance(request_binding.get("actor_sha256"), str)
+                    or re.fullmatch(r"[0-9a-f]{64}", request_binding["actor_sha256"]) is None
+                    or not isinstance(request_binding.get("scope_sha256"), str)
+                    or re.fullmatch(r"[0-9a-f]{64}", request_binding["scope_sha256"]) is None):
+                raise ValueError("TASK_REQUEST_IDEMPOTENCY_BINDING_INVALID")
+
+            def request_digest(value):
+                raw = json.dumps(value, sort_keys=True, ensure_ascii=False,
+                                 allow_nan=False, separators=(",", ":"))
+                return hashlib.sha256(raw.encode()).hexdigest()
+
+            actor_ref = request_binding["actor_ref"]
+            runtime_contract = ctx.get("agent_runtime")
+            if actor_ref == "workspace:local":
+                workspace_binding = (runtime_contract.get("workspace_binding")
+                                     if isinstance(runtime_contract, dict) else None)
+                actor_identity_valid = (
+                    ctx.get("actor_id") is None
+                    and isinstance(runtime_contract, dict)
+                    and runtime_contract.get("principal_kind") == "local_workspace"
+                    and runtime_contract.get("principal_ref") == actor_ref
+                    and isinstance(workspace_binding, str)
+                )
+                actor_material = {"actor_ref": actor_ref, "workspace_binding": workspace_binding}
+            else:
+                actor_id = ctx.get("actor_id")
+                actor_identity_valid = type(actor_id) is int and actor_ref == f"actor:{actor_id}"
+                actor_material = {"actor_ref": actor_ref}
+            scope_material = {"domain_id": ctx.get("domain_id"), "scope": ctx.get("scope")}
+            expected_actor_sha256 = request_digest(actor_material)
+            expected_scope_sha256 = request_digest(scope_material)
+            expected_idempotency_sha256 = request_digest({
+                "actor_sha256": expected_actor_sha256,
+                "scope_sha256": expected_scope_sha256,
+                "request_id": request_binding["request_id"],
+            })
+            if (not actor_identity_valid
+                    or request_binding["actor_sha256"] != expected_actor_sha256
+                    or request_binding["scope_sha256"] != expected_scope_sha256
+                    or request_binding["idempotency_sha256"] != expected_idempotency_sha256):
+                raise ValueError("TASK_REQUEST_IDEMPOTENCY_BINDING_INVALID")
+
+            # The existing ai_task primary key is the atomic idempotency guard;
+            # context_json carries the server-authored actor/scope/payload proof.
+            # No separate task store or schema migration is needed.
+            task_id = "task_" + request_idempotency_key[:32]
+            now = self._now()
+            created = False
+            with get_db() as conn:
+                conn.execute("BEGIN IMMEDIATE")
+                existing = conn.execute(
+                    "SELECT user_input,context_json,created_by FROM ai_task WHERE task_id=?",
+                    (task_id,),
+                ).fetchone()
+                if existing is not None:
+                    existing_context = _strict_json_loads(
+                        existing[1], field_name="agent task request context")
+                    existing_binding = (existing_context.get("agent_task_request")
+                                       if isinstance(existing_context, dict) else None)
+                    if (existing[0] != user_input or existing[2] != created_by
+                            or not isinstance(existing_binding, dict)
+                            or any(existing_binding.get(key) != request_binding.get(key)
+                                   for key in ("request_id", "actor_ref", "actor_sha256", "scope_sha256", "payload_sha256",
+                                               "idempotency_sha256"))):
+                        raise ValueError("AGENT_TASK_REQUEST_ID_CONFLICT")
+                else:
+                    conn.execute(
+                        """INSERT INTO ai_task
+                           (task_id, user_input, context_json, status, created_at, updated_at, created_by)
+                           VALUES (?, ?, ?, 'pending', ?, ?, ?)""",
+                        (task_id, user_input, json.dumps(ctx, ensure_ascii=False, sort_keys=True, allow_nan=False), now, now, created_by),
+                    )
+                    created = True
+            if created:
+                self._db_add_trace(task_id, "task.create", "Idempotent Agent task created", "ok")
+                logger.info(f"[TaskEngine] 任务已创建: {task_id}")
+            task = self._db_get_task(task_id)
+            return (task, created) if return_created else task
+
         task_id = self._gen_id("task")
         now = self._now()
-        ctx = context or {}
-
         with get_db() as conn:
             conn.execute(
                 """INSERT INTO ai_task
@@ -1286,12 +1387,13 @@ class TaskEngine:
         self._db_add_trace(task_id, "task.create", f"Task created by {created_by}", "ok")
         logger.info(f"[TaskEngine] 任务已创建: {task_id}")
 
-        return {
+        task = {
             "task_id": task_id,
             "status": TaskStatus.PENDING.value,
             "created_at": now,
             "user_input": user_input,
         }
+        return (task, True) if return_created else task
 
     def create_mathematical_task(self, user_input, context, *, created_by):
         """One authenticated mathematical operation survives a lost creation ACK."""

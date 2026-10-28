@@ -103,6 +103,13 @@ class DouyinAdapter(BasePlatformAdapter):
             items.append(item)
         return items
 
+    @classmethod
+    def _observed_status(cls, result):
+        return {'AUTH_REQUIRED': CollectionStatus.SESSION_EXPIRED, 'VERIFICATION_REQUIRED': CollectionStatus.NEED_VERIFY,
+                'ACCESS_BLOCKED': CollectionStatus.BLOCKED, 'RATE_LIMITED': CollectionStatus.COOLING_DOWN,
+                'CONTENT_UNAVAILABLE': CollectionStatus.PROVIDER_UNAVAILABLE, 'PROVIDER_UNAVAILABLE': CollectionStatus.PROVIDER_UNAVAILABLE}.get(
+                    (getattr(result, 'metadata', None) or {}).get('failure_class')) or cls._v4_status_to_main(result.success, result.notes, result.error)
+
     @staticmethod
     def _native_aweme_id(item: dict) -> str | None:
         raw = item.get("raw") if isinstance(item, dict) else None
@@ -233,11 +240,13 @@ class DouyinAdapter(BasePlatformAdapter):
         try:
             backend = self._load_backend()
             max_results = int(kwargs.get("max_results", 20))
-            if hasattr(backend, "breaker") and callable(getattr(backend, "safe_collect", None)):
+            if kwargs.get("cursor") is not None:
+                result = backend.search(keyword, max_results=max_results, cursor=kwargs["cursor"])
+            elif hasattr(backend, "breaker") and callable(getattr(backend, "safe_collect", None)):
                 result = backend.safe_collect(keyword, max_results=max_results, allow_fallback=False)
             else:
                 result = backend.search(keyword, max_results=max_results)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            status = self._observed_status(result)
             search_failure_state = self._detail_failure_state(result.error) if not result.success else None
             if search_failure_state == "DETAIL_FAILED":
                 search_failure_state = "SEARCH_FAILED"
@@ -341,7 +350,8 @@ class DouyinAdapter(BasePlatformAdapter):
                 raw_count=result.raw_count,
                 new_count=len(items),
                 message=(result.error or ("抖音搜索成功；部分原生详情未完成" if detail_incomplete else "")),
-                metadata={"engine": "v4_douyin_browser", "provider": "authorized_browser_worker",
+                metadata={**(result.metadata if isinstance(getattr(result, "metadata", None), dict) else {}),
+                          "engine": "v4_douyin_browser", "provider": "authorized_browser_worker",
                           "duration_s": result.duration_seconds, "detail": detail_metadata,
                           **({"acquisition_diagnostics": acquisition_diagnostics}
                              if acquisition_diagnostics else {}),
@@ -369,7 +379,7 @@ class DouyinAdapter(BasePlatformAdapter):
                     metadata={"provider": "authorized_browser_worker", "capability": method},
                 )
             result = fn(*args, **kwargs)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            status = self._observed_status(result)
             comments = map_v4_comments(result.notes) if method == "comments" else []
             items = [] if method == "comments" else self._v4_notes_to_items(result.notes)
             return CollectionResult(
@@ -400,6 +410,9 @@ class DouyinAdapter(BasePlatformAdapter):
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("creator", sec_uid=creator_id)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._delegate_v4("author_posts", author_id, max_results=kwargs.get("max_results", 20), cursor=kwargs.get("cursor"))
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         """Check configured worker reachability without launching a browser."""

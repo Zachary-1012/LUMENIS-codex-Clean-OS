@@ -112,23 +112,15 @@ Two task types share one Runtime:
 
 Tracking horizons may include T0 / T+1h / T+24h / T+3d / T+7d / T+30d, but future windows must remain scheduled or pending until real time has elapsed.
 
-### 3.1 Current prelaunch collection and query contract — 2026-10-03
+### 3.1 Current task-directed collection and query contract
 
-The Product Owner requires collection and new brand/commercial-entity admission
-to continue alongside the other product work. Current main social-platform work
-covers XHS/RedNote, Douyin, WeChat, Instagram, X and Facebook. Retain other planned
-platform capability obligations; these six are not a reason to delete them.
-Use subject/topic/task-semantic acquisition with no universal earliest publication
-date. Honor an explicit user/task time window and preserve genuine native time
-through each actual capture; Global §10 owns the 2026-10-08 correction.
-Keep unknown publication time separately for review; capture time is never a
-replacement publication date, and future observations cannot be invented.
+采集是取得当前任务所需事实的数据能力。优先复用合法且仍适用的已有资料，再按问题、主体、时间和缺口选择相关来源、搜索/详情/评论/分页/媒体或当前浏览器上下文。取得足以支持当前结论的材料并覆盖关键反证后结束本轮，不用主体数量、平台全覆盖或无限翻页代替准确性。舆情监控、活动及营销监控是固定用户功能；用户设定对象、目的、时间和频率后，沿同一采集器持续检查新增变化，可暂停、调整或结束。普通提问、刷新和监测都有明确边界，不因打开产品、选择主体或登记目录而自动扩库。
 
-The Global contract remains the single owner of country categories and the
-China-first quality adjustment: finish existing country candidates and continue
-excellent, regional, specialist and niche entities operating in China with global
-references. Do not resurrect the superseded equal-country50+50 expansion quota.
-Registry counts and four representative jobs are not full collection coverage.
+当前主体范围是现有目录中有依据确认正在中国境内经营的商业主体和品牌主体，包含在境内实际经营的国际品牌；不以国籍或名称判断，不做全球主体扩库。设置 → 主体目录统一管理添加、移除和重新添加，新增也须符合境内经营范围；证据不足的登记显示待核，不进入已确认的活动目录。目录移除停止该主体的新任务使用及关联监测，历史资料、报告、行动和版本仍按原权限保留。
+
+默认按实际相关时间由近到远呈现，提供近一周、近一个月、近半年、近一年及自定义范围；明确用户日期优先。事件发生时间、原文发布时间、采集时间分列，不互相冒充；日期未知单列，历史类比与当前事件时间线分区。
+
+Existing platform adapters remain available as targeted source capabilities. No task must run every platform or exhaust a country/global list. Discovery and tracking reuse one runtime and explicit scope; tracking windows become scheduled only after the user's monitoring choice. Source rights, native pagination, identity, deduplication, interruption and recovery are retained.
 
 Use the existing SYSTEM acquisition_plan owner. Current name/alias enumeration
 alone does not implement the complete business query. Bind each derived query
@@ -652,7 +644,13 @@ Until canonical DB override convergence is complete, isolated test / staging exe
 
 ## 15. Acceptance Dataset
 
-The first full production acceptance dataset is the 60-episode `凉子访谈录` study:
+The 60-episode `凉子访谈录` study is the concrete input dataset for this full
+production learning and performance-collection acceptance chain below. Supply
+it through existing user input and Source/Evidence/Canonical when that specific
+acceptance is run; it is not bundled or preloaded into a fresh business database
+and is not required for application startup or unrelated normal work. If it is
+unavailable, this acceptance remains `NOT_RUN`/open; do not fabricate records or
+treat an empty database as a pass.
 
 ```text
 20 breakout

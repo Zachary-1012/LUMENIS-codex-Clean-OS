@@ -566,7 +566,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('资料库'), findsOneWidget);
-      expect(find.text('资料空间'), findsOneWidget);
+      expect(find.bySemanticsLabel('资料空间'), findsOneWidget);
       expect(find.text('已核实的市场信号'), findsWidgets);
       expect(find.text('来源链路'), findsOneWidget);
       expect(find.byType(InteractiveViewer), findsOneWidget);
@@ -588,7 +588,7 @@ void main() {
 
       await tester.binding.setSurfaceSize(const Size(390, 844));
       await tester.pumpAndSettle();
-      expect(find.text('检索资料'), findsOneWidget);
+      expect(find.byKey(const Key('sh02-search')), findsOneWidget);
       expect(find.text('来源链路'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
@@ -911,7 +911,7 @@ void main() {
 
     expect(find.text('자료실'), findsOneWidget);
     expect(find.text('공간'), findsOneWidget);
-    expect(find.text('자료 공간'), findsOneWidget);
+    expect(find.bySemanticsLabel('자료 공간'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

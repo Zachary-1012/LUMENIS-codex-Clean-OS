@@ -10,7 +10,13 @@ from flask import Flask
 import pytest
 
 from agent_capability.formation import implementation_identity
-from lumenis.system.ai_gateway.owned_service import OwnedModelAdmissionRequest
+from lumenis.system.ai_gateway.owned_service import (
+    OwnedModelAdmissionRequest,
+    OwnedPretrainedInferenceAdmissionRequest,
+    OwnedServiceBlocked,
+    pretrained_inference_manifest_sha256,
+    validate_pretrained_inference_admission_request,
+)
 from lumenis.system.security import owned_model_admission as admission
 from lumenis.system.security import permission as p
 
@@ -126,6 +132,54 @@ def _request(**changes):
     return OwnedModelAdmissionRequest(**values)
 
 
+def _pretrained_request(**changes):
+    reviewer = changes.pop("_review_validator", _review_true)
+    runtime_packages = (
+        ("safetensors", "0.4.5"), ("tokenizers", "0.21.1"),
+        ("torch", "2.5.1+cpu"), ("transformers", "4.49.0"),
+    )
+    package_lock = hashlib.sha256(json.dumps(
+        [list(item) for item in runtime_packages], sort_keys=True,
+        separators=(",", ":"), ensure_ascii=False, allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    values = {
+        "schema_version": 2, "artifact_kind": "PRETRAINED_INFERENCE", "action": "admit",
+        "domain_id": "cth", "scopes": ("GLOBAL / ALL",),
+        "model_id": "sample-org/sample-model", "model_revision": "a" * 40,
+        "source_repository": "https://huggingface.co/sample-org/sample-model",
+        "license_id": "Apache-2.0", "license_text_sha256": "1" * 64,
+        "usage_policy_sha256": "2" * 64, "model_format": "transformers_safetensors",
+        "manifest_sha256": "0" * 64,
+        "artifact_files": (
+            ("chat_template.jinja", 8, "3" * 64),
+            ("config.json", 10, "4" * 64),
+            ("model-00001-of-00001.safetensors", 20, "5" * 64),
+            ("tokenizer.json", 30, "6" * 64),
+        ),
+        "weight_files": ("model-00001-of-00001.safetensors",),
+        "tokenizer_file": "tokenizer.json", "tokenizer_sha256": "6" * 64,
+        "chat_template_file": "chat_template.jinja", "chat_template_sha256": "3" * 64,
+        "quantization_format": "none", "quantization_parameters_sha256": None,
+        "conversion_recipe": None, "conversion_sha256": None,
+        "runtime_engine": "transformers-cpu", "runtime_version": "4.49.0",
+        "runtime_build_sha256": "7" * 64, "runtime_packages": runtime_packages,
+        "runtime_package_lock_sha256": package_lock,
+        "evaluation_sha256": "8" * 64, "quality_review_sha256": "9" * 64,
+        "source_use_sha256": "a" * 64, "source_use_version": "source-use-v1",
+        "evaluation_ref": "evaluation:fixture", "quality_review_ref": "review:fixture",
+        "runtime_sha256": "b" * 64, "executor_sha256": "c" * 64,
+        "review_validator_sha256": implementation_identity(reviewer), "source_validator_sha256": "e" * 64,
+        "allowed_operations": ("inference_generate",),
+        "context_window_tokens": 4096, "output_token_limit": 512,
+        "cpu_threads": 2, "memory_limit_bytes": 4 * 1024**3,
+        "generation_timeout_seconds": 120, "max_concurrent_requests": 1,
+        "prior_binding_sha256": None,
+    }
+    values.update(changes)
+    request = OwnedPretrainedInferenceAdmissionRequest(**values)
+    return replace(request, manifest_sha256=pretrained_inference_manifest_sha256(request))
+
+
 def _gate(monkeypatch):
     gate = p.PermissionGate(enabled_permissions={p.PermissionLevel.COMMIT})
     monkeypatch.setattr(p, "get_permission_gate", lambda: gate)
@@ -170,6 +224,83 @@ def test_runtime_admission_requires_exact_manual_approval_and_redacts_token(
     assert token not in repr(decision.to_dict())
     assert verifier.public_identity["request_sha256"] == decision.request_sha256
     assert verifier.public_identity["resource"] == verifier.resource
+
+
+def test_v2_pretrained_inference_uses_exact_permission_and_is_denied_without_approval(
+    scope_db, monkeypatch,
+):
+    _grant_scope(scope_db)
+    gate = _gate(monkeypatch)
+    request = _pretrained_request()
+    verifier = _verifier(gate, request)
+
+    assert verifier.resource.startswith("owned_model_admission:v2:")
+    decision = verifier.recheck()
+
+    assert decision.allowed is False
+    assert decision.code == "EXACT_RUNTIME_APPROVAL_REQUIRED"
+    assert decision.resource == verifier.resource
+    assert verifier.public_identity["artifact_kind"] == "PRETRAINED_INFERENCE"
+    assert "train_sha256" not in verifier.public_identity["request"]
+    assert "adapter_sha256" not in verifier.public_identity["request"]
+
+
+def test_v2_pretrained_inference_requires_and_accepts_exact_runtime_approval(scope_db, monkeypatch):
+    _grant_scope(scope_db)
+    gate = _gate(monkeypatch)
+    verifier = _verifier(gate, _pretrained_request())
+
+    token = _approve(gate, verifier)
+    decision = verifier.recheck()
+
+    assert decision.allowed is True
+    assert decision.code == "EXACT_RUNTIME_APPROVAL_VERIFIED"
+    assert decision.approval_token_sha256 == hashlib.sha256(token.encode()).hexdigest()
+    assert token not in repr(decision.to_dict())
+
+
+def test_v2_pretrained_manifest_hash_mismatch_and_forged_request_type_are_rejected(
+    scope_db, monkeypatch,
+):
+    _grant_scope(scope_db)
+    gate = _gate(monkeypatch)
+    request = _pretrained_request()
+    with pytest.raises(Exception, match="PRETRAINED_MODEL_MANIFEST_HASH_MISMATCH"):
+        admission.owned_model_admission_resource(
+            replace(request, manifest_sha256="f" * 64), actor_id=1,
+            domain_id="cth", context=_context(),
+        )
+
+    class ForgedPretrainedRequest(OwnedPretrainedInferenceAdmissionRequest):
+        pass
+
+    forged = object.__new__(ForgedPretrainedRequest)
+    with pytest.raises(ValueError, match="canonical owned model admission request"):
+        admission.make_owned_model_admission_verifier(
+            gate, forged, actor_id=1, domain_id="cth", context=_context(),
+            review_validator=_review_true,
+        )
+
+
+@pytest.mark.parametrize("change", [
+    {"schema_version": True},
+    {"runtime_packages": (("safetensors",),)},
+    {"weight_files": ([],)},
+    {"tokenizer_file": []},
+])
+def test_v2_malformed_resource_shapes_fail_closed_with_stable_code(change):
+    request = _pretrained_request(**change)
+
+    with pytest.raises(OwnedServiceBlocked):
+        validate_pretrained_inference_admission_request(request)
+
+
+def test_v2_request_rejects_unexpected_instance_fields():
+    request = _pretrained_request()
+    object.__setattr__(request, "private_path", "C:\\secret\\weights")
+
+    with pytest.raises(OwnedServiceBlocked, match="PRETRAINED_ADMISSION_SCHEMA_INVALID"):
+        validate_pretrained_inference_admission_request(request)
 
 
 def test_model_train_or_wildcard_approval_cannot_admit_a_runtime_binding(
@@ -487,6 +618,24 @@ def test_shared_model_admission_has_independent_scope_exact_approval_and_revocat
     with sqlite3.connect(scope_db) as con:
         con.execute("DELETE FROM v4_member_authorizations WHERE product_id='SHARED'")
     assert verifier.recheck().code == 'ACTOR_SCOPE_DENIED'
+
+
+def test_v2_pretrained_shared_scope_uses_existing_exact_permission_gate(scope_db, monkeypatch):
+    scope_name = "shared_workspace:v1"
+    context = {"scope_descriptors": {scope_name: {"scope_kind": "shared_workspace", "version": 1}}}
+    request = _pretrained_request(domain_id="shared", scopes=(scope_name,))
+    gate = _gate(monkeypatch)
+    with sqlite3.connect(scope_db) as conn:
+        conn.execute("INSERT INTO v4_member_authorizations(user_id,product_id,module,action) VALUES(1,'SHARED','owned_model_admission','write')")
+    verifier = admission.make_owned_model_admission_verifier(
+        gate, request, actor_id=1, domain_id="shared", context=context,
+        review_validator=_review_true,
+    )
+
+    assert verifier.resource.startswith("owned_model_admission:v2:")
+    assert verifier.recheck().code == "EXACT_RUNTIME_APPROVAL_REQUIRED"
+    _approve(gate, verifier)
+    assert verifier.recheck().allowed is True
 
 
 @pytest.mark.parametrize('scopes,descriptor', [

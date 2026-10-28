@@ -10,10 +10,9 @@ transaction owner. No publishing or parallel data store is introduced.
 """
 from __future__ import annotations
 
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 import ipaddress
-import sqlite3
 
 import threading
 import time
@@ -22,6 +21,7 @@ import hashlib
 import json
 import os
 import getpass
+import logging
 import re
 import unicodedata
 from datetime import datetime, timedelta
@@ -31,7 +31,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .config import PLATFORM_CAPABILITIES
 from .registry import get_adapter
-from .routing import RouteIdentityMismatch, bind_collection_route
+from .routing import RouteIdentityMismatch, bind_collection_route, normalize_provider_selection
 from .safe_collection import CollectionHygienePolicy, RateGovernor
 
 
@@ -48,6 +48,7 @@ MAX_XHS_SCROLL = 20
 MIN_INTERVAL_SECONDS = 3.0
 
 _DEFAULT_GET_ADAPTER = get_adapter
+logger = logging.getLogger(__name__)
 _runtime_adapters: Dict[str, Any] = {}
 _runtime_adapter_lock = threading.RLock()
 _evidence_schema_paths: set[str] = set()
@@ -102,7 +103,7 @@ def _observed_raw_count(collection: CollectionResult | None, returned_count: int
 
 def _status_message(status: str, *, detail: str = "") -> str:
     messages = {
-        "SUCCESS": "已完成只读采集并写入 CTH 证据链",
+        "SUCCESS": "已取得并保存资料",
         "NO_NEW_DATA": "接口可用，本次没有新内容",
         "SESSION_EXPIRED": "登录态未通过，需要人工更新本地登录态",
         "RISK_WARNING": "出现平台风险信号，已停止扩大请求",
@@ -118,6 +119,7 @@ def _status_message(status: str, *, detail: str = "") -> str:
         "CANONICAL_SYNC_FAILED": "原始记录已保留，但 Canonical Data 同步未完成",
         "SCOPE_REVIEW_REQUIRED": "内容与所选主体的关联尚待核对，未归入该主体",
         "PARTIAL_SCOPE_REVIEW_REQUIRED": "已保存确认关联的内容，其余内容仍待核对",
+        "PUBLICATION_TIME_REVIEW_REQUIRED": "部分内容缺少可核实的原生发布时间，未纳入本次时间范围结果",
         "EVIDENCE_WRITE_FAILED": "Evidence 未能持久化，本次采集不标记为完成",
         "COLLECT_ERROR": "采集引擎未完成本次请求",
         "UNAVAILABLE": "采集引擎未就绪",
@@ -282,12 +284,19 @@ def _adapter_health(platform: str, **source_kwargs: Any) -> Dict[str, Any]:
                 "healthcheck_scope", "session_state", "endpoint_configured",
                 "requires_auth", "requires_authorization", "cookies_used",
                 "availability", "worker_binding_registered", "login_and_collection_verified",
+                "network_attempted", "authorization_verification",
+                "provider_mode", "public_transport",
             )
             if key in metadata
         }
+        configuration_only = (
+            metadata.get('healthcheck_scope') in {'configuration_only', 'public_endpoint_configuration'}
+            or metadata.get('network_attempted') is False
+            or metadata.get('authorization_verification') == 'NOT_VERIFIED'
+        )
         return {
             "status": status,
-            "ready": status == "SUCCESS",
+            "ready": status == "SUCCESS" and not configuration_only,
             "can_attempt": status in {"SUCCESS", "NEED_VERIFY"},
             "message": _status_message(status),
             "metadata": safe_metadata,
@@ -321,7 +330,7 @@ def _platform_capability_states(platform, capability):
 
 
 def get_collection_surface() -> Dict[str, Any]:
-    """Return the product-facing CTH collection capability map.
+    """Return the SYSTEM collection capability map for its existing consumers.
 
     This is a local health/read-only call.  It does not start a browser or make
     an external request.
@@ -331,28 +340,28 @@ def get_collection_surface() -> Dict[str, Any]:
         cap = PLATFORM_CAPABILITIES["xhs" if platform == "xiaohongshu" else platform]
         health = _adapter_health(platform)
         last_run = _last_run(platform)
-        health_scope = (health.get("metadata") or {}).get("healthcheck_scope")
-        display_status = (
-            last_run["state"]
-            if health["status"] == "SUCCESS" and last_run and last_run.get("state")
-            else (
-                "CONFIGURED"
-                if health["status"] == "SUCCESS"
-                and health_scope in {"configuration_only", "public_endpoint_configuration"}
-                else ("READY" if health["status"] == "SUCCESS" else health["status"])
-            )
-        )
+        metadata = health.get("metadata") or {}
+        health_scope = metadata.get("healthcheck_scope")
+        display_status = ("CONFIGURED" if health["status"] == "SUCCESS"
+            and (health_scope in {"configuration_only", "public_endpoint_configuration"}
+                 or metadata.get("network_attempted") is False
+                 or metadata.get("authorization_verification") == "NOT_VERIFIED")
+            else ("READY" if health["status"] == "SUCCESS" else health["status"]))
         platforms.append({
             "platform": platform,
             "name": PLATFORM_NAMES[platform],
             "implementation_state": cap["implementation_state"],
             "source_kind": cap["source_kind"],
-            "product_owner": "CTH",
+            "product_owner": "SYSTEM",
             "consumer_views": ["CTH", "BMP"],
             "manual_collection_enabled": bool(cap.get("manual_collection_enabled")),
             "scheduled_collection_enabled": bool(cap.get("enabled")),
             "collection_mode": "human_triggered_read_only",
             'capabilities':_platform_capability_states(platform,cap),
+            'provider_modes':list((cap.get('provider_modes') or {}).keys()),
+            'public_transports':list(cap.get('public_transports') or []),
+            'default_provider_mode':cap.get('default_provider_mode'),
+            'default_public_transport':cap.get('default_public_transport'),
             # Local readiness and the last real run are separate facts.  A
             # readable cookie file must not overwrite a verified session
             # failure or collection error in the product surface.
@@ -361,7 +370,7 @@ def get_collection_surface() -> Dict[str, Any]:
             "last_run": last_run,
             "external_write": False,
             "publish_authority": "human_manual_only",
-            "truth_path": "external_data -> evidence -> canonical_data -> CTH",
+            "truth_path": "external_data -> evidence -> canonical_data -> authorized consumers",
         })
 
     primary_runtime = _xhs_primary_runtime_status()
@@ -372,15 +381,14 @@ def get_collection_surface() -> Dict[str, Any]:
         "platform": "xiaohongshu",
         "name": "小红书（香港账号）",
         "region": "hk_international",
-        "product_owner": "CTH",
+        "product_owner": "SYSTEM",
         "consumer_views": ["CTH", "BMP"],
         "implementation": "existing_primary_collector",
         "parallel_collector_added": False,
         "manual_collection_enabled": True,
         "form_selectable": True,
         "entry_label": "搜索、读取原帖与已取得的评论",
-        "capabilities": {'search': 'IMPLEMENTED', 'detail': 'IMPLEMENTED',
-                         'comments': 'LOADED_OBSERVATIONS', 'native_comment_pagination': 'NOT_VERIFIED'},
+        "capabilities": _platform_capability_states('xiaohongshu', PLATFORM_CAPABILITIES['xhs']),
         "status": primary_status,
         "status_source": "registered_adapter_health",
         "health": primary_health,
@@ -409,6 +417,7 @@ def get_collection_surface() -> Dict[str, Any]:
         "external_write": False,
         "product_will_not_publish": True,
         "generated_at": _now(),
+        "request_limits": {"max_page_items": MAX_RESULTS, "default_page_items": MAX_RESULTS},
     }
 
 
@@ -429,14 +438,6 @@ def _validate_request(platform: str, keyword: str, max_results: int, *, capabili
     if limit < 1 or limit > MAX_RESULTS:
         raise ValueError(f"max_results 必须在 1-{MAX_RESULTS} 之间")
     return canonical, query, limit
-
-
-def _blocked_youtube_atom_feed(platform: str, source_url: str) -> bool:
-    if platform != "web_atom":
-        return False
-    parts = urlsplit(source_url)
-    host = (parts.hostname or "").lower()
-    return (host == "youtube.com" or host.endswith(".youtube.com")) and parts.path == "/feeds/videos.xml"
 
 
 def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_at: str) -> Dict[str, Any]:
@@ -567,6 +568,13 @@ def _native_record(item: Dict[str, Any], platform: str, keyword: str, captured_a
                                          ("comment_count", "comments"),
                                          ("share_count", "shares")):
             fill_native(native_field, item.get(item_field))
+    elif platform in {'naver','daum'}:
+        fill_native(spec.content_id,content_id)
+        for field in ('likes','comments','collects','shares','views'):
+            fill_native(field,item.get(field))
+            record.setdefault(field,None)
+        if not publish_date:
+            record['publish_datetime'] = None
     elif platform == "public_http":
         fill_native("published_at", publish_date)
     elif platform == "web_rss":
@@ -724,10 +732,6 @@ def _prelaunch_public_import_resource(
         platform not in {"public_http", "web_atom"}
         or parts.scheme != "https"
         or not host
-        or host == "youtube.com"
-        or host.endswith(".youtube.com")
-        or host == "youtu.be"
-        or host.endswith(".youtu.be")
     ):
         raise ValueError("public HTTPS source required")
     entity_id = exact["subject_id"] or exact["brand_focus_id"]
@@ -1111,7 +1115,7 @@ def _source_item_views(connection, records, source_ids, platform, evidence_id, s
             'author_name':native.get('author_nickname') or record.get('author_nickname') or native.get('author_name') or None,
             'published_at':native.get('published_at') or None, 'captured_at':record.get('captured_at') or None,
             'body_state':body_state,
-            'original_body_available':False if body_state in {'FEED_OR_INDEX_EXCERPT','SEARCH_EXCERPT','TRUNCATED_PLATFORM_TEXT'}
+            'original_body_available':False if body_state in {'FEED_OR_INDEX_EXCERPT','SEARCH_EXCERPT','TRUNCATED_PLATFORM_TEXT','EMPTY'}
                 else True if body_state in {'PLATFORM_BODY','NATIVE_LONG_TEXT'} else None,
             'metrics':metrics, 'metric_states':{name:'OBSERVED' if value is not None else 'NOT_REPORTED'
                 for name,value in metrics.items()}, 'media':media,
@@ -1188,7 +1192,159 @@ def _current_inspectable_source_rows(connection, source_ids, *, actor, scope):
     return visible
 
 
-def read_collected_items(evidence_ref, *, actor, scope):
+def _publication_review_candidate_views(evidence_ref, evidence, inputs, source_scope, *, selected_source_id=None):
+    """Project time-rejected originals separately from admitted Source rows.
+
+    Review rows are joined only when the signed native ID/URL and the preserved
+    observation resolve uniquely. Ambiguous or missing joins stay unprojected;
+    they are never promoted to Canonical or assigned a guessed date.
+    """
+    unassigned = inputs.get('unassigned_review_candidates') or []
+    if not isinstance(unassigned, list):
+        return [], 'UNAVAILABLE', None, None
+    try:
+        collection_metadata = json.loads(evidence.get('collection_metadata') or '{}')
+    except (TypeError, ValueError):
+        return [], 'UNAVAILABLE', len(unassigned), None
+    if not isinstance(collection_metadata, dict):
+        return [], 'UNAVAILABLE', len(unassigned), None
+    publication_window = collection_metadata.get('requested_publication_window')
+    if publication_window is None:
+        return [], 'NOT_REQUESTED' if not unassigned else 'PARTIAL', len(unassigned), None
+    if not isinstance(publication_window, dict):
+        return [], 'UNAVAILABLE', len(unassigned), None
+    reviews = publication_window.get('reviews')
+    observations = inputs.get('source_observation_records') or []
+    platform = inputs.get('platform')
+    if not isinstance(reviews, list) or not isinstance(observations, list) or not isinstance(platform, str):
+        return [], 'UNAVAILABLE', len(unassigned), publication_window
+
+    from .platform_naming import to_canonical_record
+    unassigned_count = len(unassigned)
+    candidate_records = unassigned
+    if not candidate_records:
+        # Older Evidence receipts kept a rejected original in the signed
+        # observation list and the matching time review in collection metadata,
+        # but did not populate unassigned_review_candidates. Reconstruct only
+        # those review-backed, non-admitted observations; never treat the whole
+        # observation list as a pending result.
+        source_ids = {str(value) for value in (inputs.get('source_ids') or [])}
+        review_entries = []
+        review_keys = set()
+        for review in reviews:
+            if not isinstance(review, dict) or not str(review.get('status') or '').startswith('REVIEW_REQUIRED_'):
+                continue
+            review_id = review.get('platform_content_id')
+            review_id = str(review_id) if review_id not in (None, '') else None
+            review_url = review.get('source_url')
+            review_url = (_credential_free_observations(review_url)
+                          if isinstance(review_url, str) else None)
+            if review_id is not None and review_id in source_ids:
+                continue
+            key = ('id', review_id) if review_id is not None else ('url', review_url)
+            if key[1] is not None and key not in review_keys:
+                review_keys.add(key)
+                review_entries.append((review_id, review_url))
+        unassigned_count = len(review_entries)
+        candidate_records = []
+        for record in observations:
+            if not isinstance(record, dict):
+                continue
+            try:
+                record_id = to_canonical_record(record, platform).get('content_id')
+            except (TypeError, ValueError):
+                record_id = None
+            record_id = str(record_id) if record_id not in (None, '') else None
+            if record_id is not None and record_id in source_ids:
+                continue
+            record_url = record.get('url')
+            record_url = (_credential_free_observations(record_url)
+                          if isinstance(record_url, str) else None)
+            if any((review_id is not None and record_id == review_id
+                    and (review_url is None or record_url == review_url))
+                   or (review_id is None and review_url is not None and record_url == review_url)
+                   for review_id, review_url in review_entries):
+                candidate_records.append(record)
+    indexed_candidates = []
+    for candidate in candidate_records:
+        if not isinstance(candidate, dict):
+            continue
+        try:
+            canonical_id = to_canonical_record(candidate, platform).get('content_id')
+        except (TypeError, ValueError):
+            canonical_id = None
+        candidate_id = str(canonical_id) if canonical_id not in (None, '') else None
+        candidate_url = candidate.get('url')
+        candidate_url = _credential_free_observations(candidate_url) if isinstance(candidate_url, str) else None
+        positions = [index for index, observation in enumerate(observations)
+                     if isinstance(observation, dict) and observation == candidate]
+        if len(positions) != 1:
+            continue
+        indexed_candidates.append((candidate, candidate_id, candidate_url, positions[0]))
+
+    projected = []
+    used_positions = set()
+    for review in reviews:
+        if not isinstance(review, dict) or not str(review.get('status') or '').startswith('REVIEW_REQUIRED_'):
+            continue
+        review_id = review.get('platform_content_id')
+        review_id = str(review_id) if review_id not in (None, '') else None
+        review_url = review.get('source_url')
+        review_url = _credential_free_observations(review_url) if isinstance(review_url, str) else None
+        matches = [entry for entry in indexed_candidates
+                   if ((review_id is not None and entry[1] == review_id)
+                       or (review_id is None and review_url is not None and entry[2] == review_url))
+                   and (review_url is None or entry[2] == review_url)]
+        if len(matches) != 1:
+            continue
+        record, candidate_id, source_url, observation_index = matches[0]
+        if observation_index in used_positions:
+            continue
+        used_positions.add(observation_index)
+        body = record.get('content') if isinstance(record.get('content'), str) else None
+        status = review.get('status')
+        body_state = ('FEED_OR_INDEX_EXCERPT' if platform in {'web_rss', 'web_atom', 'sitemap'}
+                      else record.get('body_state') or 'SOURCE_OBSERVED_TEXT')
+        candidate = {
+            'candidate_id': candidate_id,
+            'platform_content_id': candidate_id,
+            'platform': platform,
+            'review_kind': 'PUBLICATION_TIME',
+            'review_status': status,
+            'review_reason': review.get('reason'),
+            'title': record.get('title') or None,
+            'body_preview': body[:1000] if body else None,
+            'body_character_count': len(body) if body is not None else None,
+            'body_state': body_state,
+            'original_body_available': False if body_state in {
+                'FEED_OR_INDEX_EXCERPT', 'SEARCH_EXCERPT', 'TRUNCATED_PLATFORM_TEXT', 'EMPTY'}
+                else True if body_state in {'PLATFORM_BODY', 'NATIVE_LONG_TEXT'} else None,
+            'source_url': source_url,
+            'captured_at': record.get('captured_at'),
+            'native_publication_literal': review.get('native_publication_literal'),
+            'native_publication_normalized': review.get('native_publication_normalized'),
+            'publication_time_state': ('UNKNOWN' if status == 'REVIEW_REQUIRED_NATIVE_PUBLICATION_TIME_UNKNOWN'
+                                       else 'UNVERIFIED'),
+            'within_publication_window': None,
+            'publication_since': review.get('publication_since'),
+            'publication_until': review.get('publication_until'),
+            'source_scope': dict(source_scope),
+            'canonical_admission': 'NOT_ADMITTED',
+            'evidence_ref': evidence_ref,
+            'source_observation_ref': (
+                f'{evidence_ref}:inputs.source_observation_records[{observation_index}]'),
+            'detail_available': candidate_id is not None and body is not None,
+            'rights_state': 'CHECK_SOURCE_USE_PER_ACTION',
+        }
+        if candidate_id == selected_source_id and body is not None:
+            candidate['body'] = body
+        projected.append(candidate)
+
+    state = 'COMPLETE' if len(projected) == unassigned_count else 'PARTIAL'
+    return projected, state, unassigned_count, publication_window
+
+
+def read_collected_items(evidence_ref, *, actor, scope, source_id=None):
     """Reopen saved native results through current scope and Canonical proofs."""
     import database as db
     from lumenis.shared.evidence.store import classify_evidence_integrity
@@ -1205,6 +1361,15 @@ def read_collected_items(evidence_ref, *, actor, scope):
         if evidence.get('feature_id') == 'COLLECTOR_NATIVE_AUTHORS':
             return read_collected_authors(evidence_ref,actor=actor,scope=scope)
         inputs = json.loads(evidence['inputs_json'])
+        try:
+            collection_metadata = json.loads(evidence.get('collection_metadata') or '{}')
+        except (TypeError, ValueError):
+            collection_metadata = {}
+        collection_metadata = collection_metadata if isinstance(collection_metadata, dict) else {}
+        from .public_source import safe_public_source_failure_fields
+        public_failure_fields = safe_public_source_failure_fields(collection_metadata)
+        limit_validation = collection_metadata.get('result_limit_validation')
+        limit_validation = limit_validation if isinstance(limit_validation, dict) else {}
         signed_scope = inputs.get('_lumenis_scope') or {}
         source_domain = 'bmp' if signed_scope.get('domain_id') == 'zbmp' else signed_scope.get('domain_id')
         source_scope = {'domain_id':source_domain, 'global_scope':signed_scope.get('global'),
@@ -1216,13 +1381,55 @@ def read_collected_items(evidence_ref, *, actor, scope):
             raise PermissionError('COLLECTION_RESULT_SCOPE_CHANGED')
         _business_batch_binding(actor, {domain: source_scope}, 'human', None)
         ids = inputs.get('source_ids') or []
-        visible = {str(item['source_id']) for item in _current_inspectable_source_rows(connection,ids,actor=actor,scope=scope)}
+        current_rows = _current_inspectable_source_rows(connection,ids,actor=actor,scope=scope)
+        visible = {str(item['source_id']) for item in current_rows}
         if set(map(str, ids)) != visible:
             raise PermissionError('COLLECTION_RESULT_SCOPE_CHANGED')
+        observations = inputs.get('source_observation_records') or []
+        items = _source_item_views(connection, observations, ids, inputs['platform'], evidence['id'], {'domain_id':domain})
+        review_candidates, review_candidates_state, unassigned_count, publication_window = (
+            _publication_review_candidate_views(evidence_ref, evidence, inputs, source_scope,
+                                                selected_source_id=source_id))
+        from .platform_naming import to_canonical_record
+        originals = {str(to_canonical_record(value, inputs['platform']).get('content_id') or ''): value
+                     for value in observations}
+        current_by_id = {str(row['source_id']): row for row in current_rows}
+        for item in items:
+            current = current_by_id[item['source_id']]
+            item['source_version_state'] = ('CURRENT_SOURCE_VERSION' if
+                str(current.get('evidence_ref')) == str(evidence['id'])
+                else 'RECORDED_SOURCE_VERSION')
+        if source_id is not None:
+            if not isinstance(source_id, str):
+                raise ValueError('COLLECTION_SOURCE_REFERENCE_INVALID')
+            if source_id in visible:
+                items = [item for item in items if item['source_id'] == source_id]
+                review_candidates = []
+                review_candidates_state = 'NOT_SELECTED'
+                for item in items:
+                    original = originals[source_id]
+                    item['body'] = original.get('content') if isinstance(original.get('content'), str) else None
+            else:
+                selected = [item for item in review_candidates if item.get('candidate_id') == source_id]
+                if len(selected) != 1:
+                    raise ValueError('COLLECTION_SOURCE_REFERENCE_INVALID')
+                items = []
+                review_candidates = selected
+                review_candidates_state = 'SELECTED'
         return {'ok':evidence.get('result') == 'PASS', 'status':evidence.get('actual'),
             'evidence_ref':evidence_ref, 'network_attempted':False,
-            'items':_source_item_views(connection, inputs.get('source_observation_records') or [], ids,
-                                      inputs['platform'], evidence['id'], {'domain_id':domain}),
+            'error_type':collection_metadata.get('error_type'),
+            **public_failure_fields,
+            'requested_result_limit': (limit_validation.get('requested_limit')
+                if type(limit_validation.get('requested_limit')) is int else None),
+            'provider_returned_count': (limit_validation.get('provider_returned_count')
+                if type(limit_validation.get('provider_returned_count')) is int else None),
+            'items':items,
+            'review_candidates':review_candidates,
+            'review_candidates_state':review_candidates_state,
+            'unassigned_review_candidate_count':unassigned_count,
+            'requested_publication_window':publication_window,
+            'scope':source_scope,
             'discovery_observations':inputs.get('discovery_observation_records') or [],
             'native_pagination':inputs.get('native_pagination'), 'result_freshness':'SAVED_SOURCE_RESULT'}
 
@@ -1716,6 +1923,7 @@ def _write_evidence(platform: str, keyword: str, result: Dict[str, Any], *, star
 
 def _manual_collection_approval_resource(
     scope, platform, keyword, max_results, receipt, *, max_scroll=None, capability="search",
+    provider_mode=None, public_transport=None, publication_since=None, publication_until=None,
 ):
     """Bind approval to the server identity and the exact bounded source request."""
     binding = {
@@ -1728,12 +1936,118 @@ def _manual_collection_approval_resource(
     }
     if max_scroll is not None:
         binding["max_scroll"] = max_scroll
+    if provider_mode is not None:
+        binding['provider_mode'] = provider_mode
+    if public_transport is not None:
+        binding['public_transport'] = public_transport
+    if publication_since is not None:
+        binding['publication_since'] = publication_since
+    if publication_until is not None:
+        binding['publication_until'] = publication_until
     encoded = json.dumps(binding, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return "collector-source-import:v2:" + hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+_SUBJECT_DIRECTORY_DENIALS = {
+    "SUBJECT_DIRECTORY_UNAVAILABLE",
+    "SUBJECT_NOT_IN_DIRECTORY",
+    "SUBJECT_REMOVED_FROM_DIRECTORY",
+    "SUBJECT_CN_OPERATION_NOT_CONFIRMED",
+    "SUBJECT_SCOPE_IDENTITY_MISMATCH",
+}
+
+
+def _subject_directory_decision(actor, scope):
+    """Resolve one exact Subject/BrandFocus against its actor's current CN set.
+
+    The registry and its Evidence-backed projection remain authoritative; the
+    SavedWork preference only records removals. A GLOBAL request without an
+    exact entity identity is left as unassigned discovery and is not guessed
+    from its keyword.
+    """
+    if not isinstance(scope, Mapping):
+        return {"allowed": False, "status": "SUBJECT_SCOPE_IDENTITY_MISMATCH"}
+    domain = str(scope.get("domain_id") or "").strip().lower()
+    if domain == "zbmp":
+        domain = "bmp"
+    if domain not in {"cth", "bmp"}:
+        return {"allowed": False, "status": "SUBJECT_SCOPE_IDENTITY_MISMATCH"}
+    subject_id = scope.get("subject_id")
+    brand_focus_id = scope.get("brand_focus_id")
+    if subject_id is None and brand_focus_id is None:
+        return {"allowed": True, "status": "UNASSIGNED_DISCOVERY"}
+    if (subject_id is not None and (not isinstance(subject_id, str) or not subject_id.strip())
+            or brand_focus_id is not None and (not isinstance(brand_focus_id, str) or not brand_focus_id.strip())):
+        return {"allowed": False, "status": "SUBJECT_SCOPE_IDENTITY_MISMATCH"}
+
+    try:
+        import subject_registry as registry
+
+        domain_name = domain.upper()
+        rows = registry.list_subjects(domain_name)
+        matches = [row for row in rows
+            if (subject_id is None or row.get("subject_id") == subject_id)
+            and (brand_focus_id is None or row.get("brand_focus_id") == brand_focus_id)]
+        if len(matches) != 1:
+            # Separate selectors must resolve to the same single canonical row.
+            by_subject = [row for row in rows if row.get("subject_id") == subject_id] if subject_id else []
+            by_focus = [row for row in rows if row.get("brand_focus_id") == brand_focus_id] if brand_focus_id else []
+            if subject_id and brand_focus_id and by_subject and by_focus and by_subject[0] is not by_focus[0]:
+                return {"allowed": False, "status": "SUBJECT_SCOPE_IDENTITY_MISMATCH"}
+            return {"allowed": False, "status": "SUBJECT_NOT_IN_DIRECTORY"}
+        row = matches[0]
+        if row.get("status") not in {"configured", "active"}:
+            return {"allowed": False, "status": "SUBJECT_NOT_IN_DIRECTORY"}
+
+        projection = registry._country_subject_projection(domain_name, "CN", "OPERATES_IN")
+        evaluated_at = datetime.now().astimezone()
+        operations = {
+            item["subject_id"]: registry._china_operation_for_subject(
+                projection, item["subject_id"], evaluated_at=evaluated_at,
+            )
+            for item in rows
+        }
+        working_set = registry._subject_working_set_view(
+            domain_name, actor, rows, china_operations=operations,
+        )
+        if (working_set.get("state") != "READY"
+                or not isinstance(working_set.get("subject_ids"), list)):
+            return {"allowed": False, "status": "SUBJECT_DIRECTORY_UNAVAILABLE"}
+        canonical_id = row["subject_id"]
+        if canonical_id in working_set["subject_ids"]:
+            return {"allowed": True, "status": "IN_WORKING_SET", "subject_id": canonical_id}
+        if canonical_id in working_set.get("removed_subject_ids", []):
+            return {"allowed": False, "status": "SUBJECT_REMOVED_FROM_DIRECTORY",
+                    "subject_id": canonical_id}
+        return {"allowed": False, "status": "SUBJECT_CN_OPERATION_NOT_CONFIRMED",
+                "subject_id": canonical_id}
+    except Exception:
+        logger.exception("Collector subject directory admission unavailable")
+        return {"allowed": False, "status": "SUBJECT_DIRECTORY_UNAVAILABLE"}
+
+
+def _subject_directory_denial_result(decision, *, platform=None, keyword=None):
+    status = decision.get("status") or "SUBJECT_DIRECTORY_UNAVAILABLE"
+    recovery = {
+        "SUBJECT_DIRECTORY_UNAVAILABLE": "RETRY_AFTER_DIRECTORY_READBACK",
+        "SUBJECT_NOT_IN_DIRECTORY": "REVIEW_SUBJECT_DIRECTORY",
+        "SUBJECT_REMOVED_FROM_DIRECTORY": "ADD_SUBJECT_TO_DIRECTORY",
+        "SUBJECT_CN_OPERATION_NOT_CONFIRMED": "REVIEW_CN_OPERATION_EVIDENCE",
+        "SUBJECT_SCOPE_IDENTITY_MISMATCH": "RESELECT_SUBJECT",
+    }.get(status, "REVIEW_SUBJECT_DIRECTORY")
+    return {
+        "ok": False, "status": status, "reason_code": status,
+        "error_kind": status, "recovery_action": recovery,
+        "platform": platform, "keyword": keyword, "read_only": True,
+        "external_write": False, "network_attempted": False,
+        "persistence_attempted": False,
+    }
+
+
 def _manual_collection_admission(actor, scope, platform, keyword, max_results, *,
-                                 max_scroll=None, capability="search"):
+                                 max_scroll=None, capability="search",provider_mode=None,public_transport=None,
+                                 publication_since=None, publication_until=None,
+                                 enforce_subject_directory=True):
     """Resolve current source admission without authorizing an acquisition."""
     from lumenis.system.security import (
         LocalWorkspacePrincipal, check_actor_scope_permission,
@@ -1747,7 +2061,7 @@ def _manual_collection_admission(actor, scope, platform, keyword, max_results, *
             "read_only": True, "external_write": False, **extra,
         }
 
-    if capability not in {"search", "detail", "comments", "author", "author_posts"}:
+    if capability not in {"search", "detail", "comments", "author", "author_posts", "media"}:
         return denied("NOT_SUPPORTED", network_attempted=False, persistence_attempted=False)
     if max_scroll is not None:
         canonical_platform = str(platform or "").strip().lower()
@@ -1790,12 +2104,22 @@ def _manual_collection_admission(actor, scope, platform, keyword, max_results, *
             return denied("PERMISSION_UNAVAILABLE")
         if receipt.allowed is not True:
             return denied("SCOPE_UNAUTHORIZED")
+        if enforce_subject_directory:
+            directory = _subject_directory_decision(actor, exact)
+            if directory.get("allowed") is not True:
+                return None, _subject_directory_denial_result(
+                    directory, platform=platform, keyword=keyword,
+                )
+        selection = ({} if capability=='media' else normalize_provider_selection(platform,
+            provider_mode=provider_mode,public_transport=public_transport))
         resource = _manual_collection_approval_resource(
             exact, platform, keyword, max_results, receipt,
-            max_scroll=max_scroll, capability=capability,
+            max_scroll=max_scroll, capability=capability,**selection,
+            publication_since=publication_since, publication_until=publication_until,
         )
         return {"scope": exact, "approval_resource": resource,
                 "permission_keyword": keyword,
+                "provider_selection":selection,
                 "caller": (f"account:{receipt.actor_id}" if receipt.actor_id is not None
                            else receipt.principal_ref)}, None
     except Exception:
@@ -1803,11 +2127,15 @@ def _manual_collection_admission(actor, scope, platform, keyword, max_results, *
 
 
 def _manual_collection_guard(actor, scope, platform, keyword, max_results, *,
-                             max_scroll=None, capability="search"):
+                             max_scroll=None, capability="search",provider_mode=None,public_transport=None,
+                             publication_since=None, publication_until=None,
+                             enforce_subject_directory=True):
     """Check live Collector admission and separate import approval; never grant it."""
     from lumenis.system.security import OperationType, get_permission_gate
     admission, denial = _manual_collection_admission(actor, scope, platform, keyword, max_results,
-        max_scroll=max_scroll, capability=capability)
+        max_scroll=max_scroll, capability=capability,provider_mode=provider_mode,public_transport=public_transport,
+        publication_since=publication_since, publication_until=publication_until,
+        enforce_subject_directory=enforce_subject_directory)
     if denial is not None:
         return None, denial
     try:
@@ -1829,9 +2157,33 @@ def _manual_collection_guard(actor, scope, platform, keyword, max_results, *,
 
 def _manual_collection_request(*, actor, scope, capability="search", platform=None, keyword=None,
                                content_id=None, source_id=None, max_results=MAX_RESULTS,
-                               include_replies=False, author_id=None):
+                               include_replies=False, author_id=None, source_evidence_ref=None,
+                               source_fingerprint=None,provider_mode=None,public_transport=None,
+                               publication_since=None, publication_until=None):
     """Use the same source normalization for the preview, confirmation and run."""
-    if capability in {'author','author_posts'}:
+    if publication_since is not None or publication_until is not None:
+        if capability != "search":
+            raise ValueError("PUBLICATION_WINDOW_REQUIRES_SEARCH")
+        from ..acquisition_plan import _validate_publication_period
+        _validate_publication_period(publication_since, publication_until)
+    if capability == 'media':
+        from lumenis.shared.reporting.media_brief import prepare_collected_media
+        if (platform is not None or keyword is not None or content_id is not None or author_id is not None or include_replies
+                or provider_mode is not None or public_transport is not None):
+            raise ValueError('MEDIA_REQUIRES_A_SAVED_SOURCE')
+        prepared = prepare_collected_media(source_id, actor=actor, scope=scope,
+            source_evidence_ref=source_evidence_ref, source_fingerprint=source_fingerprint)
+        import database as db
+        with db.get_db() as connection:
+            parent = _comment_parent(connection, source_id, actor, scope)
+        platform, scope, max_results = parent['platform'], parent['scope'], 1
+        request = {'capability': 'media', 'platform': platform, 'source_id': source_id,
+            'source_evidence_ref': prepared['source_evidence_ref'],
+            'source_fingerprint': prepared['source_fingerprint'], 'max_results': 1}
+        keyword = json.dumps(request, sort_keys=True, ensure_ascii=False)
+    elif source_evidence_ref is not None or source_fingerprint is not None:
+        raise ValueError('MEDIA_FIELDS_REQUIRE_MEDIA_CAPABILITY')
+    elif capability in {'author','author_posts'}:
         if keyword is not None or content_id is not None or source_id is not None or include_replies is not False:
             raise ValueError('AUTHOR_REQUEST_REQUIRES_AN_EXACT_PROFILE')
         platform = 'xiaohongshu' if platform == 'xhs' else platform
@@ -1876,8 +2228,16 @@ def _manual_collection_request(*, actor, scope, capability="search", platform=No
         request = {"capability": capability, "platform": platform,
                    "content_id" if capability == "detail" else "keyword": keyword,
                    "max_results": max_results}
+    if publication_since is not None:
+        request["publication_since"] = publication_since
+    if publication_until is not None:
+        request["publication_until"] = publication_until
+    selection = ({} if capability=='media' else normalize_provider_selection(platform,
+        provider_mode=provider_mode,public_transport=public_transport))
+    request.update(selection)
     admission, denial = _manual_collection_admission(actor, scope, platform, keyword, max_results,
-                                                     capability=capability)
+        capability=capability,**selection, publication_since=publication_since,
+        publication_until=publication_until)
     return admission, denial, request
 
 
@@ -1910,9 +2270,17 @@ def confirm_collection_request(*, actor, scope, confirmed_resource, confirmed, *
     # No client token, claimed actor or approval flag is admitted as authority.
     gate.grant_approval(OperationType.DATA_IMPORT.value, duration_minutes=5,
                         resource=admission["approval_resource"], granted_by=admission["caller"])
+    if normalized['capability'] == 'media':
+        from lumenis.shared.reporting.media_brief import prepare_collected_media, confirm_collected_media
+        media_args = {key: normalized[key] for key in ('source_evidence_ref', 'source_fingerprint')}
+        prepared = prepare_collected_media(normalized['source_id'], actor=actor, scope=scope, **media_args)
+        confirm_collected_media(normalized['source_id'], actor=actor, scope=scope, **media_args,
+            confirmed_resources=[entry['resource'] for entry in prepared['approval_resources']], confirmed=confirmed)
     exact, denial = _manual_collection_guard(actor, admission["scope"], normalized["platform"],
         admission['permission_keyword'], normalized["max_results"],
-        capability=normalized["capability"])
+        capability=normalized["capability"],**admission['provider_selection'],
+        publication_since=normalized.get('publication_since'),
+        publication_until=normalized.get('publication_until'))
     if denial is not None:
         return {**denial, "network_attempted": False, "persistence_attempted": False}
     return {"ok": True, "status": "READY", "request": normalized, "scope": exact,
@@ -1921,7 +2289,191 @@ def confirm_collection_request(*, actor, scope, confirmed_resource, confirmed, *
             "network_attempted": False, "persistence_attempted": False}
 
 
-def operate_collection_request(action, *, actor, scope, request_id=None, task_id=None, **source_request):
+def _manual_task_status(row):
+    progress = row['payload'].get('progress') or {}
+    if row['payload'].get('cancel_requested') is True:
+        return 'CANCELLED'
+    result = progress.get('result') or {}
+    publication_window = result.get('publication_window') if isinstance(result, dict) else None
+    if (isinstance(result, dict)
+            and result.get('status') == 'PUBLICATION_TIME_REVIEW_REQUIRED'
+            and result.get('error_type') == 'PUBLICATION_TIME_REVIEW_REQUIRED'
+            and result.get('evidence_ref')
+            and isinstance(publication_window, dict)
+            and publication_window.get('state') == 'REVIEW_REQUIRED'
+            and type(publication_window.get('review_required_count')) is int
+            and publication_window['review_required_count'] > 0):
+        # Older durable requests recorded this review outcome as a queue failure.
+        # Keep that stored failure receipt intact while projecting the recoverable
+        # Evidence-backed review to the caller; reads never resume collection.
+        return 'REVIEW_REQUIRED'
+    if row['status'] == 'done':
+        if (isinstance(publication_window, dict)
+                and publication_window.get('state') == 'REVIEW_REQUIRED'):
+            return 'REVIEW_REQUIRED'
+        # A durable source receipt can legitimately end the queue attempt
+        # while its acquisition outcome is explicitly partial or failed. The
+        # task projection must preserve that outcome instead of deriving
+        # success from the queue's terminal bookkeeping state.
+        if isinstance(result, dict) and result.get('ok') is False:
+            return 'FAILED'
+        return 'COMPLETED'
+    if row['status'] == 'failed':
+        return 'FAILED'
+    if progress.get('waiting_user'):
+        return 'WAITING_USER'
+    return row['status'].upper()
+
+
+def _manual_collection_actor_identity(actor):
+    """Resolve only the authenticated owner identity for a control-only action."""
+    from lumenis.system.security.permission import LocalWorkspacePrincipal
+    if type(actor) is LocalWorkspacePrincipal:
+        return {'principal_ref': actor.principal_ref}
+    if isinstance(actor, dict) and type(actor.get('id')) is int and actor['id'] > 0:
+        return {'actor_id': actor['id']}
+    raise PermissionError('AUTH_REQUIRED')
+
+
+def _manual_collection_safe_status(row, *, cancel_applied=False):
+    """Return durable queue control state without inspecting saved result data."""
+    payload = row.get('payload') if isinstance(row, dict) else None
+    payload = payload if isinstance(payload, dict) else {}
+    cancel_requested = payload.get('cancel_requested') is True
+    queue_status = str(row.get('status') or '').lower()
+    status = ('CANCELLED' if cancel_requested else
+              'PENDING' if queue_status == 'pending' else
+              'RUNNING' if queue_status == 'running' else 'TERMINAL')
+    return {'ok': True, 'status': status, 'task_id': row.get('id'),
+        'queue_status': queue_status.upper() if queue_status else 'UNKNOWN',
+        'cancel_requested': cancel_requested, 'cancel_applied': bool(cancel_applied),
+        'result_available': False, 'read_only': True, 'external_write': False,
+        'network_attempted': False, 'result_freshness': 'TASK_CONTROL_STATUS_ONLY'}
+
+
+def list_collection_requests(*, actor, scope, before=None, limit=20):
+    from ..guard.task_queue import TaskQueue
+    domain = 'bmp' if scope.get('domain_id') == 'zbmp' else scope.get('domain_id')
+    binding = _business_batch_binding(actor, {domain: scope}, 'human', None)
+    exact = {key: scope.get(key) for key in ('domain_id', 'global_scope', 'subject_id', 'brand_focus_id')}
+    exact['domain_id'] = domain
+    queue = TaskQueue()
+    try:
+        rows, next_cursor = queue.list_manual_requests(binding['identity'], exact, before=before, limit=limit)
+        return {'ok': True, 'network_attempted': False, 'next_cursor': next_cursor,
+            'tasks': [{'task_id': row['id'], 'status': _manual_task_status(row),
+                'request': row['payload']['binding']['request'], 'created_at': row['created_at'],
+                'continuation_required': (row['payload'].get('progress') or {}).get('continuation_required', False),
+                'result_status': (((row['payload'].get('progress') or {}).get('result') or {}).get('source_status')
+                    or ((row['payload'].get('progress') or {}).get('result') or {}).get('status'))}
+                for row in rows]}
+    finally:
+        queue.close()
+
+
+def cancel_subject_collection_requests(*, actor, scope):
+    """Stop this actor's exact-subject manual tasks after a directory removal.
+
+    The operational queue is queried by its original actor and exact scope.
+    Global/discovery tasks and actorless schedules are deliberately outside this
+    helper. Existing completed results and task history are never deleted.
+    """
+    from ..guard.task_queue import TaskQueue
+
+    if not isinstance(scope, Mapping):
+        return {"state": "UNAVAILABLE", "matched": 0, "cancelled": 0,
+                "cancellation_pending": 0, "already_terminal": 0, "failed": 1}
+    domain = str(scope.get("domain_id") or "").strip().lower()
+    if domain == "zbmp":
+        domain = "bmp"
+    subject_id = scope.get("subject_id")
+    brand_focus_id = scope.get("brand_focus_id")
+    if (domain not in {"cth", "bmp"} or scope.get("global_scope") is not False
+            or subject_id is None and brand_focus_id is None):
+        return {"state": "UNAVAILABLE", "matched": 0, "cancelled": 0,
+                "cancellation_pending": 0, "already_terminal": 0, "failed": 1}
+
+    try:
+        identity = _manual_collection_actor_identity(actor)
+        exact = {"domain_id": domain, "global_scope": False,
+                 "subject_id": subject_id, "brand_focus_id": brand_focus_id}
+        variants = [exact]
+        # Older BMP callers may bind only BrandFocus, while newer directory
+        # entries retain both registry Subject and BrandFocus identifiers.
+        if domain == "bmp" and subject_id is not None and brand_focus_id is not None:
+            variants.append({"domain_id": domain, "global_scope": False,
+                             "subject_id": None, "brand_focus_id": brand_focus_id})
+
+        queue = TaskQueue()
+    except Exception:
+        return {"state": "UNAVAILABLE", "matched": 0, "cancelled": 0,
+                "cancellation_pending": 0, "already_terminal": 0, "failed": 1}
+
+    rows_by_id = {}
+    failed = 0
+    try:
+        for exact_scope in variants:
+            before = None
+            while True:
+                try:
+                    rows, next_before = queue.list_manual_requests(
+                        identity, exact_scope, before=before, limit=100,
+                    )
+                except Exception:
+                    failed += 1
+                    break
+                rows_by_id.update((row["id"], row) for row in rows)
+                if next_before is None or next_before == before:
+                    break
+                before = next_before
+
+        cancelled = cancellation_pending = already_terminal = 0
+        for task_id, row in rows_by_id.items():
+            status = str(row.get("status") or "").lower()
+            payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+            request_key = payload.get("request_key")
+            if status not in {"pending", "running", "cancel_requested"}:
+                already_terminal += 1
+                continue
+            if not isinstance(request_key, str) or not request_key:
+                failed += 1
+                continue
+            try:
+                result = queue.request_cancel(
+                    task_id, task_type="collector_manual_request", request_key=request_key,
+                    reason="SUBJECT_REMOVED_FROM_DIRECTORY",
+                )
+            except Exception:
+                result = None
+            if not isinstance(result, dict):
+                failed += 1
+            elif result.get("status") == "cancelled":
+                cancelled += 1
+            elif result.get("status") == "cancel_requested":
+                cancellation_pending += 1
+            elif result.get("status") in {"done", "failed"}:
+                already_terminal += 1
+            else:
+                failed += 1
+
+        if failed:
+            state = "PARTIAL"
+        elif cancellation_pending:
+            state = "CANCELLATION_PENDING"
+        elif cancelled:
+            state = "CANCELLED"
+        else:
+            state = "NO_ACTIVE_TASKS"
+        return {"state": state, "matched": len(rows_by_id), "cancelled": cancelled,
+                "cancellation_pending": cancellation_pending,
+                "already_terminal": already_terminal, "failed": failed,
+                "network_attempted": False}
+    finally:
+        queue.close()
+
+
+def operate_collection_request(action, *, actor, scope, request_id=None, task_id=None,
+                               page_before=None, safe_status_only=False, **source_request):
     """Manual request consumer of the original queue, live scope and source writer.
 
     A step executes in the real user's current request. The queue retains only
@@ -1931,10 +2483,15 @@ def operate_collection_request(action, *, actor, scope, request_id=None, task_id
     from ..guard.task_queue import TaskQueue
     if action not in {'start', 'status', 'step', 'cancel', 'resume','recover'}:
         raise ValueError('COLLECTION_TASK_ACTION_INVALID')
+    if type(safe_status_only) is not bool or (safe_status_only and action not in {'status', 'cancel'}):
+        raise ValueError('COLLECTION_TASK_CONTROL_MODE_INVALID')
+    if page_before is not None and (action != 'status' or type(page_before) is not int or page_before <= 0):
+        raise ValueError('COLLECTION_RESULT_PAGE_INVALID')
     if not isinstance(scope, Mapping):
         raise PermissionError('SCOPE_UNAUTHORIZED')
     domain = 'bmp' if scope.get('domain_id') == 'zbmp' else scope.get('domain_id')
-    _business_batch_binding(actor, {domain: scope}, 'human', None)
+    current_identity = (_manual_collection_actor_identity(actor) if safe_status_only else
+        _business_batch_binding(actor, {domain: scope}, 'human', None)['identity'])
     queue = TaskQueue()
     try:
         if action == 'start':
@@ -1945,7 +2502,10 @@ def operate_collection_request(action, *, actor, scope, request_id=None, task_id
             if denial is not None:
                 return denial
             _, denial = _manual_collection_guard(actor, admission['scope'], normalized['platform'],
-                admission['permission_keyword'], normalized['max_results'], capability=normalized['capability'])
+                admission['permission_keyword'], normalized['max_results'], capability=normalized['capability'],
+                **admission['provider_selection'],
+                publication_since=normalized.get('publication_since'),
+                publication_until=normalized.get('publication_until'))
             if denial is not None:
                 return denial
             identity = _task_commit_binding('manual-request', actor, admission['scope'], 'human', None,
@@ -1967,27 +2527,35 @@ def operate_collection_request(action, *, actor, scope, request_id=None, task_id
         payload, binding = row['payload'], row['payload']['binding']
         normalized = binding['request']
         request_fields = {key: normalized[key] for key in
-            ('capability', 'platform', 'keyword', 'content_id', 'source_id', 'max_results', 'include_replies', 'author_id')
+            ('capability', 'platform', 'keyword', 'content_id', 'source_id', 'max_results', 'include_replies', 'author_id',
+             'source_evidence_ref', 'source_fingerprint','provider_mode','public_transport',
+             'publication_since','publication_until')
             if key in normalized}
-        if normalized['capability'] == 'comments':
+        if normalized['capability'] in {'comments', 'media'}:
             request_fields.pop('platform', None)
-        admission, denial, current_request = _manual_collection_request(actor=actor, scope=scope, **request_fields)
-        if denial is not None:
-            return denial
-        identity = _task_commit_binding('manual-request', actor, admission['scope'], 'human', None,
-            normalized['platform'], admission['permission_keyword'], normalized['max_results'], None)['identity']
         current_scope = {key: scope.get(key) for key in ('domain_id', 'global_scope', 'subject_id', 'brand_focus_id')}
         current_scope['domain_id'] = 'bmp' if current_scope['domain_id'] == 'zbmp' else current_scope['domain_id']
-        if (binding['identity'] != identity or binding['scope'] != current_scope
-                or binding['source_scope'] != admission['scope'] or current_request != normalized):
+        if binding['identity'] != current_identity or binding['scope'] != current_scope:
             raise PermissionError('COLLECTION_TASK_CONTEXT_CHANGED')
+
+        if safe_status_only:
+            if action == 'cancel':
+                applied = queue.set_manual_request_cancelled(task_id, payload['request_key'], cancelled=True)
+                return _manual_collection_safe_status(queue.get(task_id), cancel_applied=applied)
+            return _manual_collection_safe_status(row)
 
         def read_task():
             current = queue.get(task_id)
             progress = current['payload'].get('progress') or {}
             cancelled = current['payload'].get('cancel_requested') is True
             result = dict(progress.get('result') or {})
-            if result.get('page_ref'):
+            if normalized['capability'] == 'media' and result.get('media'):
+                from lumenis.shared.reporting.media_brief import read_collected_media
+                result['saved_media'] = [read_collected_media(item['evidence_ref'], actor=actor, scope=scope,
+                    source_id=normalized['source_id'], source_evidence_ref=normalized['source_evidence_ref'],
+                    source_fingerprint=normalized['source_fingerprint'])
+                    for item in result['media'] if item.get('evidence_ref')]
+            elif result.get('page_ref'):
                 result['saved_page'] = read_collected_comments(normalized['source_id'], actor=actor,
                     scope=scope, page_ref=result['page_ref'])
             elif result.get('author_evidence_ref'):
@@ -1995,23 +2563,58 @@ def operate_collection_request(action, *, actor, scope, request_id=None, task_id
             elif result.get('evidence_ref'):
                 result['saved_sources'] = read_collected_items('app_evidence_records:' + str(result['evidence_ref']),
                                                               actor=actor, scope=scope)
-            return {'ok': True, 'status': 'CANCELLED' if cancelled else
-                    'COMPLETED' if current['status'] == 'done' else
-                    'WAITING_USER' if progress.get('waiting_user') else current['status'].upper(),
+            pages = progress.get('result_pages') or []
+            available = [page for page in pages if page_before is None or page['sequence'] < page_before]
+            selected = available[-20:]
+            return {'ok': True, 'status': _manual_task_status(current),
                 'task_id': task_id, 'request': normalized, 'queue_status': current['status'],
                 'result': result, 'continuation_required': progress.get('continuation_required', False),
+                'last_attempt': progress.get('last_attempt'),
+                'result_pages': selected, 'result_page_count': len(pages),
+                'next_page_before': selected[0]['sequence'] if len(available) > len(selected) else None,
                 'cancel_requested': cancelled, 'read_only': True, 'external_write': False,
                 'network_attempted': False, 'result_freshness': 'SAVED_TASK_RESULT',
                 'retry_after_seconds': max(0, current['scheduled_at'] - time.time())
                     if current['status'] == 'pending' else None}
 
         if action in {'start', 'status'}:
+            if action == 'start':
+                directory = _subject_directory_decision(actor, binding['source_scope'])
+                if directory.get('allowed') is not True:
+                    cancelled = queue.request_cancel(
+                        task_id, task_type='collector_manual_request',
+                        request_key=payload['request_key'],
+                        reason=directory.get('status') or 'SUBJECT_DIRECTORY_UNAVAILABLE',
+                    )
+                    answer = read_task()
+                    answer.update(subject_directory_state=directory.get('status'),
+                        task_cancellation_state=(cancelled or {}).get('status', 'UNAVAILABLE'),
+                        recovery_action=_subject_directory_denial_result(directory).get('recovery_action'))
+                    return answer
             return read_task()
         if action == 'cancel':
             queue.set_manual_request_cancelled(task_id, payload['request_key'], cancelled=True)
             return read_task()
+        admission, denial, current_request = _manual_collection_request(actor=actor, scope=scope, **request_fields)
+        if denial is not None:
+            if denial.get('status') in _SUBJECT_DIRECTORY_DENIALS:
+                cancelled = queue.request_cancel(
+                    task_id, task_type='collector_manual_request',
+                    request_key=payload['request_key'], reason=denial['status'],
+                )
+                answer = read_task()
+                answer.update(last_attempt={key: denial[key] for key in
+                    ('ok', 'status', 'reason_code', 'error_kind', 'recovery_action') if key in denial},
+                    task_cancellation_state=(cancelled or {}).get('status', 'UNAVAILABLE'))
+                return answer
+            return {**denial, 'task_id': task_id, 'network_attempted': False}
+        if binding['source_scope'] != admission['scope'] or current_request != normalized:
+            raise PermissionError('COLLECTION_TASK_CONTEXT_CHANGED')
         _, denial = _manual_collection_guard(actor, admission['scope'], normalized['platform'],
-            admission['permission_keyword'], normalized['max_results'], capability=normalized['capability'])
+            admission['permission_keyword'], normalized['max_results'], capability=normalized['capability'],
+            **admission['provider_selection'],
+            publication_since=normalized.get('publication_since'),
+            publication_until=normalized.get('publication_until'))
         if denial is not None:
             return {**denial, 'task_id': task_id, 'network_attempted': False}
         if action == 'resume':
@@ -2045,51 +2648,118 @@ def operate_collection_request(action, *, actor, scope, request_id=None, task_id
         heartbeat = threading.Thread(target=renew, daemon=True, name='collector-manual-lease')
         heartbeat.start()
         try:
-            guard = lambda: queue.attempt_guard(task_id, **receipt)
+            @contextmanager
+            def guard():
+                directory = _subject_directory_decision(actor, admission['scope'])
+                if directory.get('allowed') is not True:
+                    queue.request_cancel(task_id, task_type='collector_manual_request',
+                        request_key=payload['request_key'],
+                        reason=directory.get('status') or 'SUBJECT_DIRECTORY_UNAVAILABLE')
+                with queue.attempt_guard(task_id, **receipt) as active:
+                    yield active
+                current = queue.get(task_id)
+                if current and current.get('status') == 'cancel_requested':
+                    queue.finish_cancelled(task_id, task_type='collector_manual_request',
+                        request_key=payload['request_key'],
+                        reason=current.get('last_error') or 'SUBJECT_REMOVED_FROM_DIRECTORY',
+                        **receipt)
             operation = 'manual:' + payload['operation_id']
             round_key = operation + ':' + str(progress.get('round', 0))
-            if normalized['capability'] == 'author':
+            selection = {key:normalized[key] for key in ('provider_mode','public_transport') if key in normalized}
+            if normalized['capability'] == 'media':
+                from lumenis.shared.reporting.media_brief import process_collected_media
+                def media_guard():
+                    with guard() as active:
+                        if active is not True:
+                            raise PermissionError('COLLECTION_ATTEMPT_NO_LONGER_ACTIVE')
+                result = process_collected_media(normalized['source_id'], actor=actor, scope=scope,
+                    source_evidence_ref=normalized['source_evidence_ref'],
+                    source_fingerprint=normalized['source_fingerprint'], job_id=operation,
+                    check_continue=media_guard, attempt_guard=guard)
+            elif normalized['capability'] == 'author':
                 result = collect_author(normalized['platform'], normalized['author_id'], actor=actor, scope=scope,
-                                        attempt_guard=guard, operation_key=round_key)
+                                        attempt_guard=guard, operation_key=round_key,**selection)
             elif normalized['capability'] == 'author_posts':
                 result = collect_author_posts(normalized['platform'], normalized['author_id'], actor=actor, scope=scope,
                     max_results=normalized['max_results'], attempt_guard=guard, operation_key=round_key,
-                    native_task_key=operation, _native_cursor=progress.get('native_cursor'))
+                    native_task_key=operation, _native_cursor=progress.get('native_cursor'),**selection)
             elif normalized['capability'] == 'comments':
                 result = collect_comments(normalized['source_id'], actor=actor, scope=scope,
                     request_id=payload['operation_id'], max_results=normalized['max_results'],
                     include_replies=normalized['include_replies'], continuation=progress.get('continuation'),
-                    attempt_guard=guard)
+                    attempt_guard=guard,**selection)
             elif normalized['capability'] == 'detail':
                 result = collect_detail(normalized['platform'], normalized['content_id'], actor=actor,
-                    scope=scope, attempt_guard=guard, operation_key=round_key, native_task_key=operation)
+                    scope=scope, attempt_guard=guard, operation_key=round_key, native_task_key=operation,**selection)
             else:
                 result = collect_search(normalized['platform'], normalized['keyword'], actor=actor,
                     scope=scope, max_results=normalized['max_results'], attempt_guard=guard,
-                    operation_key=round_key, native_task_key=operation, _native_cursor=progress.get('native_cursor'))
-            keys = {'ok', 'status', 'error_type', 'platform', 'source_id', 'evidence_ref', 'page_ref',
+                    operation_key=round_key, native_task_key=operation, _native_cursor=progress.get('native_cursor'),
+                    publication_since=normalized.get('publication_since'),
+                    publication_until=normalized.get('publication_until'),**selection)
+            keys = {'ok', 'status', 'source_status', 'error_type', 'error', 'platform', 'source_id', 'evidence_ref', 'page_ref',
                 'task_commit_evidence_ref', 'commit_reconciled', 'network_attempted', 'raw_count',
                 'returned_count', 'observed_count', 'imported', 'updated', 'canonical_synced',
                 'native_fields_synced', 'coverage_state', 'partial_reason', 'source_use', 'public_original_refs',
                 'original_source', 'refresh_verified', 'scope_status', 'new_collection_required', 'recovery_required',
-                'native_pagination'}
+                'retry_safe', 'recovery_action', 'review_pending_count', 'filtered_count',
+                'requested_reply_scope', 'reply_coverage_state', 'replies_complete',
+                'requested_result_limit', 'provider_returned_count',
+                'native_pagination', 'publication_window', 'retry_after_seconds',
+                'network_attempted', 'reason_code', 'error_kind'}
             keys |= {'author_evidence_ref','author_count','canonical_refs'}
-            progress['result'] = {key: result[key] for key in keys if key in result}
-            comment_next = result.get('continuation') if normalized['capability'] == 'comments' else None
+            if normalized['capability'] == 'media':
+                keys |= {'source_evidence_ref', 'source_fingerprint', 'processing_version',
+                    'observed_media_count', 'saved_media_count', 'media_original_coverage',
+                    'full_post_media_coverage', 'semantic_understanding', 'owned_inference',
+                    'auto_continue', 'continuation_reason', 'pending_positions', 'failed_positions',
+                    'intervention_required', 'step_processed_count', 'step_transferred_bytes',
+                    'pending_media_count', 'failed_media_count'}
+            saved_result = {key: result[key] for key in keys if key in result}
+            if normalized['capability'] == 'media':
+                saved_result['media'] = [{key: item[key] for key in
+                    ('evidence_ref', 'artifact_ref', 'manifest_sha256', 'status', 'reason', 'recoverable',
+                     'position', 'native_locator', 'original_bytes_saved', 'failure_evidence_ref',
+                     'failure_stage', 'failure_class', 'retry_policy') if key in item}
+                    for item in result.get('media') or []]
+            pages = list(progress.get('result_pages') or [])
+            if not pages and progress.get('result'):
+                previous = progress['result']
+                if previous.get('page_ref') or previous.get('evidence_ref') or previous.get('author_evidence_ref'):
+                    pages.append({'sequence': 1, **previous})
+            source_ref = result.get('page_ref') or result.get('author_evidence_ref') or result.get('evidence_ref')
+            if source_ref is not None and not any(
+                    (page.get('page_ref') or page.get('author_evidence_ref') or page.get('evidence_ref')) == source_ref
+                    for page in pages):
+                pages.append({'sequence': len(pages) + 1, **saved_result})
+            progress['result_pages'] = pages
+            progress['last_attempt'] = saved_result
+            if source_ref is not None or normalized['capability'] == 'media' or not progress.get('result'):
+                progress['result'] = saved_result
+            comment_next = (result.get('continuation', progress.get('continuation'))
+                            if normalized['capability'] == 'comments' else None)
             native_next = result.get('native_continuation_verified') is True and not result.get('new_collection_required')
             source_page = result.get('native_pagination') or {}
             page_next = (normalized['capability'] in {'search','author_posts'} and source_page.get('request_cursor') == progress.get('native_cursor')
                          and source_page.get('next_cursor') is not None and source_page.get('exhausted') is not True)
-            waiting = result.get('status') in {'SESSION_EXPIRED', 'NEED_VERIFY', 'BLOCKED', 'COOLING_DOWN',
-                'RATE_LIMITED', 'BUSY', 'APPROVAL_REQUIRED', 'PROVIDER_UNAVAILABLE'}
-            progress.update(continuation=comment_next, continuation_required=bool(comment_next or native_next or page_next or waiting),
+            waiting = result.get('status') in {'AUTH_REQUIRED', 'SESSION_EXPIRED', 'NEED_VERIFY', 'BLOCKED',
+                'COOLING_DOWN', 'RATE_LIMITED', 'BUSY', 'APPROVAL_REQUIRED', 'PROVIDER_UNAVAILABLE'}
+            media_pending = normalized['capability'] == 'media' and result.get('continuation_required') is True
+            progress.update(continuation=comment_next, continuation_required=bool(comment_next or native_next or page_next or waiting or media_pending),
                 waiting_user=waiting, round=progress.get('round', 0) + (1 if native_next or page_next else 0))
             if page_next:
                 progress['native_cursor'] = source_page['next_cursor']
             if not queue.save_progress(task_id, progress, **receipt):
+                current = queue.get(task_id)
+                if current and current.get('status') == 'cancel_requested':
+                    queue.finish_cancelled(task_id, task_type='collector_manual_request',
+                        request_key=payload['request_key'],
+                        reason=current.get('last_error') or 'SUBJECT_REMOVED_FROM_DIRECTORY',
+                        **receipt)
                 return read_task()
             if progress['continuation_required']:
-                queue.yield_pending(task_id, **receipt, delay=result.get('wait_seconds') or 0)
+                delay = max(float(result.get('wait_seconds') or 0), float(result.get('retry_after_seconds') or 0))
+                queue.yield_pending(task_id, **receipt, delay=delay)
             elif result.get('ok') is True or result.get('page_ref') or result.get('task_commit_evidence_ref'):
                 queue.ack(task_id, **receipt)
             else:
@@ -2100,8 +2770,31 @@ def operate_collection_request(action, *, actor, scope, request_id=None, task_id
                               else 'CURRENT_TASK_EXECUTION')
             return answer
         except PermissionError as exc:
-            if queue.get(task_id)['payload'].get('cancel_requested') is True:
+            current = queue.get(task_id)
+            if current and current['payload'].get('cancel_requested') is True:
+                if current.get('status') == 'cancel_requested':
+                    queue.finish_cancelled(task_id, task_type='collector_manual_request',
+                        request_key=payload['request_key'],
+                        reason=current.get('last_error') or 'SUBJECT_REMOVED_FROM_DIRECTORY',
+                        **receipt)
                 return read_task()
+            if str(exc) in {
+                    'COLLECTED_MEDIA_USE_APPROVAL_REQUIRED',
+                    'COLLECTED_MEDIA_COMMIT_USE_REVOKED',
+                    'COLLECTED_MEDIA_COMMIT_APPROVAL_BUSY'}:
+                progress.update(waiting_user=True, continuation_required=True,
+                    last_attempt={'ok': False, 'status': 'APPROVAL_REQUIRED',
+                        'code': str(exc), 'auto_continue': False,
+                        'intervention_required': True,
+                        'continuation_reason': 'MEDIA_USE_APPROVAL_REQUIRED'})
+                if queue.save_progress(task_id, progress, **receipt):
+                    queue.yield_pending(task_id, **receipt)
+                answer = read_task()
+                answer.update(ok=False, code=str(exc), recovery_required=True,
+                    next_action='confirm', auto_continue=False,
+                    network_attempted=getattr(exc, 'network_attempted', None),
+                    result_freshness='SAVED_TASK_RESULT')
+                return answer
             queue.fail(task_id, str(exc), **receipt, retryable=False)
             raise
         except Exception as exc:
@@ -2148,7 +2841,8 @@ def _verified_native_resume(platform, keyword, fingerprint, metadata):
 
 
 def _task_commit_binding(operation_key, actor, scope, operator, authorization,
-                         platform, keyword, max_results, business_query):
+                         platform, keyword, max_results, business_query, *,
+                         publication_since=None, publication_until=None):
     """Server-only task instance plus exact authorized operation, never an HTTP field."""
     if not isinstance(operation_key, str) or not operation_key:
         raise ValueError("invalid server collection operation")
@@ -2165,6 +2859,10 @@ def _task_commit_binding(operation_key, actor, scope, operator, authorization,
         "scope": dict(scope), "operator": operator, "platform": platform,
         "keyword": keyword, "max_results": max_results,
         "query": business_query.to_dict() if business_query is not None else None}
+    if publication_since is not None:
+        material["publication_since"] = publication_since
+    if publication_until is not None:
+        material["publication_until"] = publication_until
     return json.loads(json.dumps(material, sort_keys=True, ensure_ascii=False))
 
 
@@ -2240,10 +2938,16 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                    native_capture: NativePublicCapture | None = None,
                    attempt_guard=None, operation_key=None,
                     capability: str = 'search', _source_url=None, native_task_key=None,
-                    _native_cursor=None) -> Dict[str, Any]:
+                    _native_cursor=None,provider_mode=None,public_transport=None,
+                    publication_since=None, publication_until=None) -> Dict[str, Any]:
     """Run one explicit, read-only platform search and persist its evidence."""
     if capability not in {'search', 'detail', 'author_posts'}:
         raise ValueError('unsupported collection capability')
+    if publication_since is not None or publication_until is not None:
+        if capability != 'search':
+            raise ValueError('PUBLICATION_WINDOW_REQUIRES_SEARCH')
+        from ..acquisition_plan import _validate_publication_period
+        _validate_publication_period(publication_since, publication_until)
     if _native_cursor is not None and (capability not in {'search','author_posts'} or not native_task_key
             or _credential_free_observations(_native_cursor) != _native_cursor):
         raise ValueError('server-authored search continuation required')
@@ -2280,6 +2984,12 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if platform == "xhs":
         platform = "xiaohongshu"
     platform, keyword, max_results = _validate_request(platform, keyword, max_results, capability=capability)
+    if (prelaunch_local_import or native_capture is not None or raw_capture is not None):
+        if provider_mode is not None or public_transport is not None:
+            raise ValueError('COLLECTION_CAPTURE_HAS_FIXED_PROVIDER')
+        provider_selection = {}
+    else:
+        provider_selection = normalize_provider_selection(platform,provider_mode=provider_mode,public_transport=public_transport)
     permission_keyword = keyword
     if native_capture is not None:
         try:
@@ -2322,16 +3032,11 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     if not prelaunch_local_import:
         manual_scope, denial = _manual_collection_guard(
             actor, scope, platform, permission_keyword, max_results,
-            max_scroll=max_scroll, capability=capability,
+            max_scroll=max_scroll, capability=capability,**provider_selection,
+            publication_since=publication_since, publication_until=publication_until,
         )
         if denial is not None:
             return denial
-    if _blocked_youtube_atom_feed(platform, keyword):
-        return {
-            "ok": False, "status": "BLOCKED", "platform": platform,
-            "keyword": keyword, "read_only": True, "external_write": False,
-            "error_type": "SOURCE_POLICY",
-        }
     prelaunch_scope = (
         manual_scope if manual_scope and not manual_scope["global_scope"] else None
     )
@@ -2376,7 +3081,10 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
     task_binding = None
     if operation_key is not None:
         task_binding = _task_commit_binding(operation_key, actor, manual_scope or prelaunch_scope,
-            operator, prelaunch_authorization, platform, keyword, max_results, business_query)
+            operator, prelaunch_authorization, platform, keyword, max_results, business_query,
+            publication_since=publication_since, publication_until=publication_until)
+        if provider_selection:
+            task_binding['provider_selection'] = provider_selection
         if capability != 'search':
             task_binding['capability'] = capability
         import database as db
@@ -2464,8 +3172,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
 
         health = ({"status": "LOCAL_CAPTURE_INPUT", "can_attempt": True,
                    "healthcheck_scope": "local_original_capture_only"} if raw_capture is not None or native_capture is not None else (
-            _adapter_health(platform, url=keyword)
-            if platform in {"public_http", "web_atom", "sitemap", "instagram", "wechat"} else _adapter_health(platform)
+            _adapter_health(platform, url=keyword,**provider_selection)
+            if platform in {"public_http", "web_atom", "sitemap", "instagram", "wechat"} else _adapter_health(platform,**provider_selection)
         ))
 
 
@@ -2515,7 +3223,40 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         collection = None
         acquisition_fingerprint = None
         try:
-            search_kwargs = {"max_results": max_results}
+            search_kwargs = {"max_results": max_results,**provider_selection}
+            if (platform in {"public_http", "web_atom", "sitemap"}
+                    and (capability == "search"
+                         or platform == "public_http" and capability == "detail")):
+                def check_public_fetch_attempt():
+                    if attempt_guard is not None:
+                        with attempt_guard() as attempt_active:
+                            if attempt_active is not True:
+                                raise InterruptedError("COLLECTION_ATTEMPT_NO_LONGER_ACTIVE")
+
+                def recheck_public_fetch_admission():
+                    # The public-document limiter may wait after the request's
+                    # initial admission. Recheck the exact live authority only
+                    # after that wait and before the anonymous transport starts.
+                    check_public_fetch_attempt()
+                    if manual_scope is not None:
+                        _, current_denial = _manual_collection_guard(
+                            actor, manual_scope, platform, permission_keyword, max_results,
+                            max_scroll=max_scroll, capability=capability, **provider_selection,
+                            publication_since=publication_since, publication_until=publication_until,
+                        )
+                        if current_denial is not None:
+                            raise PermissionError("COLLECTION_SOURCE_PERMISSION_REVOKED")
+                    elif prelaunch_scope is not None:
+                        if not _authorize_prelaunch_public(
+                                prelaunch_scope, keyword, platform,
+                                maintenance_authorization=prelaunch_authorization,
+                                business_query=business_query, max_results=max_results):
+                            raise PermissionError("COLLECTION_SOURCE_PERMISSION_REVOKED")
+                        _validate_prelaunch_registry(prelaunch_scope)
+
+                search_kwargs["before_fetch"] = recheck_public_fetch_admission
+                if attempt_guard is not None:
+                    search_kwargs["check_continue"] = check_public_fetch_attempt
             if _native_cursor is not None:
                 search_kwargs['cursor'] = _native_cursor
             if max_scroll is not None:
@@ -2554,6 +3295,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             if native_capture is None and raw_capture is None:
                 bind_collection_route(
                     collection, platform=platform, capability=capability, request_value=keyword,
+                    **provider_selection,
                 )
         except RouteIdentityMismatch as exc:
             source_result = collection if isinstance(collection, CollectionResult) else None
@@ -2578,6 +3320,22 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 metadata={"error_type": type(exc).__name__},
                 provenance=source_provenance,
             )
+        except PermissionError:
+            # A public-source permission change after limiter wait is still an
+            # authorization denial, not a retryable provider failure.
+            raise
+        except InterruptedError as exc:
+            if str(exc) != "COLLECTION_ATTEMPT_NO_LONGER_ACTIVE":
+                raise
+            network_attempted = getattr(exc, "network_attempted", False) is True
+            collection = CollectionResult(
+                status=CollectionStatus.BLOCKED,
+                platform=platform,
+                message=("本次采集任务已停止，公开来源读取已中断" if network_attempted
+                         else "本次采集任务已停止，尚未开始公开来源请求"),
+                metadata={"provider": platform, "error_type": str(exc),
+                          "network_attempted": network_attempted},
+            )
         except Exception as exc:
             if raw_capture is not None:
                 return {"ok": False, "status": "INVALID_ORIGINAL_CAPTURE", "platform": platform,
@@ -2589,6 +3347,33 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 message="provider request failed",
                 metadata={"error_type": type(exc).__name__},
             )
+        provider_items = collection.items if isinstance(collection.items, list) else []
+        provider_returned_count = len(provider_items)
+        provider_limit_exceeded = provider_returned_count > max_results
+        if provider_limit_exceeded:
+            # max_results is part of the exact approved request. A provider
+            # returning more records cannot widen that request, and truncating
+            # the page would make its native cursor skip unseen records. Keep
+            # only count/pagination diagnostics; do not admit any returned body.
+            metadata = dict(collection.metadata) if isinstance(collection.metadata, dict) else {}
+            rejected_pagination = {
+                key: _credential_free_observations(metadata[key])
+                for key in ('pagination', 'continuation') if key in metadata
+            }
+            metadata['error_type'] = 'PROVIDER_RESULT_LIMIT_EXCEEDED'
+            metadata['result_limit_validation'] = {
+                'requested_limit': max_results,
+                'provider_returned_count': provider_returned_count,
+                'rejected_pagination': rejected_pagination,
+            }
+            # A cursor from this rejected response must not become a task
+            # continuation, because its exact page was not admitted.
+            metadata.pop('pagination', None)
+            metadata.pop('continuation', None)
+            collection.metadata = metadata
+            collection.status = CollectionStatus.COLLECT_ERROR
+            collection.message = 'provider returned more records than the approved request limit'
+            collection.items = []
         status = _canonical_status(collection)
         items = [item for item in (collection.items or []) if isinstance(item, dict)]
         captured_at = (native_value["capture_observation_native"] if native_capture is not None else
@@ -2606,10 +3391,19 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             business_observed_at = (raw_capture.captured_at if raw_capture is not None
                                     else datetime.now(timezone.utc).isoformat())
             business_reviews = _business_source_reviews(records, business_query, business_observed_at)
+        identity_review_pending = any(review['status'] != 'CANDIDATE_TASK_RELEVANT'
+                                      for review in business_reviews)
+        publication_reviews = (_requested_publication_window_reviews(
+            records, platform=platform, publication_since=publication_since,
+            publication_until=publication_until,
+        ) if publication_since is not None or publication_until is not None else [])
+        publication_review_pending = [review for review in publication_reviews
+            if review['status'].startswith('REVIEW_REQUIRED_')]
         if manual_scope is not None:
             _, denial = _manual_collection_guard(
                 actor, manual_scope, platform, permission_keyword, max_results,
-                max_scroll=max_scroll, capability=capability,
+                max_scroll=max_scroll, capability=capability,**provider_selection,
+                publication_since=publication_since, publication_until=publication_until,
             )
             if denial is not None:
                 return denial
@@ -2617,17 +3411,27 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
         entity_mentions = []
         review_pending = []
         review_candidates = []
+        accepted_indices = set(range(len(records)))
         if business_reviews:
-            accepted_indices = [index for index, review in enumerate(business_reviews)
-                                if review['status'] == 'CANDIDATE_TASK_RELEVANT']
-            review_candidates = [record for index, record in enumerate(records) if index not in accepted_indices]
+            business_accepted = {index for index, review in enumerate(business_reviews)
+                                 if review['status'] == 'CANDIDATE_TASK_RELEVANT'}
+            accepted_indices.intersection_update(business_accepted)
             review_pending = [review for review in business_reviews if review['status'] != 'CANDIDATE_TASK_RELEVANT']
-            records = [records[index] for index in accepted_indices]
-            items = [items[index] for index in accepted_indices]
+        if publication_reviews:
+            time_accepted = {review['observation_index'] for review in publication_reviews
+                             if review['status'] == 'CANDIDATE_IN_REQUESTED_PUBLICATION_WINDOW'}
+            accepted_indices.intersection_update(time_accepted)
+            review_pending.extend(review for review in publication_reviews
+                                  if review['status'].startswith('REVIEW_REQUIRED_'))
+        review_candidates = [record for index, record in enumerate(records) if index not in accepted_indices]
+        records = [record for index, record in enumerate(records) if index in accepted_indices]
+        items = [item for index, item in enumerate(items) if index in accepted_indices]
         if (prelaunch_scope is not None and collection.ok and records
                 and (manual_scope is not None or business_query is not None or platform in {"douyin", "x"})):
             entity_mentions = _prelaunch_entity_mentions(records, prelaunch_scope)
-            review_pending += [item for item in entity_mentions if item["status"] != "EXACT_NAME_MENTION"]
+            entity_review_pending = [item for item in entity_mentions if item["status"] != "EXACT_NAME_MENTION"]
+            identity_review_pending = identity_review_pending or bool(entity_review_pending)
+            review_pending += entity_review_pending
             accepted_indices = [i for i, item in enumerate(entity_mentions) if item["status"] == "EXACT_NAME_MENTION"]
             review_candidates += [record for i, record in enumerate(records) if i not in accepted_indices]
             records = [records[i] for i in accepted_indices]
@@ -2675,6 +3479,14 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             provenance["native_publication_state"] = native_value.get("publication_since_2026")
         if metadata.get("error_type"):
             provenance["error_type"] = str(metadata["error_type"])[:80]
+        public_failure_fields = {}
+        if status not in {"SUCCESS", "NO_NEW_DATA"}:
+            from .public_source import safe_public_source_failure_fields
+            public_failure_fields = safe_public_source_failure_fields(metadata)
+            provenance.update(public_failure_fields)
+        if metadata.get('result_limit_validation'):
+            provenance['result_limit_validation'] = _credential_free_observations(
+                metadata['result_limit_validation'])
         observed_failure = {key:metadata.get(key) for key in
             ('failure_class','http_status','provider_code','retry_after_seconds','identity_failure_stage')
             if metadata.get(key) is not None}
@@ -2691,6 +3503,14 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
             provenance['business_source_reviews'] = business_reviews
             provenance['actual_response_observation_utc'] = business_observed_at
             provenance['query_scope_role'] = 'PLANNED_TARGET_NOT_SOURCE_ENTITY_BINDING'
+        if publication_since is not None or publication_until is not None:
+            provenance['requested_publication_window'] = {
+                'publication_since': publication_since,
+                'publication_until': publication_until,
+                'transport_filter_state': 'NOT_APPLIED_BY_REGISTERED_ADAPTER',
+                'candidate_review_state': 'APPLIED_POST_FETCH_NATIVE_TIME',
+                'reviews': publication_reviews,
+            }
         if maintenance_operator:
             provenance["maintenance_plan_id"] = prelaunch_authorization.plan_id
             provenance["authorization_ref"] = prelaunch_authorization.authorization_ref
@@ -2808,7 +3628,9 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 final_status = ("SCOPE_CONFLICT" if prelaunch_scope_conflict else
                                 "CANONICAL_SYNC_FAILED" if canonical_failed else status)
                 if review_pending and not records and collection.ok:
-                    final_status = "SCOPE_REVIEW_REQUIRED"
+                    final_status = ("PUBLICATION_TIME_REVIEW_REQUIRED"
+                                    if publication_review_pending and not identity_review_pending
+                                    else "SCOPE_REVIEW_REQUIRED")
                 if (not prelaunch_scope_conflict and not canonical_failed and collection.ok
                         and (import_result.get("failed") or prelaunch_import_incomplete)):
                     final_status = "IMPORT_FAILED"
@@ -2852,6 +3674,25 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                     "entity_mentions": entity_mentions,
                     "review_pending_count": len(review_pending),
                 }
+                result.update(public_failure_fields)
+                if metadata.get("network_attempted") is False:
+                    result["network_attempted"] = False
+                retry_after = metadata.get("retry_after_seconds")
+                if type(retry_after) is int and retry_after >= 0:
+                    result["retry_after_seconds"] = retry_after
+                if provider_limit_exceeded:
+                    result.update(
+                        error_type='PROVIDER_RESULT_LIMIT_EXCEEDED',
+                        error='PROVIDER_RESULT_LIMIT_EXCEEDED: provider exceeded the exact request limit',
+                        provider_returned_count=provider_returned_count,
+                        requested_result_limit=max_results,
+                        returned_count=provider_returned_count,
+                        filtered_count=None,
+                    )
+                if publication_since is not None or publication_until is not None:
+                    result['publication_window'] = _publication_window_summary(
+                        publication_reviews, publication_since=publication_since,
+                        publication_until=publication_until)
                 discovered = metadata.get('discovery_candidates')
                 if isinstance(discovered, list):
                     result['discovery_observations'] = [_credential_free_observations({key: candidate.get(key)
@@ -3017,7 +3858,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                         "domain_adapter": {"prelaunch": prelaunch_scope["domain_id"],
                                            "consumer": "cth" if prelaunch_scope["domain_id"] == "cth" else "zbmp"},
                     }
-                if (platform == 'public_http' and manual_scope is not None and raw_capture is None
+                if (platform in PUBLIC_ORIGINAL_PLATFORMS and manual_scope is not None and raw_capture is None
                         and native_capture is None and note_ids and result.get('ok')):
                     conn.execute('SAVEPOINT collected_public_original')
                     source_path_start = len(staged_source_paths)
@@ -3030,7 +3871,7 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                             record=records[0], source_id=note_ids[0], collection_evidence_id=evidence_id,
                             context=source_context, staged_paths=staged_source_paths, actor=actor,
                             scope=manual_scope, keyword=permission_keyword, max_results=max_results,
-                            capability=capability)
+                            capability=capability, platform=platform)
                         _bind_native_source_original(conn, note_ids[0], source_context, original)
                         conn.execute('RELEASE SAVEPOINT collected_public_original')
                         result['public_original_refs'] = {'source_id': note_ids[0], **original}
@@ -3088,7 +3929,8 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 if manual_scope is not None:
                     _, denial = _manual_collection_guard(
                         actor, manual_scope, platform, permission_keyword, max_results,
-                        max_scroll=max_scroll, capability=capability,
+                        max_scroll=max_scroll, capability=capability,**provider_selection,
+                        publication_since=publication_since, publication_until=publication_until,
                     )
                     if denial is not None:
                         raise _CollectionWriteRejected(denial)
@@ -3326,12 +4168,25 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 # The signed success above covers only admitted source_ids. Keep the
                 # overall request partial when other returned items still need review.
                 if review_pending and result["ok"]:
+                    time_only_review = publication_review_pending and not identity_review_pending
                     result.update({
-                        "ok": False, "status": "PARTIAL_SCOPE_REVIEW_REQUIRED",
-                        "error_type": "SOURCE_ENTITY_IDENTITY_UNCONFIRMED",
-                        "error": _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED"),
+                        "ok": False,
+                        "status": ("PUBLICATION_TIME_REVIEW_REQUIRED" if time_only_review and not records
+                                   else "PARTIAL_SCOPE_REVIEW_REQUIRED"),
+                        "error_type": ("PUBLICATION_TIME_REVIEW_REQUIRED" if time_only_review
+                                       else "SOURCE_ENTITY_IDENTITY_UNCONFIRMED"),
+                        "error": (_status_message("PUBLICATION_TIME_REVIEW_REQUIRED") if time_only_review
+                                  else _status_message("PARTIAL_SCOPE_REVIEW_REQUIRED")),
                         "scope_status": "PARTIAL", "refresh_verified": False,
                     })
+                if (publication_reviews and not publication_review_pending and not records
+                        and all(review['status'] == 'OUTSIDE_REQUESTED_PUBLICATION_PERIOD'
+                                for review in publication_reviews)
+                        and result['ok']):
+                    result['publication_window']['state'] = 'NO_MATCHING_OBSERVATIONS'
+                    result['status'] = 'NO_NEW_DATA'
+                    result['error_type'] = 'NO_MATCHING_OBSERVATIONS'
+                    result['error'] = _status_message('NO_MATCHING_OBSERVATIONS')
                 if note_ids:
                     result['items'] = _source_item_views(conn, records, note_ids, platform, evidence_id,
                                                        manual_scope or prelaunch_scope)
@@ -3342,7 +4197,16 @@ def collect_search(platform: str, keyword: str, *, max_results: int = MAX_RESULT
                 # A transient error's diagnostic Evidence is not a completed
                 # source effect. Permit retry; committed partial sources remain fenced.
                 discovery_saved = bool(result.get('discovery_observations') and result.get('evidence_recorded'))
-                if task_binding is not None and (result.get("ok") is True or has_source_effect or discovery_saved):
+                publication_review_saved = (
+                    result.get('status') == 'PUBLICATION_TIME_REVIEW_REQUIRED'
+                    and result.get('evidence_recorded') is True
+                    and isinstance(result.get('evidence_ref'), str)
+                    and isinstance(result.get('publication_window'), dict)
+                    and result['publication_window'].get('state') == 'REVIEW_REQUIRED'
+                    and result['publication_window'].get('review_required_count', 0) > 0
+                )
+                if task_binding is not None and (result.get("ok") is True or has_source_effect
+                                                 or discovery_saved or publication_review_saved):
                     _task_commit_receipt(conn, task_binding, result)
             source_files_committed = True
             # The operational checkpoint follows the actual Source transaction.
@@ -3451,19 +4315,47 @@ def _normalize_author_target(platform, value):
     if not isinstance(value,str) or not value.strip() or value != value.strip():
         raise ValueError('AUTHOR_PROFILE_REQUIRED')
     text = value
+    if platform in {'naver','daum'} and not text.startswith(('http://','https://')):
+        text = text.removeprefix('blog:' if platform=='naver' else 'tistory:')
     if text.startswith(('http://','https://')):
         parts = urlsplit(text)
+        if platform in {'naver','daum'}:
+            if parts.scheme!='https' or parts.username or parts.password or parts.port not in (None,443):
+                raise ValueError('AUTHOR_PROFILE_PLATFORM_MISMATCH')
+            if platform=='naver' and parts.hostname in {'blog.naver.com','m.blog.naver.com'}:
+                text = parts.path.strip('/')
+                if parts.path in {'/PostList.naver','/PostList.nhn'}:
+                    text = dict(parse_qsl(parts.query)).get('blogId','')
+            elif (platform=='daum' and str(parts.hostname or '').endswith('.tistory.com')
+                    and parts.path in {'','/'}):
+                text = parts.hostname[:-len('.tistory.com')]
+            else:
+                raise ValueError('AUTHOR_PROFILE_PLATFORM_MISMATCH')
+            if re.fullmatch(r'[A-Za-z0-9_-]{1,100}',text) is None:
+                raise ValueError('AUTHOR_ID_INVALID')
+            return text
         hosts = {'bilibili':{'space.bilibili.com'}, 'xiaohongshu':{'www.rednote.com','rednote.com'},
             'douyin':{'www.douyin.com','douyin.com'}, 'instagram':{'www.instagram.com','instagram.com'},
             'facebook':{'www.facebook.com','facebook.com'}, 'x':{'x.com','www.x.com','twitter.com','www.twitter.com'},
             'weibo':{'weibo.com','www.weibo.com','m.weibo.cn'}, 'zhihu':{'www.zhihu.com','zhihu.com'},
             'kuaishou':{'www.kuaishou.com','kuaishou.com'}, 'youtube':{'www.youtube.com','youtube.com'},
             'reddit':{'www.reddit.com','reddit.com'}, 'linkedin':{'www.linkedin.com','linkedin.com'},
-            'github':{'github.com','www.github.com'}}
+            'tiktok':{'www.tiktok.com','tiktok.com'}, 'tieba':{'tieba.baidu.com'},
+            'github':{'github.com','www.github.com'},'channels':{'weixin.qq.com','channels.weixin.qq.com'}}
         if (parts.scheme != 'https' or parts.hostname not in hosts.get(platform,set())
                 or parts.username or parts.password or parts.port not in (None,443)):
             raise ValueError('AUTHOR_PROFILE_PLATFORM_MISMATCH')
         segments = parts.path.strip('/').split('/')
+        if platform=='channels':
+            if (_credential_free_observations(text)!=text or any(part in {'login','auth','cgi-bin'} for part in segments)):
+                raise ValueError('AUTHOR_PROFILE_FORMAT_INVALID')
+            return text
+        if platform=='youtube' and len(segments)==1 and segments[0].startswith('@'):
+            return segments[0]
+        if platform=='linkedin' and len(segments)==2 and segments[0] in {'in','company'}:
+            if re.fullmatch(r'[A-Za-z0-9_.-]{1,100}',segments[1]) is None:
+                raise ValueError('AUTHOR_ID_INVALID')
+            return segments[0]+':'+segments[1]
         prefixes = {'xiaohongshu':['user','profile'], 'douyin':['user'], 'zhihu':['people'],
                     'kuaishou':['profile'], 'youtube':['channel'], 'reddit':['user'], 'linkedin':['in']}
         prefix = prefixes.get(platform,[])
@@ -3491,7 +4383,21 @@ def _author_observation(platform, item, requested, captured_at):
         raise ValueError('AUTHOR_NATIVE_ID_NOT_OBSERVED')
     identity = str(identity)
     compare = str.lower if platform in {'x','instagram','facebook'} else str
-    if compare(identity.lstrip('@')) != compare(requested.lstrip('@')):
+    aliases = raw.get('native_author_aliases') or item.get('native_author_aliases') or []
+    if not isinstance(aliases, list):
+        raise ValueError('AUTHOR_NATIVE_ALIASES_INVALID')
+    observed = {compare(identity.lstrip('@'))}
+    observed.update(compare(str(value).lstrip('@')) for value in aliases
+                    if isinstance(value, (str, int)) and not isinstance(value, bool)
+                    and re.fullmatch(r'[A-Za-z0-9_.@:-]{1,160}', str(value)))
+    if platform in {'linkedin','channels'}:
+        profile_url = raw.get('profile_url') or item.get('url')
+        if isinstance(profile_url,str):
+            try:
+                observed.add(compare(_normalize_author_target(platform,profile_url).lstrip('@')))
+            except ValueError:
+                pass
+    if compare(requested.lstrip('@')) not in observed:
         raise ValueError('AUTHOR_NATIVE_ID_MISMATCH')
     def count(names, display_name):
         value = next((raw[key] for key in names if raw.get(key) is not None), None)
@@ -3504,6 +4410,7 @@ def _author_observation(platform, item, requested, captured_at):
             return int(value)
         return None
     value = {'platform':platform, 'platform_author_id':identity,
+        'native_author_aliases': sorted(observed),
         'username':raw.get('username') or None,
         'display_name':raw.get('display_name') or item.get('author_nickname') or item.get('title') or None,
         'bio':raw.get('bio') or item.get('content') or None,
@@ -3522,18 +4429,22 @@ def _author_observation(platform, item, requested, captured_at):
     return _credential_free_observations(value)
 
 
-def collect_author(platform, author_id, *, actor, scope, attempt_guard=None, operation_key=None):
+def collect_author(platform, author_id, *, actor, scope, attempt_guard=None, operation_key=None,
+                   provider_mode=None,public_transport=None):
     """Read a native author through the same session, approval and data owners."""
     import database as db
     from lumenis.shared.evidence.store import record_evidence
     from lumenis.shared.database.platform_content import persist_platform_author_records
     platform = 'xiaohongshu' if platform == 'xhs' else platform
     platform, _, _ = _validate_request(platform, str(author_id or ''), 1)
+    selection = normalize_provider_selection(platform,provider_mode=provider_mode,public_transport=public_transport)
     target = _normalize_author_target(platform, author_id)
-    exact, denial = _manual_collection_guard(actor, scope, platform, target, 1, capability='author')
+    exact, denial = _manual_collection_guard(actor, scope, platform, target, 1, capability='author',**selection)
     if denial is not None:
         return denial
     binding = _task_commit_binding(operation_key, actor, exact, 'human', None, platform,target,1,None) if operation_key else None
+    if binding and selection:
+        binding['provider_selection'] = selection
     if binding:
         with db.get_db() as connection:
             saved = _task_commit_receipt(connection,binding)
@@ -3550,10 +4461,10 @@ def collect_author(platform, author_id, *, actor, scope, attempt_guard=None, ope
                         'wait_seconds':MIN_INTERVAL_SECONDS-elapsed,'network_attempted':False}
             _last_action[platform] = time.monotonic()
         try:
-            result = _get_runtime_adapter(platform).author(target)
+            result = _get_runtime_adapter(platform).author(target,**selection)
             if not isinstance(result, CollectionResult):
                 raise TypeError('AUTHOR_PROVIDER_RESULT_INVALID')
-            bind_collection_route(result,platform=platform,capability='creator',request_value=target)
+            bind_collection_route(result,platform=platform,capability='creator',request_value=target,**selection)
         except Exception as exc:
             result = CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE,platform,
                 metadata={'error_type':type(exc).__name__},message='AUTHOR_PROVIDER_UNAVAILABLE')
@@ -3586,13 +4497,13 @@ def collect_author(platform, author_id, *, actor, scope, attempt_guard=None, ope
             if active is not True:
                 raise PermissionError('COLLECTION_ATTEMPT_SUPERSEDED')
             connection.execute('BEGIN IMMEDIATE')
-            _, denial = _manual_collection_guard(actor,exact,platform,target,1,capability='author')
+            _, denial = _manual_collection_guard(actor,exact,platform,target,1,capability='author',**selection)
             if denial is not None:
                 raise PermissionError('AUTHOR_APPROVAL_REVOKED')
             source_ids = ['platform-author:'+platform+':'+item['platform_author_id'] for item in observations]
             evidence_id = record_evidence(connection=connection, source='collector',feature_id='COLLECTOR_NATIVE_AUTHORS',
                 version='collector-native-author/1',asset_id=target,capture_mode='native_author_read',
-                inputs={'platform':platform,'source_ids':source_ids,'author_observation_records':observations,
+                inputs={'platform':platform,'provider_selection':selection,'source_ids':source_ids,'author_observation_records':observations,
                     'unverified_author_observation_records':rejected},
                 outputs={'status':response['status'],'author_count':response['author_count'],
                     'raw_count':response['raw_count'],'error_type':response['error_type']},
@@ -3664,7 +4575,8 @@ def collect_author_posts(platform, author_id, *, actor, scope, **kwargs):
 
 
 def collect_detail(platform: str, content_id: str, *, operator='human', scope=None,
-                   actor=None, attempt_guard=None, operation_key=None, native_task_key=None):
+                   actor=None, attempt_guard=None, operation_key=None, native_task_key=None,
+                   provider_mode=None,public_transport=None):
     """Exact source read through the existing Permission/Evidence transaction.
 
     The caller must supply the same actor and Source scope as search. This is
@@ -3677,7 +4589,8 @@ def collect_detail(platform: str, content_id: str, *, operator='human', scope=No
     reference = _credential_free_observations(content_id)
     return collect_search(platform, reference, max_results=1, operator=operator,
         scope=scope, actor=actor, attempt_guard=attempt_guard, operation_key=operation_key,
-        capability='detail', _source_url=content_id, native_task_key=native_task_key)
+        capability='detail', _source_url=content_id, native_task_key=native_task_key,
+        provider_mode=provider_mode,public_transport=public_transport)
 
 
 def _comment_parent(connection, source_id, actor, scope):
@@ -3988,7 +4901,7 @@ def recover_comment_page_original(page_ref, *, actor, scope):
             _comment_parent_version(inputs.get('parent'), parent)
             binding = inputs['binding']
             exact, denial = _manual_collection_guard(actor, parent['scope'], parent['platform'],
-                binding['keyword'], binding['max_results'], capability='comments')
+                binding['keyword'], binding['max_results'], capability='comments',**binding.get('provider_selection',{}))
             if denial is not None:
                 raise PermissionError('COMMENT_ORIGINAL_RECOVERY_APPROVAL_REQUIRED')
             authorized = _task_commit_binding(binding['operation_key'], actor, exact, 'human', None,
@@ -4017,7 +4930,8 @@ def recover_comment_page_original(page_ref, *, actor, scope):
 
 
 def collect_comments(source_id: str, *, actor, scope, request_id: str, max_results=20,
-                     include_replies=False, continuation=None, attempt_guard=None):
+                     include_replies=False, continuation=None, attempt_guard=None,
+                     provider_mode=None,public_transport=None):
     """One explicit page through existing adapters, Evidence and note_comments.
 
     Clients echo a signed page reference, never a platform cursor or actor/scope
@@ -4035,14 +4949,17 @@ def collect_comments(source_id: str, *, actor, scope, request_id: str, max_resul
     with db.get_db() as connection:
         parent = _comment_parent(connection, source_id, actor, scope)
     platform = parent['platform']
+    selection = normalize_provider_selection(platform,provider_mode=provider_mode,public_transport=public_transport)
     keyword = json.dumps({'capability': 'comments', 'source_id': source_id,
         'source_url': parent['source_url'], 'include_replies': include_replies}, sort_keys=True, ensure_ascii=False)
-    exact, denial = _manual_collection_guard(actor, parent['scope'], platform, keyword, max_results, capability='comments')
+    exact, denial = _manual_collection_guard(actor, parent['scope'], platform, keyword, max_results, capability='comments',**selection)
     if denial is not None:
         return denial
     binding = _task_commit_binding('comments:' + request_id, actor, exact, 'human', None,
                                    platform, keyword, max_results, None)
     binding.update(capability='comments', parent_fingerprint=parent['fingerprint'], include_replies=include_replies)
+    if selection:
+        binding['provider_selection'] = selection
     previous = continuation['page_ref'] if continuation else None
     cursor, chain = None, []
     with db.get_db() as connection:
@@ -4071,11 +4988,12 @@ def collect_comments(source_id: str, *, actor, scope, request_id: str, max_resul
                 return {'ok': False, 'status': 'RATE_LIMITED', 'network_attempted': False,
                         'retry_after_seconds': MIN_INTERVAL_SECONDS - elapsed, 'source_id': source_id}
             _last_action[platform] = time.monotonic()
-        health = _adapter_health(platform)
+        health = _adapter_health(platform,**selection)
         if health.get('can_attempt', health.get('ready')) is not True:
             return {'ok': False, 'status': health.get('status', 'UNAVAILABLE'),
                     'network_attempted': False, 'source_id': source_id}
-        options = {'max_comments': max_results, 'include_replies': include_replies}
+        options = {'max_comments': max_results, 'include_replies': include_replies,
+                   'source_url': parent['source_url'],**selection}
         if cursor is not None:
             options['cursor'] = cursor
         target = parent['source_url'] if platform == 'xiaohongshu' else source_id
@@ -4086,7 +5004,37 @@ def collect_comments(source_id: str, *, actor, scope, request_id: str, max_resul
                 message='comment provider request failed', metadata={'error_type': type(exc).__name__})
         if not isinstance(collection, CollectionResult):
             raise ValueError('COMMENT_PROVIDER_SHAPE_INVALID')
-        bind_collection_route(collection, platform=platform, capability='comments', request_value=target)
+        bind_collection_route(collection, platform=platform, capability='comments', request_value=target,**selection)
+        provider_comments = collection.comments if isinstance(collection.comments, list) else []
+        provider_returned_count = len(provider_comments)
+        provider_limit_exceeded = provider_returned_count > max_results
+        if provider_limit_exceeded:
+            metadata = dict(collection.metadata) if isinstance(collection.metadata, dict) else {}
+            rejected_pagination = metadata.get('pagination')
+            rejected_pagination = (_credential_free_observations(rejected_pagination)
+                                   if isinstance(rejected_pagination, dict) else {})
+            request_cursor = rejected_pagination.get('request_cursor')
+            metadata['error_type'] = 'PROVIDER_RESULT_LIMIT_EXCEEDED'
+            metadata['result_limit_validation'] = {
+                'requested_limit': max_results,
+                'provider_returned_count': provider_returned_count,
+                'rejected_pagination': rejected_pagination,
+            }
+            # Retain only the cursor-consumption fact needed for this call.
+            # The rejected response's next cursor is diagnostic and cannot
+            # resume a page whose observations were not admitted.
+            metadata['pagination'] = {
+                'request_cursor': request_cursor,
+                'next_cursor': None,
+                'exhausted': None,
+                'page_complete': False,
+                'replies_complete': None,
+                'partial_reason': 'PROVIDER_RESULT_LIMIT_EXCEEDED',
+            }
+            collection.metadata = metadata
+            collection.status = CollectionStatus.COLLECT_ERROR
+            collection.message = 'provider returned more comments than the approved request limit'
+            collection.comments = []
         observations = _normalized_comment_observations(collection.comments, parent, include_replies=include_replies)
         metadata = collection.metadata if isinstance(collection.metadata, dict) else {}
         pagination = metadata.get('pagination') if isinstance(metadata.get('pagination'), dict) else {}
@@ -4099,7 +5047,8 @@ def collect_comments(source_id: str, *, actor, scope, request_id: str, max_resul
             raise ValueError('COMMENT_PROVIDER_CURSOR_INVALID')
         if len(json.dumps(next_cursor, allow_nan=False).encode()) > 16384:
             raise ValueError('COMMENT_PROVIDER_CURSOR_INVALID')
-        retry_current = not collection.ok or pagination.get('page_complete') is False
+        retry_current = (not provider_limit_exceeded
+                         and (not collection.ok or pagination.get('page_complete') is False))
         chain = chain if retry_current else [*chain, cursor_hash]
         if retry_current:
             next_cursor = cursor
@@ -4108,20 +5057,52 @@ def collect_comments(source_id: str, *, actor, scope, request_id: str, max_resul
             next_cursor, exhausted = None, False
             pagination = {**pagination, 'partial_reason': 'NATIVE_CURSOR_LOOP'}
         status = _canonical_status(collection)
-        complete = collection.ok and exhausted is True and pagination.get('replies_complete') is True
+        replies_complete = pagination.get('replies_complete')
+        collection_metadata = collection.metadata if isinstance(collection.metadata, dict) else {}
+        declared_reply_scope = pagination.get('reply_scope') or collection_metadata.get('reply_scope')
+        # Some adapters declare their reply scope at the provider level while
+        # keeping pagination in a separate field. Promote only explicit scopes
+        # whose own adapter contract says the complete provider-visible tree
+        # was traversed; visible-DOM scopes remain unknown.
+        if (include_replies and type(replies_complete) is not bool and exhausted is True
+                and (declared_reply_scope == 'ALL_API_VISIBLE_REPLIES'
+                     or (declared_reply_scope == 'NESTED'
+                         and collection_metadata.get('comment_coverage') == 'API_VISIBLE_TREE_ONLY'))):
+            replies_complete = True
+        reply_coverage_state = ('NOT_REQUESTED' if not include_replies else
+            'COMPLETE_FOR_PROVIDER_SCOPE' if replies_complete is True else
+            'INCOMPLETE' if replies_complete is False else 'UNKNOWN')
+        complete = (collection.ok and exhausted is True and pagination.get('page_complete') is not False
+                    and (not include_replies or replies_complete is True))
+        partial_reason = pagination.get('partial_reason')
+        if (collection.ok and pagination.get('page_complete') is False and not partial_reason):
+            partial_reason = 'PAGE_COMPLETION_NOT_ESTABLISHED'
+        elif (collection.ok and exhausted is True and include_replies and replies_complete is not True
+                and not partial_reason):
+            partial_reason = ('REPLY_PAGES_PENDING' if replies_complete is False
+                              else 'REPLY_COVERAGE_NOT_ESTABLISHED')
         result = {'ok': bool(collection.ok), 'status': 'SUCCESS' if complete else
                     'COMMENTS_PARTIAL' if collection.ok else status,
             'provider_status': status, 'source_id': source_id, 'platform': platform,
-            'comments': observations, 'observed_count': len(observations) if collection.ok or observations else None,
+            'comments': observations, 'observed_count': (provider_returned_count if provider_limit_exceeded
+                else len(observations) if collection.ok or observations else None),
             'native_identity_count': (sum(bool(item['platform_comment_id']) for item in observations)
                                       if collection.ok or observations else None),
             'coverage_state': 'COMPLETE_FOR_DECLARED_SCOPE' if complete else 'PARTIAL',
             'coverage_scope': pagination.get('coverage_scope', 'PROVIDER_RETURNED_OBSERVATIONS_ONLY'),
-            'partial_reason': pagination.get('partial_reason') or (None if complete else 'COVERAGE_NOT_ESTABLISHED'),
+            'requested_reply_scope': 'INCLUDE_REPLIES' if include_replies else 'TOP_LEVEL_ONLY',
+            'reply_coverage_state': reply_coverage_state,
+            'replies_complete': replies_complete if include_replies else None,
+            'partial_reason': partial_reason or (None if complete else 'COVERAGE_NOT_ESTABLISHED'),
             'read_only': True, 'external_write': False, 'network_attempted': True,
             'continuation': None, 'pagination_exhausted': exhausted,
             'recovery_required': retry_current,
             'refresh_verified': bool(collection.ok), 'cached': False}
+        if provider_limit_exceeded:
+            result.update(error_type='PROVIDER_RESULT_LIMIT_EXCEEDED',
+                requested_result_limit=max_results, provider_returned_count=provider_returned_count,
+                new_collection_required=True, retry_safe=False, recovery_required=False)
+            result['partial_reason'] = 'PROVIDER_RESULT_LIMIT_EXCEEDED'
         result['source_use'] = {'purpose': 'COLLECTION_INSPECTION', 'source_scope_checked': True,
             'source_rights_promoted': False, 'analysis_export_training': 'CHECK_EXISTING_SOURCE_USE_PER_ACTION'}
         # Observed bodies are retained even on an interrupted provider page;
@@ -4132,7 +5113,7 @@ def collect_comments(source_id: str, *, actor, scope, request_id: str, max_resul
             connection.execute('BEGIN IMMEDIATE')
             if _comment_parent(connection, source_id, actor, scope) != parent:
                 raise PermissionError('COMMENT_PARENT_CHANGED')
-            _, denial = _manual_collection_guard(actor, exact, platform, keyword, max_results, capability='comments')
+            _, denial = _manual_collection_guard(actor, exact, platform, keyword, max_results, capability='comments',**selection)
             if denial is not None:
                 raise PermissionError('COMMENT_APPROVAL_REVOKED')
             repeated = _task_commit_receipt(connection, page_binding)
@@ -4207,8 +5188,17 @@ def read_collected_comments(source_id: str, *, actor, scope, limit=20, before=No
             if row['feature_id'] != 'COLLECTOR_NATIVE_COMMENTS' or row['asset_id'] != source_id:
                 raise PermissionError('COMMENT_PAGE_CONTEXT_CHANGED')
             version_state = _comment_parent_version(inputs.get('parent'), parent)
-            return {'source_id': source_id, 'comments': outputs['result']['comments'], 'page_ref': page_ref,
-                    'coverage_state': outputs['result']['coverage_state'], 'immutable': True,
+            page_result = outputs['result']
+            return {'source_id': source_id, 'comments': page_result['comments'], 'page_ref': page_ref,
+                    'coverage_state': page_result['coverage_state'], 'immutable': True,
+                    'status': page_result.get('status'), 'error_type': page_result.get('error_type'),
+                    'observed_count': page_result.get('observed_count'),
+                    'requested_result_limit': page_result.get('requested_result_limit'),
+                    'provider_returned_count': page_result.get('provider_returned_count'),
+                    'requested_reply_scope': page_result.get('requested_reply_scope'),
+                    'reply_coverage_state': page_result.get('reply_coverage_state'),
+                    'replies_complete': page_result.get('replies_complete'),
+                    'partial_reason': page_result.get('partial_reason'),
                     'source_version_state': version_state, 'source_use': outputs['result'].get('source_use')}
         params = [source_id]
         predicate = 'note_id=?'
@@ -4273,6 +5263,133 @@ def _business_source_reviews(records, query, observed_at):
                          'platform_content_id': record.get('content_id'),
                          'source_url': record.get('url'), 'native_publication_literal': native})
     return reviewed
+
+
+def _requested_publication_window_reviews(records, *, platform,
+                                          publication_since=None, publication_until=None):
+    """Apply a durable source request's explicit window to native publication time.
+
+    Current registered search adapters do not share a native date-filter
+    contract. Keep the exact request bound in permission and task receipts, then
+    review fetched observations before Canonical import. Missing or imprecise
+    native time stays review-only; capture time never substitutes for it.
+    """
+    from datetime import date, datetime
+    from ..acquisition_plan import (
+        _outside_publication_period, _validate_publication_period,
+    )
+    from .multi_platform_import import _normalize_source_publication
+    from .platform_naming import get_platform_fields, normalize_content_id, normalize_platform
+
+    start, end = _validate_publication_period(publication_since, publication_until)
+    canonical = normalize_platform(platform)
+    spec = get_platform_fields(canonical)
+    reviews = []
+    for index, record in enumerate(records):
+        native = record.get(spec.published_at) if spec else None
+        if native in (None, ''):
+            native = record.get('publish_datetime')
+        literal = native if isinstance(native, (str, int, float)) and not isinstance(native, bool) else None
+        if isinstance(literal, str):
+            literal = literal[:160]
+        normalized = _normalize_source_publication(native, canonical)
+        publication = None
+        if normalized:
+            if re.fullmatch(r'\d{4}-\d{2}-\d{2}', normalized):
+                try:
+                    publication = date.fromisoformat(normalized)
+                except ValueError:
+                    publication = None
+            else:
+                try:
+                    parsed = datetime.fromisoformat(normalized.replace('Z', '+00:00'))
+                except ValueError:
+                    try:
+                        from email.utils import parsedate_to_datetime
+                        parsed = parsedate_to_datetime(normalized)
+                    except (TypeError, ValueError, OverflowError):
+                        parsed = None
+                if (isinstance(parsed, datetime) and parsed.tzinfo is not None
+                        and parsed.utcoffset() is not None):
+                    publication = parsed
+
+        source_id = (normalize_content_id(canonical, record.get(spec.content_id) if spec else None)
+                     or normalize_content_id(canonical, record.get('content_id')))
+        base = {
+            'observation_index': index,
+            'platform_content_id': str(source_id) if source_id else None,
+            'source_url': _credential_free_observations(record.get('url')),
+            'native_publication_literal': literal,
+            'native_publication_normalized': normalized or None,
+            'publication_since': publication_since,
+            'publication_until': publication_until,
+            'derivative': True,
+        }
+        if publication is None:
+            reviews.append({**base, 'within_publication_window': None,
+                            'status': 'REVIEW_REQUIRED_NATIVE_PUBLICATION_TIME_UNKNOWN',
+                            'reason': 'NATIVE_PUBLICATION_TIME_OR_OFFSET_UNVERIFIED'})
+            continue
+        if isinstance(publication, date) and not isinstance(publication, datetime):
+            if any(isinstance(boundary, datetime) for boundary in (start, end) if boundary is not None):
+                reviews.append({**base, 'within_publication_window': None,
+                                'status': 'REVIEW_REQUIRED_PUBLICATION_PRECISION',
+                                'reason': 'DATE_ONLY_SOURCE_CANNOT_PROVE_INSTANT_BOUNDARY'})
+                continue
+            outside = ((start is not None and publication < start)
+                       or (end is not None and publication > end))
+        else:
+            outside = _outside_publication_period(publication, start, end)
+        if outside:
+            reviews.append({**base, 'within_publication_window': False,
+                            'status': 'OUTSIDE_REQUESTED_PUBLICATION_PERIOD',
+                            'reason': 'NATIVE_PUBLICATION_OUTSIDE_EXPLICIT_REQUEST_WINDOW'})
+            continue
+
+        captured_raw = record.get('captured_at')
+        if isinstance(captured_raw, str) and isinstance(publication, datetime):
+            try:
+                captured = datetime.fromisoformat(captured_raw.replace('Z', '+00:00'))
+            except ValueError:
+                captured = None
+            if (captured is not None and captured.tzinfo is not None
+                    and captured.utcoffset() is not None and publication > captured):
+                reviews.append({**base, 'within_publication_window': None,
+                                'status': 'REVIEW_REQUIRED_PUBLICATION_AFTER_CAPTURE',
+                                'reason': 'NATIVE_PUBLICATION_AFTER_ACTUAL_CAPTURE'})
+                continue
+        reviews.append({**base, 'within_publication_window': True,
+                        'status': 'CANDIDATE_IN_REQUESTED_PUBLICATION_WINDOW',
+                        'reason': None})
+    return reviews
+
+
+def _publication_window_summary(reviews, *, publication_since, publication_until):
+    """Expose the time-bound decision without implying the transport searched the range."""
+    review_required = sum(review.get('status', '').startswith('REVIEW_REQUIRED_') for review in reviews)
+    outside = sum(review.get('status') == 'OUTSIDE_REQUESTED_PUBLICATION_PERIOD' for review in reviews)
+    within = sum(review.get('status') == 'CANDIDATE_IN_REQUESTED_PUBLICATION_WINDOW' for review in reviews)
+    if review_required:
+        state = 'REVIEW_REQUIRED'
+    elif reviews and outside == len(reviews):
+        state = 'NO_MATCHING_OBSERVATIONS'
+    elif not reviews:
+        state = 'NO_OBSERVATIONS'
+    else:
+        state = 'APPLIED'
+    return {
+        'publication_since': publication_since,
+        'publication_until': publication_until,
+        'state': state,
+        'source_time_basis': 'NATIVE_PUBLICATION_ONLY',
+        'transport_filter_state': 'NOT_APPLIED_BY_REGISTERED_ADAPTER',
+        'candidate_review_state': 'APPLIED_POST_FETCH_NATIVE_PUBLICATION',
+        'observed_count': len(reviews),
+        'within_window_count': within,
+        'outside_window_count': outside,
+        'review_required_count': review_required,
+        'reviews': reviews,
+    }
 
 
 def _business_batch_binding(actor, scopes, operator, prelaunch_authorization):
@@ -4387,7 +5504,13 @@ def collect_business_queries(business_requests, *, actor=None, scopes=None,
                             business_query=query, max_results=max_results):
                         raise PermissionError('SCOPE_UNAUTHORIZED')
                 elif platform in SECONDARY_COLLECTION_PLATFORMS:
-                    _, error = _manual_collection_guard(actor, source_scope, platform, query.keyword, max_results)
+                    query_scope = (query.scope if isinstance(source_scope, Mapping)
+                                   and source_scope.get('global_scope') is True else source_scope)
+                    # This read-stage check retains exact Permission. Working-set
+                    # eligibility is checked per query at execution so one removed
+                    # entity does not hide history or block independent queries.
+                    _, error = _manual_collection_guard(actor, query_scope, platform, query.keyword,
+                        max_results, enforce_subject_directory=False)
                     if error is not None:
                         return {**error, 'runs': [], 'network_attempted': False}
             queue.reap_stale(120, task_id=task_id)
@@ -4569,18 +5692,38 @@ def _execute_business_queries(business_requests, *, actor=None, scopes=None,
                 result = {'ok': False, 'status': 'SCOPE_UNAUTHORIZED', 'platform': platform,
                           'network_attempted': False, 'error_type': 'QUERY_CALLER_SCOPE_MISMATCH'}
             else:
-                try:
-                    result = collect_search(platform, query.keyword, max_results=max_results,
-                        actor=actor, operator=operator, scope=scope, business_query=query,
-                        prelaunch_local_import=operator == 'prelaunch_maintenance',
-                        prelaunch_authorization=prelaunch_authorization,
-                        attempt_guard=attempt_guard,
-                        operation_key=((operation_prefix + ":" + key
-                            + (":native:" + str(native_rounds[key]) if native_rounds.get(key) else ""))
-                            if operation_prefix else None))
-                except (ValueError, PermissionError) as exc:
-                    result = {'ok': False, 'status': 'COLLECTION_REQUEST_REJECTED',
-                              'platform': platform, 'error_type': type(exc).__name__}
+                query_scope = query.scope if scope.get('global_scope') is True else scope
+                directory = ({'allowed': True} if operator == 'prelaunch_maintenance'
+                    else _subject_directory_decision(actor, query_scope))
+                if directory.get('allowed') is not True:
+                    result = _subject_directory_denial_result(
+                        directory, platform=platform, keyword=query.keyword,
+                    )
+                else:
+                    def query_attempt_guard():
+                        @contextmanager
+                        def guarded_attempt():
+                            current_directory = ({'allowed': True}
+                                if operator == 'prelaunch_maintenance'
+                                else _subject_directory_decision(actor, query_scope))
+                            underlying = (attempt_guard() if attempt_guard is not None
+                                          else nullcontext(True))
+                            with underlying as active:
+                                yield active is True and current_directory.get('allowed') is True
+                        return guarded_attempt()
+
+                    try:
+                        result = collect_search(platform, query.keyword, max_results=max_results,
+                            actor=actor, operator=operator, scope=query_scope, business_query=query,
+                            prelaunch_local_import=operator == 'prelaunch_maintenance',
+                            prelaunch_authorization=prelaunch_authorization,
+                            attempt_guard=query_attempt_guard,
+                            operation_key=((operation_prefix + ":" + key
+                                + (":native:" + str(native_rounds[key]) if native_rounds.get(key) else ""))
+                                if operation_prefix else None))
+                    except (ValueError, PermissionError) as exc:
+                        result = {'ok': False, 'status': 'COLLECTION_REQUEST_REJECTED',
+                                  'platform': platform, 'error_type': type(exc).__name__}
             runs.append({'query_key': key, 'planned_query': query.to_dict(), 'result': result})
             if (result.get('native_continuation_verified') is True
                     and result.get('task_commit_evidence_ref')
@@ -4593,6 +5736,11 @@ def _execute_business_queries(business_requests, *, actor=None, scopes=None,
                 completed.add(key)
                 if progress_callback is not None:
                     progress_callback(sorted(completed))
+            elif result.get('status') in _SUBJECT_DIRECTORY_DENIALS:
+                # One removed/unverified entity blocks only its own query.
+                # Other selected entities and source platforms remain usable.
+                deferred.append({'query_key': key, 'query': query.to_dict(),
+                                 'reason': result.get('status')})
             else:
                 blocked[platform] = result.get('status') or 'UNAVAILABLE'
                 deferred.append({'query_key': key, 'query': query.to_dict(), 'reason': blocked[platform]})
@@ -4637,7 +5785,7 @@ class PublicRawCapture:
 def _public_raw_collection(capture: PublicRawCapture) -> CollectionResult:
     """Normal local Source intake of observed bytes; no fetcher substitution."""
     from .public_source import PublicResponse
-    from .public_http import PublicHttpAdapter
+    from .public_http import PublicHttpAdapter,has_observed_media_source
     material = _public_raw_material(capture)
     if capture.content_type == "text/html":
         item = PublicHttpAdapter._item(PublicResponse(
@@ -4657,7 +5805,7 @@ def _public_raw_collection(capture: PublicRawCapture) -> CollectionResult:
                 "shares": None, "raw": {"body_source": "captured_utf8_text",
                     "publication_date_source": "unknown", "publication_date_state": "unknown",
                     "full_body_text": body, "full_body_sha256": hashlib.sha256(body.encode()).hexdigest()}}
-    if not item.get("content", "").strip():
+    if not item.get("content", "").strip() and not has_observed_media_source(item):
         raise ValueError("original Raw contains no source body")
     item["captured_at"] = capture.captured_at
     # Capture time belongs to the signed admission observation, not the stable
@@ -4775,17 +5923,33 @@ class NativePublicCapture:
     content: bytes
     sha256: str
 
+PUBLIC_ORIGINAL_PLATFORMS = frozenset({'public_http', 'naver', 'daum'})
+
+
+def _parse_public_original(platform, response, media_schema):
+    if platform == 'public_http':
+        from .public_http import PublicHttpAdapter
+        return PublicHttpAdapter._item(response, media_schema=media_schema)
+    if platform == 'naver':
+        from .naver import NaverAdapter
+        return NaverAdapter.parse_original(response)
+    if platform == 'daum':
+        from .daum import DaumAdapter
+        return DaumAdapter.parse_original(response)
+    raise ValueError('PUBLIC_SOURCE_PLATFORM_UNSUPPORTED')
+
+
 def validate_public_source_original(content, sha256):
     """Pure public Source producer check; no fetch, DNS or session read."""
     import base64
     from .public_source import PublicResponse
-    from .public_http import PublicHttpAdapter
     if (type(content) is not bytes or not 0 < len(content) <= 4 * 1024 * 1024
             or hashlib.sha256(content).hexdigest() != sha256):
         raise ValueError('PUBLIC_SOURCE_ORIGINAL_BYTES_CHANGED')
     value = json.loads(content)
-    if not isinstance(value, dict) or value.get('platform') != 'public_http':
+    if not isinstance(value, dict) or value.get('platform') not in PUBLIC_ORIGINAL_PLATFORMS:
         raise ValueError('PUBLIC_SOURCE_ORIGINAL_INVALID')
+    platform = value['platform']
     response = value.get('source_response')
     if (not isinstance(response, dict) or set(response) != {
             'body_base64', 'sha256', 'url', 'requested_url', 'content_type', 'status_code'}
@@ -4808,14 +5972,20 @@ def validate_public_source_original(content, sha256):
             address = None
         if address is not None and not address.is_global:
             raise ValueError('PUBLIC_SOURCE_URL_INVALID')
-    item = PublicHttpAdapter._item(PublicResponse(url=response['url'], content=raw,
-        content_type=response['content_type'], status_code=response['status_code'],
-        requested_url=response['requested_url']))
     observed = value.get('native_record')
+    source_raw = (observed.get('source_raw') or {}) if isinstance(observed, dict) else {}
+    media_observation = source_raw.get('media_observation')
+    media_schema = (media_observation.get('schema') if isinstance(media_observation, dict)
+                    else 'public-http-dom-media/v1')
+    if media_schema not in {'public-http-dom-media/v1', 'public-http-dom-media/v2'}:
+        raise ValueError('PUBLIC_SOURCE_MEDIA_SCHEMA_UNSUPPORTED')
+    item = _parse_public_original(platform, PublicResponse(url=response['url'], content=raw,
+        content_type=response['content_type'], status_code=response['status_code'],
+        requested_url=response['requested_url']), media_schema)
     observation = (observed.get('source_raw') or {}).get('content_observation') if isinstance(observed, dict) else None
     if (not isinstance(observed, dict) or not isinstance(observation, dict)
             or value.get('native_id') != item['platform_content_id']
-            or value.get('stable_source_key') != 'public_http:' + item['platform_content_id']
+            or value.get('stable_source_key') != platform + ':' + item['platform_content_id']
             or observed.get('content_id') != item['platform_content_id']
             or value.get('source_url') != response['url'] or observed.get('url') != item['url']
             or value.get('body') != item['content'] or observed.get('content') != item['content']
@@ -4825,6 +5995,13 @@ def validate_public_source_original(content, sha256):
             or observation.get('document_byte_length') != len(raw)
             or observation != item['raw']['content_observation']):
         raise ValueError('PUBLIC_SOURCE_BODY_BINDING_CHANGED')
+    if media_observation is not None:
+        if (not isinstance(media_observation, dict)
+                or media_observation.get('schema') != media_schema
+                or any(source_raw.get(key) != item['raw'].get(key)
+                       or observed.get(key) != item['raw'].get(key)
+                       for key in ('media_list', 'media_hints', 'media_observation'))):
+            raise ValueError('PUBLIC_SOURCE_MEDIA_BINDING_CHANGED')
     datetime.fromisoformat(value['capture_observation_native'].replace('Z', '+00:00'))
     if value['capture_observation_native'] != observed.get('captured_at'):
         raise ValueError('PUBLIC_SOURCE_CAPTURE_TIME_CHANGED')
@@ -4844,11 +6021,14 @@ def validate_public_source_original(content, sha256):
 
 
 def _persist_public_http_original(connection, *, response, record, source_id, collection_evidence_id,
-                                  context, staged_paths, actor, scope, keyword, max_results, capability):
+                                  context, staged_paths, actor, scope, keyword, max_results, capability,
+                                  platform='public_http'):
     import base64
     from .public_source import PublicResponse
     from lumenis.shared.evidence.store import classify_evidence_integrity
-    exact, denial = _manual_collection_guard(actor, scope, 'public_http', keyword, max_results,
+    if platform not in PUBLIC_ORIGINAL_PLATFORMS:
+        raise ValueError('PUBLIC_SOURCE_PLATFORM_UNSUPPORTED')
+    exact, denial = _manual_collection_guard(actor, scope, platform, keyword, max_results,
                                              capability=capability)
     if denial is not None:
         raise ValueError('PUBLIC_SOURCE_IMPORT_NOT_AUTHORIZED')
@@ -4871,7 +6051,7 @@ def _persist_public_http_original(connection, *, response, record, source_id, co
         context['domain_id'], exact['subject_id'], exact['brand_focus_id'])).fetchall()
     if len(canonical) != 1 or canonical[0]['content'] != record.get('content'):
         raise ValueError('PUBLIC_SOURCE_CANONICAL_BODY_CHANGED')
-    value = {'platform': 'public_http', 'native_id': source_id, 'stable_source_key': 'public_http:' + source_id,
+    value = {'platform': platform, 'native_id': source_id, 'stable_source_key': platform + ':' + source_id,
         'source_url': response.url, 'body': record['content'],
         'body_sha256': hashlib.sha256(record['content'].encode()).hexdigest(),
         'body_state': record['source_raw']['content_observation']['completeness'], 'native_record': record,

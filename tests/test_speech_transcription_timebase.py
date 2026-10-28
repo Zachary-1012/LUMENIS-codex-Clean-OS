@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import re
 import struct
 import subprocess
 import wave
@@ -9,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.test_content_project_storage import media_store  # noqa: F401
+from tests.test_content_project_storage import media_store as media_store
 from lumenis.shared.content_creation import speech_transcription as adapter
 from lumenis.shared.content_creation.video_editing import Timeline, VideoEditingError, fingerprint_local_media, _ffprobe_path
 from lumenis.system.ai_gateway import owned_speech
@@ -41,9 +42,16 @@ def aligned_decoder(monkeypatch):
             {'id': 0, 'start': a, 'end': b, 'text': ' synthetic-alignment-token',
              'avg_logprob': -.1, 'compression_ratio': 1., 'no_speech_prob': .01,
              'words': [{'word': 'synthetic-alignment-token', 'start': a, 'end': b, 'probability': .9}]}]}
-        return {'schema': 'synthetic_alignment_fixture_NOT_ASR',
+        return {'schema': 'owned-speech-derivative:v1', 'owner': 'SYSTEM AI Gateway',
                 **owned_speech.validate_transcript(raw, duration_seconds=frames/rate),
-                'source_sha256': kwargs['expected_audio_sha256']}
+                'source_sha256': kwargs['expected_audio_sha256'], 'source_ref': kwargs['source_ref'],
+                'source_ref_authenticated_by_adapter': False, 'duration_seconds': frames/rate,
+                'model_id': runtime.model_id, 'model_revision': owned_speech.MODEL_REVISION,
+                'weight_sha256': owned_speech.model_weight_sha256(runtime.model_id),
+                'runtime_manifest_sha256': runtime.manifest_sha256, 'adapter_sha256': 'd'*64,
+                'ffmpeg_sha256': runtime.ffmpeg_sha256, 'fallback_allowed': False, 'offline': True,
+                'declared_language': kwargs['language_hint'], 'rights_state': 'UNKNOWN',
+                'product_acceptance': False, 'warnings': []}
     monkeypatch.setattr(owned_speech, 'transcribe_audio', decode)
     return captures
 
@@ -145,8 +153,10 @@ def test_repeat_trim_overlap_and_sample_delay_mapping(media_store, aligned_decod
     assert [word['start'] for word in mapped['report']['words']] == pytest.approx([round(.000013*48000)/48000+.3,1.3], abs=1/16000)
     overlapping = timeline.add_audio_track('b', audio_role='voiceover').add_clip(
         asset.asset_id, track_id='b', audio_role='voiceover', source_in=.5, source_out=1)
-    with pytest.raises(VideoEditingError, match='OVERLAP_REQUIRES_REVIEW'):
-        adapter.build_timeline_transcription_files(overlapping, item, rendered_sha256='a'*64)
+    mapped_overlap=adapter.build_timeline_transcription_files(overlapping,item,rendered_sha256='a'*64)['report']
+    assert len(mapped_overlap['words'])==3 and mapped_overlap['overlapping_cues']
+    assert any(warning['reason']=='overlapping_source_cues_retained_requires_listening_review'
+               for warning in mapped_overlap['warnings'])
     cut = Timeline.from_assets([asset]).add_audio_track('a', audio_role='voiceover').add_clip(
         asset.asset_id, track_id='a', audio_role='voiceover', source_in=.82, source_out=1)
     assert adapter.build_timeline_transcription_files(cut, item, rendered_sha256='a'*64)['report']['state'] == 'no_retained_words'
@@ -187,8 +197,10 @@ def test_clock_scan_is_packet_bounded_and_cancellable(media_store, monkeypatch):
     def run(command, **kwargs):
         if '-show_frames' in command:
             observed.append(command)
-            assert command[command.index('-read_intervals') + 1] == '%+#100001'
-            assert kwargs['timeout'] == 60
+            assert command[command.index('-read_intervals') + 1] == '%+#5000001'
+            assert '-count_packets' in command
+            assert command[command.index('-of') + 1] == 'compact=p=0:nk=0'
+            assert 60 <= kwargs['timeout'] <= 3600
             kwargs['check_continue']()
         return original(command, **{**kwargs, 'check_continue': None})
     monkeypatch.setattr(rendering, '_run', run)
@@ -203,9 +215,8 @@ def test_incomplete_packet_scan_does_not_claim_verified_clock(media_store, monke
     original = rendering._run
     def run(command, **kwargs):
         if '-show_frames' in command:
-            Path(command[command.index('-o') + 1]).write_text(json.dumps({
-                'frames': [{'best_effort_timestamp': 0, 'nb_samples': 1024}],
-                'streams': [{'nb_read_packets': '100001'}]}))
+            Path(command[command.index('-o') + 1]).write_text(
+                'best_effort_timestamp=0|nb_samples=1024\nnb_read_packets=5000001\n')
             return
         return original(command, **kwargs)
     monkeypatch.setattr(rendering, '_run', run)
@@ -219,11 +230,66 @@ def test_sub_tolerance_frame_drift_cannot_accumulate(media_store, monkeypatch):
     original = rendering._run
     def run(command, **kwargs):
         if '-show_frames' in command:
-            Path(command[command.index('-o') + 1]).write_text(json.dumps({
-                'frames': [{'best_effort_timestamp': i * 1025, 'nb_samples': 1024} for i in range(20)],
-                'streams': [{'nb_read_packets': '20'}]}))
+            frames = ''.join(f'best_effort_timestamp={i * 1025}|nb_samples=1024\n' for i in range(20))
+            Path(command[command.index('-o') + 1]).write_text(frames + 'nb_read_packets=20\n')
             return
         return original(command, **kwargs)
     monkeypatch.setattr(rendering, '_run', run)
     with pytest.raises(VideoEditingError, match='SOURCE_CLOCK_DISCONTINUITY_UNSUPPORTED'):
         adapter._source_transcription_clock(asset, 0)
+
+
+def test_long_audio_is_chunked_and_boundary_words_are_not_duplicated(media_store, monkeypatch):
+    source = media_store['source'].with_name('long-610-second.wav')
+    subprocess.run([_ffmpeg_path(), '-v', 'error', '-n', '-f', 'lavfi', '-i',
+                    'sine=frequency=440:sample_rate=16000:duration=610',
+                    '-ac', '1', '-c:a', 'pcm_s16le', str(source)], check=True, capture_output=True)
+    asset = fingerprint_local_media(str(source))
+    runtime = owned_speech.SpeechRuntime('/missing/python', 'a'*64, '/missing/manifest', 'b'*64,
+                                         '/missing/weights', '/missing/ffmpeg', 'c'*64)
+    monkeypatch.setattr(adapter, 'configured_speech_runtime', lambda: runtime)
+    calls = []
+
+    def decode(path, **kwargs):
+        with wave.open(path, 'rb') as wav:
+            frames, rate = wav.getnframes(), wav.getframerate()
+        assert rate == 16000 and frames / rate <= 600
+        assert hashlib.sha256(Path(path).read_bytes()).hexdigest() == kwargs['expected_audio_sha256']
+        index = len(calls)
+        calls.append({'frames': frames, 'sha256': kwargs['expected_audio_sha256']})
+        if index == 0:
+            values = [(' first', 10, 10.2), (' boundary', 589.92, 590.04)]
+        else:
+            values = [(' boundary', 1.94, 2.06), (' tail', 10, 10.2)]
+        segments = []
+        for segment_id, (text, start, end) in enumerate(values):
+            probability = .95 if index == 1 and text.strip() == 'boundary' else .9
+            segments.append({'id': segment_id, 'start': start, 'end': end, 'text': text,
+                             'avg_logprob': -.1, 'compression_ratio': 1., 'no_speech_prob': .01,
+                             'words': [{'word': text, 'start': start, 'end': end, 'probability': probability}]})
+        raw = {'text': ''.join(item['text'] for item in segments), 'language': 'en', 'segments': segments}
+        return {'schema': 'owned-speech-derivative:v1', 'owner': 'SYSTEM AI Gateway',
+                **owned_speech.validate_transcript(raw, duration_seconds=frames/rate),
+                'source_sha256': kwargs['expected_audio_sha256'], 'source_ref': kwargs['source_ref'],
+                'source_ref_authenticated_by_adapter': False, 'duration_seconds': frames/rate,
+                'model_id': runtime.model_id, 'model_revision': owned_speech.MODEL_REVISION,
+                'weight_sha256': owned_speech.model_weight_sha256(runtime.model_id),
+                'runtime_manifest_sha256': runtime.manifest_sha256, 'adapter_sha256': 'd'*64,
+                'ffmpeg_sha256': runtime.ffmpeg_sha256, 'fallback_allowed': False, 'offline': True,
+                'declared_language': kwargs['language_hint'], 'rights_state': 'UNKNOWN',
+                'product_acceptance': False, 'warnings': []}
+
+    monkeypatch.setattr(owned_speech, 'transcribe_audio', decode)
+    result = adapter.build_transcription_files(asset)
+    transcript = result['report']['transcript']
+    words = [word for segment in transcript['segments'] for word in segment['words']]
+    chunking = result['report']['chunking']
+    assert len(calls) == 2
+    assert [round(item['frames']/16000, 3) for item in calls] == [592, 22]
+    assert transcript['text'] == ' first boundary tail'
+    assert [word['word'] for word in words] == [' first', ' boundary', ' tail']
+    assert [word['start'] for word in words] == pytest.approx([10, 589.94, 598], abs=.001)
+    assert chunking['duplicate_words_removed'] == 1
+    assert chunking['source_frame_count'] == 610 * 16000
+    assert len(chunking['windows']) == 2
+    assert all(re.fullmatch('[a-f0-9]{64}', window['window_audio_sha256']) for window in chunking['windows'])

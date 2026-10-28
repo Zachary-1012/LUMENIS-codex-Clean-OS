@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 import uuid
 from contextvars import ContextVar
@@ -51,14 +52,32 @@ class MemoryRecord:
             self.content_hash = _stable_hash(self.value)
 
     def is_expired(self, now: Optional[float] = None) -> bool:
-        if self.ttl_seconds <= 0:
-            return False
-        now = now or time.time()
         try:
-            created = datetime.fromisoformat(self.timestamp).timestamp()
-        except Exception:
+            ttl_seconds = float(self.ttl_seconds)
+        except (TypeError, ValueError, OverflowError):
+            return True
+        if ttl_seconds == 0:
             return False
-        return (now - created) > self.ttl_seconds
+        if ttl_seconds < 0 or not math.isfinite(ttl_seconds):
+            return True
+        try:
+            created_at = datetime.fromisoformat(self.timestamp)
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            created = created_at.timestamp()
+        except (TypeError, ValueError, OverflowError, OSError):
+            # A time-limited correction with an unreadable creation time cannot
+            # be proven active. Fail closed so malformed stored timestamps do
+            # not silently turn a temporary memory into permanent prompt input.
+            return True
+        current = time.time() if now is None else now
+        try:
+            current_time = float(current)
+            if not math.isfinite(current_time):
+                return True
+            return (current_time - created) > ttl_seconds
+        except (TypeError, ValueError, OverflowError):
+            return True
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -105,7 +124,9 @@ class BaseMemoryLayer:
             task["context"] = json.loads(task.get("context_json") or "{}")
             from agent_runtime.task_binding import authorized_context
             from lumenis.system.security.permission import resolve_local_workspace_principal
-            actor = {"id": actor_id} if actor_id is not None else resolve_local_workspace_principal(module="skills", action="read")
+            shared_task = task["context"].get("domain_id") == "shared"
+            actor = {"id": actor_id} if actor_id is not None else resolve_local_workspace_principal(
+                module="content" if shared_task else "skills", action="read")
             if actor is None:
                 raise PermissionError("MEMORY_ACTOR_REQUIRED")
             context = authorized_context(task, actor, connection=conn)
@@ -117,12 +138,16 @@ class BaseMemoryLayer:
             if authorize_task_result_read(task, actor) is not True:
                 raise PermissionError("MEMORY_TASK_RESULT_SCOPE_DENIED")
             if write:
-                from lumenis.system.security.permission import check_actor_scope_permission, check_local_workspace_scope_permission
-                checker = check_actor_scope_permission if actor_id is not None else check_local_workspace_scope_permission
-                decision = checker(context["actor"], domain_id=context["domain_id"],
-                    action="write", module="agent_runtime" if actor_id is not None else "skills", connection=conn, **context["scope"])
-                if not decision.allowed:
-                    raise PermissionError("MEMORY_WRITE_SCOPE_DENIED")
+                if context['domain_id'] == 'shared':
+                    from lumenis.system.security.permission import authorize_shared_workspace
+                    authorize_shared_workspace(context['actor'], context['scope'], module='content', action='write', connection=conn)
+                else:
+                    from lumenis.system.security.permission import check_actor_scope_permission, check_local_workspace_scope_permission
+                    checker = check_actor_scope_permission if actor_id is not None else check_local_workspace_scope_permission
+                    decision = checker(context["actor"], domain_id=context["domain_id"],
+                        action="write", module="agent_runtime" if actor_id is not None else "skills", connection=conn, **context["scope"])
+                    if not decision.allowed:
+                        raise PermissionError("MEMORY_WRITE_SCOPE_DENIED")
             return {"actor_id": actor_id, "domain_id": context["domain_id"],
                     "scope": context["scope"], "task_id": task_id}
         finally:
@@ -252,8 +277,17 @@ class BaseMemoryLayer:
     def correct(self, key, value, *, expected_revision):
         if not self.enabled or self._task_binding is None:
             raise PermissionError("MEMORY_TASK_BINDING_REQUIRED")
+        if type(key) is not str or not key.strip() or len(key) > 256 or type(value) is not dict:
+            raise ValueError("MEMORY_CORRECTION_INVALID")
         if type(expected_revision) is not int or expected_revision < 0:
             raise ValueError("MEMORY_REVISION_REQUIRED")
+        # A correction is an explicit user-authored context input. Never let a
+        # secret-shaped value or sensitive field become eligible for Gateway
+        # consumption; redaction here would silently change the user's text.
+        from agent_runtime.durable_adapter import _sanitize_checkpoint_value
+        _safe_value, sensitive = _sanitize_checkpoint_value(value)
+        if sensitive:
+            raise ValueError("MEMORY_SENSITIVE_CONTENT_REJECTED")
         record = MemoryRecord(layer=self.LAYER_NAME, key=key, value=value,
                               metadata={"type": "user_correction"})
         self._write_derived(record, expected_revision=expected_revision)
@@ -340,3 +374,127 @@ def get_db_connection(db_path: str):
     conn = DatabaseRepository(db_path).connect()
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def read_task_user_correction_context(db_path, task_id, actor_id, *,
+                                      maximum_records=100, maximum_bytes=262144):
+    """Read only explicit, active human corrections for this exact task.
+
+    The returned payload is a derivative of the existing Memory owner. It is
+    not Source/Evidence, Canonical fact, permission, training consent, or a
+    cross-task preference store. Over-capacity context is represented honestly
+    and is never partially included.
+    """
+    if (type(task_id) is not str or not task_id
+            or actor_id is not None and type(actor_id) is not int
+            or type(maximum_records) is not int or not 1 <= maximum_records <= 500
+            or type(maximum_bytes) is not int or not 1024 <= maximum_bytes <= 2 * 1024 * 1024):
+        raise ValueError("MEMORY_CONTEXT_PARAMETERS_INVALID")
+    from .episodic import EpisodicMemory
+    from .semantic import SemanticMemory
+    from .task import TaskMemory
+
+    records = []
+    binding = None
+    query_time = time.time()
+    for layer, memory_type in (("episodic", EpisodicMemory),
+                               ("semantic", SemanticMemory),
+                               ("task", TaskMemory)):
+        memory = memory_type(db_path=db_path, enabled=True).bind_task(task_id, actor_id)
+        current_binding = memory._binding_context()
+        if binding is None:
+            binding = current_binding
+        elif current_binding != binding:
+            raise PermissionError("MEMORY_CONTEXT_BINDING_CHANGED")
+        for record in active_user_correction_records(memory._derived_rows(), now=query_time):
+            if (type(record.key) is not str or not record.key.strip()
+                    or type(record.value) is not dict
+                    or type(record.metadata.get("memory_revision")) is not int
+                    or record.metadata["memory_revision"] < 1
+                    or type(record.timestamp) is not str):
+                return _memory_context_envelope(binding, [], state="INVALID_RECORD_BLOCKED",
+                    record_count=len(records) + 1)
+            from agent_runtime.durable_adapter import _sanitize_checkpoint_value
+            _safe, sensitive = _sanitize_checkpoint_value(record.value)
+            if sensitive:
+                return _memory_context_envelope(binding, [], state="SENSITIVE_CONTENT_BLOCKED",
+                    record_count=len(records) + 1)
+            records.append({
+                "layer": layer,
+                "key": record.key,
+                "revision": record.metadata.get("memory_revision"),
+                "timestamp": record.timestamp,
+                "value": record.value,
+                "truth_kind": "user_authored_unverified_correction",
+            })
+
+    records = order_user_correction_context(records)
+    return _memory_context_envelope(binding, records, maximum_records=maximum_records,
+                                    maximum_bytes=maximum_bytes)
+
+
+def active_user_correction_records(records, *, now=None):
+    """Return only active, non-expired human corrections for prompt context.
+
+    ``BaseMemoryLayer.query`` already filters TTL before applying its limit, but
+    the task-bound Gateway context reader walks the layer's raw derived rows so
+    it can validate the complete correction set and snapshot it atomically.
+    Apply the same expiry rule here; otherwise an explicitly short-lived
+    correction could remain in a resumed Agent task after its TTL elapsed.
+    """
+    if type(records) is not list:
+        raise ValueError("MEMORY_CONTEXT_RECORDS_INVALID")
+    query_time = time.time() if now is None else now
+    if type(query_time) not in (int, float):
+        raise ValueError("MEMORY_CONTEXT_TIME_INVALID")
+    return [record for record in records
+            if record.metadata.get("type") == "user_correction"
+            and not record.is_expired(query_time)]
+
+
+def order_user_correction_context(records):
+    """Order current user corrections newest first using absolute timestamps."""
+    if type(records) is not list:
+        raise ValueError("MEMORY_CONTEXT_RECORDS_INVALID")
+
+    def key(record):
+        try:
+            created_at = datetime.fromisoformat(record["timestamp"])
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+            return (created_at.timestamp(), record["layer"], record["key"])
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("MEMORY_CONTEXT_TIMESTAMP_INVALID") from exc
+
+    return sorted(records, key=key, reverse=True)
+
+
+def _memory_context_envelope(binding, records, *, state=None, record_count=None,
+                             maximum_records=100,
+                             maximum_bytes=262144):
+    import hashlib
+    encoded = json.dumps(records, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":"), allow_nan=False).encode()
+    capacity_exceeded = len(records) > maximum_records or len(encoded) > maximum_bytes
+    result_state = state or ("CAPACITY_EXCEEDED" if capacity_exceeded else
+                             "AVAILABLE" if records else "EMPTY")
+    result_count = len(records) if record_count is None else record_count
+    raw_snapshot = {"binding": binding, "state": result_state,
+                    "record_count": result_count, "records": records}
+    snapshot_sha256 = hashlib.sha256(json.dumps(raw_snapshot, ensure_ascii=False,
+        sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
+    if state is not None:
+        return {"schema": "task-user-corrections/v1", "state": state,
+                "record_count": result_count, "records": [],
+                "snapshot_sha256": snapshot_sha256,
+                "source_policy": "same_task_explicit_user_corrections_only"}
+    if capacity_exceeded:
+        return {"schema": "task-user-corrections/v1", "state": result_state,
+                "record_count": result_count, "records": [],
+                "snapshot_sha256": snapshot_sha256,
+                "omission": "complete_human_context_exceeds_bound_no_partial_inclusion",
+                "source_policy": "same_task_explicit_user_corrections_only"}
+    return {"schema": "task-user-corrections/v1",
+            "state": result_state, "record_count": result_count, "records": records,
+            "snapshot_sha256": snapshot_sha256,
+            "source_policy": "same_task_explicit_user_corrections_only"}

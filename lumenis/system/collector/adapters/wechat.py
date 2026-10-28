@@ -24,7 +24,14 @@ def _challenge(soup: BeautifulSoup) -> bool:
     if soup.select_one('input[name="captcha"], #verify_code, #captcha, .verifycode'):
         return True
     text = soup.get_text(' ', strip=True)
-    return any(marker in text for marker in ('访问过于频繁', '环境异常', '访问异常，请完成验证', '请输入验证码', '请完成安全验证'))
+    if any(marker in text for marker in ('访问过于频繁', '环境异常', '访问异常，请完成验证', '请输入验证码', '请完成安全验证')):
+        return True
+    # Sogou can return its verification form with HTTP 200, without any of the
+    # older captcha selectors. Match the actual verification explanation, not
+    # a bare mention of 验证码 in an otherwise valid original article.
+    compact = re.sub(r'\s+', '', text)
+    return (soup.select_one('#js_content') is None
+            and '此验证码用于确认这些请求是您的正常行为而不是自动程序发出的' in compact)
 
 
 _MEDIA_QUERY_SECRET_NAMES = frozenset({
@@ -188,6 +195,8 @@ def parse_public_article(response: PublicResponse) -> dict[str, Any] | None:
 
 def parse_sogou_discovery(response: PublicResponse) -> tuple[list[dict[str, Any]], str | None]:
     soup = BeautifulSoup(response.content, 'html.parser')
+    if _challenge(soup):
+        return [], None
     rows = []
     seen = set()
     for node in soup.select('li[id^="sogou_vr"], .news-box .txt-box'):
@@ -312,6 +321,7 @@ class WechatPublicAdapter(BasePlatformAdapter):
             if _challenge(soup):
                 return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
                     message='Source verification required',
+                    raw_count=None,
                     metadata={**self._verification_diagnostic(
                         'public_sogou_discovery_original_fetch', response, 0),
                         'reason': 'DISCOVERY_REDIRECT_VERIFICATION_REQUIRED'})
@@ -363,6 +373,7 @@ class WechatPublicAdapter(BasePlatformAdapter):
             if _challenge(soup):
                 return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
                     message='Source verification required',
+                    raw_count=None,
                     metadata=self._verification_diagnostic(
                         route.backend, response, 0))
             item = parse_public_article(response)
@@ -402,8 +413,14 @@ class WechatPublicAdapter(BasePlatformAdapter):
             if _challenge(soup):
                 return CollectionResult(CollectionStatus.NEED_VERIFY, self.platform,
                     message='Source verification required',
+                    raw_count=None,
                     metadata={**self._verification_diagnostic(route.backend, response, 0),
-                              'index_only': True})
+                              'index_only': True,
+                              'pagination': {'request_cursor': cursor, 'next_cursor': None,
+                                  'exhausted': None, 'page_complete': False,
+                                  'coverage_scope': 'PUBLIC_INDEX_VERIFICATION_REQUIRED',
+                                  'continuation_blocked': True,
+                                  'blocked_status': CollectionStatus.NEED_VERIFY.value}})
             candidates, next_url = parse_sogou_discovery(response)
             next_page = None
             if next_url:
@@ -427,11 +444,18 @@ class WechatPublicAdapter(BasePlatformAdapter):
                     item.setdefault('raw',{})['public_discovery'] = candidate
                 items.extend(result.items)
                 if result.status in {CollectionStatus.NEED_VERIFY, CollectionStatus.BLOCKED}:
-                    return CollectionResult(result.status, self.platform, items=items, raw_count=len(candidates),
+                    paused_pagination = {**pagination, 'next_cursor': None,
+                        'observed_next_cursor': pagination['next_cursor'],
+                        'exhausted': None, 'page_complete': False,
+                        'continuation_blocked': True, 'blocked_status': result.status.value}
+                    return CollectionResult(result.status, self.platform, items=items, raw_count=len(candidates), new_count=len(items),
                 metadata={'discovery_candidates': candidates, 'original_outcomes': original_outcomes,
                           'provider': route.backend,
-                          'next_search_url': next_url, 'pagination':pagination,
+                          'next_search_url': None, 'pagination': paused_pagination,
                           'partial': True, 'original_body_available': bool(items),
+                          'index_only': not bool(items), 'search_page': page,
+                          'per_request_original_attempt_count': len(original_outcomes),
+                          'per_request_deferred_source_count': max(0, len(candidates) - len(original_outcomes)),
                           **({"request_final_status": CollectionStatus.NEED_VERIFY.value,
                               "http_status": (result.metadata.get("http_status")
                                               if type(result.metadata.get("http_status")) is int

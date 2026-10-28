@@ -1,11 +1,4 @@
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import '../sys05/sys05_appearance_controller.dart';
-
-import '../../../core/lumenis_icon.dart';
-
 import '../../../core/lumenis_core_client.dart';
-import '../../../core/lumenis_theme.dart';
 import '../../../core/transport/lumenis_http_transport.dart';
 
 enum WaitingScene { search, sources, compare, analysis, export, waiting }
@@ -31,9 +24,8 @@ SysFailureKind classifySysFailure(Object error) {
 /// locale registry. The keys are intentionally stable so the later shell
 /// integration can promote them without changing screen semantics.
 abstract final class SysSystemCopy {
-  static String text(BuildContext context, String key) {
-    final language = Localizations.localeOf(context).languageCode;
-    final localeKey = switch (language) {
+  static String text(String languageCode, String key) {
+    final localeKey = switch (languageCode) {
       'en' => 'en',
       'ko' => 'ko',
       _ => 'zh-CN',
@@ -78,10 +70,9 @@ abstract final class SysSystemCopy {
       'sys.failure.response.title': '系统状态暂不可用',
       'sys.failure.response.detail': '系统没有提供有效结果，请稍后重试。',
       'sys02.eyebrow': '系统 · 采集',
-      'sys02.title': '获取资料',
-      'sys02.summary.title': '采集记录',
+      'sys02.title': '采集器状态',
       'sys02.manual.action': '手动采集',
-      'sys02.manual.hint': '刷新时采集；定时采集需单独开启。',
+      'sys02.manual.hint': '可选；默认对全部已登记主体自动采集，在系统后台运行。',
       'sys02.manual.queued': '已提交手动采集，在系统后台运行。',
       'sys02.manual.failed': '手动采集未能提交，请稍后重试。',
       'sys02.subtitle': '查看调度、限流、重试与入链状态；未验证的采集不会被标为已运行。',
@@ -89,7 +80,7 @@ abstract final class SysSystemCopy {
       'sys02.summary.partial': '受限连通',
       'sys02.summary.missing': '缺少访问条件',
       'sys02.summary.blocked': '被安全策略阻断',
-      'sys02.lanes.title': '来源连接',
+      'sys02.lanes.title': '平台运行线',
       'sys02.lanes.detail': '每条线只呈现最近一次返回的状态，不把注册记录当作健康证明。',
       'sys02.lanes.empty': '当前接口没有返回平台运行线。',
       'sys02.field.platform': '平台',
@@ -260,47 +251,39 @@ abstract final class SysSystemCopy {
       'sys.failure.response.detail':
           'The system did not return a valid result. Try again later.',
       'sys02.eyebrow': 'SYSTEM · COLLECTION',
-      'sys02.title': 'Collect sources',
-      'sys02.summary.title': 'Collection history',
+      'sys02.title': 'Collector status',
       'sys02.manual.action': 'Collect now',
-      'sys02.manual.hint':
-          'Collect on refresh. Scheduled collection is optional.',
+      'sys02.manual.hint': 'Optional; all registered subjects are collected automatically in the system background by default.',
       'sys02.manual.queued':
           'Manual collection queued in the system background.',
       'sys02.manual.failed':
           'Manual collection could not be queued. Try again later.',
-      'sys02.subtitle':
-          'Inspect scheduling, rate limits, retries and ingestion without treating registration as health.',
+      'sys02.subtitle': 'Inspect scheduling, rate limits, retries and ingestion without treating registration as health.',
       'sys02.summary.active': 'Confirmed connected',
       'sys02.summary.partial': 'Partially connected',
       'sys02.summary.missing': 'Access condition missing',
       'sys02.summary.blocked': 'Policy blocked',
-      'sys02.lanes.title': 'Connections',
-      'sys02.lanes.detail':
-          'Each lane shows only the latest returned state; registration is not health proof.',
+      'sys02.lanes.title': 'Platform lanes',
+      'sys02.lanes.detail': 'Each lane shows only the latest returned state; registration is not health proof.',
       'sys02.lanes.empty': 'The current endpoint returned no platform lanes.',
       'sys02.field.platform': 'Platform',
       'sys02.field.status': 'Current state',
       'sys02.field.records': 'Parsed records',
       'sys02.field.detail': 'State detail',
       'sys02.boundary.title': 'Ingestion boundary',
-      'sys02.boundary.detail':
-          'A failed collection stays at the collection layer; only validated records may enter Evidence and Canonical Data.',
-      'sys02.boundary.noActions':
-          'Retry, stop and compensation actions are not present in the current contract.',
+      'sys02.boundary.detail': 'A failed collection stays at the collection layer; only validated records may enter Evidence and Canonical Data.',
+      'sys02.boundary.noActions': 'Retry, stop and compensation actions are not present in the current contract.',
       'sys02.source.title': 'Collection status source',
       'sys02.source.detail':
           'This view reads the system-returned collection status summary.',
       'sys03.eyebrow': 'SYSTEM · DATA TRUTH',
       'sys03.title': 'Database and truth chain',
-      'sys03.subtitle':
-          'Separate schema, readability, integrity and the Source → Evidence → Canonical chain.',
+      'sys03.subtitle': 'Separate schema, readability, integrity and the Source → Evidence → Canonical chain.',
       'sys03.validation.title': 'Validation spine',
       'sys03.validation.schema': 'Schema version records',
       'sys03.validation.integrity': 'Integrity checks',
       'sys03.validation.readability': 'Application readability',
-      'sys03.validation.detail':
-          'A migration version does not prove that the application can read safely.',
+      'sys03.validation.detail': 'A migration version does not prove that the application can read safely.',
       'sys03.checks.title': 'Current checks',
       'sys03.checks.empty':
           'The current endpoint returned no integrity checks.',
@@ -312,18 +295,14 @@ abstract final class SysSystemCopy {
       'sys03.chain.unavailable':
           'The current endpoint did not return each truth-chain stage.',
       'sys03.identity.title': 'Database identity',
-      'sys03.identity.detail':
-          'Paths, connection details and internal implementation are not echoed in the UI.',
+      'sys03.identity.detail': 'Paths, connection details and internal implementation are not echoed in the UI.',
       'sys03.identity.state': 'Identity and isolation state',
-      'sys03.boundary':
-          'Database inspection is read only; recovery and migration need a separately authorized contract.',
+      'sys03.boundary': 'Database inspection is read only; recovery and migration need a separately authorized contract.',
       'sys04.eyebrow': 'SYSTEM · SECURITY',
       'sys04.title': 'Security and permission',
-      'sys04.subtitle':
-          'Inspect access posture and boundaries; the screen never replaces server authorization or reveals secrets.',
+      'sys04.subtitle': 'Inspect access posture and boundaries; the screen never replaces server authorization or reveals secrets.',
       'sys04.matrix.title': 'Access posture',
-      'sys04.matrix.detail':
-          'Only user-explainable permission levels are shown, not raw policy expressions.',
+      'sys04.matrix.detail': 'Only user-explainable permission levels are shown, not raw policy expressions.',
       'sys04.field.level': 'Access level',
       'sys04.field.scope': 'User-visible scope',
       'sys04.level.read': 'Read',
@@ -334,19 +313,15 @@ abstract final class SysSystemCopy {
       'sys04.level.unknown': 'Unconfirmed',
       'sys04.operations': 'Controlled operation types',
       'sys04.audit.title': 'Audit and decision',
-      'sys04.audit.detail':
-          'Protected operations re-check actor, domain, scope and risk on the server.',
+      'sys04.audit.detail': 'Protected operations re-check actor, domain, scope and risk on the server.',
       'sys04.audit.unavailable': 'No audit decision is available to display.',
-      'sys04.boundary':
-          'Changing a Subject changes working context; it does not grant access.',
+      'sys04.boundary': 'Changing a Subject changes working context; it does not grant access.',
       'sys05.eyebrow': 'SYSTEM · PREFERENCES',
       'sys05.title': 'Settings / appearance / language',
-      'sys05.subtitle':
-          'Tune the local work experience; preferences do not change business data, Subject, Evidence or permission.',
+      'sys05.subtitle': 'Tune the local work experience; preferences do not change business data, Subject, Evidence or permission.',
       'sys05.appearance.title': 'Appearance and motion',
       'sys05.preview.title': 'Live preview',
-      'sys05.preview.detail':
-          'The preview uses SYSTEM semantic states and is not a business-data result.',
+      'sys05.preview.detail': 'The preview uses SYSTEM semantic states and is not a business-data result.',
       'sys05.field.theme': 'Theme',
       'sys05.field.optical': 'Optical density',
       'sys05.field.density': 'Interface density',
@@ -368,19 +343,14 @@ abstract final class SysSystemCopy {
       'sys05.save': 'Save local preference',
       'sys05.saved': 'Saved to the current workspace state',
       'sys05.reset': 'Restore defaults',
-      'sys05.localOnly':
-          'This preference binding is limited to the local workspace; cross-restart persistence is not confirmed by the host contract.',
+      'sys05.localOnly': 'This preference binding is limited to the local workspace; cross-restart persistence is not confirmed by the host contract.',
       'sys06.eyebrow': 'SYSTEM · CONTROLLED BROWSER',
       'sys06.title': 'Internal browser',
-      'sys06.subtitle':
-          'Inspect controlled capture capability and boundaries; this is not personal browsing and identity material is not echoed.',
+      'sys06.subtitle': 'Inspect controlled capture capability and boundaries; this is not personal browsing and identity material is not echoed.',
       'sys06.boundary.title': 'Capability boundary',
-      'sys06.boundary.detail':
-          'Only capability state, instance counts and verified read-only scope are shown.',
-      'sys06.boundary.allowed':
-          'Allowed: read source content and metadata inside approved capture rules.',
-      'sys06.boundary.blocked':
-          'Not bound: new tabs, evidence snapshots and structured extraction operations.',
+      'sys06.boundary.detail': 'Only capability state, instance counts and verified read-only scope are shown.',
+      'sys06.boundary.allowed': 'Allowed: read source content and metadata inside approved capture rules.',
+      'sys06.boundary.blocked': 'Not bound: new tabs, evidence snapshots and structured extraction operations.',
       'sys06.instances': 'Controlled instances',
       'sys06.online': 'Online now',
       'sys06.capabilities': 'Read-only capabilities',
@@ -389,17 +359,13 @@ abstract final class SysSystemCopy {
       'sys06.noInstances': 'No controlled instance was returned.',
       'sys06.status': 'Status',
       'sys06.safe': 'Identity material hidden',
-      'sys06.source':
-          'Source: system browser capability report; only screened state fields are shown.',
+      'sys06.source': 'Source: system browser capability report; only screened state fields are shown.',
       'sys07.eyebrow': 'SYSTEM · EVALUATION',
       'sys07.title': 'Evaluation and acceptance',
-      'sys07.subtitle':
-          'Show only checks with real outcomes and evidence references; missing, partial and unknown never pass.',
+      'sys07.subtitle': 'Show only checks with real outcomes and evidence references; missing, partial and unknown never pass.',
       'sys07.posture.title': 'Current evaluation posture',
-      'sys07.posture.unknown':
-          'Production acceptance state was not returned by the current endpoint',
-      'sys07.posture.ready':
-          'Checks were returned, but this is not a complete production-acceptance pass',
+      'sys07.posture.unknown': 'Production acceptance state was not returned by the current endpoint',
+      'sys07.posture.ready': 'Checks were returned, but this is not a complete production-acceptance pass',
       'sys07.gates.title': 'Production acceptance gates',
       'sys07.gates.empty':
           'No evidence-backed production acceptance gate was returned.',
@@ -411,12 +377,10 @@ abstract final class SysSystemCopy {
       'sys07.field.evidence': 'Evidence reference',
       'sys07.skills': 'Registered skills',
       'sys07.notPass': 'No PASS conclusion formed',
-      'sys07.source':
-          'Check source: real security/skill status returned by the current ViewModel.',
+      'sys07.source': 'Check source: real security/skill status returned by the current ViewModel.',
       'sys08.eyebrow': 'SYSTEM · OBSERVABILITY',
       'sys08.title': 'Observability and logs',
-      'sys08.subtitle':
-          'Separate log inventory, structured records and Trace correlation; no time-series means no throughput or error-rate chart.',
+      'sys08.subtitle': 'Separate log inventory, structured records and Trace correlation; no time-series means no throughput or error-rate chart.',
       'sys08.trace.title': 'Trace correlation',
       'sys08.trace.unavailable':
           'No Trace waterfall or correlated record was returned.',
@@ -436,8 +400,7 @@ abstract final class SysSystemCopy {
       'sys08.filter.all': 'All',
       'sys08.exportUnavailable':
           'Log export has no verified permission and effect contract yet.',
-      'sys08.safe':
-          'Credentials, absolute paths and session material are never displayed.',
+      'sys08.safe': 'Credentials, absolute paths and session material are never displayed.',
     },
     'ko': {
       'sys.waiting.preference': '대기 문구',
@@ -473,10 +436,9 @@ abstract final class SysSystemCopy {
       'sys.failure.response.title': '시스템 상태를 사용할 수 없음',
       'sys.failure.response.detail': '시스템이 유효한 결과를 반환하지 않았습니다. 나중에 다시 시도하세요.',
       'sys02.eyebrow': 'SYSTEM · 수집',
-      'sys02.title': '자료 수집',
-      'sys02.summary.title': '수집 기록',
+      'sys02.title': '수집기 상태',
       'sys02.manual.action': '수동 수집',
-      'sys02.manual.hint': '새로고침할 때 수집합니다. 예약 수집은 별도로 설정합니다.',
+      'sys02.manual.hint': '선택 사항이며 기본적으로 등록된 모든 주체를 시스템 백그라운드에서 자동 수집합니다.',
       'sys02.manual.queued': '수동 수집이 시스템 백그라운드에 등록되었습니다.',
       'sys02.manual.failed': '수동 수집을 등록하지 못했습니다. 잠시 후 다시 시도하세요.',
       'sys02.subtitle': '스케줄, 제한, 재시도와 체인 유입을 확인하며 등록 상태를 정상으로 표시하지 않습니다.',
@@ -484,7 +446,7 @@ abstract final class SysSystemCopy {
       'sys02.summary.partial': '부분 연결',
       'sys02.summary.missing': '접근 조건 없음',
       'sys02.summary.blocked': '정책 차단',
-      'sys02.lanes.title': '출처 연결',
+      'sys02.lanes.title': '플랫폼 실행 라인',
       'sys02.lanes.detail': '각 라인은 마지막 반환 상태만 표시하며 등록은 정상 증명이 아닙니다.',
       'sys02.lanes.empty': '현재 엔드포인트가 플랫폼 실행 라인을 반환하지 않았습니다.',
       'sys02.field.platform': '플랫폼',
@@ -661,544 +623,4 @@ String sysSafeDisplay(Object? value, {String fallback = '—'}) {
     caseSensitive: false,
   );
   return sensitive.hasMatch(text) ? fallback : text;
-}
-
-Color sysStatusColor(String state, {required LumenisPalette palette}) {
-  return switch (state.toLowerCase()) {
-    'ready' || 'ok' || 'active' || 'success' || 'online' => palette.positive,
-    'warning' ||
-    'warn' ||
-    'partial' ||
-    'degraded' ||
-    'pending' => palette.caution,
-    'error' || 'offline' || 'blocked' || 'danger' || 'bad' => palette.danger,
-    _ => palette.quiet,
-  };
-}
-
-class SysPanel extends StatelessWidget {
-  const SysPanel({required this.child, this.title, this.detail, super.key});
-
-  final Widget child;
-  final String? title;
-  final String? detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: LumenisTheme.paper(LumenisTheme.of(context)),
-      child: Padding(
-        padding: const EdgeInsets.all(LumenisSpace.section),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (title != null) ...[
-              Text(title!, style: Theme.of(context).textTheme.titleMedium),
-              if (detail != null) ...[
-                const SizedBox(height: LumenisSpace.tight),
-                Text(
-                  detail!,
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).muted,
-                    height: 1.45,
-                  ),
-                ),
-              ],
-              const SizedBox(height: LumenisSpace.section),
-            ],
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class SysPageHeader extends StatelessWidget {
-  const SysPageHeader({
-    required this.eyebrow,
-    required this.title,
-    required this.subtitle,
-    this.onRefresh,
-    super.key,
-  });
-
-  final String eyebrow;
-  final String title;
-  final String subtitle;
-  final VoidCallback? onRefresh;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.headlineMedium),
-              if (subtitle.trim().isNotEmpty) ...[
-                const SizedBox(height: LumenisSpace.inset),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: LumenisTheme.of(context).muted,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        if (onRefresh != null)
-          IconButton(
-            tooltip: SysSystemCopy.text(context, 'sys.common.refresh'),
-            onPressed: onRefresh,
-            icon: const LumenisIcon(Icons.refresh_rounded),
-          ),
-      ],
-    );
-  }
-}
-
-class SysStatusBadge extends StatelessWidget {
-  const SysStatusBadge({required this.state, required this.label, super.key});
-
-  final String state;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = sysStatusColor(state, palette: LumenisTheme.of(context));
-    return Semantics(
-      label: '${SysSystemCopy.text(context, 'sys.common.status')}: $label',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: ShapeDecoration(
-          color: color.withValues(alpha: 0.11),
-          shape: LumenisPixelBorder(
-            step: 2,
-            side: BorderSide(color: color.withValues(alpha: 0.42)),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox.square(dimension: 4, child: ColoredBox(color: color)),
-            const SizedBox(width: LumenisSpace.tight),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class SysLoadingView extends StatelessWidget {
-  const SysLoadingView({required this.titleKey, super.key});
-
-  final String titleKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final copy = SysSystemCopy.text(context, titleKey);
-    return Semantics(
-      liveRegion: true,
-      label: copy,
-      excludeSemantics: true,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 760),
-          child: Padding(
-            padding: const EdgeInsets.all(28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  copy,
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).foreground,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                const WaitingFeedback(scene: WaitingScene.waiting),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class SysFailureView extends StatelessWidget {
-  const SysFailureView({required this.kind, required this.onRetry, super.key});
-
-  final SysFailureKind kind;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final titleKey = switch (kind) {
-      SysFailureKind.authentication => 'sys.failure.auth.title',
-      SysFailureKind.permissionDenied => 'sys.failure.permission.title',
-      SysFailureKind.offline => 'sys.failure.offline.title',
-      SysFailureKind.response => 'sys.failure.response.title',
-    };
-    final detailKey = switch (kind) {
-      SysFailureKind.authentication => 'sys.failure.auth.detail',
-      SysFailureKind.permissionDenied => 'sys.failure.permission.detail',
-      SysFailureKind.offline => 'sys.failure.offline.detail',
-      SysFailureKind.response => 'sys.failure.response.detail',
-    };
-    final retryable =
-        kind == SysFailureKind.offline || kind == SysFailureKind.response;
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 760),
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: SysPanel(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    SysSystemCopy.text(context, titleKey),
-                    style: TextStyle(
-                      color: LumenisTheme.of(context).foreground,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  SysSystemCopy.text(context, detailKey),
-                  style: TextStyle(
-                    color: LumenisTheme.of(context).muted,
-                    height: 1.5,
-                  ),
-                ),
-                if (retryable) ...[
-                  const SizedBox(height: 20),
-                  FilledButton.tonal(
-                    onPressed: onRetry,
-                    child: Text(
-                      SysSystemCopy.text(context, 'sys.common.retry'),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class SysMetricLine extends StatelessWidget {
-  const SysMetricLine({
-    required this.label,
-    required this.value,
-    required this.state,
-    super.key,
-  });
-
-  final String label;
-  final Object? value;
-  final String state;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasValue = value != null;
-    final display = hasValue
-        ? '$value'
-        : SysSystemCopy.text(context, 'sys.common.unavailable');
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Semantics(
-          label: '$label: $display',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  color: LumenisTheme.of(context).muted,
-                  height: 1.35,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                display,
-                style: TextStyle(
-                  color: hasValue
-                      ? sysStatusColor(state, palette: LumenisTheme.of(context))
-                      : LumenisTheme.of(context).quiet,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Supplemental decoration only. The caller owns authoritative status and actions.
-class WaitingFeedback extends StatelessWidget {
-  const WaitingFeedback({required this.scene, super.key});
-  final WaitingScene scene;
-  static const _jokes = <WaitingScene, String>{
-    WaitingScene.search: '在找资料，暂时不找借口。',
-    WaitingScene.sources: '让资料排好队，别再开会排队。',
-    WaitingScene.compare: '方案可以多，选项别打架。',
-    WaitingScene.analysis: '把线索理清，比把锅甩清重要。',
-    WaitingScene.export: '正在收尾，希望这版不用叫“最终版7”。',
-    WaitingScene.waiting: '工作在继续，你可以先伸个懒腰。',
-  };
-  @override
-  Widget build(BuildContext context) {
-    final appearance = Sys05AppearanceScope.maybeOf(context);
-    final tone = appearance?.waitingTone ?? WaitingTone.simple;
-    final reduced =
-        appearance?.reducedMotion == true ||
-        MediaQuery.maybeOf(context)?.disableAnimations == true;
-    // English/Korean deliberately use neutral copy pending editorial review.
-    final playfulChinese =
-        tone == WaitingTone.playful &&
-        Localizations.localeOf(context).languageCode == 'zh';
-    return ExcludeSemantics(
-      child: IgnorePointer(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _WaitingPaper(reduced: reduced, scene: scene),
-            if (tone != WaitingTone.off) ...[
-              const SizedBox(height: 8),
-              Text(
-                playfulChinese
-                    ? _jokes[scene]!
-                    : SysSystemCopy.text(context, 'sys.waiting.neutral'),
-                key: const ValueKey('sys/waiting-extra-text'),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WaitingPaper extends StatefulWidget {
-  const _WaitingPaper({required this.reduced, required this.scene});
-  final bool reduced;
-  final WaitingScene scene;
-  @override
-  State<_WaitingPaper> createState() => _WaitingPaperState();
-}
-
-class _WaitingPaperState extends State<_WaitingPaper>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
-  late final AnimationController _motion;
-  bool _foreground = true;
-  @override
-  void initState() {
-    super.initState();
-    _motion = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
-    _foreground =
-        WidgetsBinding.instance.lifecycleState == null ||
-        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  void _sync() {
-    if (!widget.reduced &&
-        _foreground &&
-        TickerMode.valuesOf(context).enabled) {
-      if (!_motion.isAnimating) _motion.repeat(reverse: true);
-    } else {
-      _motion.stop();
-      _motion.value = 0;
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _sync();
-  }
-
-  @override
-  void didUpdateWidget(covariant _WaitingPaper oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.scene != widget.scene) _motion.value = 0;
-    _sync();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed;
-    _sync();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _motion.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _motion,
-    builder: (context, _) => CustomPaint(
-      key: const ValueKey('sys/waiting-paper'),
-      size: const Size(64, 40),
-      painter: _PaperPainter(
-        _motion.value,
-        Theme.of(context).colorScheme.primary,
-        widget.scene,
-      ),
-    ),
-  );
-}
-
-class _PaperPainter extends CustomPainter {
-  const _PaperPainter(this.phase, this.color, this.scene);
-  final double phase;
-  final Color color;
-  final WaitingScene scene;
-  @override
-  void paint(Canvas canvas, Size size) {
-    final wave = math.sin(phase * math.pi);
-    final ink = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
-    void line(double x, double y, double xx, double yy) =>
-        canvas.drawLine(Offset(x, y), Offset(xx, yy), ink);
-    switch (scene) {
-      case WaitingScene.search:
-        canvas.drawRect(Rect.fromLTWH(8, 8, 23, 26), ink);
-        line(12, 14, 24, 14);
-        line(12, 20, 22, 20);
-        canvas.drawCircle(Offset(34 + wave * 5, 18), 8, ink);
-        line(40 + wave * 5, 24, 48 + wave * 5, 32);
-        break;
-      case WaitingScene.sources:
-        for (var i = 0; i < 3; i++) {
-          canvas.drawRect(
-            Rect.fromLTWH(
-              10.0 + i * (5.0 - wave * 2.0),
-              5.0 + i * 5.0,
-              28.0,
-              22.0,
-            ),
-            ink,
-          );
-        }
-        canvas.drawCircle(const Offset(40, 9), 3, ink);
-        line(40, 12, 40, 18);
-        break;
-      case WaitingScene.compare:
-        for (var i = 0; i < 2; i++) {
-          final x = 12.0 + i * 26;
-          final y = 6 + (i == 0 ? wave : 1 - wave) * 4;
-          canvas.drawPath(
-            Path()
-              ..moveTo(x, y)
-              ..lineTo(x + 5, y)
-              ..lineTo(x + 5, 28)
-              ..lineTo(x + 2.5, 33)
-              ..lineTo(x, 28)
-              ..close(),
-            ink,
-          );
-        }
-        line(25, 19, 33, 19);
-        break;
-      case WaitingScene.analysis:
-        final d = wave * 3;
-        canvas.drawPath(
-          Path()
-            ..moveTo(16 + d, 8)
-            ..lineTo(10 + d, 8)
-            ..lineTo(10 + d, 32)
-            ..lineTo(16 + d, 32),
-          ink,
-        );
-        canvas.drawPath(
-          Path()
-            ..moveTo(48 - d, 8)
-            ..lineTo(54 - d, 8)
-            ..lineTo(54 - d, 32)
-            ..lineTo(48 - d, 32),
-          ink,
-        );
-        line(24, 17, 39, 17);
-        canvas.drawCircle(const Offset(31, 26), 3, ink);
-        break;
-      case WaitingScene.export:
-        // A folded paper remains on-screen; no claimed delivery or success.
-        canvas.drawPath(
-          Path()
-            ..moveTo(8, 10)
-            ..lineTo(53, 8 + wave * 3)
-            ..lineTo(36, 33)
-            ..lineTo(27, 23)
-            ..close(),
-          ink,
-        );
-        line(27, 23, 53, 8 + wave * 3);
-        line(27, 23, 24, 32);
-        break;
-      case WaitingScene.waiting:
-        canvas.drawPath(
-          Path()
-            ..moveTo(36, 11)
-            ..lineTo(36, 28)
-            ..quadraticBezierTo(36, 36, 28, 36)
-            ..quadraticBezierTo(20, 36, 20, 28)
-            ..lineTo(20, 9 - wave * 3)
-            ..quadraticBezierTo(20, 3, 26, 3)
-            ..quadraticBezierTo(32, 3, 32, 9)
-            ..lineTo(32, 27)
-            ..quadraticBezierTo(32, 31, 28, 31)
-            ..quadraticBezierTo(25, 31, 25, 27)
-            ..lineTo(25, 12),
-          ink,
-        );
-        break;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_PaperPainter old) =>
-      old.phase != phase || old.color != color || old.scene != scene;
 }

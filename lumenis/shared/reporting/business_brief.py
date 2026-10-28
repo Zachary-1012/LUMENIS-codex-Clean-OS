@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import time as _time
 from datetime import date, datetime, time, timezone
 from decimal import Decimal, InvalidOperation, localcontext, Context
 from urllib.parse import urlsplit
@@ -387,12 +388,18 @@ def validate_business_source_use(request, *, actor=None):
     )
 
 
-def _owned_result_provenance(result, request):
+def _owned_result_provenance(result, request, *, evaluation_call_ref=None):
     if (
         not isinstance(result, dict)
         or result.get("ok") is not True
         or result.get("status") != "COMPLETED"
         or result.get("provider") != "owned"
+        or result.get("code") != "OWNED_INFERENCE_COMPLETED"
+        or result.get("operation") != request.operation
+        or result.get("domain_id") != request.domain_id
+        or result.get("scope") != request.scope
+        or type(result.get("attempt_id")) is not str
+        or not re.fullmatch(r"attempt_[0-9a-f]{32}", result["attempt_id"])
         or result.get("real_input_bound") is not True
         or result.get("request_id") != request.request_id
         or result.get("request_digest") != owned_service_request_digest(request)
@@ -453,6 +460,7 @@ def _owned_result_provenance(result, request):
     keys = {
         *_OWNED_HASH_FIELDS,
         *_OWNED_TEXT_FIELDS,
+        "attempt_id",
         "context_window_tokens",
         "output_token_limit",
         "prompt_tokens",
@@ -466,7 +474,22 @@ def _owned_result_provenance(result, request):
         "quality_state",
         "promotion_status",
     }
-    return {key: result.get(key) for key in keys}
+    provenance = {key: result.get(key) for key in keys}
+    if (type(evaluation_call_ref) is str and re.fullmatch(
+            r"ai-call:v1:[1-9][0-9]{0,15}:[0-9a-f]{64}", evaluation_call_ref)):
+        provenance["evaluation_call_ref"] = evaluation_call_ref
+        generated_text = result.get("text")
+        if type(generated_text) is str:
+            provenance["evaluation_output_sha256"] = hashlib.sha256(
+                generated_text.encode("utf-8")
+            ).hexdigest()
+        elif type(result.get("analysis")) in (dict, list):
+            provenance["evaluation_output_sha256"] = _digest(
+                {"analysis": result["analysis"]}
+            )
+        else:
+            provenance.pop("evaluation_call_ref", None)
+    return provenance
 
 
 def _excerpts(source):
@@ -767,10 +790,11 @@ def read_business_brief(evidence_ref, *, job_id, actor_ref, scope, actor=None):
     material = inputs["material"]
     provider = outputs["provider"]
     provenance = outputs.get("owned_provenance")
+    evaluation_link_state = "NOT_RECORDED"
     if provider == "owned":
         if inputs["version"] != _VERSION or not isinstance(provenance, dict):
             raise ValueError("BUSINESS_BRIEF_OWNED_PROVENANCE_INVALID")
-        _verify_stored_owned_provenance(
+        evaluation_link_state = _verify_stored_owned_provenance(
             provenance, material, job_id, actor_ref, scope, actor=actor
         )
         if outputs["model"] != provenance["model_id"]:
@@ -794,6 +818,12 @@ def read_business_brief(evidence_ref, *, job_id, actor_ref, scope, actor=None):
             analysis,
             material["revision"]["previous_analysis"],
         )
+    public_provenance = dict(provenance) if provider == "owned" else None
+    if public_provenance is not None:
+        public_provenance["evaluation_link_state"] = evaluation_link_state
+        if evaluation_link_state != "VERIFIED":
+            public_provenance.pop("evaluation_call_ref", None)
+            public_provenance.pop("evaluation_output_sha256", None)
     return {
         "state": "draft",
         "review_status": "HUMAN_PENDING",
@@ -809,7 +839,7 @@ def read_business_brief(evidence_ref, *, job_id, actor_ref, scope, actor=None):
         "input_sha256": outputs["input_sha256"],
         "model": outputs["model"],
         "provider": provider,
-        **({"owned_provenance": provenance} if provider == "owned" else {}),
+        **({"owned_provenance": public_provenance} if provider == "owned" else {}),
         "sample": material["sample"],
         "markdown": _markdown(material["question"], analysis),
         "outcome_state": "NOT_OBSERVED",
@@ -871,7 +901,20 @@ def _request_business_inference(system, user, **kwargs):
             max_output_tokens=kwargs["max_tokens"],
         )
         validate_business_source_use(request, actor=actor)
+        gateway_started = _time.perf_counter()
         result = gateway.run_owned_request(request)
+        gateway_latency_ms = max(0, int((_time.perf_counter() - gateway_started) * 1000))
+        # This source-bound Shared caller goes directly through the SYSTEM
+        # Gateway, so it must explicitly feed the same content-free Evaluation
+        # owner used by AI Hub and Agent planning. Evaluation failure does not
+        # turn a valid business result into a failure.
+        evaluation_call_ref = None
+        try:
+            from lumenis.shared.evaluation.ai import record_owned_gateway_execution
+            evaluation_call_ref = record_owned_gateway_execution(
+                request, result, latency_ms=gateway_latency_ms)
+        except Exception:
+            pass
         if not isinstance(result, dict):
             raise ValueError("BUSINESS_BRIEF_OWNED_RESPONSE_INVALID")
         if result.get("ok") is not True:
@@ -888,11 +931,26 @@ def _request_business_inference(system, user, **kwargs):
                     "state": result.get("status", "UNAVAILABLE"),
                     "reason": reason,
                     "available": False,
-                    "generation_probe_performed": False,
+                    "generation_probe_performed": bool(
+                        isinstance(result.get("attempt_id"), str)
+                        and re.fullmatch(r"attempt_[0-9a-f]{32}", result["attempt_id"])
+                    ),
                     "fallback_allowed": False,
                 },
             )
-        provenance = _owned_result_provenance(result, request)
+        provenance = _owned_result_provenance(
+            result, request, evaluation_call_ref=evaluation_call_ref,
+        )
+        evaluation_link_state = "NOT_RECORDED"
+        if evaluation_call_ref and "evaluation_output_sha256" in provenance:
+            from lumenis.shared.evaluation.ai import verify_owned_gateway_execution_ref
+            evaluation_link_state = verify_owned_gateway_execution_ref(
+                evaluation_call_ref, request, expected_provenance=provenance,
+            )
+            if evaluation_link_state != "VERIFIED":
+                provenance.pop("evaluation_call_ref", None)
+                provenance.pop("evaluation_output_sha256", None)
+        provenance["evaluation_link_state"] = evaluation_link_state
         validate_business_source_use(request, actor=actor)
         if not isinstance(result.get("analysis"), dict):
             raise ValueError("BUSINESS_BRIEF_OWNED_RESPONSE_INVALID")
@@ -906,6 +964,7 @@ def _request_business_inference(system, user, **kwargs):
                 "actor": actor,
                 "reason": "OWNED_INFERENCE_COMPLETED",
                 "available": True,
+                "evaluation_call_ref": evaluation_call_ref,
             },
         )
     except (ValueError, TypeError, KeyError, PermissionError) as exc:
@@ -945,6 +1004,13 @@ def _verify_stored_owned_provenance(
         or any(
             not isinstance(provenance.get(key), str) or not provenance[key]
             for key in _OWNED_TEXT_FIELDS
+        )
+        or (
+            "attempt_id" in provenance
+            and (
+                type(provenance["attempt_id"]) is not str
+                or not re.fullmatch(r"attempt_[0-9a-f]{32}", provenance["attempt_id"])
+            )
         )
     ):
         raise ValueError("BUSINESS_BRIEF_OWNED_PROVENANCE_INVALID")
@@ -1020,6 +1086,16 @@ def _verify_stored_owned_provenance(
     )
     if provenance["request_digest"] != owned_service_request_digest(request):
         raise ValueError("BUSINESS_BRIEF_OWNED_REQUEST_DIGEST_INVALID")
+    evaluation_ref = provenance.get("evaluation_call_ref")
+    if evaluation_ref is None:
+        return "NOT_LINKED" if "evaluation_output_sha256" in provenance else "NOT_RECORDED"
+    expected_output = provenance.get("evaluation_output_sha256")
+    if type(expected_output) is not str or not re.fullmatch(r"[0-9a-f]{64}", expected_output):
+        return "NOT_LINKED"
+    from lumenis.shared.evaluation.ai import verify_owned_gateway_execution_ref
+    return verify_owned_gateway_execution_ref(
+        evaluation_ref, request, expected_provenance=provenance,
+    )
 
 
 def analyze_business_brief(

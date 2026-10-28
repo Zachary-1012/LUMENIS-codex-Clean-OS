@@ -1,366 +1,85 @@
 # LUMENIS engineering tools
 
-This directory implements development tooling, not product architecture or production truth.
-Root AGENTS.md and the current source/owner/contracts govern product work.
+This page documents repository-controlled developer tools under `.codex/`. It is not a product plan, source-owner map, task router, model-selection policy, or live status record. Repository-wide development instructions are owned by [`../AGENTS.md`](../AGENTS.md); exact product source paths are indexed in [`../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md`](../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md).
 
-- Lifecycle source: hooks/lumenis_hooks.py; register it once per workstation in ~/.codex/hooks.json after native /hooks trust. Do not duplicate the same handler in both user and project hook registrations. hooks.example.json is a portable-reference template that requires local Python/path review.
-- UserPromptSubmit is treated as user input; duplicate-event detection uses its turn ID, never marker text in the prompt body.
-- Native Hook trust is required before lifecycle execution. Workstation trust is stored by Codex against the current hook hash; when a hook definition changes, re-review its current hash instead of bypassing trust. Hook trust never grants model-selection authority.
-- Authorized isolated engineering-helper regression command: python -X utf8 -m unittest discover -s .codex/tests -v. The helper reads verification_policy.run_unit_integration_allowed from the machine contract and refuses execution while it is false.
-- Local MCP: lumenis_engineering. Its server and bounded source/routing helpers are versioned in this repository under .codex/mcp/server.mjs and .codex/engineering.py. It exposes bounded source, routing, Git, health and verification operations; selected regressions follow current explicit machine policy and Owner admission. No arbitrary shell or broad product-suite execution is exposed over MCP.
-- Compile/static, build, security/permission and data-consistency checks must use the native Codex sandbox or their existing owner tool. Complete applicable recovery and real-user E2E on the running product with permitted real inputs. Unit/integration regressions are restored under the 2026-10-10 verification_policy; preserve their actual test classification. A check observation never proves full product E2E or release readiness.
-- Runtime state is outside the product repository in ~/.codex/lumenis-engineering-state.
-- The MCP SDK binary/package, workstation registration and diagnostics stay workstation-local and are never Product Truth. The MCP logic itself is repository-versioned; a clean clone must install/point to a compatible SDK and register the in-repo server locally rather than depend on another machine's hidden helper source.
-- `model-routing.toml` records Product Owner manual selection and factual readback, with no M/F/C1-C6 fixed model/effort assignment. Hooks report only available event metadata. Historical workstation launch profiles cannot override the user's selected settings.
-- `project_doc_max_bytes = 131072` preserves headroom for the current root AGENTS.md because Codex applies a shared project-instruction byte budget. If the router grows beyond the configured budget, fix the router/budget and fail the governance gate rather than accepting silent instruction truncation.
-- `web_search = "live"` is retained so an owning window can resolve technical blockers from current official documentation and maintained upstream GitHub/high-quality implementations, then implement and verify the strongest feasible complete solution without spawning duplicate research windows.
-- `goals = true` is retained for multi-turn closure work with a stable finish line: the Goal must mirror the current window's complete approved outcome, verification surface, constraints and blocked-stop conditions. It is thread-scoped continuity, never a new Product Authority or a license to shrink scope.
-- `skill_search = true` is retained so Codex can discover and reuse existing engineering workflows instead of re-creating them. Skills remain subordinate to AGENTS/Product Architecture/Owner/Permission and may not redefine product scope.
-- The tracked project config registers OpenAI's official read-only developer-documentation MCP as `openaiDeveloperDocs` at `https://developers.openai.com/mcp`; keep this as the single LUMENIS definition rather than duplicating it in user config. It is an optional current-documentation source (`required = false`), never Product Truth or a shipped dependency. Context7 remains a complementary current-library documentation source.
-- No top-level repository model/provider/service-tier/review-model override is defined. The only native project model default is `[agents] default_subagent_model = "gpt-6-luna"` with `max` reasoning, matching `model-routing.toml`; an explicit spawn or Product Owner manual choice has precedence.
+本页只说明仓库受控的开发工具入口，不是产品规划、源码 Owner 索引、任务路由、模型选择规则或运行状态记录。仓库开发规则唯一入口为 [`../AGENTS.md`](../AGENTS.md)，产品源码精确路径见[源码 Owner Index](../00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md)。
 
-## Compaction and recovery / 压缩与续接
+## Tool entry points / 工具入口
 
-Use durable context in the existing Owner record; a model summary is lossy.
-Keep one `continuity` section in that record, not a new Task Card or scheduler.
-Frozen outcome IDs and normalized implementation source paths survive context clear.
-Rebinding to a different record requires rereading the prior record and validating
-its current closure receipts; cached closure alone is insufficient. A new direct
-PO turn must be reconciled before reusing a closure, blocker or deferral exit,
-even when its text matches an earlier turn. A locally recorded Stop continuation
-is not a new PO authorization: preserve the original binding only when its native
-turn metadata and exact generated reason match the pending continuation. Missing
-or conflicting metadata requires reconciliation; ordinary user text never grants
-a bypass, and a new pause instruction remains authoritative.
-必须保留完整目标、最新 PO 来源与更正、约束、已有证据、全部未完项和下一步；
-摘要不是新的调度授权。原生 Goal 的旧暂停标记不能覆盖更新的直接 PO 指令。
+| Path | Purpose |
+| --- | --- |
+| `engineering.py` | Existing bounded engineering CLI, including `continuity` and `verification_run`; these interfaces consume the current Owner record and the repository's existing verification policy. |
+| `local_workflow.py` | Selected-file local engineering actions, invoked through `scripts/local_development.ps1` and the checked-in VS Code tasks. |
+| `hooks/` | Repository hook implementation and portable examples. A tracked hook source does not prove that a workstation registered or trusted it. |
+| `mcp/` | Repository source for the optional LUMENIS engineering MCP server. Local SDK installation and registration are workstation configuration. |
+| `tests/` | Regressions for these developer tools; test execution follows the current repository instructions and machine policy. |
 
-The JSON section retains these fields; the optional `delivery` object below binds
-the current task's complete outcome constraints without creating another queue:
+| 路径 | 用途 |
+| --- | --- |
+| `engineering.py` | 现有有界工程 CLI，包含 `continuity` 与 `verification_run`；接口读取现有 Owner 记录并遵循仓库验证策略。 |
+| `local_workflow.py` | 对选定文件执行本地工程操作，由 `scripts/local_development.ps1` 和已跟踪的 VS Code Tasks 调用。 |
+| `hooks/` | 仓库 Hook 实现和可移植示例。源码受控不表示某台工作站已注册或信任它。 |
+| `mcp/` | 可选 LUMENIS 工程 MCP Server 的仓库源码。本地 SDK 安装和注册属于工作站配置。 |
+| `tests/` | 开发工具的回归；执行须遵循仓库当前规则和机器策略。 |
+
+## Owner continuity record / Owner 接续记录
+
+The existing Owner record has one `continuity` object. Its required fields are `owner`, `objective`, `po_source`, `constraints`, `completed`, `remaining`, `next_action`, `pending_effects`, `source_paths`, `evidence_paths`, and `native_goal`. The optional `delivery` object uses `schema_version: 1` and has `status`, `po_source`, `scope_sources`, and `requirements`, with optional `exit` and `effect_ledger`. Each requirement carries `id`, `outcome_class`, `acceptance`, `coverage_refs`, `status`, and `evidence`. The optional `execution` object uses `schema_version: 1` and has `status`, `role`, `po_source`, `allowed_writes`, and `approved_calls`. These are the current tool input fields, not a second source of product scope or live execution state.
+
+现有 Owner 记录包含一个 `continuity` 对象，必需字段包括 `owner`、`objective`、`po_source`、`constraints`、`completed`、`remaining`、`next_action`、`pending_effects`、`source_paths`、`evidence_paths` 和 `native_goal`。可选 `delivery` 使用 `schema_version: 1`，包含 `status`、`po_source`、`scope_sources`、`requirements`，并可选 `exit`、`effect_ledger`。每项 requirement 包含 `id`、`outcome_class`、`acceptance`、`coverage_refs`、`status` 和 `evidence`。可选 `execution` 使用 `schema_version: 1`，包含 `status`、`role`、`po_source`、`allowed_writes` 和 `approved_calls`。这些是现有工具的输入字段，不是另一套产品范围或实时执行状态。
+
+Read or save through the existing CLI:
+
+```powershell
+python -X utf8 .codex/engineering.py continuity --params '{"mode":"read"}'
+python -X utf8 .codex/engineering.py continuity --params '{"mode":"save","record":"work/<existing-owner-record>.json","section":"continuity"}'
+```
+
+The command uses the current native session identity. `save` names an existing Owner record and exact top-level section; the tool validates the record and source scope before writing. The record schema has no credential fields. See [`../AGENTS.md`](../AGENTS.md) for the repository development route.
+
+读取或保存使用现有 CLI：
+
+```powershell
+python -X utf8 .codex/engineering.py continuity --params '{"mode":"read"}'
+python -X utf8 .codex/engineering.py continuity --params '{"mode":"save","record":"work/<existing-owner-record>.json","section":"continuity"}'
+```
+
+命令使用当前原生会话身份。`save` 指定已有 Owner 记录及其顶层 section；工具会在写入前校验记录和源码范围。该记录结构没有凭据字段。仓库开发路径见 [`../AGENTS.md`](../AGENTS.md)。
+
+## Selected verification receipt / 选定验证回执
+
+`verification_run` accepts a JSON parameter object with `kind` (`compile`, `static`, or `test`), an argv array, and `timeout_seconds`. It records the subprocess outcome and the source/policy pins required by its implementation. Its current Owner binding and allowed check set are enforced by the tool and current machine contract; a receipt is engineering evidence, not product acceptance.
+
+```json
+{"kind":"<compile|static|test>","argv":["<executable>","<argument>"],"timeout_seconds":60}
+```
+
+`verification_run` 接收含 `kind`、argv 数组和 `timeout_seconds` 的 JSON 参数对象，并按工具实现记录子进程结果及源码/策略版本 pin。当前 Owner 绑定和允许的检查类型由工具及机器合同校验；回执是工程证据，不等于产品验收。
+
+The CLI consumes argv as a JSON string array; its receipt records that selected command execution. Consult `engineering.py` when the input schema changes. Product outcome and operation records remain with their existing owners.
+
+参数中的 `kind` 只接受 `compile`、`static` 或 `test`，命令按 argv 数组传入，时限用 `timeout_seconds` 指定。源码/策略 pin 和现有 Owner 绑定由工具与机器合同校验；回执只记录工程验证结果。
+
+CLI 的 argv 是 JSON 字符串数组，回执记录所选命令的执行结果。输入结构变更时以 `engineering.py` 为准；产品成果及外部操作记录仍归既有 Owner。
+
+不要将用户数据拼成 shell 命令；按 CLI 要求显式传入 argv 字段。命令结构变更时以 `engineering.py` 为准。验证回执不得用于添加或重放外部操作。
+
+## Local workflow actions / 本地工作流动作
+
+The existing local workflow exposes `snapshot`, `check`, `diff`, `format-preview`, `format-apply`, `rollback`, `locale-preview`, and `build`. `format-apply` accepts `--manifest`; `rollback` accepts `--receipt` for a prior successful apply receipt. The format manifest shape is:
 
 ```json
 {
-  "owner": "M",
-  "objective": "The complete approved outcome and acceptance boundary",
-  "po_source": "Dated direct PO instruction and existing provenance reference",
-  "constraints": ["Current scope, rights, costs, writer boundaries and corrections"],
-  "completed": ["Exact achieved result, evidence reference and limits"],
-  "remaining": ["Every unmet requirement, including external blockers"],
-  "next_action": "The next safe executable step",
-  "pending_effects": [],
-  "source_paths": [".codex/hooks/lumenis_hooks.py"],
-  "evidence_paths": [],
-  "native_goal": "Current observed Goal reference/status, or NOT_VERIFIED"
+  "head": "<current verified HEAD>",
+  "owner": "<existing owner>",
+  "reservation_path": "<current reservation path>",
+  "reservation_sha256": "<current reservation SHA-256>",
+  "paths": [
+    {"path": "<exact repository-relative file>", "preimage_sha256": "<file SHA-256>"}
+  ]
 }
 ```
 
-`pending_effects` records unresolved operation IDs, status and existing receipt
-pointers; an empty list asserts none known, not a universal safety proof. Record
-no credentials, Cookies, raw private prompts or production data. References are
-explicit repository text files; `work/` records are local protected evidence and
-are never automatically committed or sent to a service.
+The tool checks the current reservation, exact file set, and preimage hashes. The source parser is the exact CLI contract; package-specific instructions remain in [`../app/README.md`](../app/README.md), [`../website/README.md`](../website/README.md), and [`../scripts/README.md`](../scripts/README.md). Workstation-only tool paths, receipts, hook trust and editor installation state do not belong in portable repository documentation.
 
-When a pending effect is admitted, `delivery.effect_ledger` retains its exact-text
-SHA-256 identity with `status: PENDING`; those IDs must match the top-level
-`pending_effects` list. Resolve it by changing that entry to `RESOLVED` and
-including a declared local JSON receipt path plus the receipt SHA-256. The receipt
-identifies the same effect, records a terminal readback (`APPLIED`,
-`NOT_APPLIED`, `FAILED`, `CANCELLED` or `RECONCILED`), an observation and the
-complete source pins frozen when that operation was admitted as pending. The ledger keeps the resolved entry
-across sessions; its exact receipt reference is frozen. Its source pins and head
-describe the implementation version at the time of the operation. They are checked
-when the effect first resolves; a later source edit does not invalidate that
-historical readback or authorize replay. Missing legacy admission pins require
-explicit reconciliation rather than substituting today's source version. Current implementation acceptance still
-uses its own current-source receipts. New effects may be appended as `PENDING`,
-then become immutable after their receipt is admitted. Removing the pending item
-or leaving the list empty alone cannot resolve an effect.
-The frozen admission must also survive context clearing. A fresh guard cannot
-import already-resolved effects without that prior admission; preserve the old
-record, receipt and guard for reconciliation, never replay the external effect.
-Admission reserves evidence-list space for pending resolutions and each outcome's
-operation/recovery receipts before another effect is added.
-
-```powershell
-# Refresh at admission, meaningful outcome/PO correction, or planned handoff.
-python .codex/engineering.py continuity --params '{"mode":"save","record":"work/<existing-owner-record>.json","section":"continuity"}'
-# On compact/resume, before source writes or any uncertain operation retry.
-python .codex/engineering.py continuity --params '{"mode":"read"}'
-```
-
-The command uses the current native `CODEX_THREAD_ID`/`CODEX_SESSION_ID` and agent
-identity, the existing per-session engineering state, lock and atomic replace.
-No stable identity means no shared fallback record. It never changes a native
-Goal, dispatch, model, product source, database, service or user configuration.
-Locks use the operating system's file locking and release on process death;
-an unknown legacy lock requires exact process-owner readback before archival.
-Do not remove another window's lock. Verification receipts use the bound source
-scope, HEAD and current verification policy; unrelated Owners' edits do not
-force repeat validation. Changed in-scope bytes still invalidate that evidence.
-Stop compares actual scoped changes with the original baseline, including committed
-changes; a clean tracked scoped file is not a change. Other Owners' mutations do
-not impose this task's checks. Frontend `.astro`/`.css` and bounded `.log` evidence
-are supported text pins; private/session/data exclusions remain enforced. Normal execution hashes the frozen owned paths against their original admission
-baseline, including ignored sources; report/pause snapshots also retain their
-scoped paths. Git ignore status cannot suppress verification requirements.
-
-- `PINNED_CONTEXT`: referenced bytes and recorded local version match; read the
-  record and latest direct PO instruction. This is not authorization/acceptance.
-- `RECONCILE_REQUIRED`: only inspect reported changes/new message/pending effects,
-  reconcile the existing record, then bind the reviewed version. Do not blindly
-  refresh pins, repeat effects or stop other windows.
-- `READBACK_REQUIRED`: bind the actual current Owner record after verifying the
-  current instruction; never borrow another thread's context.
-
-PreCompact stores a bounded local snapshot without updating task pins or copying
-raw task text into global state. PostCompact records the event; native
-SessionStart(source=compact) injects the readback pointer before continuation.
-The original verification baseline stays intact; displayed HEAD is fresh local
-HEAD, while origin/main is explicitly cached and needs a fresh fetch at integration.
-Missing/truncated/disabled hooks require this same manual command, not a new loop.
-
-依据 / Sources: [OpenAI durable project memory](https://developers.openai.com/blog/run-long-horizon-tasks-with-codex),
-[official hook lifecycle](https://developers.openai.com/codex/hooks),
-[fixed Codex compact prompt](https://github.com/openai/codex/blob/a07c8ebd57feedc4cf5dfe854c8e9101de54186b/codex-rs/prompts/templates/compact/prompt.md),
-[fixed SessionStart after compaction](https://github.com/openai/codex/blob/a07c8ebd57feedc4cf5dfe854c8e9101de54186b/codex-rs/core/src/session/mod.rs).
-These describe recovery mechanics, not a guarantee of error-free model execution.
-
-### Complete-outcome guards / 完整成果约束
-
-Execution is constrained before supported tool calls, not only at Stop. The existing
-Owner continuity section may bind `execution` with `schema_version: 1`, `status`
-(`RUNNING` or `PAUSED`), `role` (`FRONTEND`, `CAPABILITY`, or explicitly authorized
-`GUARD_MAINTENANCE`), the exact `po_source`, `allowed_writes`, and `approved_calls`.
-Paths are repository-relative exact files or directory prefixes ending in `/`.
-Frontend writes stay in app/, website/ and contracts/experience/; capability work
-cannot write frontend files. Ordinary implementation cannot edit AGENTS, governance
-or the enforcement tooling. A patch checks every source and move destination.
-Linked paths and repository escapes are refused. An unbound or unreadable execution
-scope denies mutation/opaque calls; the native event identity must match the binding.
-
-Shell, MCP and delegation are not made safe by claiming they are read-only. Except
-for explicitly recognized reads and the original continuity entry, admit their
-exact tool name and canonical JSON arguments SHA-256, purpose, input-file hashes
-and explicit `repeat` boolean in `approved_calls`. Successful unchanged calls with
-`repeat: false` cannot be rerun. Changing pinned inputs requires renewed admission.
-This is bounded call admission, not an interpreter for arbitrary scripts or an OS
-sandbox; reviewed scripts remain responsible for their indirect writes/effects.
-No hook can determine visual quality or prove that a declared receipt is truthful.
-
-The admitted scope is frozen through compaction. A new direct PO instruction is
-required to expand it. Pause persists across later questions; only explicit resume
-plus reconciliation may resume writes. Stop preserves unfinished work during a
-pause and cannot dispatch work or demand tests. Native hook registration/trust and
-actual invocation must be verified separately from this source implementation.
-The template uses all supported tool names so delegation does not escape matching.
-Do not register a duplicate handler or claim native enforcement from a script run.
-
-The same Owner continuity record can include `delivery` (schema version 1).
-Record the complete direct-PO outcome before implementation, with stable existing
-requirement IDs, observable acceptance conditions, all coverage references and
-hash-pinned source documents. A rebind may add requirements; it cannot silently
-remove their IDs, weaken acceptance or drop coverage. Keep prior requirements
-when the PO changes scope and record the exact new instruction. `DEFER`, source
-presence, a PR or CI success never closes an approved requirement.
-
-`delivery.status` describes this task: `RUNNING`, `REPORT_ONLY`, `PO_PAUSED`,
-`APPROVAL_WAIT`, `EXTERNAL_BLOCKED`, `PO_DEFERRED` or `JOB_CLOSED`. Each requirement records
-`id`, `outcome_class`, `acceptance`, `coverage_refs`, its actual `status`, and
-`evidence`. Freeze `PRODUCT` versus `DEVELOPMENT_TOOL` at admission: a product
-outcome requires real user E2E and recovery; a tool workflow cannot replace it.
-`scope_sources` records each original scope document's `path` and `sha256`.
-Evidence points to bounded existing JSON receipts with the recorded outcome,
-historical source HEAD and the complete admitted source/scope-file hashes. An
-unrelated commit or later scope addition does not invalidate a closed outcome
-whose original source pins are unchanged. Its exact receipt references and bytes
-remain frozen under the same record/session binding. New or reopened outcomes
-require current complete-scope outcome and recovery receipts. A changed original
-source invalidates current closure: explicitly reopen, preserve historical
-receipts, verify the new version, then close again. Historical receipts alone
-cannot accept changed source. Receipts distinguish real user work, tool workflow
-and recovery from isolated automated checks. Original
-requirements and source documents remain the coverage authority: a hook cannot
-prove that an initial checklist omitted nothing or that a self-authored receipt
-describes a real event.
-
-A fresh execution binding first admits a RUNNING outcome with unfinished work;
-pre-existing terminal records cannot be stamped as the new instruction. Report-only
-turns freeze the bound record, sources, authority and evidence paths, including
-ignored files and context-clear recovery, so modifying those inputs remains visible.
-For a running task, Stop rejects remaining unclosed work and unaudited completion
-claims even when no source changed. Complete status requires current receipt
-readback for every requirement and an empty top-level `remaining` list. The concise
-continuity narrative is limited to 24,000 serialized Unicode characters; the structured `delivery`
-evidence budget is separately limited to 8,000,000 bytes, supporting up to 100
-outcomes with full operation and recovery receipts. Up to 220 evidence paths are
-allowed. These bounds do not establish that a receipt is truthful. Paths are
-normalized before change comparison, including `./` spellings. A report-only reply, direct PO pause, required
-approval or evidenced external blocker is a non-completion exit: preserve the
-remaining work, exact reason and next/resume condition. `PO_DEFERRED` is a
-non-closure exit only when every unfinished requirement is explicitly deferred,
-its exact PO source and ID appear in a current hash-pinned local source receipt,
-and the exit names those IDs and their resume condition. A new PO message requires
-reconciling that deferral; it does not silently inherit a historical stop. Blocker/deferral
-proof identities and hashes, unfinished requirement IDs, and the authorizing
-prompt-turn binding are retained across rebinding, `RUNNING` and context clear.
-Editing display reason or resume wording cannot refresh the authorization. Reusing
-an old blocker or deferral cannot become current by refreshing only the prompt hash;
-a fresh blocker readback or renewed direct PO receipt is required. Direct
-standalone Chinese and English pause/approval instructions are recognized.
-A generic blocker cannot
-stop independent authorized work. Hooks never dispatch another window, start a
-suite, call a model or change account/model/effort/tier. One corrective continuation
-is permitted; repeated Stop failure terminates with an explicit incomplete state,
-preventing an unbounded retry loop. Legacy records remain readable but do not
-claim these additional machine constraints until explicitly bound.
-
-Dynamic maintenance means reconciling this existing record after a new direct PO
-instruction, meaningful outcome, changed source/runtime version or invalidated
-evidence. Reuse unaffected receipts; recheck affected boundaries. Do not weaken
-verification policy or automatically install/upgrade plugins to obtain a PASS.
-Current read-only questions must not inherit a demand to rerun checks for older
-session edits; those unfinished checks remain required before delivery. Source,
-runtime, database, user outcome and publication are separate acceptance facts.
-
-After publishing a hook update, verify the actually registered handler and native
-`hooks/list` trust/readback. A source change alone is not active enforcement.
-Keep one registration, preserve other handlers and settings, and never edit the
-native trust store. If native reapproval is required, report that precise condition
-instead of calling the hook active. Rollback uses the reviewed previous published
-handler/configuration, not a reset or overwrite of product candidates.
-
-### Actual verification receipts / 真实退出码回执
-
-Some native `Bash` PostToolUse events contain only stdout text and no process
-exit code. Empty stdout never establishes success. The hook retains that unknown
-observation without replacing a verified result with a fabricated exit code.
-For an explicitly selected check whose exit metadata is absent, the existing CLI
-can execute a bounded command and record its actual subprocess result:
-
-```powershell
-python .codex/engineering.py verification_run --params '{"kind":"compile","argv":["python","-X","utf8","-m","py_compile",".codex/engineering.py"],"timeout_seconds":60}'
-```
-
-Bind the reviewed current Owner continuity first. Commands use argv arrays, not
-shell strings, and must match the existing compile/static/targeted-regression
-allowlist and current machine verification policy. The runner records RUNNING
-before execution, actual return code or timeout, and source/HEAD/policy pins
-before and after. Changed inputs cannot produce a passing receipt. A missing
-receipt is not permission to repeat a completed expensive check: first inspect
-its original tool/process result; use this route for necessary subsequent checks.
-The current record, Owner, authority/evidence hashes, HEAD and prompt must still
-match admission; after a relevant change, read/reconcile and rebind explicitly.
-Edits within admitted source scope are expected, but the selected check pins
-their exact start/end bytes. Known pending effects remain recorded and are never
-replayed by this check. Hook exit status accepts only an actual top-level integer
-exit field; output text, nested claims and empty output remain UNKNOWN.
-
-For an Owner-reviewed product regression, the same runner accepts exactly one
-literal pytest node, not a folder/suite or arbitrary flags:
-
-```powershell
-python .codex/engineering.py verification_run --params '{"kind":"test","argv":["python","-X","utf8","-m","pytest","-q","--no-header","-p","no:cacheprovider","tests/<reviewed_file>.py::<actual_test_node>"],"timeout_seconds":60}'
-```
-
-The test file and active conftest/fixture modules require current Owner review;
-this readback grants no permission to edit another Owner's files. The runner pins
-all configuration/conftest candidates (including ABSENT), fixes pytest -c/rootdir,
-and admits only named, recursively reviewed fixture edges with exact source hash,
-Owner and purpose. The C3/C4/C5 socket guards remain enabled; a changed hash or
-unknown plugin fails closed. Authority, task records, evidence and reviewed shared
-fixtures stay immutable even if included in the editable source list. Existing test
-setup and data guards still execute. Plugin autoload/cache are disabled, and
-zero executed or only skipped tests do not yield passing verification. AST checks
-reject recognized unsafe direct actions but cannot prove indirect dependencies
-safe: the Owner must review their source/effects first. No model/collection/
-production-DB/deployment authority follows from a test command.
-Hooks never launch checks themselves. This mechanism records engineering evidence
-only; it grants no dispatch, model call, production write or product acceptance.
-The upstream limitation is visible in the fixed
-[ExecCommand hook payload](https://github.com/openai/codex/blob/a07c8ebd57feedc4cf5dfe854c8e9101de54186b/codex-rs/core/src/tools/context.rs).
-
-Secrets, data files, browser sessions, production database writes and unknown local changes are outside this tooling task. Do not alter them to make an installation check green.
-
-## Local deterministic developer workflow (2026-10-09)
-
-Ruff CLI is a required local static tool when Python paths are checked. This workstation now exposes `ruff --version` through its existing `D:/devtools/bin` entry and pins Ruff 0.16.9 in `D:/devtools/lumenis-engineering/ruff-0.16.9`; the ignored `tools.local.json` binds the exact executable. VS Code keeps its same-version bundled server. On another workstation resolve its installed executable, then use the existing official-source installation authority for a missing tool; do not silently skip a required static check. Record UNAVAILABLE only at a verified permission/resource boundary and continue independent work. Installation hashes/rollback and actual checks stay in protected local receipts; no model calls or production Python dependency changes.
-
-
-Use PowerShell 7.5+ and Python 3.11+; the existing project's Python/type policy remains unchanged. VS Code's native Tasks call `scripts/local_development.ps1`, backed by `.codex/local_workflow.py`. They do not launch Codex, a provider, module suites, product services, commit or push. The official language extensions supply local completion/diagnostics; automatic save fixes, heavy automatic Tasks, test discovery and AI completion are disabled for this workspace.
-
-```powershell
-pwsh -NoProfile -File scripts/local_development.ps1 -Action snapshot -Owner M
-pwsh -NoProfile -File scripts/local_development.ps1 -Action check -Owner M -PathsJson '[".codex/local_workflow.py","scripts/local_development.ps1"]'
-pwsh -NoProfile -File scripts/local_development.ps1 -Action diff -Owner M -Paths .codex/local_workflow.py
-pwsh -NoProfile -File scripts/local_development.ps1 -Action format-preview -Owner M -Paths .codex/local_workflow.py
-pwsh -NoProfile -File scripts/local_development.ps1 -Action locale-preview -Owner F
-pwsh -NoProfile -File scripts/local_development.ps1 -Action build -Owner F -Target website
-pwsh -NoProfile -File scripts/local_development.ps1 -Action build -Owner F -Target flutter-web
-```
-
-Checks select exact files, keep actual diagnostic positions/exit codes and never fix automatically. Python uses AST and Ruff, Dart uses existing analyzer/formatter, PowerShell uses parser/PSScriptAnalyzer, JS uses Node syntax; Astro/TS checks require their available existing parser. A syntax parser does not prove full type correctness. Missing tools fail honestly. Locale generation runs the pinned existing Dart generator against existing schemas in a temporary mirror, previews the output, and never overwrites a product-generated file. Formatting supports only the explicitly configured Python/Dart formatters. Builds use fixed Astro/Flutter commands with no dependency installation/lifecycle hooks; success cache requires matching HEAD, input/tool/command and output hashes.
-
-Local absolute executable paths can be supplied in ignored `work/m-governance-20261008/devtools/tools.local.json` (schema `{"version":1,"tools":{"python":"...","ruff":"...","dart":"...","pwsh":"...","node":"...","npm":"..."},"flutter_tools_snapshot":"..."}`). Values must be absolute file paths, not commands or flags. Keep extensions outside the VS Code application installation directory so application updates cannot erase them. Installation/source/version/license evidence stays in the protected local receipt path; the extensions are developer tools, not redistributed product dependencies.
-
-Actual source formatting is a separate explicitly authorized action. Freeze the exact file and current writer first. The manifest below is stored inside the protected default receipt path and pins current raw reservation bytes:
-
-```json
-{
-  "head": "actual current HEAD",
-  "owner": "M",
-  "reservation_path": "work/w6-integration-20261002/dispatch-20261008/SHARED-RESERVATIONS.json",
-  "reservation_sha256": "actual current raw reservation SHA-256",
-  "paths": [{"path": ".codex/local_workflow.py", "preimage_sha256": "actual current file SHA-256"}]
-}
-```
-
-Only a matching current Owner/RESERVED/head/exact allowed path is eligible. This tooling delivery uses the existing `M_local_development_automation` reservation, not a new writer authority. `-Action format-apply -Paths <exact-file> -Manifest <manifest>` requires the exact manifest; `-Action rollback -Paths <exact-file> -Receipt <prior-format-receipt>` restores only exact format postimages under the same valid grant. Source backups and durable intent are written first. The process lock coordinates this helper's writers; it does not lock external editors or authorize an uncertain writer. Changed HEAD, source, reservation, path links or grant stops the affected write. Do not broaden the manifest to force success.
-
-Every action writes ignored private JSON receipts with times, actual exit, source/version range, bounded error, authorization/recovery and tool-spawned model calls (zero). Failed receipts remain failed; later success records recovery separately. Read-only actions and equal formatting inputs do not write source. Static/build/tool acceptance cannot mark a business Job closed, nor prove Runtime/DB/user acceptance. M/W6 still review the exact accepted source and CURRENT co-publication before ordinary main integration.
-
-Rollback this developer configuration by restoring its private preimage backups after verifying no later user change, disabling these Tasks or uninstalling only this delivery's added extensions via the official Code CLI. Never reset/clean the product tree or restore an entire old profile. Existing C1 and earlier M source/material work stay protected and independently unfinished.
-
-### Editor recovery without another tool stack
-
-Compare the running Code process's actual `--extensions-dir` and `--user-data-dir`
-with the installed extension directory before reinstalling anything. A stale
-launcher path can leave installed language extensions inactive. Keep the durable
-extension directory; repair only the verified missing local alias or launcher
-path, with a private preimage and link-target record. Do not bypass publisher or
-workspace trust. Restart only the affected language/extension host after checking
-that it does not own another active task; do not restart product services.
-
-For PowerShell, select the already-installed compatible PowerShell 7 executable
-through `powershell.powerShellAdditionalExePaths` and
-`powershell.powerShellDefaultVersion` in the actual profile. Keep machine-specific
-paths out of portable repository settings. Do not install a second shell to fix a
-discovery error or change the user's general terminal/profile selection.
-
-Dart-Code 3.144 resolves `dart.analysisExcludedFolders` relative to each workspace
-folder; it does not expand `${workspaceFolder}` in that setting. Use the checked-in
-relative paths, close temporary Dart files inside excluded historical copies, and
-restart the Dart analysis server after this setting changes. Retain the real
-`app/` project, its existing type/lint policy and diagnostics. Do not suppress
-legitimate errors, delete historical tests or set the deprecated
-`onlyAnalyzeProjectsWithOpenFiles` to hide the scanning problem.
-
-Use the native **Trigger Suggest** command for non-model completion; do not confuse
-it with **Trigger Inline Suggestion**. Check keybindings before diagnostics actions:
-the PowerShell extension can bind F8 to run a selection. Inspect Problems directly
-instead of executing a script. Real editor acceptance and exact private receipts
-are indexed in the existing round-15 bounded delivery record; they are development
-tool evidence, not product Job closure or a total Codex-token savings claim.
-
-## 2026-10-18 source-adoption continuation
-
-The authorized complete research-capability absorption continues in existing
-SourceBrief/Task/Shared scope, BusinessDecisionWorkflow and Learning/Gateway
-owners. Read `00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json` for the pinned source
-and exhaustive 72-file/51-intent/33-capability/36-reference mappings, then the
-sole complete plan §1.3 and original screen specifications. The attachment is
-local provenance, not a second architecture, runtime or exchange protocol.
-The four-repository exchange remains 1.1.0 with its unchanged fingerprint;
-external repositories were not modified. Backend bounded implementation and real-session HTTP are verified in owner deliveries; final merged gates remain pending;
-frontend builds and four-surface acceptance remain NOT_VERIFIED. Reconcile each
-owner's exact delivered source/tests before changing these states. Do not lose
-any original 195G/R/J/U, original creation, interaction or interface-AIGC scope.
+现有本地工作流动作包括 `snapshot`、`check`、`diff`、`format-preview`、`format-apply`、`rollback`、`locale-preview` 和 `build`。`format-apply` 接受 `--manifest`；`rollback` 通过 `--receipt` 指定先前成功的 apply 回执。清单字段示例如上。工具按现有 reservation、精确文件集合和文件改动前 SHA-256 校验；CLI 以源码解析器为准。项目说明见 [`../app/README.md`](../app/README.md)、[`../website/README.md`](../website/README.md) 和 [`../scripts/README.md`](../scripts/README.md)。工作站专属工具路径、回执、Hook 信任和编辑器安装状态不写入可移植仓库文档。

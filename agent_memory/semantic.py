@@ -156,8 +156,10 @@ def search_authorized_sources(query, *, actor, scope, connection, limit=30, offs
         raise RuntimeError('MEMORY_SEARCH_SNAPSHOT_CHANGED')
     selected = ranked[offset:offset + limit]
     result = []
-    for candidate in selected:
-        passage = original_passage(query, candidate['text'])
+    for position, candidate in enumerate(selected, offset):
+        # Preserve the very original range that established this source's rank.
+        # Re-ranking only this document can select a different, weaker passage.
+        passage = report['ranked_passages'][position] or original_passage(query, candidate['text'])
         if passage and candidate['text'][passage['start']:passage['end']].strip():
             source = read_source_reference({**candidate['reference'], 'start': passage['start'], 'end': passage['end']},
                 actor=actor, scope=scope, connection=connection)

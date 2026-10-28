@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 import '../../core/lumenis_core_client.dart';
@@ -345,6 +347,74 @@ abstract interface class Ai01ConversationSources {
   );
 }
 
+/// Source lookup state owned by the conversation controller.
+final class Ai01ConversationSourceSearch {
+  String? conversationId;
+  String? submittedQuery;
+  String? sourceSnapshot;
+  final List<Map<String, dynamic>> records = [];
+  Map<String, dynamic>? preview;
+  int? nextOffset;
+  bool busy = false;
+  bool incomplete = false;
+  String? issue;
+  bool get hasMore => nextOffset != null;
+}
+
+/// Editable context for one persistent conversation identity.
+final class Ai01ConversationContextDraft {
+  Ai01ConversationContextDraft(this.conversationId);
+
+  final String conversationId;
+  Ai01ConversationContext? saved;
+  Ai01ConversationContext? remote;
+  Map<String, dynamic> value = _emptyConversationContext();
+  List<Map<String, dynamic>> sourceReferences = [];
+  bool loading = false;
+  bool saving = false;
+  String? issue;
+
+  bool get dirty =>
+      saved != null &&
+      (_contextSignature(value) != _contextSignature(saved!.value) ||
+          _sourceSignature(sourceReferences) !=
+              _sourceSignature(saved!.sourceReferences));
+}
+
+Map<String, dynamic> _emptyConversationContext() => {
+  'goal': '',
+  'constraints': <String>[],
+  'draft': '',
+  'decisions': <String>[],
+  'excluded_turn_ids': <String>[],
+};
+
+String _contextSignature(Map<String, dynamic> value) => jsonEncode({
+  for (final key in ['goal', 'constraints', 'draft', 'decisions'])
+    key: value[key],
+  'excluded_turn_ids': List<String>.from(value['excluded_turn_ids'] as List)
+    ..sort(),
+});
+
+String _sourceSignature(List<Map<String, dynamic>> sources) =>
+    jsonEncode(sources.map((source) => source['reference']).toList());
+
+final class _PendingConversationContextSave {
+  const _PendingConversationContextSave({
+    required this.conversationId,
+    required this.value,
+    required this.sourceReferences,
+    required this.idempotencyKey,
+    required this.expectedRevision,
+  });
+
+  final String conversationId;
+  final Map<String, dynamic> value;
+  final List<Map<String, dynamic>> sourceReferences;
+  final String idempotencyKey;
+  final int expectedRevision;
+}
+
 class _PendingConversationAppend {
   const _PendingConversationAppend({
     required this.text,
@@ -644,10 +714,16 @@ class Ai01ConversationViewModel extends ChangeNotifier {
   bool creatingUnknown = false;
   bool outcomeUnknown = false;
   String? issue;
+  Ai01ConversationContextDraft? contextDraft;
+  final Ai01ConversationSourceSearch sourceSearch =
+      Ai01ConversationSourceSearch();
   int _listOffset = 0;
   int _generation = 0;
+  int _contextGeneration = 0;
+  int _sourceGeneration = 0;
   int _keyCounter = 0;
   final Map<String, _PendingConversationAppend> _pendingAppends = {};
+  final Map<String, _PendingConversationContextSave> _pendingContextSaves = {};
   bool _disposed = false;
 
   bool get canLoadMoreTurns => detail?.hasMore == true && !detailLoading;
@@ -662,6 +738,585 @@ class Ai01ConversationViewModel extends ChangeNotifier {
 
   String? get pendingAppendText =>
       selectedId == null ? null : _pendingAppends[selectedId]?.text;
+
+  Future<void> loadContext(
+    String conversationId, {
+    bool replaceLocal = false,
+  }) async {
+    if (_disposed || conversationId.isEmpty) return;
+    final generation = ++_contextGeneration;
+    var session = contextDraft;
+    if (session == null || session.conversationId != conversationId) {
+      session = Ai01ConversationContextDraft(conversationId);
+      contextDraft = session;
+    }
+    session.loading = true;
+    session.issue = null;
+    _notify();
+    try {
+      final saved = await repository.readContext(conversationId);
+      if (_disposed || generation != _contextGeneration) return;
+      final localMatches =
+          session.saved == null ||
+          (_contextSignature(saved.value) == _contextSignature(session.value) &&
+              _sourceSignature(saved.sourceReferences) ==
+                  _sourceSignature(session.sourceReferences));
+      if (replaceLocal || localMatches) {
+        _applyContextDraft(session, saved);
+        session.issue = replaceLocal ? null : 'saved';
+      } else {
+        session.remote = saved;
+        session.issue = 'conflict';
+      }
+    } on LumenisCoreException catch (error) {
+      if (_disposed || generation != _contextGeneration) return;
+      if (_readDenied(error.statusCode)) {
+        _clearContextDraft(session);
+        session.issue = error.statusCode == 401
+            ? 'authentication'
+            : 'permission';
+        // Transcript and work details share the same read boundary. Re-read
+        // through the conversation owner so cached turns are dropped too.
+        await open(conversationId);
+      } else {
+        session.issue = 'load_error';
+      }
+    } catch (_) {
+      if (!_disposed && generation == _contextGeneration) {
+        session.issue = 'load_error';
+      }
+    } finally {
+      if (!_disposed && generation == _contextGeneration) {
+        session.loading = false;
+        _notify();
+      }
+    }
+  }
+
+  void editContext({
+    required Map<String, dynamic> value,
+    required List<Map<String, dynamic>> sourceReferences,
+  }) {
+    final session = contextDraft;
+    if (_disposed || session == null || session.saving) return;
+    session.value = _copyContextValue(value);
+    session.sourceReferences = sourceReferences
+        .map((source) => Map<String, dynamic>.from(source))
+        .toList(growable: false);
+    session.issue = null;
+    _notify();
+  }
+
+  void addContextSource(Map<String, dynamic> source) {
+    final session = contextDraft;
+    if (_disposed || session == null || session.saved == null) return;
+    final identity = jsonEncode(source['reference']);
+    if (source['reference'] is! Map ||
+        session.sourceReferences.any(
+          (item) => jsonEncode(item['reference']) == identity,
+        )) {
+      return;
+    }
+    session.sourceReferences = [
+      ...session.sourceReferences,
+      Map<String, dynamic>.from(source),
+    ];
+    session.issue = null;
+    _notify();
+  }
+
+  void removeContextSource(Map<String, dynamic> reference) {
+    final session = contextDraft;
+    if (_disposed || session == null || session.saved == null) return;
+    final identity = jsonEncode(reference);
+    session.sourceReferences = session.sourceReferences
+        .where((source) => jsonEncode(source['reference']) != identity)
+        .toList(growable: false);
+    session.issue = null;
+    _notify();
+  }
+
+  void discardContextEdits() {
+    final session = contextDraft;
+    if (_disposed || session == null) return;
+    final latest = session.remote ?? session.saved;
+    if (latest == null) return;
+    _applyContextDraft(session, latest);
+    session.issue = 'saved';
+    _notify();
+  }
+
+  Future<void> saveContext({bool keepLocal = false}) async {
+    final session = contextDraft;
+    if (_disposed || session == null || session.saving || session.loading) {
+      return;
+    }
+    final pending = _pendingContextSaves[session.conversationId];
+    if (pending != null) {
+      await checkContextSaveOutcome(session.conversationId);
+      return;
+    }
+    final base = keepLocal ? session.remote : session.saved;
+    if (base == null) return;
+    final snapshot = _PendingConversationContextSave(
+      conversationId: session.conversationId,
+      value: _copyContextValue(session.value),
+      sourceReferences: session.sourceReferences
+          .map((source) => Map<String, dynamic>.from(source))
+          .toList(growable: false),
+      idempotencyKey: _newKey('context'),
+      expectedRevision: base.revision,
+    );
+    _pendingContextSaves[session.conversationId] = snapshot;
+    await _sendContextSave(snapshot);
+  }
+
+  Future<void> retryContextSave(String conversationId) async {
+    final pending = _pendingContextSaves[conversationId];
+    if (_disposed || pending == null) return;
+    await checkContextSaveOutcome(conversationId);
+    if (_pendingContextSaves[conversationId] == pending) {
+      await _sendContextSave(pending);
+    }
+  }
+
+  Future<void> checkContextSaveOutcome(String conversationId) async {
+    final pending = _pendingContextSaves[conversationId];
+    final session = contextDraft;
+    if (_disposed || pending == null || session?.saving == true) return;
+    session?.saving = true;
+    _notify();
+    try {
+      final readback = await repository.readContext(conversationId);
+      if (_disposed) return;
+      if (_contextMatches(readback, pending) &&
+          readback.revision > pending.expectedRevision) {
+        _completeContextSave(pending, readback);
+      } else if (readback.revision == pending.expectedRevision) {
+        if (session != null && session.conversationId == conversationId) {
+          session.saved ??= readback;
+          session.issue = 'save_unknown';
+        }
+      } else {
+        _pendingContextSaves.remove(conversationId);
+        if (session != null && session.conversationId == conversationId) {
+          session.remote = readback;
+          session.issue = 'conflict';
+        }
+      }
+    } on LumenisCoreException catch (error) {
+      if (_disposed) return;
+      if (_readDenied(error.statusCode)) {
+        _pendingContextSaves.remove(conversationId);
+        if (session != null && session.conversationId == conversationId) {
+          _clearContextDraft(session);
+          session.issue = error.statusCode == 401
+              ? 'authentication'
+              : 'permission';
+        }
+        await open(conversationId);
+      } else if (session != null && session.conversationId == conversationId) {
+        session.issue = 'save_unknown';
+      }
+    } catch (_) {
+      if (!_disposed && session?.conversationId == conversationId) {
+        session!.issue = 'save_unknown';
+      }
+    } finally {
+      if (!_disposed && session?.conversationId == conversationId) {
+        session!.saving = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<void> _sendContextSave(_PendingConversationContextSave pending) async {
+    final session = contextDraft;
+    if (_disposed || session?.saving == true) return;
+    if (session?.conversationId == pending.conversationId) {
+      session!.saving = true;
+      session.issue = null;
+    }
+    _notify();
+    try {
+      final result = await repository.updateContext(
+        conversationId: pending.conversationId,
+        value: pending.value,
+        idempotencyKey: pending.idempotencyKey,
+        expectedRevision: pending.expectedRevision,
+        sourceReferences: pending.sourceReferences
+            .map(
+              (source) => Map<String, dynamic>.from(source['reference'] as Map),
+            )
+            .toList(growable: false),
+      );
+      applyContextMutation(result);
+      final readback = await repository.readContext(pending.conversationId);
+      if (_disposed) return;
+      if (_contextMatches(readback, pending) &&
+          readback.revision >= result.revision) {
+        _completeContextSave(pending, readback);
+      } else {
+        _pendingContextSaves.remove(pending.conversationId);
+        if (session?.conversationId == pending.conversationId) {
+          session!.remote = readback;
+          session.issue = 'conflict';
+        }
+      }
+    } on LumenisCoreException catch (error) {
+      if (_disposed) return;
+      if (error.statusCode == 409) {
+        await loadContext(pending.conversationId);
+        if (contextDraft?.conversationId == pending.conversationId &&
+            contextDraft?.remote != null) {
+          contextDraft!.issue = 'conflict';
+        }
+        _pendingContextSaves.remove(pending.conversationId);
+      } else if (_readDenied(error.statusCode)) {
+        await loadContext(pending.conversationId, replaceLocal: false);
+        if (contextDraft?.conversationId == pending.conversationId &&
+            contextDraft?.saved != null) {
+          contextDraft!.issue = error.statusCode == 401
+              ? 'authentication'
+              : 'permission';
+        }
+        _pendingContextSaves.remove(pending.conversationId);
+      } else if (!_isOutcomeUnknown(error)) {
+        _pendingContextSaves.remove(pending.conversationId);
+        if (contextDraft?.conversationId == pending.conversationId) {
+          contextDraft!.issue = error.statusCode == 400
+              ? 'invalid'
+              : 'save_error';
+        }
+      } else if (contextDraft?.conversationId == pending.conversationId) {
+        contextDraft!.issue = 'save_unknown';
+      }
+    } catch (_) {
+      if (!_disposed &&
+          contextDraft?.conversationId == pending.conversationId) {
+        contextDraft!.issue = 'save_unknown';
+      }
+    } finally {
+      if (!_disposed && session?.conversationId == pending.conversationId) {
+        session!.saving = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<void> searchSources(
+    String conversationId,
+    String query, {
+    bool more = false,
+  }) async {
+    final search = sourceSearch;
+    final normalized = more ? search.submittedQuery : query.trim();
+    final repository = this.repository;
+    if (_disposed || search.busy || repository is! Ai01ConversationSources) {
+      return;
+    }
+    final sourceRepository = repository as Ai01ConversationSources;
+    if (normalized == null ||
+        normalized.isEmpty ||
+        (more &&
+            (search.nextOffset == null ||
+                search.conversationId != conversationId))) {
+      return;
+    }
+    final generation = ++_sourceGeneration;
+    search.busy = true;
+    search.issue = null;
+    search.preview = null;
+    search.conversationId = conversationId;
+    _notify();
+    try {
+      final result = await sourceRepository.sourceQuery(conversationId, {
+        'query': normalized,
+        'limit': '12',
+        if (more) 'offset': '${search.nextOffset}',
+        if (more && search.sourceSnapshot != null)
+          'snapshot': search.sourceSnapshot!,
+      });
+      if (_disposed || generation != _sourceGeneration) return;
+      final page = result['search'];
+      if (result['ok'] != true ||
+          page is! Map ||
+          page['records'] is! List ||
+          page['has_more'] is! bool ||
+          page['verification_complete'] is! bool) {
+        throw const FormatException('Invalid source search.');
+      }
+      final records = (page['records'] as List)
+          .map(_validateSource)
+          .toList(growable: false);
+      final next = page['next_offset'];
+      if (page['has_more'] == true && next is! int) {
+        throw const FormatException('Invalid source cursor.');
+      }
+      final retrieval = page['retrieval'];
+      search.sourceSnapshot = retrieval is Map
+          ? retrieval['source_snapshot_sha256'] as String?
+          : null;
+      if (more) {
+        search.records.addAll(records);
+      } else {
+        search.records
+          ..clear()
+          ..addAll(records);
+      }
+      search.nextOffset = page['has_more'] == true ? next as int : null;
+      search.submittedQuery = normalized;
+      search.incomplete = page['verification_complete'] != true;
+      if (search.incomplete) search.issue = 'incomplete';
+    } catch (error) {
+      if (_disposed || generation != _sourceGeneration) return;
+      if (error is LumenisCoreException && _readDenied(error.statusCode)) {
+        search.records.clear();
+        search.preview = null;
+        search.nextOffset = null;
+        search.issue = 'restricted';
+      } else if (error is LumenisCoreException && error.statusCode == 409) {
+        search.records.clear();
+        search.nextOffset = null;
+        search.sourceSnapshot = null;
+        search.issue = 'sources_changed';
+      } else {
+        search.issue = 'read_failed';
+      }
+    } finally {
+      if (!_disposed && generation == _sourceGeneration) {
+        search.busy = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<void> previewSource(
+    String conversationId,
+    Map<String, dynamic> record, {
+    int start = 0,
+  }) async {
+    final search = sourceSearch;
+    final repository = this.repository;
+    if (_disposed || search.busy || repository is! Ai01ConversationSources) {
+      return;
+    }
+    final sourceRepository = repository as Ai01ConversationSources;
+    if (record['state'] != 'available' ||
+        search.conversationId != conversationId) {
+      return;
+    }
+    final count = record['character_count'];
+    if (count is! int || start < 0 || start > count) return;
+    final generation = ++_sourceGeneration;
+    search.busy = true;
+    search.issue = null;
+    search.preview = null;
+    _notify();
+    try {
+      final reference = Map<String, dynamic>.from(record['reference'] as Map)
+        ..['start'] = start
+        ..['end'] = (start + 64000).clamp(start, count);
+      final response = await sourceRepository.sourceQuery(conversationId, {
+        'source_reference': jsonEncode(reference),
+      });
+      if (_disposed || generation != _sourceGeneration) return;
+      if (response['ok'] != true) {
+        throw const FormatException('Invalid source preview.');
+      }
+      search.preview = _validateSource(response['source_preview']);
+    } catch (error) {
+      if (_disposed || generation != _sourceGeneration) return;
+      if (error is LumenisCoreException && _readDenied(error.statusCode)) {
+        search.records.clear();
+        search.preview = null;
+        search.nextOffset = null;
+        search.issue = 'restricted';
+      } else if (error is LumenisCoreException && error.statusCode == 409) {
+        search.records.clear();
+        search.preview = null;
+        search.nextOffset = null;
+        search.sourceSnapshot = null;
+        search.issue = 'sources_changed';
+      } else {
+        search.issue = 'read_failed';
+      }
+    } finally {
+      if (!_disposed && generation == _sourceGeneration) {
+        search.busy = false;
+        _notify();
+      }
+    }
+  }
+
+  Map<String, dynamic>? adoptSourcePreview({
+    int? selectionStart,
+    int? selectionEnd,
+  }) {
+    final preview = sourceSearch.preview;
+    if (_disposed ||
+        sourceSearch.busy ||
+        preview == null ||
+        preview['state'] != 'available') {
+      return null;
+    }
+    final reference = Map<String, dynamic>.from(preview['reference'] as Map);
+    final text = preview['text'] as String;
+    final start = reference['start'] as int;
+    if (selectionStart != null &&
+        selectionEnd != null &&
+        selectionStart >= 0 &&
+        selectionEnd > selectionStart &&
+        selectionEnd <= text.length) {
+      reference['start'] =
+          start + text.substring(0, selectionStart).runes.length;
+      reference['end'] = start + text.substring(0, selectionEnd).runes.length;
+    }
+    return {...preview, 'reference': reference};
+  }
+
+  void clearSourceSearch() {
+    _sourceGeneration++;
+    sourceSearch
+      ..conversationId = null
+      ..submittedQuery = null
+      ..sourceSnapshot = null
+      ..records.clear()
+      ..preview = null
+      ..nextOffset = null
+      ..busy = false
+      ..incomplete = false
+      ..issue = null;
+    _notify();
+  }
+
+  static Map<String, dynamic> _validateSource(Object? raw) {
+    if (raw is! Map || raw['reference'] is! Map || raw['state'] is! String) {
+      throw const FormatException('Invalid source.');
+    }
+    final item = Map<String, dynamic>.from(raw);
+    if (item['state'] == 'available' &&
+        (item['text'] is! String ||
+            item['title'] is! String ||
+            item['offset_unit'] != 'unicode_codepoint' ||
+            item['character_count'] is! int)) {
+      throw const FormatException('Invalid source text.');
+    }
+    return item;
+  }
+
+  static Map<String, dynamic> _copyContextValue(Map<String, dynamic> value) {
+    final copy = Map<String, dynamic>.from(value);
+    if (copy.length != 5 ||
+        copy['goal'] is! String ||
+        copy['draft'] is! String ||
+        ['constraints', 'decisions', 'excluded_turn_ids'].any(
+          (key) =>
+              copy[key] is! List ||
+              (copy[key] as List).any((item) => item is! String),
+        )) {
+      throw const FormatException('Invalid conversation context.');
+    }
+    return {
+      'goal': copy['goal'],
+      'constraints': List<String>.from(copy['constraints'] as List),
+      'draft': copy['draft'],
+      'decisions': List<String>.from(copy['decisions'] as List),
+      'excluded_turn_ids': List<String>.from(copy['excluded_turn_ids'] as List),
+    };
+  }
+
+  void _applyContextDraft(
+    Ai01ConversationContextDraft session,
+    Ai01ConversationContext saved,
+  ) {
+    session
+      ..saved = saved
+      ..remote = null
+      ..value = _copyContextValue(saved.value)
+      ..sourceReferences = saved.sourceReferences
+          .map((source) => Map<String, dynamic>.from(source))
+          .toList(growable: false)
+      ..issue = null;
+    if (saved.turn case final Ai01ConversationTurn turn) {
+      applyContextMutation(
+        Ai01ConversationMutation(
+          turn: turn,
+          revision: saved.revision,
+          idempotentHit: true,
+        ),
+      );
+    }
+  }
+
+  void _clearContextDraft(Ai01ConversationContextDraft session) {
+    session
+      ..saved = null
+      ..remote = null
+      ..value = _emptyConversationContext()
+      ..sourceReferences = [];
+  }
+
+  bool _contextMatches(
+    Ai01ConversationContext context,
+    _PendingConversationContextSave pending,
+  ) {
+    final expected = _copyContextValue(pending.value);
+    final actual = _copyContextValue(context.value);
+    final excluded = Set<String>.from(actual['excluded_turn_ids'] as List);
+    if (!excluded.containsAll(expected['excluded_turn_ids'] as List<String>)) {
+      return false;
+    }
+    expected['excluded_turn_ids'] = actual['excluded_turn_ids'];
+    return context.conversationId == pending.conversationId &&
+        _contextSignature(actual) == _contextSignature(expected) &&
+        _sourceSignature(context.sourceReferences) ==
+            _sourceSignature(pending.sourceReferences);
+  }
+
+  void _completeContextSave(
+    _PendingConversationContextSave pending,
+    Ai01ConversationContext readback,
+  ) {
+    _pendingContextSaves.remove(pending.conversationId);
+    final session = contextDraft;
+    if (session == null || session.conversationId != pending.conversationId) {
+      return;
+    }
+    final localStillMatches =
+        _contextSignature(session.value) == _contextSignature(pending.value) &&
+        _sourceSignature(session.sourceReferences) ==
+            _sourceSignature(pending.sourceReferences);
+    session
+      ..saved = readback
+      ..remote = null
+      ..issue = localStillMatches ? 'saved' : null;
+    if (localStillMatches) {
+      session
+        ..value = _copyContextValue(readback.value)
+        ..sourceReferences = readback.sourceReferences
+            .map((source) => Map<String, dynamic>.from(source))
+            .toList(growable: false);
+    } else {
+      session.value['excluded_turn_ids'] = <String>{
+        ...List<String>.from(session.value['excluded_turn_ids'] as List),
+        ...List<String>.from(readback.value['excluded_turn_ids'] as List),
+      }.toList();
+    }
+    if (readback.turn case final Ai01ConversationTurn turn) {
+      applyContextMutation(
+        Ai01ConversationMutation(
+          turn: turn,
+          revision: readback.revision,
+          idempotentHit: true,
+        ),
+      );
+    }
+    _notify();
+  }
+
+  static bool _readDenied(int? status) =>
+      const {401, 403, 404, 410}.contains(status);
 
   Future<void> refreshList({bool selectFirstIfEmpty = true}) async {
     if (_disposed || listLoading) return;
@@ -745,6 +1400,11 @@ class Ai01ConversationViewModel extends ChangeNotifier {
 
   Future<void> open(String conversationId) async {
     if (_disposed) return;
+    if (selectedId != conversationId) {
+      _contextGeneration++;
+      contextDraft = null;
+      clearSourceSearch();
+    }
     final generation = ++_generation;
     selectedId = conversationId;
     detail = null;
@@ -877,6 +1537,27 @@ class Ai01ConversationViewModel extends ChangeNotifier {
     return true;
   }
 
+  /// Creates a persistent conversation when the current task has no identity,
+  /// then appends the user's text through the same conversation owner.
+  ///
+  /// If an earlier creation had an uncertain outcome, a caller must explicitly
+  /// acknowledge that unresolved creation before another identity is made.
+  Future<bool> sendToCurrentOrCreate(
+    String text, {
+    required VoidCallback onPersisted,
+    bool acknowledgeUnresolvedCreation = false,
+  }) async {
+    if (_disposed || busy || text.trim().isEmpty) return false;
+    if (selectedId == null || detail?.id != selectedId) {
+      if (creatingUnknown && !acknowledgeUnresolvedCreation) return false;
+      await createConversation(
+        acknowledgeUnresolvedPrevious: acknowledgeUnresolvedCreation,
+      );
+    }
+    if (_disposed || !canSend) return false;
+    return send(text, onPersisted: onPersisted);
+  }
+
   Future<void> checkOutcome({VoidCallback? onAppendPersisted}) async {
     final current = detail;
     if (_disposed || current == null || detailLoading) return;
@@ -992,6 +1673,9 @@ class Ai01ConversationViewModel extends ChangeNotifier {
   void showConversationList() {
     if (_disposed || busy) return;
     _generation++;
+    _contextGeneration++;
+    contextDraft = null;
+    clearSourceSearch();
     selectedId = null;
     detail = null;
     detailLoading = false;
@@ -1210,7 +1894,7 @@ class Ai01ConversationViewModel extends ChangeNotifier {
   static String _classify(Object error) {
     if (error is LumenisCoreException) {
       final status = error.statusCode;
-      if (status == null) return 'unknown';
+      if (status == null) return 'offline';
       return switch (status) {
         401 => 'authentication',
         403 => 'permission',
@@ -1220,7 +1904,7 @@ class Ai01ConversationViewModel extends ChangeNotifier {
         _ => 'unknown',
       };
     }
-    return error is FormatException ? 'unknown' : 'offline';
+    return error is FormatException ? 'invalid_response' : 'offline';
   }
 
   void _notify() {
@@ -1231,6 +1915,9 @@ class Ai01ConversationViewModel extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _generation++;
+    _contextGeneration++;
+    _sourceGeneration++;
+    _pendingContextSaves.clear();
     super.dispose();
   }
 }

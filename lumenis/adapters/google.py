@@ -10,7 +10,7 @@ worker 未注册、身份无法核验或访问受到挑战时，返回明确失�
 其他浏览器或网络路径，也不把访问失败报告为“0 条成功”。
 
 六态：knitsail 挑战 / 人机验证 / 登录 / 网络异常分别上报，只有真正解析到
-结果块才算 SUCCESS；发布时间从结果摘要中尽力归一，取不到留空、不臆造。
+结果块才算 SUCCESS；摘要日期仅保留为候选，不能代替目标文章的发布时间。
 """
 import logging
 import re
@@ -32,18 +32,22 @@ class GoogleAdapter(BaseAdapter):
     platform_name = "google"
     platform_display = "Google搜索"
 
-    def search(self, keyword: str, max_results: int = 10) -> AdapterResult:
+    def search(self, keyword: str, max_results: int = 10, *, cursor=None) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
 
         try:
-            return self._search_via_browser(keyword, max_results)
-        except Exception as e:
-            logger.exception("Google 采集异常")
-            return AdapterResult(success=False, error=f"Google 浏览器采集异常: {e}")
+            if cursor is not None and (not isinstance(cursor, dict) or set(cursor) != {'start'}
+                    or type(cursor['start']) is not int or not 0 <= cursor['start'] <= 10000):
+                return AdapterResult(success=False, error='GOOGLE_NATIVE_CURSOR_INVALID')
+            return self._search_via_browser(keyword, max_results, cursor=cursor)
+        except Exception as exc:
+            logger.warning("Google read failed error_type=%s", type(exc).__name__)
+            code = str(exc) if re.fullmatch(r'[A-Z_]{1,120}', str(exc)) else 'PROVIDER_UNAVAILABLE'
+            return AdapterResult(success=False, error='GOOGLE_' + code)
 
     # ---------- 主流程 ----------
-    def _search_via_browser(self, keyword, max_results) -> AdapterResult:
+    def _search_via_browser(self, keyword, max_results, *, cursor=None) -> AdapterResult:
         worker = registered_browser_worker_spec("google")
         if worker.get("platform") != "google":
             raise RuntimeError("GOOGLE_READONLY_WORKER_NOT_REGISTERED")
@@ -68,6 +72,8 @@ class GoogleAdapter(BaseAdapter):
             q = urllib.parse.quote(keyword.strip())
             search_url = (f"https://www.google.com/search?q={q}"
                           f"&hl=zh-CN&num={max(max_results, 10)}")
+            if cursor is not None:
+                search_url += '&start=' + str(cursor['start'])
             page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
             self._dismiss_consent(page)
 
@@ -86,10 +92,28 @@ class GoogleAdapter(BaseAdapter):
                 return AdapterResult(success=False, error=f"Google 页面状态={state}")
 
             notes = self._parse_results(page, max_results)
+            next_cursor = None
+            for link in page.locator('a#pnnext, a[rel="next"]').all():
+                href = link.get_attribute('href')
+                if not href: continue
+                parsed = urllib.parse.urlsplit(urllib.parse.urljoin('https://www.google.com', href))
+                values = urllib.parse.parse_qs(parsed.query)
+                start = values.get('start', [''])[-1]
+                if (parsed.scheme == 'https' and parsed.hostname == 'www.google.com' and parsed.path == '/search'
+                        and not parsed.username and not parsed.password and values.get('q', [None])[-1] == keyword.strip()
+                        and start.isascii() and start.isdigit() and int(start) > (cursor or {}).get('start', 0)):
+                    next_cursor = {'start': int(start)}
+                    break
+            for note in notes:
+                note.raw_data = {**(note.raw_data or {}), 'body_state': 'FEED_OR_INDEX_EXCERPT',
+                    'body_kind': 'search_snippet', 'original_body_available': False,
+                    'discovery_source_url': search_url, 'original_target_url': note.url}
             if not notes:
-                # 页面正常但确实没解析到 -> EMPTY（success=True 空列表，由注册中心判 EMPTY）
-                return AdapterResult(success=True, notes=[], raw_count=0)
-            return AdapterResult(success=True, notes=notes[:max_results], raw_count=len(notes))
+                return AdapterResult(success=False, error='GOOGLE_NATIVE_RESULT_NOT_OBSERVED')
+            return AdapterResult(success=True, notes=notes[:max_results], raw_count=len(notes), metadata={'pagination': {
+                'request_cursor': cursor, 'next_cursor': next_cursor, 'exhausted': False if next_cursor else None,
+                'page_complete': True, 'coverage_scope': 'GOOGLE_DISCOVERY_SNIPPETS_ONLY',
+                'partial_reason': 'NATIVE_END_NOT_OBSERVED' if next_cursor is None else None}})
         finally:
             if page is not None:
                 try:
@@ -162,9 +186,11 @@ class GoogleAdapter(BaseAdapter):
                 title=title,
                 content=snippet,
                 url=href,
-                author="Google",
-                publish_date=self._norm_date(snippet),
-                raw_data={"engine": "google", "link_redirect": redirected},
+                author="",
+                publish_date="",
+                raw_data={"engine": "google", "link_redirect": redirected,
+                          'discovery_date_candidate': self._norm_date(snippet) or None,
+                          'date_semantics': 'SNIPPET_DATE_NOT_VERIFIED_PUBLICATION'},
             ))
             time.sleep(0.2)  # 温和还原，避免连点
             if len(notes) >= max_results:

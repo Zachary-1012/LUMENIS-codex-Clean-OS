@@ -31,6 +31,7 @@ import requests
 
 from .base import AdapterResult, BaseAdapter, optional_int
 from .cookie_vault import to_cookie_string
+from .human_browser import NativePageWindowError, native_page_window, validate_native_page_window_cursor
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,7 @@ class ZhihuAdapter(BaseAdapter):
                 except Exception:
                     logger.debug("知乎受控浏览器断开失败", exc_info=True)
 
-    def _parse_zhihu_card(self, card) -> "CollectedNote | None":
+    def _parse_zhihu_card(self, card):
         """解析单个知乎搜索结果卡片为CollectedNote。"""
         from .base import CollectedNote
 
@@ -243,7 +244,11 @@ class ZhihuAdapter(BaseAdapter):
 
     @staticmethod
     def _page_cursor_valid(cursor):
-        return (isinstance(cursor,dict) and set(cursor)=={'offset','limit'}
+        try:
+            validate_native_page_window_cursor(cursor)
+        except NativePageWindowError:
+            return False
+        return (isinstance(cursor,dict) and set(cursor)-{'item_offset','page_sha256'}=={'offset','limit'}
             and isinstance(cursor['offset'],str) and len(cursor['offset']) <= 4096
             and not any(ord(char)<32 for char in cursor['offset'])
             and type(cursor['limit']) is int and 1 <= cursor['limit'] <= 20)
@@ -268,6 +273,85 @@ class ZhihuAdapter(BaseAdapter):
             return cursor if cls._page_cursor_valid(cursor) else None
         except (ValueError,KeyError):
             return None
+
+    @staticmethod
+    def _read_json(response):
+        """Retain actual HTTP/provider failure facts without credential material."""
+        from collections.abc import Mapping
+        from email.utils import parsedate_to_datetime
+        import math
+        status=response.status_code if type(response.status_code) is int else None
+        headers=response.headers if isinstance(response.headers,Mapping) else {}
+        retry=headers.get('Retry-After'); seconds=None
+        if isinstance(retry,str):
+            try:
+                seconds=int(retry) if retry.isascii() and retry.isdigit() else max(
+                    0,math.ceil((parsedate_to_datetime(retry)-datetime.now(timezone.utc)).total_seconds()))
+            except (TypeError,ValueError,OverflowError):
+                pass
+        metadata={'http_status':status,'retry_after_seconds':seconds}
+        if status is not None and not 200 <= status < 300:
+            kind={401:'AUTH_REQUIRED',403:'ACCESS_BLOCKED',404:'CONTENT_UNAVAILABLE',
+                  412:'ACCESS_BLOCKED',429:'RATE_LIMITED'}.get(status,'PROVIDER_UNAVAILABLE')
+            return None,AdapterResult(success=False,error=f'知乎 HTTP {status}',metadata={**metadata,'failure_class':kind})
+        try:
+            data=response.json()
+        except (TypeError,ValueError):
+            return None,AdapterResult(success=False,error='ZHIHU_SOURCE_JSON_NOT_AVAILABLE',
+                metadata={**metadata,'failure_class':'SOURCE_PARSE_ERROR'})
+        if not isinstance(data,dict):
+            return None,AdapterResult(success=False,error='ZHIHU_SOURCE_PROTOCOL_INVALID',
+                metadata={**metadata,'failure_class':'SOURCE_PROTOCOL_ERROR'})
+        if data.get('error'):
+            error=data['error'] if isinstance(data['error'],dict) else {}
+            code=error.get('code')
+            metadata['provider_code']=code if type(code) is int or isinstance(code,str) and re.fullmatch(r'[A-Za-z0-9_-]{1,80}',code) else None
+            name=error.get('name')
+            metadata['provider_error_name']=name if isinstance(name,str) and re.fullmatch(r'[A-Za-z_]{1,80}',name) else None
+            return None,AdapterResult(success=False,error='ZHIHU_PROVIDER_REJECTED',
+                metadata={**metadata,'failure_class':'PROVIDER_REJECTED'})
+        return data,None
+
+    @staticmethod
+    def _member_target(value):
+        from urllib.parse import urlsplit
+        text=str(value or '').strip()
+        if text.startswith(('http://','https://')):
+            parts=urlsplit(text)
+            if (parts.scheme!='https' or parts.hostname not in {'www.zhihu.com','zhihu.com'}
+                    or parts.username or parts.password or parts.port not in (None,443)
+                    or re.fullmatch(r'/people/[A-Za-z0-9_-]{1,100}/?',parts.path) is None):
+                raise ValueError('ZHIHU_MEMBER_TARGET_INVALID')
+            text=parts.path.strip('/').split('/')[-1]
+        if re.fullmatch(r'[A-Za-z0-9_-]{1,100}',text) is None:
+            raise ValueError('ZHIHU_MEMBER_TARGET_INVALID')
+        return text
+
+    @staticmethod
+    def _body_media(source_html,source_url):
+        from html.parser import HTMLParser
+        from urllib.parse import parse_qsl,urljoin,urlsplit
+        values=[]
+        class Parser(HTMLParser):
+            def handle_starttag(self,tag,attributes):
+                if tag not in {'img','video','audio','source','iframe'}:
+                    return
+                fields=dict(attributes)
+                value=next((fields.get(key) for key in ('data-original','data-actualsrc','data-src','src') if fields.get(key)),None)
+                url=urljoin(source_url,value) if value else None
+                try:
+                    parts=urlsplit(url) if url else None
+                    safe=(parts is not None and parts.scheme=='https' and parts.hostname and not parts.username and not parts.password
+                        and not any(key.lower() in {'token','access_token','auth','cookie','session','password','api_key'} for key,_ in parse_qsl(parts.query)))
+                except ValueError:
+                    safe=False
+                values.append({'kind':'image' if tag=='img' else 'embed' if tag=='iframe' else tag,
+                    'url':url if safe else None,'url_role':'EMBED_PAGE' if tag=='iframe' else 'MEDIA_URL',
+                    'platform_media_id':fields.get('data-video-id') or fields.get('data-vid'),
+                    'native_tag':tag,'native_locator':f'$.content:{tag}[{len(values)}]',
+                    'original_bytes_state':'NOT_ACQUIRED'})
+        Parser(convert_charrefs=True).feed(source_html or '')
+        return values
 
     @staticmethod
     def _content_target(value, content_type='answer'):
@@ -302,7 +386,7 @@ class ZhihuAdapter(BaseAdapter):
                 "q": keyword.strip(),
                 "limit": min(max_results, 20),
                 "correction": 1,
-                **(cursor or {}),
+                **{key:value for key,value in (cursor or {}).items() if key in {'offset','limit'}},
             }
             resp = requests.get(
                 self.SEARCH_URL,
@@ -310,9 +394,9 @@ class ZhihuAdapter(BaseAdapter):
                 params=params,
                 timeout=15,
             )
-            if type(resp.status_code) is int and resp.status_code in {401,403,429}:
-                return AdapterResult(success=False,error=f'知乎 HTTP {resp.status_code}')
-            data = resp.json()
+            data,failure=self._read_json(resp)
+            if failure is not None:
+                return failure
 
             # 知乎 API 错误响应
             if isinstance(data, dict) and data.get("error"):
@@ -321,9 +405,14 @@ class ZhihuAdapter(BaseAdapter):
                 return AdapterResult(success=False, error=f"知乎搜索API错误: {msg}")
 
             items = data.get("data", []) if isinstance(data, dict) else []
+            if not isinstance(items,list):
+                return AdapterResult(success=False,error='ZHIHU_SEARCH_SOURCE_SHAPE_INVALID')
+            window = native_page_window(items,limit=max_results,cursor=cursor,identities=[
+                str(item['object'].get('type'))+':'+str(item['object'].get('id'))
+                if isinstance(item,dict) and isinstance(item.get('object'),dict) else None for item in items])
             notes = []
             seen_urls = set()
-            for item in items:
+            for item in window['rows']:
                 obj = item.get("object", {}) if isinstance(item, dict) else {}
                 note = self._object_to_note(obj)
                 if note:
@@ -332,18 +421,24 @@ class ZhihuAdapter(BaseAdapter):
                     if note.url:
                         seen_urls.add(note.url)
                     notes.append(note)
-                if len(notes) >= max_results:
-                    break
 
             paging = data.get('paging') or {} if isinstance(data,dict) else {}
             next_cursor = self._next_page_cursor(paging.get('next'),'/api/v4/search_v3',
                 expected_query={'q':keyword.strip(),'t':'general'})
+            current_page = {'offset':str(params.get('offset','0')),'limit':params['limit']}
+            if next_cursor == current_page or paging.get('is_end') is True:
+                next_cursor = None
+            if not window['page_complete']:
+                next_cursor = {**current_page,**window['next_window']}
             return AdapterResult(success=True,notes=notes,raw_count=len(notes),metadata={
                 'pagination':{'request_cursor':cursor,'next_cursor':next_cursor,
-                    'exhausted':paging.get('is_end') if type(paging.get('is_end')) is bool else None,
-                    'page_complete':len(items) <= max_results,
+                    'exhausted':False if not window['page_complete'] else paging.get('is_end') if type(paging.get('is_end')) is bool else None,
+                    'page_complete':window['page_complete'],
+                    **{key:window[key] for key in ('window_start','window_end','observed_native_rows','page_sha256','page_identity_basis')},
                     'coverage_scope':'PROVIDER_VISIBLE_ZHIHU_SEARCH_PAGE'}})
 
+        except NativePageWindowError as exc:
+            return self._window_failure(exc,cursor)
         except Exception as exc:
             logger.exception("知乎采集异常")
             return AdapterResult(success=False, error=f"知乎采集异常: {exc}")
@@ -352,13 +447,21 @@ class ZhihuAdapter(BaseAdapter):
         """将知乎搜索结果 object 转为标准化 CollectedNote。"""
         try:
             obj_type = obj.get("type", "")
+            body_html=next((obj.get(key) for key in ('content','detail') if isinstance(obj.get(key),str)),None)
+            observed_body=body_html if body_html is not None else obj.get('excerpt','')
             if obj_type == "answer":
                 question = obj.get("question", {}) or {}
                 qid = question.get("id", "")
                 aid = obj.get("id", "")
-                url = f"https://www.zhihu.com/question/{qid}/answer/{aid}" if qid and aid else ""
+                if type(aid) not in (str,int) or re.fullmatch(r'[1-9][0-9]{0,24}',str(aid)) is None:
+                    return None
+                # Authored-answer pages need not include the question object.
+                # The platform's answer permalink remains an exact native ID;
+                # never lose its source URL or invent a parent question ID.
+                known_question = type(qid) in (str,int) and re.fullmatch(r'[1-9][0-9]{0,24}',str(qid)) is not None
+                url = f"https://www.zhihu.com/question/{qid}/answer/{aid}" if known_question else f'https://www.zhihu.com/answer/{aid}'
                 title = question.get("title", "") or f"知乎回答 {aid}"
-                content = self._clean_html(obj.get('content') if isinstance(obj.get('content'),str) else obj.get("excerpt", ""))
+                content = self._clean_html(observed_body)
                 author = (obj.get("author") or {}).get("name", "")
                 author_id = str((obj.get("author") or {}).get("id", ""))
                 likes = optional_int(obj.get("voteup_count"))
@@ -366,24 +469,24 @@ class ZhihuAdapter(BaseAdapter):
                 publish_date = self._ts_to_iso(obj.get("created_time"))
             elif obj_type == "article":
                 aid = obj.get("id", "")
-                url = obj.get("url", "") or f"https://zhuanlan.zhihu.com/p/{aid}"
+                url = f"https://zhuanlan.zhihu.com/p/{aid}"
                 title = obj.get("title", "") or f"知乎文章 {aid}"
-                content = self._clean_html(obj.get('content') if isinstance(obj.get('content'),str) else obj.get("excerpt", ""))
+                content = self._clean_html(observed_body)
                 author = (obj.get("author") or {}).get("name", "")
                 author_id = str((obj.get("author") or {}).get("id", ""))
                 likes = optional_int(obj.get("voteup_count"))
                 comments = optional_int(obj.get("comment_count"))
-                publish_date = self._ts_to_iso(obj.get("created"))
+                publish_date = self._ts_to_iso(obj.get('created') if obj.get('created') is not None else obj.get('created_time'))
             elif obj_type == "question":
                 qid = obj.get("id", "")
                 url = f"https://www.zhihu.com/question/{qid}" if qid else ""
                 title = obj.get("title", "") or f"知乎问题 {qid}"
-                content = self._clean_html(obj.get('content') if isinstance(obj.get('content'),str) else obj.get("excerpt", ""))
+                content = self._clean_html(observed_body)
                 author = (obj.get("author") or {}).get("name", "")
                 author_id = str((obj.get("author") or {}).get("id", ""))
                 likes = None
                 comments = optional_int(obj.get('comment_count'))
-                publish_date = self._ts_to_iso(obj.get("created"))
+                publish_date = self._ts_to_iso(obj.get('created') if obj.get('created') is not None else obj.get('created_time'))
             else:
                 # 其他类型（live/column 等）跳过，不臆造
                 return None
@@ -409,7 +512,8 @@ class ZhihuAdapter(BaseAdapter):
                     "object_type": obj_type,
                     "id": obj.get("id"),
                     "updated_time": obj.get("updated_time"),
-                    'body_state':'PLATFORM_BODY' if isinstance(obj.get('content'),str) else 'SEARCH_EXCERPT',
+                    'body_state':'PLATFORM_BODY' if body_html is not None else 'SEARCH_EXCERPT',
+                    'media_hints':self._body_media(body_html,url),
                     'source_observation':obj,
                 },
             )
@@ -453,9 +557,9 @@ class ZhihuAdapter(BaseAdapter):
                 return AdapterResult(success=False, error=f"不支持的知乎内容类型: {ctype}")
             resp = requests.get(url, headers=self._get_headers(),
                                 params={"include": "content,voteup_count,comment_count"}, timeout=15)
-            if type(resp.status_code) is int and resp.status_code in {401,403,429}:
-                return AdapterResult(success=False,error=f'知乎 HTTP {resp.status_code}')
-            data = resp.json()
+            data,failure=self._read_json(resp)
+            if failure is not None:
+                return failure
             if isinstance(data, dict) and data.get("error"):
                 return AdapterResult(success=False, error=f"知乎详情失败: {data['error'].get('message', str(data['error']))}")
             if str(data.get('id')) != content_id:
@@ -476,16 +580,17 @@ class ZhihuAdapter(BaseAdapter):
             cursor, include = kwargs.get('cursor'), kwargs.get('include_replies',False)
             if type(max_comments) is not int or not 1 <= max_comments <= 20 or type(include) is not bool:
                 raise ValueError('ZHIHU_COMMENT_REQUEST_INVALID')
+            validate_native_page_window_cursor(cursor)
             root_id, pending, root_next, root_end = None, [], None, None
             page = {'offset':'','limit':max_comments}
             if cursor is not None:
                 if self._page_cursor_valid(cursor):
-                    page = cursor
-                elif (isinstance(cursor,dict) and set(cursor)=={
+                    page = {key:value for key,value in cursor.items() if key in {'offset','limit'}}
+                elif (isinstance(cursor,dict) and set(cursor)-{'item_offset','page_sha256'}=={
                         'mode','root_id','page','pending_roots','next_root','root_exhausted'}
                         and cursor['mode']=='replies' and include is True
                         and isinstance(cursor['root_id'],str) and re.fullmatch(r'[1-9][0-9]{0,24}',cursor['root_id'])
-                        and self._page_cursor_valid(cursor['page'])
+                        and self._page_cursor_valid(cursor['page']) and set(cursor['page'])=={'offset','limit'}
                         and isinstance(cursor['pending_roots'],list) and len(cursor['pending_roots']) <= 20
                         and all(isinstance(item,str) and re.fullmatch(r'[1-9][0-9]{0,24}',item)
                                 for item in cursor['pending_roots'])
@@ -495,22 +600,25 @@ class ZhihuAdapter(BaseAdapter):
                     root_next,root_end = cursor['next_root'],cursor['root_exhausted']
                 else:
                     raise ValueError('ZHIHU_COMMENT_CURSOR_INVALID')
+                validate_native_page_window_cursor(root_next)
             resource = ctype+'s'
             path = (f'/api/v4/comment_v5/comment/{root_id}/child_comment' if root_id else
                     f'/api/v4/comment_v5/{resource}/{native_id}/root_comment')
             url = 'https://www.zhihu.com'+path
             resp = requests.get(url, headers=self._get_headers(),
                                 params={'order_by':'score',**page}, timeout=15)
-            if type(resp.status_code) is int and resp.status_code in {401,403,429}:
-                return AdapterResult(success=False,error=f'知乎 HTTP {resp.status_code}')
-            data = resp.json()
+            data,failure=self._read_json(resp)
+            if failure is not None:
+                return failure
             if isinstance(data, dict) and data.get("error"):
                 return AdapterResult(success=False, error=f"知乎评论失败: {data['error'].get('message', str(data['error']))}")
             if not isinstance(data,dict) or not isinstance(data.get('data'),list):
                 raise ValueError('ZHIHU_COMMENT_SOURCE_SHAPE_INVALID')
             items = data['data']
+            window = native_page_window(items,limit=max_comments,cursor=cursor,
+                identities=[str(item.get('id')) if isinstance(item,dict) else None for item in items])
             selected = []
-            for item in items:
+            for item in window['rows']:
                 selected.append((item,root_id))
                 # Already returned replies are observations even with the
                 # optional further-replies request disabled.
@@ -537,42 +645,54 @@ class ZhihuAdapter(BaseAdapter):
                     raw_data={'engine':'zhihu_comment_v5','cid':c.get('id'),'type':'comment',
                         'parent_content_id':source_id,'parent_comment_id':parent or c.get('root_comment_id'),
                         'reply_to_comment_id':c.get('reply_to_comment_id',c.get('reply_comment_id')),
-                        'reply_count':c.get('child_comment_count'),'source_observation':c},
+                        'reply_count':c.get('child_comment_count'),'source_observation':c,
+                        'media_hints':self._body_media(c.get('content') or '',source_url)},
                 ))
             paging = data.get('paging') or {}
             end = paging.get('is_end') if type(paging.get('is_end')) is bool else None
             next_page = self._next_page_cursor(paging.get('next'),path,expected_query={'order_by':'score'})
             next_page = next_page if end is not True else None
-            totals_known = all(type(item.get('child_comment_count')) is int and item['child_comment_count'] >= 0 for item in items)
-            deferred = [str(item['id']) for item in items if type(item.get('child_comment_count')) is int
+            if next_page == page:
+                next_page = None
+            page_end = end if window['page_complete'] else False
+            base_cursor = {key:value for key,value in (cursor or {}).items() if key not in {'item_offset','page_sha256'}}
+            if not window['page_complete']:
+                next_page = {**page,**window['next_window']}
+            totals_known = all(type(item.get('child_comment_count')) is int and item['child_comment_count'] >= 0 for item in window['rows'])
+            deferred = [str(item['id']) for item in window['rows'] if type(item.get('child_comment_count')) is int
                         and item['child_comment_count'] > len(item.get('child_comments') or [])]
             replies_complete = not bool(deferred) if totals_known else None
             if root_id:
                 if next_page is not None:
-                    next_cursor = {**cursor,'page':next_page}
-                elif end is True and pending:
-                    next_cursor = {**cursor,'root_id':pending[0],'pending_roots':pending[1:],
+                    next_cursor = ({**base_cursor,**window['next_window']} if not window['page_complete'] else
+                                   {**base_cursor,'page':next_page})
+                elif page_end is True and pending:
+                    next_cursor = {**base_cursor,'root_id':pending[0],'pending_roots':pending[1:],
                                    'page':{'offset':'','limit':max_comments}}
-                elif end is True:
+                elif page_end is True:
                     next_cursor = root_next
                 else:
                     next_cursor = None
-                replies_complete = end
-                exhausted = root_end if end is True and not pending and root_next is None else False if next_cursor else None
+                replies_complete = page_end
+                exhausted = root_end if page_end is True and not pending and root_next is None else False if next_cursor else None
             elif include and deferred:
                 next_cursor = {'mode':'replies','root_id':deferred[0],'pending_roots':deferred[1:],
-                    'page':{'offset':'','limit':max_comments},'next_root':next_page,'root_exhausted':end}
+                    'page':{'offset':'','limit':max_comments},'next_root':next_page,'root_exhausted':page_end}
                 exhausted = False
             else:
-                next_cursor,exhausted = next_page,end
+                next_cursor,exhausted = next_page,page_end
             return AdapterResult(success=True, notes=notes, raw_count=len(notes),metadata={
                 'pagination':{'request_cursor':cursor,'next_cursor':next_cursor,'exhausted':exhausted,
-                    'page_complete':True,'replies_complete':replies_complete,
+                    'page_complete':window['page_complete'],'replies_complete':replies_complete,
+                    **{key:window[key] for key in ('window_start','window_end','observed_native_rows','page_sha256','page_identity_basis')},
                     'reported_root_total':optional_int(paging.get('totals')) if not root_id else None,
                     'reported_reply_total':optional_int(paging.get('totals')) if root_id else None,
                     'coverage_scope':'PROVIDER_VISIBLE_NATIVE_COMMENT_PAGES',
-                    'partial_reason':'NATIVE_NEXT_CURSOR_NOT_OBSERVED' if end is False and next_page is None else
+                    'partial_reason':'REQUESTED_LIMIT_REACHED' if not window['page_complete'] else
+                        'NATIVE_NEXT_CURSOR_NOT_OBSERVED' if end is False and next_page is None else
                         'REPLY_PAGES_PENDING' if replies_complete is False else None}})
+        except NativePageWindowError as exc:
+            return self._window_failure(exc,kwargs.get('cursor'))
         except Exception as exc:
             logger.exception("知乎评论采集异常")
             return AdapterResult(success=False, error=f"知乎评论异常: {exc}")
@@ -582,17 +702,24 @@ class ZhihuAdapter(BaseAdapter):
         if not user_id or not str(user_id).strip():
             return AdapterResult(success=False, error="user_id 为空")
         try:
+            user_id=self._member_target(user_id)
             url = f"https://www.zhihu.com/api/v4/members/{user_id}"
             resp = requests.get(url, headers=self._get_headers(),
                                 params={"include": "allow_message,is_followed,is_following,is_org,is_blocking,employments,answer_count,follower_count,articles_count,gender,badge[?(type=best_answerer)].topics"},
                                 timeout=15)
-            data = resp.json()
+            data,failure=self._read_json(resp)
+            if failure is not None:
+                return failure
             if isinstance(data, dict) and data.get("error"):
                 return AdapterResult(success=False, error=f"知乎用户信息失败: {data['error'].get('message', str(data['error']))}")
+            aliases=[{'kind':key,'value':str(data[key])} for key in ('id','url_token')
+                     if type(data.get(key)) in (str,int) and str(data[key])]
+            if user_id not in {item['value'] for item in aliases}:
+                return AdapterResult(success=False,error='ZHIHU_MEMBER_ID_MISMATCH')
             note = self._make_note(
                 title=data.get("name", ""),
                 content=(data.get("headline") or "").strip(),
-                url=data.get("url") or f"https://www.zhihu.com/people/{data.get('id', user_id)}",
+                url=f"https://www.zhihu.com/people/{data.get('url_token') or data.get('id')}",
                 author=data.get("name", ""),
                 author_id=str(data.get("id", "")),
                 publish_date="",
@@ -609,6 +736,10 @@ class ZhihuAdapter(BaseAdapter):
                     "is_org": data.get("is_org"),
                     'url_token':data.get('url_token'), 'follower_count':data.get('follower_count'),
                     'answer_count':data.get('answer_count'), 'articles_count':data.get('articles_count'),
+                    'question_count':data.get('question_count'),'following_count':data.get('following_count'),
+                    'native_author_aliases':aliases,
+                    'native_identity':{'requested_id':user_id,'state':'OBSERVED_MATCH'},
+                    'profile_url':f"https://www.zhihu.com/people/{data.get('url_token') or data.get('id')}",
                     'source_observation':data,
                     "type": "creator",
                 },
@@ -617,3 +748,76 @@ class ZhihuAdapter(BaseAdapter):
         except Exception as exc:
             logger.exception("知乎用户采集异常")
             return AdapterResult(success=False, error=f"知乎用户异常: {exc}")
+
+    def author_posts(self, author_id, *, max_results=20, cursor=None, **kwargs):
+        """Traverse native authored answers/articles/questions with separate pages."""
+        try:
+            member=self._member_target(author_id)
+            if type(max_results) is not int or not 1 <= max_results <= 20:
+                raise ValueError('ZHIHU_AUTHOR_PAGE_SIZE_INVALID')
+            kinds=('answer','article','question')
+            kind,page=kinds[0],{'offset':'0','limit':max_results}
+            if cursor is not None:
+                validate_native_page_window_cursor(cursor)
+                if (not isinstance(cursor,dict) or set(cursor)-{'item_offset','page_sha256'}!={'kind','page'}
+                        or cursor['kind'] not in kinds or not self._page_cursor_valid(cursor['page'])
+                        or set(cursor['page']) != {'offset','limit'}):
+                    raise ValueError('ZHIHU_AUTHOR_CURSOR_INVALID')
+                kind,page=cursor['kind'],cursor['page']
+            path=f'/api/v4/members/{member}/{kind}s'
+            response=requests.get('https://www.zhihu.com'+path,headers=self._get_headers(),
+                params={**page,'include':'data[*].content,detail,voteup_count,comment_count'},timeout=15)
+            data,failure=self._read_json(response)
+            if failure is not None:
+                return failure
+            if not isinstance(data.get('data'),list):
+                raise ValueError('ZHIHU_AUTHOR_PAGE_NOT_OBSERVED')
+            values=data['data']
+            window=native_page_window(values,limit=max_results,cursor=cursor,
+                identities=[kind+':'+str(value.get('id')) if isinstance(value,dict) else None for value in values])
+            notes=[]
+            for value in window['rows']:
+                author=value.get('author') or {}
+                reported={str(author[key]) for key in ('id','url_token') if type(author.get(key)) in (str,int)}
+                if reported and member not in reported:
+                    return AdapterResult(success=False,error='ZHIHU_AUTHOR_POST_OWNER_MISMATCH')
+                note=self._object_to_note({**value,'type':kind})
+                if note is not None:
+                    note.raw_data['author_history_binding']={'requested_author_id':member,
+                        'endpoint':path,'ownership_basis':'NATIVE_AUTHOR_ID_MATCH' if reported else 'NATIVE_MEMBER_RESOURCE',
+                        'native_author_observed':bool(reported)}
+                    notes.append(note)
+            paging=data.get('paging') or {}
+            native_end=paging.get('is_end') if type(paging.get('is_end')) is bool else None
+            next_page=self._next_page_cursor(paging.get('next'),path) if native_end is not True else None
+            if next_page == page:
+                next_page = None
+            next_cursor={'kind':kind,'page':next_page} if next_page is not None else None
+            next_kind=None
+            if not window['page_complete']:
+                next_cursor={'kind':kind,'page':page,**window['next_window']}
+            elif native_end is True and kind!=kinds[-1]:
+                next_kind=kinds[kinds.index(kind)+1]
+                next_cursor={'kind':next_kind,'page':{'offset':'0','limit':max_results}}
+            return AdapterResult(success=True,notes=notes,raw_count=len(notes),metadata={
+                'author_id':member,'author_history_branch':kind,
+                'pagination':{'request_cursor':cursor,'next_cursor':next_cursor,
+                    'exhausted':False if next_cursor else native_end if kind==kinds[-1] else None,
+                    'native_branch_exhausted':native_end,'next_branch':next_kind,
+                    'page_complete':window['page_complete'],
+                    **{key:window[key] for key in ('window_start','window_end','observed_native_rows','page_sha256','page_identity_basis')},
+                    'coverage_scope':'NATIVE_AUTHORED_ANSWERS_ARTICLES_QUESTIONS',
+                    'partial_reason':'REQUESTED_LIMIT_REACHED' if not window['page_complete'] else
+                        'NATIVE_NEXT_CURSOR_NOT_OBSERVED' if native_end is False and next_page is None else None}})
+        except NativePageWindowError as exc:
+            return self._window_failure(exc,cursor)
+        except Exception as exc:
+            return AdapterResult(success=False,error='知乎作者历史未完成: '+type(exc).__name__,
+                metadata={'error_type':str(exc) if isinstance(exc,ValueError) and re.fullmatch(r'ZHIHU_[A-Z_]+',str(exc))
+                          else type(exc).__name__})
+
+    @staticmethod
+    def _window_failure(exc,cursor):
+        return AdapterResult(success=False,raw_count=None,error='ZHIHU_'+str(exc),metadata={
+            'failure_class':str(exc),'pagination':{'request_cursor':cursor,'next_cursor':None,
+                'exhausted':None,'page_complete':False,'resume_requires_fresh_page':True}})

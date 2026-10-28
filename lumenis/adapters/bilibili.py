@@ -27,7 +27,7 @@ import logging
 from datetime import datetime, timezone
 
 from .base import BaseAdapter, AdapterResult, optional_int
-from .cookie_vault import to_requests_cookies, to_cookie_string, check_cookie_status
+from .cookie_vault import to_requests_cookies, check_cookie_status
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +284,7 @@ class BilibiliAdapter(BaseAdapter):
         if not bvid or not str(bvid).strip():
             return AdapterResult(success=False, error="bvid 为空")
         try:
-            import json as _json, requests as _req
+            import requests as _req
             bvid = self._bvid(bvid)
             if not self.public_read_only and not self._cookie_ok():
                 return AdapterResult(success=False, error="B站 cookie 缺失或无关键认证 cookie，请更新 data/bilibili_cookies.json")
@@ -340,6 +340,16 @@ class BilibiliAdapter(BaseAdapter):
                     "tname": v.get("tname"),
                     "pubdate_ts": v.get("pubdate"),
                     'source_observation':v,'body_state':'PLATFORM_VIDEO_DESCRIPTION',
+                    'media_hints':[{'kind':'cover','url':v.get('pic'),
+                        'native_locator':'$.data.pic','original_bytes_state':'NOT_ACQUIRED'},
+                        *[{'kind':'video','url':None,'native_segment_id':str(segment['cid']),
+                           'page_number':segment.get('page'),'title':segment.get('part'),
+                           'duration_seconds':segment.get('duration'),
+                           'native_locator':f'$.data.pages[{index}]',
+                           'url_state':'NATIVE_SEGMENT_OBSERVED_PLAYBACK_URL_NOT_ACQUIRED',
+                           'original_bytes_state':'NOT_ACQUIRED'}
+                          for index,segment in enumerate(v.get('pages') or [])
+                          if isinstance(segment,dict) and type(segment.get('cid')) in (str,int)]],
                 },
             )
             return AdapterResult(success=True, notes=[note], raw_count=1)

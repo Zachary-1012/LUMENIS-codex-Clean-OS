@@ -37,6 +37,10 @@ from .video_editing import (
 SAMPLE_RATE = 48000
 FRAME_RATE = 30
 RENDER_INPUT_BATCH_SIZE = 16
+SILENCE_SCAN_WINDOW_SECONDS = 600
+SILENCE_SCAN_WINDOW_STEP_SECONDS = 588  # Preserve a 12 second overlap at window boundaries.
+MAX_SILENCE_SCAN_WINDOWS = 256
+MAX_SILENCE_CANDIDATES = 20_000
 MIX_SAMPLE_PEAK_LIMIT = 0.891251  # -1 dBFS sample peak; not a true-peak/LUFS guarantee.
 FINAL_TRUE_PEAK_LIMIT_DBTP = -1.0
 PEAK_CORRECTION_HEADROOM_DB = .5  # Codec response can change with gain; remeasure, never assume.
@@ -815,7 +819,7 @@ def _verify_final_audio_peak(rendered: Path, audio: Path, *, ffmpeg: str,
         command += ["-af", f"volume={_number(correction_db)}dB,apad=whole_len={samples},"
                     f"atrim=end_sample={samples},asetpts=N/SR/TB",
                     "-ar", str(SAMPLE_RATE), "-ac", "2", "-threads:a", "1", "-t", _number(duration),
-                    "-map_metadata", "-1", "-metadata", "comment=Demo - source rights not verified", str(corrected)]
+                    "-map_metadata", "-1", str(corrected)]
         _run(command, cwd=rendered.parent, timeout=_programme_timeout(duration), **run_options)
         rendered = corrected
         loudness = _measure_loudness(rendered, ffmpeg, duration=duration, **run_options)
@@ -1144,8 +1148,7 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             else:
                 command += ["-an"]
             command += ["-c:v", "libx264", "-preset", "veryfast", "-threads:v", "1", "-pix_fmt", "yuv420p",
-                        "-t", _number(duration), "-map_metadata", "-1",
-                        "-metadata", "comment=Demo - source rights not verified", "-movflags", "+faststart",
+                        "-t", _number(duration), "-map_metadata", "-1", "-movflags", "+faststart",
                         str(rendered)]
             # A complete programme can take longer than the command helper's
             # short default. Keep a finite duration-based budget and the same
@@ -1526,8 +1529,7 @@ def propose_silence_edits(asset: Any, *, min_silence_sec: float = .5, threshold_
     """Read-only measured candidates. No word-safety claim and no automatic edit."""
     from shared_artifacts import _ffmpeg_path, validate_local_asset
     asset.validate()
-    if (asset.duration_sec > 600 or
-            any(type(x) not in (int,float) or not math.isfinite(x) for x in (min_silence_sec, threshold_db, margin_sec))
+    if (any(type(x) not in (int,float) or not math.isfinite(x) for x in (min_silence_sec, threshold_db, margin_sec))
             or not .1 <= min_silence_sec <= 30 or not -80 <= threshold_db <= -10 or not 0 <= margin_sec <= 2):
         raise VideoEditingError('SILENCE_DETECTION_OPTIONS_INVALID')
     if asset.audio_stream_count == 0:
@@ -1545,23 +1547,78 @@ def propose_silence_edits(asset: Any, *, min_silence_sec: float = .5, threshold_
     verify();ffmpeg=_ffmpeg_path()
     if not ffmpeg:raise VideoEditingError('MEDIA_RENDER_TOOLS_UNAVAILABLE')
     with tempfile.TemporaryDirectory(prefix='silence-proposal-') as temporary:
-        report=_run([ffmpeg,'-v','info','-nostdin','-nostats','-protocol_whitelist','file','-format_whitelist',MEDIA_INPUT_DEMUXERS,
-                     '-i',str(path),'-map',f'0:a:{audio_stream_index}','-af',
-                     f'asetpts=PTS-STARTPTS,silencedetect=noise={threshold_db}dB:d={min_silence_sec}',
-                     '-f','null','-'],cwd=Path(temporary),timeout=max(60,asset.duration_sec*2),check_continue=check_continue)
-    intervals=[];start=None
-    for kind,value in re.findall(r'silence_(start|end):\s*([-+]?\d+(?:\.\d+)?)',report):
-        time=float(value)
-        if kind=='start':start=max(0,time)
-        elif start is not None:
-            end=min(asset.duration_sec,time)
-            if end>start:intervals.append((start,end))
-            start=None
-    if start is not None and start<asset.duration_sec:intervals.append((start,asset.duration_sec))
+        windows=[]
+        if asset.duration_sec <= SILENCE_SCAN_WINDOW_SECONDS:
+            windows.append((0.0,asset.duration_sec))
+        else:
+            start_sec=0.0
+            while start_sec < asset.duration_sec:
+                end_sec=min(start_sec+SILENCE_SCAN_WINDOW_SECONDS,asset.duration_sec)
+                windows.append((start_sec,end_sec))
+                if end_sec >= asset.duration_sec:
+                    break
+                start_sec += SILENCE_SCAN_WINDOW_STEP_SECONDS
+                if len(windows) >= MAX_SILENCE_SCAN_WINDOWS:
+                    raise VideoEditingError('SILENCE_DETECTION_RESOURCE_LIMIT')
+        closed=[];open_at_boundary=[]
+        for index,(window_start,window_end) in enumerate(windows):
+            if check_continue:check_continue()
+            window_duration=window_end-window_start
+            report=_run([ffmpeg,'-v','info','-nostdin','-nostats','-ss',_number(window_start),
+                         '-t',_number(window_duration),'-protocol_whitelist','file',
+                         '-format_whitelist',MEDIA_INPUT_DEMUXERS,'-i',str(path),
+                         '-map',f'0:a:{audio_stream_index}','-af',
+                         f'asetpts=PTS-STARTPTS,silencedetect=noise={threshold_db}dB:d={min_silence_sec}',
+                         '-f','null','-'],cwd=Path(temporary),
+                         timeout=max(60,window_duration*2),check_continue=check_continue)
+            current_start=None
+            for kind,value in re.findall(r'silence_(start|end):\s*([-+]?\d+(?:\.\d+)?)',report):
+                try:
+                    relative=float(value)
+                except (TypeError,ValueError,OverflowError) as exc:
+                    raise VideoEditingError('SILENCE_DETECTION_RESULT_INVALID') from exc
+                if not math.isfinite(relative):
+                    raise VideoEditingError('SILENCE_DETECTION_RESULT_INVALID')
+                relative=min(max(relative,0.0),window_duration)
+                if kind=='start':
+                    if current_start is None:current_start=relative
+                elif current_start is not None:
+                    begin=window_start+current_start;end=window_start+relative
+                    if end>begin:closed.append((begin,end))
+                    current_start=None
+                if len(closed)+len(open_at_boundary)>MAX_SILENCE_CANDIDATES:
+                    raise VideoEditingError('SILENCE_DETECTION_CANDIDATE_LIMIT_EXCEEDED')
+            if current_start is not None:
+                item=(window_start+current_start,window_end)
+                if index == len(windows)-1:
+                    closed.append(item)
+                else:
+                    open_at_boundary.append(item)
+            if len(closed)+len(open_at_boundary)>MAX_SILENCE_CANDIDATES:
+                raise VideoEditingError('SILENCE_DETECTION_CANDIDATE_LIMIT_EXCEEDED')
+        # Earlier windows cannot know whether a silence continues beyond their
+        # end. A later overlapping window supplies the real end; use that end
+        # instead of stretching a truncated event to the chunk boundary.
+        for begin,partial_end in open_at_boundary:
+            continuations=[end for other_begin,end in closed
+                           if other_begin <= partial_end+.02 and end >= begin-.02]
+            closed.append((begin,max(continuations)) if continuations else (begin,asset.duration_sec))
+        intervals=[]
+        for begin,end in sorted(closed):
+            if intervals and begin <= intervals[-1][1]+.02:
+                intervals[-1]=(intervals[-1][0],max(intervals[-1][1],end))
+            else:
+                intervals.append((begin,end))
     verify()
     return {'state':'proposal','source_sha256':asset.sha256,'audio_stream_index':audio_stream_index,
             'method':'ffmpeg_silencedetect','threshold_db':threshold_db,'minimum_silence_sec':min_silence_sec,
             'margin_sec':margin_sec,'time_reference':'selected_audio_stream_elapsed_seconds',
+            'scan_window_count':len(windows),
+            'scan_strategy':'overlapping_bounded_windows_v1' if len(windows)>1 else 'single_bounded_window_v1',
+            'scan_window_seconds':SILENCE_SCAN_WINDOW_SECONDS,
+            'scan_overlap_seconds':SILENCE_SCAN_WINDOW_SECONDS-SILENCE_SCAN_WINDOW_STEP_SECONDS if len(windows)>1 else 0,
+            'scan_windows':[{'start_sec':start,'end_sec':end} for start,end in windows],
+            'scanned_source_duration_sec':asset.duration_sec,
             'word_alignment_verified':False,'automatic_application':False,'requires_user_review':True,
             'candidates':[{'silence_start_sec':a,'silence_end_sec':b,'suggested_remove_start_sec':a+margin_sec,
                            'suggested_remove_end_sec':b-margin_sec} for a,b in intervals if b-a>2*margin_sec]}

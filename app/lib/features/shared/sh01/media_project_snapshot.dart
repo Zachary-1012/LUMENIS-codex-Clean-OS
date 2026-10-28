@@ -307,6 +307,7 @@ final class MediaProjectClip {
     required this.audioStreamIndex,
     this.videoPlacement,
     this.frameCrop,
+    this.playbackRate = 1,
   });
 
   final String clipId;
@@ -322,8 +323,10 @@ final class MediaProjectClip {
   final int? audioStreamIndex;
   final MediaVideoPlacement? videoPlacement;
   final Map<String, Object?>? frameCrop;
+  final double playbackRate;
 
-  double get durationSec => sourceOut - sourceIn;
+  double get durationSec =>
+      double.parse(((sourceOut - sourceIn) / playbackRate).toStringAsFixed(6));
 
   factory MediaProjectClip.fromJson(Object? value) {
     final json = _object(value, {
@@ -341,9 +344,16 @@ final class MediaProjectClip {
       if (value is Map && value.containsKey('video_placement'))
         'video_placement',
       if (value is Map && value.containsKey('frame_crop')) 'frame_crop',
+      if (value is Map && value.containsKey('playback_rate')) 'playback_rate',
     }, 'clip');
     final sourceIn = _number(json['source_in'], 'source_in');
     final sourceOut = _number(json['source_out'], 'source_out');
+    final playbackRate = _number(
+      json['playback_rate'] ?? 1,
+      'playback_rate',
+      minimum: 1 / 16,
+      maximum: 16,
+    );
     final audioIndexValue = json['audio_stream_index'];
     if (audioIndexValue != null && audioIndexValue is! int) {
       throw _invalid('audio_stream_index must be an integer or null');
@@ -353,13 +363,14 @@ final class MediaProjectClip {
       mediaAssetId: _string(json['media_asset_id'], 'media_asset_id'),
       sourceIn: sourceIn,
       sourceOut: sourceOut,
+      playbackRate: playbackRate,
       timelineStart: _number(json['timeline_start'], 'timeline_start'),
       trackId: _string(json['track_id'], 'track_id'),
       purpose: _string(json['purpose'], 'purpose', allowEmpty: true),
       audioRole: _string(json['audio_role'], 'audio_role'),
       audioMix: MediaProjectAudioMix.fromJson(
         json['audio_mix'],
-        clipDuration: sourceOut - sourceIn,
+        clipDuration: (sourceOut - sourceIn) / playbackRate,
       ),
       evidenceRefs: _strings(json['evidence_refs'], 'evidence_refs'),
       audioStreamIndex: audioIndexValue as int?,
@@ -382,6 +393,7 @@ final class MediaProjectClip {
   }
 
   void _validate() {
+    _number(playbackRate, 'playback_rate', minimum: 1 / 16, maximum: 16);
     _require(
       sourceOut > sourceIn,
       'clip source range must have positive duration',
@@ -428,6 +440,7 @@ final class MediaProjectClip {
     MediaProjectAudioMix? audioMix,
     Object? audioStreamIndex = _notProvided,
     MediaVideoPlacement? videoPlacement,
+    double? playbackRate,
   }) => MediaProjectClip(
     clipId: clipId ?? this.clipId,
     mediaAssetId: mediaAssetId ?? this.mediaAssetId,
@@ -441,6 +454,7 @@ final class MediaProjectClip {
     evidenceRefs: evidenceRefs,
     videoPlacement: videoPlacement ?? this.videoPlacement,
     frameCrop: frameCrop,
+    playbackRate: playbackRate ?? this.playbackRate,
     audioStreamIndex: identical(audioStreamIndex, _notProvided)
         ? this.audioStreamIndex
         : audioStreamIndex as int?,
@@ -460,6 +474,7 @@ final class MediaProjectClip {
     'audio_stream_index': audioStreamIndex,
     if (videoPlacement != null) 'video_placement': videoPlacement!.toJson(),
     if (frameCrop != null) 'frame_crop': frameCrop,
+    if (playbackRate != 1) 'playback_rate': playbackRate,
   };
 }
 
@@ -1080,7 +1095,7 @@ final class MediaProjectSnapshot {
     final asset = _asset(mediaAssetId);
     final video = track.kind == 'video';
     _number(sourceIn, 'source_in');
-    final sourceOut = sourceIn + clip.durationSec;
+    final sourceOut = sourceIn + clip.durationSec * clip.playbackRate;
     _number(sourceOut, 'source_out');
     _require(
       sourceOut > sourceIn && sourceOut <= asset.durationSec,
@@ -1169,10 +1184,10 @@ final class MediaProjectSnapshot {
       'split must be inside clip source range',
     );
     final firstDuration = double.parse(
-      (atSec - clip.sourceIn).toStringAsFixed(6),
+      ((atSec - clip.sourceIn) / clip.playbackRate).toStringAsFixed(6),
     );
     final secondDuration = double.parse(
-      (clip.sourceOut - atSec).toStringAsFixed(6),
+      ((clip.sourceOut - atSec) / clip.playbackRate).toStringAsFixed(6),
     );
     final first = clip.copyWith(
       clipId: '$clipId-a',
@@ -1185,7 +1200,7 @@ final class MediaProjectSnapshot {
     final second = clip.copyWith(
       clipId: '$clipId-b',
       sourceIn: atSec,
-      timelineStart: clip.timelineStart + atSec - clip.sourceIn,
+      timelineStart: clip.timelineStart + firstDuration,
       audioMix: clip.audioMix.copyWith(
         fadeInSec: 0,
         fadeOutSec: clip.audioMix.fadeOutSec
@@ -1615,9 +1630,9 @@ final class MediaProjectSnapshot {
         final leftFrames = cutFrame - _frameAt(from.timelineStart);
         final fromAsset = assetsById[from.mediaAssetId];
         if (fromAsset == null ||
-            from.sourceIn + (leftFrames + afterCut) / 30 >
+            from.sourceIn + (leftFrames + afterCut) * from.playbackRate / 30 >
                 fromAsset.durationSec ||
-            to.sourceIn < beforeCut / 30) {
+            to.sourceIn < beforeCut * to.playbackRate / 30) {
           throw _invalid('TRANSITION_MEDIA_HANDLES_UNAVAILABLE');
         }
         windows.add((startFrame, endFrame));

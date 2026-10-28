@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """通用主体模块与香港 Cookie 绑定的隔离验收。"""
-import json
 import sqlite3
 import sys
+from copy import deepcopy
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -269,6 +269,98 @@ def test_explicit_local_workspace_lists_domains_without_creating_actor(subject_r
     assert denied.status_code == 401
     client.application.config["LUMENIS_OPEN_WORKSPACE"] = False
     assert client.get("/api/settings/subjects").status_code == 401
+
+
+def test_bmp_remove_persists_when_cn_evidence_unavailable_and_cancels_exact_scope(
+    subject_registry_client, monkeypatch,
+):
+    import experience_runtime
+    import lumenis.auth.service as auth_service
+    import lumenis.shared.reporting.delivery_preferences as preferences_owner
+    import subject_registry
+    from lumenis.system.collector.adapters import secondary_collection
+    from lumenis.system.security import permission
+
+    monkeypatch.setenv("ACCOUNT_SYSTEM_ENABLED", "on")
+    client, current = subject_registry_client
+    current["user"] = {"id": 2, "role": "user"}
+    monkeypatch.setattr(auth_service, "get_current_user", lambda **kwargs: current["user"])
+    monkeypatch.setattr(permission, "local_workspace_read_allowed", lambda _module: False)
+    monkeypatch.setattr(experience_runtime, "_content_source_same_origin", lambda: True)
+
+    brand = subject_registry.list_subjects("BMP")[0]
+    preference_state = {
+        "persisted": False,
+        "artifact_ref": None,
+        "version": 0,
+        "draft_digest": None,
+        "preferences": {"subject_directory": {
+            "mode": "EVIDENCED_CN", "subject_ids": [], "removed_subject_ids": [],
+        }},
+    }
+    saved_call = {}
+
+    def read_preferences(*, actor, scope):
+        saved_call["read_actor"] = actor
+        saved_call["read_scope"] = scope
+        return {
+            "preferences": deepcopy(preference_state["preferences"]),
+            "persisted": preference_state["persisted"],
+            "artifact_ref": preference_state["artifact_ref"],
+            "version": preference_state["version"],
+            "draft_digest": preference_state["draft_digest"],
+        }
+
+    def save_preferences(value, *, actor, scope, request_id,
+                         previous_artifact_id=None, expected_draft_digest=None):
+        saved_call.update(actor=actor, scope=scope, request_id=request_id)
+        preference_state.update(
+            persisted=True, artifact_ref="ART-0123456789abcdef", version=1,
+            draft_digest="a" * 64, preferences=deepcopy(value),
+        )
+        return {"replayed": False,
+                "artifact": {"artifact_id": preference_state["artifact_ref"]},
+                "document": {"version": 1}}
+
+    monkeypatch.setattr(preferences_owner, "read_preferences", read_preferences)
+    monkeypatch.setattr(preferences_owner, "save_preferences", save_preferences)
+
+    def missing_cn_evidence(*_args, **_kwargs):
+        raise RuntimeError("isolated missing evidence")
+
+    monkeypatch.setattr(subject_registry, "_country_subject_projection", missing_cn_evidence)
+    cancellation = {"state": "CANCELLED", "matched": 1, "cancelled": 1,
+                    "cancellation_pending": 0, "already_terminal": 0, "failed": 0,
+                    "network_attempted": False}
+    cancel_call = {}
+
+    def cancel_requests(*, actor, scope):
+        cancel_call.update(actor=actor, scope=scope)
+        return cancellation
+
+    monkeypatch.setattr(secondary_collection, "cancel_subject_collection_requests", cancel_requests)
+
+    response = client.post("/api/settings/subjects/working-set", json={
+        "domain_id": "BMP", "action": "remove", "subject_id": brand["subject_id"],
+        "request_id": "0" * 32,
+    })
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["preference_save"]["persisted"] is True
+    assert body["working_set"]["state"] == "EVIDENCE_UNAVAILABLE"
+    assert brand["subject_id"] in body["working_set"]["removed_subject_ids"]
+    assert body["task_cancellation"] == cancellation
+    assert saved_call["actor"]["id"] == 2
+    assert saved_call["scope"] == {
+        "domain_id": "zbmp", "subject_id": None,
+        "brand_focus_id": None, "global_scope": True,
+    }
+    assert cancel_call == {
+        "actor": {"id": 2, "role": "user"},
+        "scope": {"domain_id": "bmp", "subject_id": brand["subject_id"],
+                  "brand_focus_id": brand["brand_focus_id"], "global_scope": False},
+    }
 
 
 def test_active_resident_plan_and_orchestrator_are_hk_only():

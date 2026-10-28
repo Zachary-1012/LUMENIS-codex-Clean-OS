@@ -650,6 +650,226 @@ def _country_subject_projection(domain_id, country_iso, relation_type):
     return projection
 
 
+def _relation_datetime(value):
+    """Parse a relation/evidence timestamp in the server's local timezone."""
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    # Relation rows may retain either an explicit offset or the legacy local
+    # timestamps used by Evidence. astimezone() interprets naive values in the
+    # current server timezone without inventing a different date.
+    return parsed.astimezone()
+
+
+def _claim_current_time_state(claim, evaluated_at):
+    kind = claim.get("valid_time_kind")
+    if kind == "UNKNOWN":
+        return "UNKNOWN"
+    if kind == "AS_OF_CAPTURE":
+        captured = _relation_datetime(claim.get("evidence_captured_at"))
+        if captured is None:
+            return "UNKNOWN"
+        # A same-day capture is evidence about that capture date; it does not
+        # establish that an operation is ongoing at this later instant.
+        return "AS_OF_CAPTURE" if captured.date() == evaluated_at.date() else "OUTSIDE_CURRENT_RANGE"
+    if kind == "INTERVAL":
+        start = _relation_datetime(claim.get("valid_from"))
+        end_value = claim.get("valid_to")
+        end = _relation_datetime(end_value) if end_value else None
+        if start is None or (end_value and end is None):
+            return "UNKNOWN"
+        return "CURRENT" if start <= evaluated_at and (end is None or evaluated_at < end) else "OUTSIDE_CURRENT_RANGE"
+    return "UNKNOWN"
+
+
+def _china_operation_for_subject(projection, subject_id, *, evaluated_at=None):
+    """Project current CN operating evidence without inferring from identity.
+
+    Only an Evidence-verified, accepted OPERATES_IN/CN assertion whose declared
+    time covers the current observation can establish current operation. A
+    name, headquarters, nationality, unreviewed assertion, or old capture does
+    not qualify.
+    """
+    evaluated_at = evaluated_at or datetime.now().astimezone()
+    claims = [
+        claim for claim in projection.get("claims", [])
+        if claim.get("subject_id") == subject_id
+    ]
+    projected_claims = []
+    for claim in claims:
+        raw_source_url = claim.get("source_note_url")
+        source_url = None
+        if raw_source_url:
+            try:
+                source_url = _validate_official_source_url(raw_source_url)
+                source_url_state = "AVAILABLE"
+            except SubjectValidationError:
+                source_url_state = "REDACTED"
+        else:
+            source_url_state = "NOT_PROVIDED"
+        projected_claims.append({
+            "relation_type": claim.get("relation_type"),
+            "claim_kind": claim.get("claim_kind"),
+            "status": claim.get("status"),
+            "review_status": claim.get("review_status"),
+            "evidence_integrity": claim.get("evidence_integrity"),
+            "time_state": _claim_current_time_state(claim, evaluated_at),
+            "valid_time_kind": claim.get("valid_time_kind"),
+            "valid_from": claim.get("valid_from"),
+            "valid_to": claim.get("valid_to"),
+            "captured_at": claim.get("evidence_captured_at"),
+            "source_url": source_url,
+            "source_url_state": source_url_state,
+            "source_evidence_ref": claim.get("source_evidence_ref"),
+            "source_note_id": claim.get("source_note_id"),
+        })
+
+    live = [
+        claim for claim in projected_claims
+        if claim["status"] != "REJECTED" and claim["time_state"] == "CURRENT"
+    ]
+    verified = [claim for claim in live if claim["evidence_integrity"] == "VERIFIED"]
+    accepted_assertions = [
+        claim for claim in verified
+        if claim["review_status"] == "ACCEPTED" and claim["claim_kind"] == "ASSERTED"
+    ]
+    accepted_absences = [
+        claim for claim in verified
+        if claim["review_status"] == "ACCEPTED" and claim["claim_kind"] == "EXPLICIT_ABSENCE"
+    ]
+    observed = [
+        claim for claim in projected_claims
+        if claim["status"] != "REJECTED" and claim["time_state"] == "AS_OF_CAPTURE"
+    ]
+    verified_observed = [claim for claim in observed if claim["evidence_integrity"] == "VERIFIED"]
+    accepted_observed_assertions = [
+        claim for claim in verified_observed
+        if claim["review_status"] == "ACCEPTED" and claim["claim_kind"] == "ASSERTED"
+    ]
+    accepted_observed_absences = [
+        claim for claim in verified_observed
+        if claim["review_status"] == "ACCEPTED" and claim["claim_kind"] == "EXPLICIT_ABSENCE"
+    ]
+    conflicted = [claim for claim in live if claim["status"] == "CONFLICTED"]
+    unreviewed = [claim for claim in live if claim["status"] == "UNREVIEWED"]
+    unreviewed_observed = [claim for claim in observed if claim["status"] == "UNREVIEWED"]
+    invalid = [
+        claim for claim in projected_claims
+        if claim["status"] != "REJECTED" and claim["evidence_integrity"] != "VERIFIED"
+    ]
+    unresolved_counter_claim = any(
+        claim["claim_kind"] == "EXPLICIT_ABSENCE" for claim in unreviewed
+    ) if accepted_assertions else any(
+        claim["claim_kind"] == "ASSERTED" for claim in unreviewed
+    ) if accepted_absences else False
+
+    if conflicted or (accepted_assertions and accepted_absences):
+        status, currently_operating = "CONFLICT", None
+    elif unresolved_counter_claim:
+        status, currently_operating = "UNREVIEWED", None
+    elif accepted_assertions:
+        status, currently_operating = "CONFIRMED_CURRENT", True
+    elif accepted_absences:
+        status, currently_operating = "NOT_OPERATING_CURRENT", False
+    elif accepted_observed_assertions and accepted_observed_absences:
+        status, currently_operating = "CONFLICT_AS_OF_CAPTURE", None
+    elif accepted_observed_assertions:
+        status, currently_operating = "EVIDENCED_AS_OF_CAPTURE", None
+    elif accepted_observed_absences:
+        status, currently_operating = "NOT_OPERATING_AS_OF_CAPTURE", None
+    elif unreviewed:
+        status, currently_operating = "UNREVIEWED", None
+    elif unreviewed_observed:
+        status, currently_operating = "UNREVIEWED_AS_OF_CAPTURE", None
+    elif invalid:
+        status, currently_operating = "EVIDENCE_INVALID", None
+    elif not claims:
+        status, currently_operating = "NOT_COLLECTED", None
+    elif all(claim.get("status") == "REJECTED" for claim in projected_claims):
+        status, currently_operating = "REJECTED", None
+    else:
+        status, currently_operating = "NOT_ESTABLISHED_FOR_AS_OF", None
+
+    return {
+        "country_iso": "CN",
+        "relation_type": "OPERATES_IN",
+        "status": status,
+        "currently_operating": currently_operating,
+        "evaluated_at": evaluated_at.isoformat(timespec="seconds"),
+        "claims": projected_claims,
+    }
+
+
+def _subject_directory_scope(domain_id):
+    return {
+        "domain_id": "cth" if domain_id == "CTH" else "zbmp",
+        "subject_id": None,
+        "brand_focus_id": None,
+        "global_scope": True,
+    }
+
+
+def _subject_directory_actor(user=None, *, local_workspace=False, action="read"):
+    if isinstance(user, dict) and type(user.get("id")) is int and user["id"] > 0:
+        return user
+    if not local_workspace:
+        return None
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    return resolve_local_workspace_principal(module="reports", action=action)
+
+
+def _subject_working_set_view(
+    domain_id, actor, rows, *, china_operations=None, evidence_state="AVAILABLE",
+):
+    """Read an actor's evidence-qualified CN working set via SavedWork."""
+    from lumenis.shared.reporting.delivery_preferences import read_preferences
+
+    unavailable = {
+        "state": "UNAVAILABLE", "mode": None, "subject_ids": None,
+        "removed_subject_ids": [], "persisted": None, "preference_ref": None,
+        "version": None, "draft_digest": None,
+    }
+    if actor is None:
+        return unavailable
+    try:
+        saved = read_preferences(actor=actor, scope=_subject_directory_scope(domain_id))
+    except Exception as exc:
+        if str(exc) not in {"WORK_PERMISSION_DENIED", "WORK_SCOPE_INVALID"}:
+            logger.exception("Subject directory preference readback unavailable")
+        return unavailable
+    preference = saved["preferences"]["subject_directory"]
+    active_registry_ids = {
+        row["subject_id"] for row in rows
+        if row.get("status") in {"configured", "active"}
+    }
+    removed = sorted(set(preference["removed_subject_ids"]) & {
+        row["subject_id"] for row in rows
+    })
+    if evidence_state != "AVAILABLE" or china_operations is None:
+        return {
+            "state": "EVIDENCE_UNAVAILABLE", "mode": preference["mode"],
+            "subject_ids": None, "removed_subject_ids": removed,
+            "persisted": saved["persisted"], "preference_ref": saved["artifact_ref"],
+            "version": saved["version"], "draft_digest": saved["draft_digest"],
+        }
+    currently_operating_ids = {
+        subject_id for subject_id, operation in china_operations.items()
+        if subject_id in active_registry_ids
+        and operation.get("status") == "CONFIRMED_CURRENT"
+        and operation.get("currently_operating") is True
+    }
+    selected = sorted(currently_operating_ids - set(removed))
+    return {
+        "state": "READY", "mode": preference["mode"], "subject_ids": selected,
+        "removed_subject_ids": removed, "persisted": saved["persisted"],
+        "preference_ref": saved["artifact_ref"], "version": saved["version"],
+        "draft_digest": saved["draft_digest"],
+    }
+
+
 @subject_registry_bp.route("/api/settings/subjects", methods=["GET"])
 def get_subjects():
     # Account system is post-loop (PO): until ACCOUNT_SYSTEM_ENABLED=on, registry
@@ -703,12 +923,13 @@ def get_subjects():
                         "error": "国家筛选需同时指定业务领域、国家和关系类型"}), 400
 
     country_projection = None
+    subjects_by_domain = {}
     try:
-        subjects = [
-            subject
-            for domain in authorized_domains
-            for subject in list_subjects(domain)
-        ]
+        subjects_by_domain = {
+            domain: list_subjects(domain) for domain in authorized_domains
+        }
+        subjects = [subject for domain in authorized_domains
+                    for subject in subjects_by_domain[domain]]
         if country is not None:
             from lumenis.shared.database.entity_relations import EntityRelationError
             try:
@@ -731,6 +952,70 @@ def get_subjects():
         return jsonify({"ok": False, "code": "SUBJECT_REGISTRY_UNAVAILABLE",
                         "error": "主体注册表暂不可用"}), 503
 
+    # The registry remains searchable. Only a current, accepted, verified
+    # CN/OPERATES_IN interval enters the default directory; other rows remain
+    # explicit pending/evidence states and are never promoted by name or locale.
+    evaluated_at = datetime.now().astimezone()
+    china_projections = {}
+    china_projection_states = {}
+    for domain in authorized_domains:
+        if (country_projection is not None and requested_domain == domain
+                and country.upper() == "CN" and relation.upper() == "OPERATES_IN"):
+            china_projections[domain] = country_projection
+            china_projection_states[domain] = "AVAILABLE"
+            continue
+        try:
+            china_projections[domain] = _country_subject_projection(
+                domain, "CN", "OPERATES_IN",
+            )
+            china_projection_states[domain] = "AVAILABLE"
+        except Exception:
+            # The registry can still be read if relation Evidence is not
+            # available. Report that boundary on each entry instead of
+            # mislabeling missing source data as no China operation.
+            logger.exception("China operating relation projection unavailable")
+            china_projection_states[domain] = "UNAVAILABLE"
+
+    for subject in subjects:
+        domain = subject["domain_id"]
+        projection = china_projections.get(domain)
+        if projection is None:
+            subject["china_operation"] = {
+                "country_iso": "CN",
+                "relation_type": "OPERATES_IN",
+                "status": "UNAVAILABLE",
+                "currently_operating": None,
+                "evaluated_at": evaluated_at.isoformat(timespec="seconds"),
+                "claims": [],
+            }
+        else:
+            subject["china_operation"] = _china_operation_for_subject(
+                projection, subject["subject_id"], evaluated_at=evaluated_at,
+            )
+
+    projection_states = set(china_projection_states.values())
+    china_operation_source_state = (
+        "AVAILABLE" if projection_states == {"AVAILABLE"}
+        else "UNAVAILABLE" if projection_states == {"UNAVAILABLE"}
+        else "PARTIAL"
+    )
+    preference_actor = _subject_directory_actor(
+        user, local_workspace=local_read, action="read",
+    )
+    working_sets = {}
+    for domain in authorized_domains:
+        operations = {
+            subject["subject_id"]: subject["china_operation"]
+            for subject in subjects_by_domain[domain]
+        }
+        if domain not in china_projections:
+            operations = None
+        working_sets[domain] = _subject_working_set_view(
+            domain, preference_actor, subjects_by_domain[domain],
+            china_operations=operations,
+            evidence_state=china_projection_states.get(domain, "UNAVAILABLE"),
+        )
+
     return jsonify({
         "ok": True,
         "source": "lumenis_subject_registry",
@@ -747,6 +1032,9 @@ def get_subjects():
             "CN", "KR", "JP", "GB", "FR", "US", "CA", "AU", "MY", "SG",
             "TH", "BR", "NO", "OTHER",
         ],
+        "china_operation_source_state": china_operation_source_state,
+        "china_operation_evaluated_at": evaluated_at.isoformat(timespec="seconds"),
+        "working_sets": working_sets,
         "country_projection": country_projection,
     })
 
@@ -776,6 +1064,235 @@ def create_subject():
                         "selection_only": True, "subject": subject}), 200
     return jsonify({"ok": True, "created": True, "selection_only": True,
                     "subject": subject}), 201
+
+
+@subject_registry_bp.route("/api/settings/subjects/working-set", methods=["POST"])
+def update_subject_working_set():
+    """Add/remove one identity from this actor's personal directory scope.
+
+    The canonical Subject/BrandFocus remains shared and unchanged. Persistence,
+    actor binding, version checks and the write Permission are owned by the
+    existing SavedWork delivery-preferences path.
+    """
+    try:
+        from experience_runtime import _content_source_same_origin
+        from lumenis.auth.service import get_current_user
+        from lumenis.system.security.permission import local_workspace_read_allowed
+        from lumenis.shared.reporting import delivery_preferences
+
+        if not _content_source_same_origin():
+            return jsonify({"ok": False, "code": "SUBJECT_DIRECTORY_ORIGIN_DENIED"}), 403
+        body = request.get_json(silent=True)
+        required = {"domain_id", "action", "subject_id", "request_id"}
+        optional = {"previous_artifact_id", "expected_draft_digest"}
+        if (not isinstance(body, dict) or not required.issubset(body)
+                or set(body) - required - optional):
+            raise SubjectValidationError("SUBJECT_DIRECTORY_REQUEST_INVALID")
+        domain = normalize_domain(body.get("domain_id"))
+        action = body.get("action")
+        subject_id = body.get("subject_id")
+        request_id = body.get("request_id")
+        previous_artifact_id = body.get("previous_artifact_id")
+        expected_draft_digest = body.get("expected_draft_digest")
+        if (action not in {"add", "remove"}
+                or not isinstance(subject_id, str) or not subject_id
+                or subject_id != subject_id.strip() or len(subject_id) > 256
+                or not isinstance(request_id, str)
+                or re.fullmatch(r"[0-9a-f]{32}", request_id) is None):
+            raise SubjectValidationError("SUBJECT_DIRECTORY_REQUEST_INVALID")
+        if (previous_artifact_id is not None
+                and (not isinstance(previous_artifact_id, str)
+                     or not re.fullmatch(r"ART-[0-9a-f]{16}", previous_artifact_id))):
+            raise SubjectValidationError("SUBJECT_DIRECTORY_REVISION_INVALID")
+        if (expected_draft_digest is not None
+                and (not isinstance(expected_draft_digest, str)
+                     or re.fullmatch(r"[0-9a-f]{64}", expected_draft_digest) is None)):
+            raise SubjectValidationError("SUBJECT_DIRECTORY_REVISION_INVALID")
+        if (previous_artifact_id is None) != (expected_draft_digest is None):
+            raise SubjectValidationError("SUBJECT_DIRECTORY_REVISION_INVALID")
+
+        user = get_current_user(read_only=True)
+        local_workspace = local_workspace_read_allowed("subject_registry")
+        actor = _subject_directory_actor(
+            user, local_workspace=local_workspace, action="write",
+        )
+        if actor is None:
+            return jsonify({"ok": False, "code": "SUBJECT_DIRECTORY_ACTOR_REQUIRED"}), 401
+        if isinstance(actor, dict):
+            from account.authorization import check_dual_domain_permission
+            if not check_dual_domain_permission(
+                actor["id"], "ZBMP" if domain == "BMP" else "CTH",
+                module="subject_registry", action="read",
+            ):
+                return jsonify({"ok": False, "code": "SUBJECT_SCOPE_DENIED"}), 403
+
+        rows = list_subjects(domain)
+        active_ids = {
+            row["subject_id"] for row in rows
+            if row.get("status") in {"configured", "active"}
+        }
+        if subject_id not in active_ids:
+            return jsonify({"ok": False, "code": "SUBJECT_NOT_IN_DIRECTORY"}), 404
+        subject_row = next(row for row in rows if row["subject_id"] == subject_id)
+
+        china_operations = None
+        evidence_state = "UNAVAILABLE"
+        try:
+            china_projection = _country_subject_projection(domain, "CN", "OPERATES_IN")
+            evaluated_at = datetime.now().astimezone()
+            china_operations = {
+                row["subject_id"]: _china_operation_for_subject(
+                    china_projection, row["subject_id"], evaluated_at=evaluated_at,
+                )
+                for row in rows
+            }
+            evidence_state = "AVAILABLE"
+        except Exception:
+            logger.exception("Subject directory CN evidence unavailable")
+            if action == "add":
+                return jsonify({
+                    "ok": False, "code": "SUBJECT_CN_EVIDENCE_UNAVAILABLE",
+                    "state": "EVIDENCE_UNAVAILABLE",
+                }), 503
+
+        target_operation = (china_operations or {}).get(subject_id)
+        if action == "add" and (
+                target_operation is None
+                or target_operation["status"] != "CONFIRMED_CURRENT"
+                or target_operation["currently_operating"] is not True):
+            return jsonify({
+                "ok": False, "code": "SUBJECT_CN_OPERATION_NOT_CONFIRMED",
+                "china_operation": target_operation,
+            }), 409
+
+        scope = _subject_directory_scope(domain)
+        saved = delivery_preferences.read_preferences(actor=actor, scope=scope)
+        preferences = saved["preferences"]
+        current = preferences["subject_directory"]
+        registered_ids = {row["subject_id"] for row in rows}
+        removed = set(current["removed_subject_ids"]) & registered_ids
+        evidenced_ids = {
+            current_subject_id for current_subject_id, operation in (china_operations or {}).items()
+            if operation["status"] == "CONFIRMED_CURRENT"
+            and operation["currently_operating"] is True
+        }
+        selected = evidenced_ids - removed
+
+        changed = False
+        if action == "remove" and subject_id not in removed:
+            # A removal is a durable exclusion even when current CN Evidence is
+            # unavailable or no longer current. It never changes Canonical data.
+            removed.add(subject_id)
+            changed = True
+        elif action == "add" and subject_id not in selected:
+            removed.discard(subject_id)
+            changed = True
+
+        def cancellation_receipt():
+            if action != "remove":
+                return None
+            try:
+                from lumenis.system.collector.adapters.secondary_collection import (
+                    cancel_subject_collection_requests,
+                )
+                collection_scope = {
+                    "domain_id": "cth" if domain == "CTH" else "bmp",
+                    "subject_id": subject_id if domain == "CTH" else None,
+                    "brand_focus_id": subject_row.get("brand_focus_id") if domain == "BMP" else None,
+                    "global_scope": False,
+                }
+                if domain == "BMP":
+                    collection_scope["subject_id"] = subject_id
+                return cancel_subject_collection_requests(actor=actor, scope=collection_scope)
+            except Exception:
+                logger.exception("Subject directory task cancellation unavailable")
+                return {
+                    "state": "UNAVAILABLE", "matched": 0, "cancelled": 0,
+                    "cancellation_pending": 0, "already_terminal": 0, "failed": 1,
+                    "network_attempted": False,
+                }
+
+        if not changed:
+            readback = _subject_working_set_view(
+                domain, actor, rows, china_operations=china_operations,
+                evidence_state=evidence_state,
+            )
+            cancellation = cancellation_receipt()
+            return jsonify({
+                "ok": True, "state": "UNCHANGED", "action": action,
+                "subject_id": subject_id, "request_id": request_id,
+                "preference_save": {"state": "UNCHANGED", "persisted": saved["persisted"],
+                                    "preference_ref": saved["artifact_ref"], "version": saved["version"]},
+                "task_cancellation": cancellation,
+                "working_set": readback,
+            })
+
+        if saved["persisted"] and (
+                previous_artifact_id is None or expected_draft_digest is None):
+            return jsonify({
+                "ok": False, "code": "SUBJECT_DIRECTORY_BASE_REQUIRED",
+                "request_id": request_id,
+                "working_set": _subject_working_set_view(
+                    domain, actor, rows, china_operations=china_operations,
+                ),
+            }), 409
+        preferences["subject_directory"] = {
+            "mode": "EVIDENCED_CN",
+            "subject_ids": [],
+            "removed_subject_ids": sorted(removed),
+        }
+        result = delivery_preferences.save_preferences(
+            preferences,
+            actor=actor,
+            scope=scope,
+            request_id=request_id,
+            previous_artifact_id=previous_artifact_id,
+            expected_draft_digest=expected_draft_digest,
+        )
+        readback = _subject_working_set_view(
+            domain, actor, list_subjects(domain),
+            china_operations=china_operations, evidence_state=evidence_state,
+        )
+        if not readback["persisted"] or (action == "add" and readback["state"] != "READY"):
+            return jsonify({
+                "ok": False, "code": "SUBJECT_DIRECTORY_READBACK_UNAVAILABLE",
+                "request_id": request_id,
+            }), 503
+        if (not result.get("replayed") and
+                ((action == "remove" and readback["state"] == "READY"
+                  and subject_id in readback["subject_ids"])
+                 or (action == "remove" and subject_id not in readback["removed_subject_ids"])
+                 or (action == "add" and subject_id not in readback["subject_ids"]))):
+            return jsonify({
+                "ok": False, "code": "SUBJECT_DIRECTORY_READBACK_MISMATCH",
+                "request_id": request_id,
+            }), 503
+        cancellation = cancellation_receipt()
+        return jsonify({
+            "ok": True, "state": "REPLAYED" if result.get("replayed") else "SAVED",
+            "action": action, "subject_id": subject_id, "request_id": request_id,
+            "preference_ref": result["artifact"]["artifact_id"],
+            "version": result["document"]["version"],
+            "preference_save": {"state": "REPLAYED" if result.get("replayed") else "SAVED",
+                                "persisted": True,
+                                "preference_ref": result["artifact"]["artifact_id"],
+                                "version": result["document"]["version"]},
+            "task_cancellation": cancellation,
+            "working_set": readback,
+        })
+    except SubjectValidationError as exc:
+        return jsonify({"ok": False, "code": str(exc)}), 400
+    except PermissionError:
+        return jsonify({"ok": False, "code": "SUBJECT_DIRECTORY_PERMISSION_DENIED"}), 403
+    except Exception as exc:
+        code = str(exc)
+        if code in {"WORK_REVISION_CONFLICT", "WORK_DRAFT_REVISION_CONFLICT",
+                    "WORK_REQUEST_REUSE_CONFLICT"}:
+            return jsonify({"ok": False, "code": "SUBJECT_DIRECTORY_VERSION_CONFLICT"}), 409
+        if code in {"WORK_PERMISSION_DENIED", "WORK_EFFECT_PERMISSION_DENIED"}:
+            return jsonify({"ok": False, "code": "SUBJECT_DIRECTORY_PERMISSION_DENIED"}), 403
+        logger.exception("Subject directory working-set update unavailable")
+        return jsonify({"ok": False, "code": "SUBJECT_DIRECTORY_UNAVAILABLE"}), 503
 
 
 __all__ = [

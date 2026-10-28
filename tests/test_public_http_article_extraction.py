@@ -2,9 +2,104 @@
 
 import hashlib
 
+import pytest
+
 from lumenis.system.collector.adapters.base import CollectionStatus
 from lumenis.system.collector.adapters.public_http import PublicHttpAdapter
 from lumenis.system.collector.adapters.public_source import PublicResponse
+
+
+def test_public_dom_media_is_reopenable_in_native_projection_without_extra_fetch():
+    from lumenis.system.collector.adapters.secondary_collection import _native_record
+    from lumenis.system.collector.adapters.platform_naming import map_raw_to_normalized
+    html = b'''<html><head><title>Media source</title></head><body>
+        <header><img src="/navigation-logo.png"></header><article id="story">
+        <p>Actual publisher source text.</p><img data-src="/original.png" alt="Source image">
+        <video poster="/poster.jpg"><source src="https://cdn.example.test/original.mp4" type="video/mp4">
+        <track src="/captions.vtt" kind="subtitles" srclang="en"></video>
+        <audio src="/original.wav"></audio><iframe src="https://www.youtube.com/embed/abcdefghijk"></iframe>
+        <iframe src="https://unknown-embed.example.test/page"></iframe>
+        <aside><img src="/sidebar.png"></aside></article></body></html>'''
+    source = 'https://publisher.example.test/news/article'
+    calls = []
+    def fetch(url):
+        calls.append(url)
+        return PublicResponse(source,html,'text/html',200)
+    result = PublicHttpAdapter(fetcher=fetch).search(source)
+    assert result.ok and calls == [source]
+    item = result.items[0]
+    record = _native_record(item,'public_http',source,item['captured_at'])
+    normalized = map_raw_to_normalized(record,'public_http')
+    media = normalized['media_list']
+    assert item['cover'] == 'https://publisher.example.test/original.png'
+    assert {entry['media_type'] for entry in media} == {'image','video','audio','timed_text','embed'}
+    assert all(entry['bytes_state'] == 'NOT_ACQUIRED' for entry in media)
+    assert 'navigation-logo' not in str(media) and 'sidebar.png' not in str(media)
+    assert next(entry for entry in media if entry['media_type']=='video')['url'] == 'https://cdn.example.test/original.mp4'
+    embed = next(entry for entry in media if entry['media_type']=='embed')
+    assert embed['url'] is None and embed['observed_page_url'].startswith('https://unknown-embed.example.test/')
+    player = next(entry for entry in media if entry.get('acquisition'))
+    assert player['url'] == 'https://www.youtube.com/embed/abcdefghijk'
+    assert player['acquisition']['representation'] == 'PLAYER_SOURCE'
+    caption = next(entry for entry in media if entry['media_type']=='timed_text')
+    assert caption['url'] is None and caption['observed_text_url'].endswith('/captions.vtt')
+    assert item['raw']['media_observation']['copyright_license'] == 'NOT_ESTABLISHED'
+    assert item['raw']['body_scope']['whole_article_verified'] is False
+
+
+def test_media_v1_replay_preserves_old_observation_and_v2_declares_actual_manifest_only():
+    source = PublicResponse('https://publisher.example.test/source',b'<main>Source'
+        b'<video><source src="https://cdn.example.test/master.m3u8" type="application/x-mpegurl"></video>'
+        b'<audio src="https://cdn.example.test/audio.mpd"></audio>'
+        b'<iframe src="https://www.youtube.com/embed/abcdefghijk"></iframe>'
+        b'<img src="/original.png"></main>','text/html',200)
+    v1 = PublicHttpAdapter._item(source,media_schema='public-http-dom-media/v1')
+    assert all('acquisition' not in item for item in v1['raw']['media_list'])
+    assert v1['raw']['media_list'][2]['url'] is None
+    current = PublicHttpAdapter._item(source)
+    assert current['raw']['media_observation']['schema'] == 'public-http-dom-media/v2'
+    assert [item.get('acquisition',{}).get('protocol') for item in current['raw']['media_list']] == ['m3u8','dash','https',None]
+    assert current['content'] == v1['content'] and current['raw']['content_observation'] == v1['raw']['content_observation']
+
+
+def test_public_dom_media_retains_unresolved_positions_and_blocks_sensitive_url_projection():
+    response = PublicResponse('https://publisher.example.test/source',
+        b'<main>Source text<img src="/image.png?token=do-not-export"><img src="data:image/png;base64,abc">'
+        b'<video data-id="native-video-without-url"></video><img src="/safe.png#display"></main>', 'text/html',200)
+    item = PublicHttpAdapter._item(response)
+    media = item['raw']['media_list']
+    assert len(media) == 4 and [entry['url'] for entry in media[:3]] == [None,None,None]
+    assert media[-1]['url'] == 'https://publisher.example.test/safe.png'
+    assert 'do-not-export' not in str(media)
+    assert all(entry['native_locator']['element'] for entry in media)
+
+
+def test_media_after_text_preview_limit_is_retained_without_claiming_full_article():
+    from lumenis.system.collector.adapters.public_http import MAX_PUBLIC_BODY_CHARS
+    response = PublicResponse('https://publisher.example.test/long',
+        ('<article>' + 'A'*(MAX_PUBLIC_BODY_CHARS+20) + '<img src="/late-original.png"></article>').encode(),
+        'text/html',200)
+    item = PublicHttpAdapter._item(response)
+    assert item['raw']['content_observation']['completeness'] == 'TRUNCATED_SEMANTIC_PREVIEW'
+    assert item['raw']['body_scope']['returned_text_truncated'] is True
+    assert item['raw']['body_scope']['selected_dom_text_complete'] is False
+    assert item['raw']['body_scope']['whole_article_verified'] is False
+    assert item['raw']['media_list'][0]['url'].endswith('/late-original.png')
+
+
+def test_media_inventory_budget_records_actual_omissions_and_base_srcset():
+    from lumenis.system.collector.adapters.public_http import MAX_PUBLIC_MEDIA_REFERENCES
+    response = PublicResponse('https://publisher.example.test/source',
+        ('<head><base href="https://cdn.example.test/assets/"></head><main>Source text'
+         '<img srcset="one.png 1x, two.png 2x">'
+         + ''.join(f'<img src="{index}.png">' for index in range(MAX_PUBLIC_MEDIA_REFERENCES)) + '</main>').encode(),
+        'text/html',200)
+    item = PublicHttpAdapter._item(response)
+    observed = item['raw']['media_observation']
+    assert observed['retained_reference_count'] == MAX_PUBLIC_MEDIA_REFERENCES
+    assert observed['reference_count'] == MAX_PUBLIC_MEDIA_REFERENCES+2
+    assert observed['omitted_reference_count'] == 2 and observed['truncated'] is True
+    assert item['raw']['media_list'][0]['url'] == 'https://cdn.example.test/assets/one.png'
 
 
 def test_substantial_article_content_and_declared_date_survive_capture():
@@ -63,9 +158,93 @@ def test_title_only_page_is_not_reported_as_captured_content():
     assert result.metadata["error_type"] == "EMPTY_CONTENT"
 
 
+def test_public_http_rate_limit_preserves_server_wait_and_blocks_followup(monkeypatch):
+    from lumenis.system.collector.adapters.public_source import PublicSourceHTTPError
+    from lumenis.system.collector.guard.rate_limiter import AdaptiveRateLimiter
+
+    limiter = AdaptiveRateLimiter(
+        base_interval=0, min_interval=0, max_interval=0,
+        cooldown_seconds=5, jitter=False,
+    )
+    monkeypatch.setattr(PublicHttpAdapter, "_document_limiter", limiter)
+    calls = []
+
+    def rate_limited(url):
+        calls.append(url)
+        raise PublicSourceHTTPError(429, retry_after_seconds=120)
+
+    adapter = PublicHttpAdapter(fetcher=rate_limited)
+    source = "https://publisher.example.test/rate-limited"
+    result = adapter.search(source)
+
+    assert result.status is CollectionStatus.COOLING_DOWN
+    assert result.metadata["http_status"] == 429
+    assert result.metadata["retry_after_seconds"] >= 110
+    assert result.metadata["network_attempted"] is True
+    assert limiter.remaining_cooldown() >= 110
+
+    followup = adapter.search(source)
+    assert followup.status is CollectionStatus.COOLING_DOWN
+    assert followup.metadata["network_attempted"] is False
+    assert followup.metadata["retry_after_seconds"] >= 110
+    assert calls == [source]
+
+
+def test_public_http_default_transport_receives_task_cancellation(monkeypatch):
+    import lumenis.system.collector.adapters.public_http as public_http
+    from lumenis.system.collector.guard.rate_limiter import AdaptiveRateLimiter
+
+    limiter = AdaptiveRateLimiter(base_interval=0, min_interval=0, jitter=False)
+    monkeypatch.setattr(public_http.PublicHttpAdapter, "_document_limiter", limiter)
+    calls = []
+    inside_transport = False
+
+    def stop_inside_transport():
+        if inside_transport:
+            raise InterruptedError("COLLECTION_ATTEMPT_NO_LONGER_ACTIVE")
+
+    def transport_fetch(url, *, check_continue=None):
+        nonlocal inside_transport
+        calls.append(url)
+        inside_transport = True
+        check_continue()
+        raise AssertionError("a cancelled public read must not continue")
+
+    monkeypatch.setattr(public_http, "fetch_public_url", transport_fetch)
+    adapter = public_http.PublicHttpAdapter()
+
+    with pytest.raises(InterruptedError, match="COLLECTION_ATTEMPT_NO_LONGER_ACTIVE"):
+        adapter.search(
+            "https://publisher.example.test/cancel-during-response",
+            check_continue=stop_inside_transport,
+        )
+
+    assert calls == ["https://publisher.example.test/cancel-during-response"]
+    assert limiter.consecutive_fail == 0
+
+
+def test_public_http_rejected_default_document_reports_network_attempt(monkeypatch):
+    import lumenis.system.collector.adapters.public_http as public_http
+    from lumenis.system.collector.guard.rate_limiter import AdaptiveRateLimiter
+
+    response = PublicResponse(
+        "https://publisher.example.test/non-html",
+        b"%PDF-1.7", "application/pdf", 200,
+    )
+    monkeypatch.setattr(public_http, "fetch_public_url", lambda _url: response)
+    monkeypatch.setattr(
+        public_http.PublicHttpAdapter, "_document_limiter",
+        AdaptiveRateLimiter(base_interval=0, min_interval=0, jitter=False),
+    )
+
+    result = public_http.PublicHttpAdapter().search(response.url)
+
+    assert result.status is CollectionStatus.PROVIDER_UNAVAILABLE
+    assert result.metadata["network_attempted"] is True
+
+
 def test_fix094_sibling_article_selection_scales_linearly(monkeypatch):
     """FIX-094: sibling article dedup checks selected ancestors in linear work."""
-    import builtins
     import lumenis.system.collector.adapters.public_http as public_http
     from bs4 import BeautifulSoup
 
@@ -562,3 +741,33 @@ def test_multi_token_navigation_role_on_ancestor_or_descendant_is_chrome():
     assert [n.get_text(" ", strip=True).startswith("real story body") for n in nodes] == [True]
     text = "".join(public_http._iter_node_text_parts(nodes[0]))
     assert "NAV_TOKEN_TEXT" not in text
+
+
+def test_media_only_document_keeps_empty_text_and_exact_manifest_without_fetching_it():
+    source='https://publisher.example.test/native-player'
+    manifest='https://cdn.example.test/declared-source.mpd'
+    original=('<html><head><title>Official player</title></head><body><video src="'
+              +manifest+'"></video></body></html>').encode()
+    calls=[]
+    def fetch(url):
+        calls.append(url)
+        return PublicResponse(source,original,'text/html',200,source)
+    result=PublicHttpAdapter(fetcher=fetch).search(source)
+    assert result.ok and result.original_response.content==original and calls==[source]
+    item=result.items[0]
+    assert item['content']=='' and item['raw']['body_state']=='EMPTY'
+    assert item['raw']['content_observation']['source_text_char_length']==0
+    assert not item['raw']['body_scope']['selected_dom_text_complete']
+    assert result.metadata['source_representation']=='MEDIA_DOCUMENT_WITHOUT_BODY_TEXT'
+    media=item['raw']['media_hints'][0]
+    assert media['url']==manifest and media['bytes_state']=='NOT_ACQUIRED'
+    assert media['acquisition']=={'extractor_key':'Generic','representation':'STREAM_MANIFEST','protocol':'dash'}
+
+
+def test_empty_document_without_usable_native_media_remains_unavailable():
+    for body in ('<video></video>','<iframe src="https://unknown.example.test/embed"></iframe>',
+                 '<header><img src="/logo.png"></header>','<img src="data:image/png;base64,AA==">'):
+        source='https://publisher.example.test/empty'
+        response=PublicResponse(source,('<html><body>'+body+'</body></html>').encode(),'text/html',200,source)
+        result=PublicHttpAdapter(fetcher=lambda url:response).search(source)
+        assert not result.ok and result.metadata['error_type']=='EMPTY_CONTENT' and not result.items

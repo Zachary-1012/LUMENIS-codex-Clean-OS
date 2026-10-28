@@ -329,6 +329,13 @@ def execution_reason(root: Path, state: dict, event: dict) -> str | None:
         return None
     if state.get("execution_paused") or state.get("turn_exit_mode") in {"PO_PAUSED", "APPROVAL_WAIT", "REPORT_ONLY"}:
         return "PO_PAUSED_OR_READ_ONLY: no writes, builds, delegation or effects are authorized."
+    # continuity_save adds this digest only after validating the optional Owner
+    # execution block. Legacy sessions keep the pre-execution policy behavior.
+    if "execution_digest" not in state:
+        return None
+    admitted_digest = state.get("execution_digest")
+    if not isinstance(admitted_digest, str) or not SHA256_RE.fullmatch(admitted_digest):
+        return "EXECUTION_SCOPE_CHANGED: reconcile the direct PO instruction; no self-expanded scope."
     bound = state.get("continuity")
     if not isinstance(bound, dict):
         return "EXECUTION_UNBOUND: bind the existing Owner record before a mutating or opaque tool call."
@@ -337,7 +344,7 @@ def execution_reason(root: Path, state: dict, event: dict) -> str | None:
             return "EXECUTION_IDENTITY_MISMATCH"
         item = continuity_record(root, bound["record"], bound["section"], state.get("delivery_guard"), bound.get("pins"))
         execution = validate_execution(root, item)
-        if not execution or execution_digest(execution) != state.get("execution_digest"):
+        if not execution or execution_digest(execution) != admitted_digest:
             return "EXECUTION_SCOPE_CHANGED: reconcile the direct PO instruction; no self-expanded scope."
         if execution["status"] != "RUNNING":
             return "EXECUTION_PAUSED"
@@ -2628,10 +2635,6 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         state["last_snapshot"] = now
         return {}
     if name == "Stop":
-        if state.get("execution_paused"):
-            state["verification_status"] = "PO_PAUSED_UNFINISHED_WORK_PRESERVED"
-            state.pop("stop_continuation_binding", None)
-            return {}
         allowed, delivery_reason = delivery_stop_check(root, state, event)
         if not allowed:
             return stop_block(state, event, delivery_reason or "Structured delivery remains open.", "BLOCKED_DELIVERY_OUTCOME_OPEN")

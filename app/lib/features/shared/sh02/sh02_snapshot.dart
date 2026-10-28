@@ -116,6 +116,7 @@ class Sh02Evidence {
     required this.freshness,
     required this.lineage,
     required this.origin,
+    this.inspection,
   });
 
   final String internalId;
@@ -126,6 +127,7 @@ class Sh02Evidence {
   final String freshness;
   final List<String> lineage;
   final String origin;
+  final Sh02CollectedInspection? inspection;
 
   String get kindLabel => switch (kind) {
     Sh02EvidenceKind.metric => '指标',
@@ -140,10 +142,14 @@ class Sh02Evidence {
     final record = _asMap(value);
     if (record == null) return null;
     final id = _string(record['id'] ?? record['evidence_id']);
-    final summary = _safeText(record['summary'] ?? record['quote']);
+    final inspection = Sh02CollectedInspection.tryParse(record, scope: scope);
+    final summary = inspection != null
+        ? _string(record['summary'])
+        : _safeText(record['summary'] ?? record['quote']);
     if (id == null || summary == null) return null;
-    if (_SharedProjection.tryParse(record['projection'], scope: scope) ==
-        null) {
+    if (inspection == null &&
+        _SharedProjection.tryParse(record['projection'], scope: scope) ==
+            null) {
       return null;
     }
     final lineage = _strings(record['lineage'] ?? record['chain']);
@@ -154,9 +160,13 @@ class Sh02Evidence {
         '';
     return Sh02Evidence(
       internalId: id,
-      kind: _kind(record['kind'] ?? record['type']),
+      kind: inspection != null
+          ? Sh02EvidenceKind.source
+          : _kind(record['kind'] ?? record['type']),
       summary: summary,
-      source: _safeText(record['source'] ?? record['source_name']) ?? '',
+      source: inspection != null
+          ? _string(record['source'] ?? record['source_name']) ?? ''
+          : _safeText(record['source'] ?? record['source_name']) ?? '',
       capturedAt: _safeText(record['captured_at'] ?? record['time']) ?? '',
       freshness: _freshness(record['freshness'] ?? record['state']),
       lineage: lineage
@@ -164,6 +174,97 @@ class Sh02Evidence {
           .where((value) => value.isNotEmpty)
           .toList(growable: false),
       origin: origin,
+      inspection: inspection,
+    );
+  }
+}
+
+class Sh02CollectedInspection {
+  const Sh02CollectedInspection({
+    required this.sourceId,
+    required this.evidenceRef,
+    required this.domain,
+    required this.canonicalId,
+    this.taskId,
+  });
+  final String sourceId;
+  final String evidenceRef;
+  final String domain;
+  final String canonicalId;
+  final int? taskId;
+
+  static Sh02CollectedInspection? tryParse(
+    Map<String, dynamic> row, {
+    required Sh02Scope scope,
+  }) {
+    final projection = _asMap(row['projection']);
+    final stored = _asMap(projection?['stored_scope']);
+    final evidence = _asMap(projection?['evidence']);
+    final integrity = _asMap(projection?['integrity']);
+    final inspection = _asMap(row['inspection']);
+    final original = _asMap(inspection?['original']);
+    final selectors = _asMap(original?['scope']);
+    final query = _asMap(original?['query']);
+    final use = _asMap(inspection?['source_use']);
+    final sourceId = _string(inspection?['source_id']);
+    final evidenceRef = _string(inspection?['evidence_ref']);
+    final domain = selectors?['domain_id'];
+    final canonicalId = _string(row['id']);
+    if (!scope.isGlobal ||
+        row['kind'] != 'COLLECTED_SOURCE' ||
+        projection?['contract'] != 'lumenis.shared.experience-row-projection' ||
+        projection?['version'] != 3 ||
+        projection?['purpose'] != 'SOURCE_INSPECTION' ||
+        projection?['read_allowed'] != true ||
+        !_projectionScopeMatches(_asMap(projection?['scope']) ?? {}, scope) ||
+        stored?['scope_status'] != 'UNASSIGNED' ||
+        stored?['global'] != true ||
+        stored?['subject_id'] != null ||
+        stored?['brand_focus_id'] != null ||
+        integrity?['verified'] != true ||
+        integrity?['lineage_verified'] != true ||
+        integrity?['assurance'] != 'writer-authenticated' ||
+        inspection?['contract'] != 'lumenis.collected-source-inspection/v1' ||
+        inspection?['scope_status'] != 'UNASSIGNED' ||
+        sourceId == null ||
+        evidenceRef == null ||
+        canonicalId == null ||
+        !RegExp(r'^app_evidence_records:[1-9][0-9]*$').hasMatch(evidenceRef) ||
+        evidence?['source_id'] != sourceId ||
+        evidence?['evidence_id'] != evidenceRef.split(':').last ||
+        evidence?['canonical_reference'] !=
+            'evidence:collector:${evidenceRef.split(':').last}' ||
+        projection?['canonical_reference'] != canonicalId ||
+        !const {'CTH', 'BMP'}.contains(domain) ||
+        selectors?['mode'] != 'GLOBAL_ALL' ||
+        stored?['domain_id'] != (domain == 'CTH' ? 'cth' : 'zbmp') ||
+        stored?['product_id'] != (domain == 'CTH' ? 'CTH' : 'ZBMP') ||
+        original?['endpoint'] !=
+            '/api/experience/cth/platform-collection/results' ||
+        query?['source_id'] != sourceId ||
+        query?['evidence_ref'] != evidenceRef ||
+        use?['grants_source_use'] != false ||
+        use?['state'] != 'CHECK_SOURCE_USE_PER_ACTION') {
+      return null;
+    }
+    final task = _asMap(inspection?['collection_task']);
+    final taskId = task?['task_id'];
+    final taskScope = _asMap(task?['scope']);
+    if (task != null &&
+        (taskId is! int ||
+            taskId <= 0 ||
+            task['endpoint'] !=
+                '/api/experience/cth/platform-collection/tasks/$taskId' ||
+            taskScope?['mode'] != 'GLOBAL_ALL' ||
+            taskScope?['domain_id'] != domain)) {
+      return null;
+    }
+    return Sh02CollectedInspection(
+      sourceId: sourceId,
+      evidenceRef: evidenceRef,
+      domain: domain as String,
+      canonicalId: canonicalId,
+      taskId: taskId as int?,
     );
   }
 }

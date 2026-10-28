@@ -20,8 +20,11 @@ lumenis.shared.evaluation.ai — LUMENIS Shared Evaluation AI 质量评估
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
+import re
 import sqlite3
 import threading
 from datetime import datetime, timedelta
@@ -29,6 +32,377 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import ai_call_logger as acl
 from lumenis.shared.database import get_repository
+
+_OWNED_EXECUTION_SCHEMA = 'lumenis.owned-ai-execution/v1'
+_CONTEXT_EXCLUSION_DECISION = 'USER_EXCLUDED_FROM_FUTURE_CONTEXT'
+_EVALUATION_CALL_REF = re.compile(r'^ai-call:v1:([1-9][0-9]{0,15}):([0-9a-f]{64})$')
+_CONVERSATION_REQUEST_ID = re.compile(r'^(turn_[0-9a-f]{32}):([0-9a-f]{64})$')
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode('utf-8')).hexdigest()
+
+
+def _stable_hash(value: dict) -> str:
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+        separators=(',', ':'), allow_nan=False).encode('utf-8')).hexdigest()
+
+
+def owned_gateway_output_sha256(result) -> str:
+    """Return the digest used by owned-Gateway evaluation rows, without content."""
+    if type(result) is not dict:
+        return ''
+    text = result.get('text')
+    analysis = result.get('analysis')
+    if type(text) is str:
+        return _sha256_text(text)
+    if type(analysis) is str:
+        return _sha256_text(analysis)
+    if type(analysis) in (dict, list):
+        return _stable_hash({'analysis': analysis})
+    return ''
+
+
+def _safe_version(value, limit=256):
+    if type(value) is not str or not value or len(value) > limit:
+        return ''
+    if any(ord(char) < 32 or ord(char) == 127 for char in value):
+        return ''
+    return value
+
+
+def _owned_execution_binding(request):
+    """Build the actor/task/source binding shared by write and readback paths."""
+    from lumenis.system.ai_gateway.owned_service import (
+        OwnedServiceRequest, owned_service_request_digest, validate_owned_service_request,
+    )
+    if type(request) is not OwnedServiceRequest:
+        return None
+    try:
+        validate_owned_service_request(request)
+        request_digest = owned_service_request_digest(request)
+    except Exception:
+        return None
+    target_match = _CONVERSATION_REQUEST_ID.fullmatch(request.request_id)
+    is_conversation = (request.domain_id == 'shared'
+        and bool(re.fullmatch(r'conv_[0-9a-f]{32}', request.job_id))
+        and target_match is not None)
+    turn_id = target_match.group(1) if is_conversation else ''
+    binding = {
+        'actor_ref_sha256': _sha256_text(request.actor_ref),
+        'scope_sha256': _sha256_text(request.scope),
+        'domain_id': request.domain_id,
+        'task_id': request.job_id,
+        'conversation_id': request.job_id if is_conversation else '',
+        'turn_id': turn_id,
+        'request_id_sha256': _sha256_text(request.request_id),
+        'request_digest': request_digest,
+        'input_revision_sha256': request.input_revision_sha256,
+        'source_binding_sha256': request.source_binding_sha256,
+        'source_use_policy_sha256': request.source_use_policy_sha256,
+        'operation': request.operation,
+    }
+    return request_digest, binding, _stable_hash(binding), is_conversation, turn_id
+
+
+def _owned_execution_record(request, result, *, latency_ms=None):
+    """Build a content-free record for an actual typed owned-Gateway request."""
+    if type(result) is not dict:
+        return None
+    identity = _owned_execution_binding(request)
+    if identity is None:
+        return None
+    request_digest, binding, binding_sha256, is_conversation, turn_id = identity
+
+    attempt_id = result.get('attempt_id')
+    attempt_id = attempt_id if type(attempt_id) is str and re.fullmatch(
+        r'attempt_[0-9a-f]{32}', attempt_id) else ''
+    generated = bool(attempt_id)
+    result_status = _safe_version(result.get('status'), 64).upper()
+    code = _safe_version(result.get('code'), 96)
+    result_digest = result.get('request_digest')
+    exact_digest = result_digest == request_digest
+    successful = (
+        result.get('ok') is True and result_status == 'COMPLETED' and generated
+        and result.get('real_input_bound') is True and exact_digest
+        and result.get('input_revision_sha256') == request.input_revision_sha256
+        and result.get('domain_id') == request.domain_id
+        and result.get('scope') == request.scope
+        and result.get('operation') == request.operation
+        and result.get('source_binding_sha256') == request.source_binding_sha256
+        and bool(_safe_version(result.get('run_id'), 512))
+    )
+    if successful:
+        state = 'COMPLETED'
+    elif result_status == 'CANCELLED' or code in {
+            'OWNED_SERVICE_CANCELLED', 'OWNED_INFERENCE_CANCELLED', 'CONTEXT_CANCELLED'}:
+        state = 'CANCELLED'
+    elif not generated and code == 'OWNED_SERVICE_EXECUTOR_NOT_BOUND':
+        state = 'NOT_BOUND'
+    elif not generated and ('BUDGET' in code or code == 'CONTEXT_REQUIRED_INPUT_EXCEEDS_MODEL_BUDGET'):
+        state = 'BUDGET_BLOCKED'
+    elif not generated and (result_status in {'PERMISSION_DENIED', 'FORBIDDEN'}
+            or 'PERMISSION' in code or 'AUTHORIZATION' in code):
+        state = 'PERMISSION_DENIED'
+    elif not generated and result_status in {'INVALID_INPUT', 'UNAVAILABLE'}:
+        state = result_status
+    elif generated:
+        state = 'FAILED'
+    elif result_status == 'COMPLETED':
+        # A success-shaped result without the server-issued attempt and exact
+        # request binding is not a model result and cannot count as success.
+        state = 'UNVERIFIED_COMPLETION'
+    else:
+        state = 'PRECHECK_BLOCKED'
+
+    versions = {}
+    for key in ('model_id', 'model_revision', 'recipe', 'runtime_sha256', 'executor_sha256',
+                'manifest_sha256', 'artifact_identity_sha256', 'candidate_identity_sha256',
+                'adapter_sha256', 'adapter_config_sha256', 'evaluation_sha256',
+                'quality_review_sha256'):
+        safe = _safe_version(result.get(key), 128 if key in {'model_id', 'model_revision', 'recipe'} else 64)
+        if safe:
+            versions[key] = safe
+    run_id = _safe_version(result.get('run_id'), 96)
+    if run_id:
+        versions['run_id'] = run_id
+    if attempt_id:
+        versions['attempt_id'] = attempt_id
+
+    safe_result = {
+        'schema': _OWNED_EXECUTION_SCHEMA,
+        'state': state,
+        'generation_performed': generated,
+        'result_status': result_status or 'UNKNOWN',
+        'code': code or 'UNKNOWN',
+        'binding': binding,
+        'binding_sha256': binding_sha256,
+        'versions': versions,
+    }
+    encoded_result = json.dumps(safe_result, ensure_ascii=False, sort_keys=True,
+                                separators=(',', ':'), allow_nan=False)
+    if len(encoded_result) > 1900:
+        versions = {key: value for key, value in versions.items()
+                    if key in {'model_id', 'model_revision', 'runtime_sha256',
+                               'executor_sha256', 'run_id', 'attempt_id'}}
+        safe_result['versions'] = versions
+        encoded_result = json.dumps(safe_result, ensure_ascii=False, sort_keys=True,
+                                    separators=(',', ':'), allow_nan=False)
+    if len(encoded_result) > 2000:
+        return None
+    output_hash = owned_gateway_output_sha256(result) if successful else ''
+
+    tokens = result.get('total_tokens')
+    tokens = tokens if successful and type(tokens) is int and tokens >= 0 else None
+    latency_ms = latency_ms if type(latency_ms) in (int, float) and latency_ms >= 0 else None
+    record = {
+        'provider': 'owned',
+        'model': versions.get('model_id', ''),
+        'prompt_version': request.source_use_policy_version,
+        'input_hash': request.input_revision_sha256,
+        'input_text': '',
+        'output': '',
+        'output_hash': output_hash,
+        'task_id': request.job_id,
+        'trace_id': request.request_id,
+        'domain_id': request.domain_id,
+        'product_id': {'shared': 'SHARED', 'cth': 'CTH', 'bmp': 'BMP'}.get(request.domain_id, ''),
+        'target_type': 'ai_conversation_turn' if is_conversation else 'ai_owned_request',
+        'target_id': turn_id if is_conversation else request.job_id,
+        'model_version': versions.get('model_revision', ''),
+        'system_result': encoded_result,
+        # Keep final_decision reserved for explicit human disposition; runtime
+        # state lives in the versioned system_result payload above.
+        'final_decision': '',
+        'failure_reason': '' if successful else (code or state),
+        'success': successful,
+        'token_usage': tokens,
+        'latency_ms': latency_ms,
+    }
+    return record, binding_sha256, is_conversation
+
+
+def record_owned_gateway_execution(request, result, *, latency_ms=None):
+    """Record only hashes and typed execution metadata; never prompt/output text.
+
+    A row is successful only when the server issued a generation attempt and the
+    completed result matches the exact typed request, input version and bindings.
+    Pre-generation outcomes remain visible with their own non-success state.
+    """
+    built = _owned_execution_record(request, result, latency_ms=latency_ms)
+    if built is None:
+        return None
+    record, binding_sha256, _is_conversation = built
+    call_id = acl.log_call(**record)
+    if type(call_id) is not int or call_id < 1:
+        return None
+    return f'ai-call:v1:{call_id}:{binding_sha256}'
+
+
+def verify_owned_gateway_execution_ref(evaluation_ref, request, *, expected_provenance):
+    """Read back the exact successful Gateway record for a saved owned result.
+
+    The opaque reference and attempt-id shape are not sufficient by themselves:
+    this verifies the row's request, actor/scope binding, completed state, model
+    identity and output digest against the typed request and saved provenance.
+    """
+    identity = _owned_execution_binding(request)
+    match = _EVALUATION_CALL_REF.fullmatch(evaluation_ref) if type(evaluation_ref) is str else None
+    if identity is None or match is None or type(expected_provenance) is not dict:
+        return 'NOT_LINKED'
+    _, binding, binding_sha256, is_conversation, turn_id = identity
+    if match.group(2) != binding_sha256:
+        return 'NOT_LINKED'
+    expected = {
+        'attempt_id': expected_provenance.get('attempt_id'),
+        'run_id': expected_provenance.get('run_id'),
+        'model_id': expected_provenance.get('model_id'),
+        'model_revision': expected_provenance.get('model_revision'),
+        'runtime_sha256': expected_provenance.get('runtime_sha256'),
+        'executor_sha256': expected_provenance.get('executor_sha256'),
+        'output_sha256': expected_provenance.get('evaluation_output_sha256'),
+    }
+    if (any(type(value) is not str or not value for value in expected.values())
+            or not re.fullmatch(r'attempt_[0-9a-f]{32}', expected['attempt_id'])
+            or any(not re.fullmatch(r'[0-9a-f]{64}', expected[key])
+                   for key in ('runtime_sha256', 'executor_sha256', 'output_sha256'))):
+        return 'NOT_LINKED'
+    try:
+        call_id = int(match.group(1))
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute('''SELECT id,provider,model,prompt_version,input_hash,output_hash,
+                    success,task_id,trace_id,domain_id,product_id,target_type,target_id,model_version,
+                    system_result
+                FROM ai_call_logs WHERE id=?''', (call_id,)).fetchone()
+    except sqlite3.Error:
+        return 'UNAVAILABLE'
+    except Exception:
+        return 'UNAVAILABLE'
+    if row is None:
+        return 'NOT_LINKED'
+    try:
+        payload = json.loads(row['system_result'] or '{}')
+        versions = payload.get('versions')
+        target_type = 'ai_conversation_turn' if is_conversation else 'ai_owned_request'
+        target_id = turn_id if is_conversation else request.job_id
+        product_id = {'shared': 'SHARED', 'cth': 'CTH', 'bmp': 'BMP'}.get(request.domain_id, '')
+        valid = (
+            payload.get('schema') == _OWNED_EXECUTION_SCHEMA
+            and payload.get('state') == 'COMPLETED'
+            and payload.get('generation_performed') is True
+            and payload.get('result_status') == 'COMPLETED'
+            and payload.get('code') == 'OWNED_INFERENCE_COMPLETED'
+            and payload.get('binding') == binding
+            and payload.get('binding_sha256') == binding_sha256
+            and type(versions) is dict
+            and all(versions.get(key) == expected[key] for key in (
+                'attempt_id', 'run_id', 'model_id', 'model_revision',
+                'runtime_sha256', 'executor_sha256'))
+            and row['id'] == call_id and row['provider'] == 'owned' and row['success'] == 1
+            and row['model'] == expected['model_id']
+            and row['model_version'] == expected['model_revision']
+            and row['prompt_version'] == request.source_use_policy_version
+            and row['input_hash'] == request.input_revision_sha256
+            and row['output_hash'] == expected['output_sha256']
+            and row['task_id'] == request.job_id and row['trace_id'] == request.request_id
+            and row['domain_id'] == request.domain_id and row['product_id'] == product_id
+            and row['target_type'] == target_type and row['target_id'] == target_id
+        )
+    except (TypeError, ValueError, AttributeError):
+        valid = False
+    return 'VERIFIED' if valid else 'NOT_LINKED'
+
+
+def _conversation_feedback_row(connection, evaluation_ref, *, actor_ref, scope,
+                                conversation_id, turn_id):
+    if (not isinstance(connection, sqlite3.Connection)
+            or any(type(value) is not str or not value for value in
+                   (actor_ref, scope, conversation_id, turn_id))):
+        return None, 'NOT_LINKED'
+    match = _EVALUATION_CALL_REF.fullmatch(evaluation_ref) if type(evaluation_ref) is str else None
+    if not match:
+        return None, 'NOT_LINKED'
+    try:
+        call_id = int(match.group(1))
+        row = connection.execute('''SELECT id,provider,success,task_id,trace_id,domain_id,product_id,
+                target_type,target_id,model_version,system_result,final_decision
+            FROM ai_call_logs WHERE id=?''', (call_id,)).fetchone()
+    except sqlite3.Error:
+        return None, 'UNAVAILABLE'
+    if row is None:
+        return None, 'NOT_LINKED'
+    try:
+        result = json.loads(row['system_result'] or '{}')
+        binding = result.get('binding')
+        valid = (
+            result.get('schema') == _OWNED_EXECUTION_SCHEMA
+            and result.get('state') == 'COMPLETED'
+            and result.get('generation_performed') is True
+            and type(binding) is dict
+            and _stable_hash(binding) == match.group(2) == result.get('binding_sha256')
+            and binding.get('actor_ref_sha256') == _sha256_text(actor_ref)
+            and binding.get('scope_sha256') == _sha256_text(scope)
+            and binding.get('domain_id') == 'shared'
+            and binding.get('task_id') == conversation_id
+            and binding.get('conversation_id') == conversation_id
+            and binding.get('turn_id') == turn_id
+            and row['provider'] == 'owned' and row['success'] == 1
+            and row['task_id'] == conversation_id and row['domain_id'] == 'shared'
+            and row['product_id'] == 'SHARED'
+            and row['target_type'] == 'ai_conversation_turn' and row['target_id'] == turn_id
+        )
+    except (TypeError, ValueError, AttributeError):
+        valid = False
+    if not valid:
+        return None, 'NOT_LINKED'
+    return dict(row), 'LINKED'
+
+
+def inspect_conversation_turn_feedback(connection, evaluation_ref, *, actor_ref, scope,
+                                       conversation_id, turn_id):
+    """Read the exact saved feedback state for one actor/scope/turn-bound call."""
+    row, state = _conversation_feedback_row(connection, evaluation_ref, actor_ref=actor_ref,
+        scope=scope, conversation_id=conversation_id, turn_id=turn_id)
+    if row is None:
+        return state
+    return ('RECORDED' if row['final_decision'] == _CONTEXT_EXCLUSION_DECISION
+            else 'NOT_RECORDED')
+
+
+def record_conversation_turn_exclusion(connection, evaluation_ref, *, actor_ref, scope,
+                                       conversation_id, turn_id):
+    """Atomically attach a constant human exclusion decision to a verified call.
+
+    The conversation owner supplies its already-authorized transaction, so the
+    context exclusion and this feedback marker commit or roll back together.
+    Raw prompt, answer and user-authored correction text are never stored here.
+    """
+    row, state = _conversation_feedback_row(connection, evaluation_ref, actor_ref=actor_ref,
+        scope=scope, conversation_id=conversation_id, turn_id=turn_id)
+    if row is None:
+        return state
+    if row['final_decision'] == _CONTEXT_EXCLUSION_DECISION:
+        return 'ALREADY_RECORDED'
+    if row['final_decision']:
+        return 'CONFLICT'
+    try:
+        changed = connection.execute('''UPDATE ai_call_logs SET final_decision=?
+            WHERE id=? AND success=1 AND target_type='ai_conversation_turn' AND target_id=?
+              AND (final_decision IS NULL OR final_decision='')''',
+            (_CONTEXT_EXCLUSION_DECISION, row['id'], turn_id)).rowcount
+    except sqlite3.Error:
+        return 'UNAVAILABLE'
+    if changed == 1:
+        return 'RECORDED'
+    try:
+        current = connection.execute('SELECT final_decision FROM ai_call_logs WHERE id=?',
+                                     (row['id'],)).fetchone()
+    except sqlite3.Error:
+        return 'UNAVAILABLE'
+    if current and current[0] == _CONTEXT_EXCLUSION_DECISION:
+        return 'ALREADY_RECORDED'
+    return 'CONFLICT'
 
 # ============================================================
 # 1) 数据库连接（由 Shared Database 在调用时解析唯一运行库）
@@ -120,14 +494,25 @@ def _results_match(rule: str, ai: str) -> bool:
     return _norm(rule) == _norm(ai)
 
 
+def _owned_execution_payload(row):
+    try:
+        value = json.loads(row.get('system_result') or '{}')
+    except (TypeError, ValueError):
+        return None
+    if type(value) is dict and value.get('schema') == _OWNED_EXECUTION_SCHEMA:
+        return value
+    return None
+
+
 # ============================================================
 # 3) 核心评估函数：evaluate_ai_quality
 # ============================================================
 def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) -> Dict[str, Any]:
     """Read measured quality signals; absent denominators remain unknown.
 
-    ``ai_accuracy`` is a compatibility alias of rule_agreement_rate, NOT an
-    independent accuracy benchmark. Contract v2 makes that meaning explicit.
+     ``ai_accuracy`` is a compatibility alias of rule_agreement_rate, NOT an
+     independent accuracy benchmark. Contract v3 also separates owned Gateway
+     execution, cancellation and pre-generation outcomes.
     """
     import math
     if type(limit) is not int or not 1 <= limit <= 50000:
@@ -148,8 +533,16 @@ def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) 
                 result.append(value)
         return result
     empty = {
-        'metric_contract': 'lumenis.ai-quality/v2', 'state': 'NO_SAMPLES',
+        'metric_contract': 'lumenis.ai-quality/v3', 'state': 'NO_SAMPLES',
         'total_calls': 0, 'success_count': 0, 'failure_count': 0,
+        'cancelled_count': 0, 'cancelled_before_generation_count': 0,
+        'not_executed_count': 0,
+        'not_executed_states': {},
+        'conversation_context_exclusion_count': 0,
+        'execution_counts': {'attempted': 0, 'completed': 0, 'failed': 0,
+                             'cancelled': 0, 'cancelled_before_generation': 0,
+                             'not_executed': 0,
+                             'not_executed_states': {}},
         'rule_agreement_rate': None, 'ai_accuracy': None,
         'ai_accuracy_semantics': 'COMPATIBILITY_ALIAS_RULE_AGREEMENT_NOT_GROUND_TRUTH',
         'independent_accuracy': None, 'independent_accuracy_state': 'NOT_MEASURED',
@@ -190,8 +583,35 @@ def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) 
                 'period': {'since': since, 'until': '', 'sampled': None}}
     if not rows:
         return empty
-    success = [row for row in rows if row.get('success') == 1]
-    failure = [row for row in rows if row.get('success') == 0]
+    tagged = {}
+    for row in rows:
+        execution = _owned_execution_payload(row)
+        if execution is not None:
+            tagged[row['id']] = execution
+    legacy = [row for row in rows if row.get('id') not in tagged]
+    tracked_completed = [row for row in rows if row.get('id') in tagged
+        and tagged[row['id']].get('generation_performed') is True
+        and tagged[row['id']].get('state') == 'COMPLETED' and row.get('success') == 1]
+    tracked_cancelled = [row for row in rows if row.get('id') in tagged
+        and tagged[row['id']].get('state') == 'CANCELLED']
+    tracked_cancelled_before_generation = [row for row in tracked_cancelled
+        if tagged[row['id']].get('generation_performed') is not True]
+    tracked_failed = [row for row in rows if row.get('id') in tagged
+        and tagged[row['id']].get('generation_performed') is True
+        and tagged[row['id']].get('state') not in {'COMPLETED', 'CANCELLED'}]
+    tracked_not_executed = [row for row in rows if row.get('id') in tagged
+        and tagged[row['id']].get('generation_performed') is not True
+        and tagged[row['id']].get('state') != 'CANCELLED']
+    success = [row for row in legacy if row.get('success') == 1] + tracked_completed
+    failure = [row for row in legacy if row.get('success') == 0] + tracked_failed
+    not_executed_states = {}
+    for row in tracked_not_executed:
+        state = tagged[row['id']].get('state') or 'UNKNOWN'
+        not_executed_states[state] = not_executed_states.get(state, 0) + 1
+    execution_rows = [row for row in rows if row.get('id') not in tagged]
+    execution_rows.extend(row for row in rows if row.get('id') in tagged
+        and tagged[row['id']].get('generation_performed') is True
+        and tagged[row['id']].get('state') != 'CANCELLED')
     comparable = [row for row in success if row.get('rule_result') and row.get('output')]
     agreement = rounded_ratio(sum(_results_match(row['rule_result'], row['output']) for row in comparable), len(comparable))
     final = [row for row in success if row.get('final_result') and row.get('output')]
@@ -209,10 +629,13 @@ def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) 
     latencies = sorted(value for value in raw_latencies if value > 0)
     tokens = numbers(success, 'token_usage')
     correction_count = sum(bool(row.get('human_correction')) for row in rows)
+    context_exclusion_count = sum(
+        row.get('id') in tagged and row.get('target_type') == 'ai_conversation_turn'
+        and row.get('final_decision') == _CONTEXT_EXCLUSION_DECISION for row in rows)
     confidence_unknown = max(0, len(success) - len(raw_confidences))
     latency_unknown = max(0, len(success) - len(raw_latencies))
     providers = {}
-    for row in rows:
+    for row in execution_rows:
         name = row.get('provider') or 'unknown'
         record = providers.setdefault(name, {'total': 0, 'failures': 0, 'known': 0})
         record['total'] += 1; record['failures'] += row.get('success') == 0
@@ -220,6 +643,21 @@ def evaluate_ai_quality(since: str = '', provider: str = '', limit: int = 5000) 
     return {
         **empty, 'state': 'OBSERVED', 'total_calls': len(rows),
         'success_count': len(success), 'failure_count': len(failure),
+        'cancelled_count': len(tracked_cancelled),
+        'cancelled_before_generation_count': len(tracked_cancelled_before_generation),
+        'not_executed_count': len(tracked_not_executed),
+        'not_executed_states': not_executed_states,
+        'conversation_context_exclusion_count': context_exclusion_count,
+        'execution_counts': {
+            'attempted': (len(tracked_completed) + len(tracked_failed)
+                + sum(row.get('id') in tagged and tagged[row['id']].get('generation_performed') is True
+                      for row in tracked_cancelled)),
+            'completed': len(tracked_completed), 'failed': len(tracked_failed),
+            'cancelled': len(tracked_cancelled),
+            'cancelled_before_generation': len(tracked_cancelled_before_generation),
+            'not_executed': len(tracked_not_executed),
+            'not_executed_states': not_executed_states,
+        },
         'rule_agreement_rate': agreement, 'ai_accuracy': agreement,
         'ai_replacement_rate': rounded_ratio(replaced, len(final)),
         'human_correction_count': correction_count,
@@ -331,24 +769,24 @@ def evaluate_provider_health(since: str = '') -> Dict[str, Any]:
     """
     评估各 Provider 的健康状况，用于 Provider 收敛决策。
 
+    Owned Gateway outcomes are classified from their versioned execution
+    payload. Pre-generation denials, budget stops and cancellations are visible
+    but do not count as provider failures; a provider is only rated from actual
+    generation attempts and compatible legacy observations.
+
     Returns:
-        {provider: {total, success, failure, failure_rate, avg_latency_ms, status}}
+        {provider: {total, attempted, success, failure, cancelled,
+        not_executed, failure_rate, avg_latency_ms, status}}
     """
     try:
         conn = _conn()
         try:
-            sql = ("SELECT provider, COUNT(*) as total, "
-                   "SUM(CASE WHEN success=1 THEN 1 ELSE 0 END) as success, "
-                   "SUM(CASE WHEN success=0 THEN 1 ELSE 0 END) as failure, "
-                   "AVG(CASE WHEN latency_ms > 0 THEN latency_ms END) as avg_latency, "
-                   "SUM(CASE WHEN latency_ms = 0 THEN 1 ELSE 0 END) as ambiguous_zero_latency, "
-                   "SUM(CASE WHEN success IN (0,1) THEN 1 ELSE 0 END) as known_outcomes "
-                   "FROM ai_call_logs WHERE 1=1")
+            sql = "SELECT provider, success, latency_ms, system_result FROM ai_call_logs WHERE 1=1"
             params: List[Any] = []
             if since:
                 sql += " AND created_at >= ?"
                 params.append(since)
-            sql += " GROUP BY provider ORDER BY total DESC"
+            sql += " ORDER BY id DESC"
             rows = [dict(r) for r in conn.execute(sql, params).fetchall()]
         finally:
             conn.close()
@@ -356,14 +794,71 @@ def evaluate_provider_health(since: str = '') -> Dict[str, Any]:
         print(f'[AIEvaluation] evaluate_provider_health failed: {e}')
         return {}
 
+    providers = {}
+    for row in rows:
+        name = row.get('provider') or 'unknown'
+        execution = _owned_execution_payload(row)
+        record = providers.setdefault(name, {
+            'total': 0, 'success': 0, 'failure': 0, 'known': 0,
+            'unknown': 0, 'attempted': 0, 'cancelled': 0,
+            'cancelled_before_generation': 0, 'not_executed': 0,
+            'not_executed_states': {}, 'latencies': [],
+            'ambiguous_zero_latency': 0,
+        })
+        record['total'] += 1
+        generated = execution is not None and execution.get('generation_performed') is True
+        state = execution.get('state') if execution is not None else ''
+        success = row.get('success')
+        if execution is None:
+            if success == 1:
+                record['success'] += 1
+                record['known'] += 1
+            elif success == 0:
+                record['failure'] += 1
+                record['known'] += 1
+            else:
+                record['unknown'] += 1
+            if success in (0, 1):
+                _add_provider_latency(record, row.get('latency_ms'))
+            continue
+
+        if state == 'CANCELLED':
+            record['cancelled'] += 1
+            if not generated:
+                record['cancelled_before_generation'] += 1
+            else:
+                record['attempted'] += 1
+            continue
+        if not generated:
+            record['not_executed'] += 1
+            record['not_executed_states'][state or 'UNKNOWN'] = (
+                record['not_executed_states'].get(state or 'UNKNOWN', 0) + 1)
+            continue
+
+        record['attempted'] += 1
+        if state == 'COMPLETED' and success == 1:
+            record['success'] += 1
+            record['known'] += 1
+            _add_provider_latency(record, row.get('latency_ms'))
+        elif state != 'COMPLETED':
+            record['failure'] += 1
+            record['known'] += 1
+            _add_provider_latency(record, row.get('latency_ms'))
+        else:
+            # A success-shaped row that no longer matches the execution
+            # contract is not a measured provider success or failure.
+            record['unknown'] += 1
+
     result = {}
-    for r in rows:
-        p = r.get('provider', 'unknown') or 'unknown'
-        total = r.get('total', 0) or 0
-        failure = r.get('failure', 0) or 0
-        known_outcomes = r.get('known_outcomes', 0) or 0
+    for p, r in providers.items():
+        total = r['total']
+        failure = r['failure']
+        known_outcomes = r['known']
         failure_rate = failure / known_outcomes if known_outcomes else None
-        unknown_outcomes = total - known_outcomes
+        unknown_outcomes = r['unknown']
+        execution_observed = r['attempted'] > 0 or any(
+            _owned_execution_payload(row) is None and (row.get('provider') or 'unknown') == p
+            and row.get('success') in (0, 1) for row in rows)
         # 状态判定
         if failure_rate is None:
             status = 'UNKNOWN'
@@ -371,23 +866,44 @@ def evaluate_provider_health(since: str = '') -> Dict[str, Any]:
             status = 'UNHEALTHY'
         elif failure_rate >= 0.2:
             status = 'DEGRADED'
-        elif total == 0 or unknown_outcomes:
+        elif not execution_observed or unknown_outcomes:
             status = 'UNKNOWN'
         else:
             status = 'HEALTHY'
         result[p] = {
             'total': total,
-            'success': r.get('success', 0) or 0,
+            'attempted': r['attempted'],
+            'success': r['success'],
             'failure': failure,
+            'cancelled': r['cancelled'],
+            'cancelled_before_generation': r['cancelled_before_generation'],
+            'not_executed': r['not_executed'],
+            'not_executed_states': r['not_executed_states'],
             'failure_rate': round(failure_rate, 4) if failure_rate is not None else None,
             'known_outcomes': known_outcomes,
             'unknown_outcomes': unknown_outcomes,
-            'avg_latency_ms': int(r['avg_latency']) if r.get('avg_latency') is not None else None,
-            'ambiguous_zero_latency_samples': r.get('ambiguous_zero_latency', 0) or 0,
+            'avg_latency_ms': (int(sum(r['latencies']) / len(r['latencies']))
+                               if r['latencies'] else None),
+            'ambiguous_zero_latency_samples': r['ambiguous_zero_latency'],
             'status': status,
             'configured_status': acl.get_provider_status(p),
         }
     return result
+
+
+def _add_provider_latency(record, raw_latency):
+    if raw_latency is None or isinstance(raw_latency, bool):
+        return
+    try:
+        latency = float(raw_latency)
+    except (TypeError, ValueError, OverflowError):
+        return
+    if not math.isfinite(latency) or latency < 0:
+        return
+    if latency == 0:
+        record['ambiguous_zero_latency'] += 1
+    else:
+        record['latencies'].append(latency)
 
 
 # ============================================================
@@ -471,6 +987,13 @@ def generate_evaluation_report(since: str = '') -> str:
         f'  失败: {quality.get("failure_count", 0)}',
         f'  回退率: {pct(quality.get("fallback_rate"))}',
         '',
+        '【Gateway 执行状态】',
+        f'  实际执行尝试: {quality.get("execution_counts", {}).get("attempted", 0)}',
+        f'  执行后取消: {max(0, quality.get("cancelled_count", 0) - quality.get("cancelled_before_generation_count", 0))}',
+        f'  执行前取消: {quality.get("cancelled_before_generation_count", 0)}',
+        f'  未执行（未绑定/预算/权限等）: {quality.get("not_executed_count", 0)}',
+        f'  后续上下文排除反馈: {quality.get("conversation_context_exclusion_count", 0)}',
+        '',
         '【质量指标】',
         f'  AI与规则一致率（非独立正确率）: {pct(quality.get("rule_agreement_rate"))}',
         f'  AI 替代率: {pct(quality.get("ai_replacement_rate"))}',
@@ -496,7 +1019,10 @@ def generate_evaluation_report(since: str = '') -> str:
     ]
     for p, h in provider_health.items():
         lines.append(
-            f'  {p}: 总量={h["total"]} 失败率={pct(h["failure_rate"])} '
+            f'  {p}: 总量={h["total"]} 尝试={h["attempted"]} '
+            f'成功={h["success"]} 失败={h["failure"]} '
+            f'取消={h["cancelled"]} 未执行={h["not_executed"]} '
+            f'失败率={pct(h["failure_rate"])} '
             f'状态={h["status"]} (配置={h["configured_status"]})'
         )
     lines.extend([
@@ -528,6 +1054,12 @@ def quick_summary() -> Dict[str, Any]:
         'human_correction_rate': q.get('human_correction_rate'),
         'human_correction_state': q.get('human_correction_state'),
         'sample_counts': q.get('sample_counts'),
+        'execution_counts': q.get('execution_counts'),
+        'cancelled_count': q.get('cancelled_count'),
+        'cancelled_before_generation_count': q.get('cancelled_before_generation_count'),
+        'not_executed_count': q.get('not_executed_count'),
+        'not_executed_states': q.get('not_executed_states'),
+        'conversation_context_exclusion_count': q.get('conversation_context_exclusion_count'),
         'fallback_rate': q.get('fallback_rate'),
         'provider_health': evaluate_provider_health(),
         'rule_verification': verify_ai_not_replacing_rules(),

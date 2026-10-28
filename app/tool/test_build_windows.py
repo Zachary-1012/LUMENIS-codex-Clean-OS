@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import unittest
@@ -797,6 +798,51 @@ class WindowsPortableBundleTests(unittest.TestCase):
                         self.seal(target)
                     path.write_bytes(original)
 
+    def test_web_and_windows_receipts_require_every_asset_manifest_variant_file(self):
+        def size(value):
+            if value < 254:
+                return bytes([value])
+            if value <= 0xFFFF:
+                return b"\xfe" + value.to_bytes(2, "little")
+            return b"\xff" + value.to_bytes(4, "little")
+
+        encoded = bytearray()
+
+        def encode(value):
+            if isinstance(value, str):
+                payload = value.encode("utf-8")
+                encoded.extend(b"\x07" + size(len(payload)) + payload)
+            elif isinstance(value, float):
+                encoded.append(6)
+                encoded.extend(b"\x00" * ((-len(encoded)) % 8))
+                encoded.extend(struct.pack("<d", value))
+            elif isinstance(value, list):
+                encoded.extend(b"\x0c" + size(len(value)))
+                for item in value:
+                    encode(item)
+            elif isinstance(value, dict):
+                encoded.extend(b"\x0d" + size(len(value)))
+                for key, item in value.items():
+                    encode(key)
+                    encode(item)
+            else:
+                raise AssertionError(f"unsupported fixture value: {value!r}")
+
+        encode({"assets/manifest-only.dat": [
+            {"asset": "assets/manifest-only.dat", "dpr": 2.0}
+        ]})
+        for target, assets in (("web", self.root / "app/build/web/assets"),
+                               ("windows", self.runner / "data/flutter_assets")):
+            with self.subTest(target=target):
+                (assets / "AssetManifest.bin").write_bytes(encoded)
+                bundled = assets / "assets/manifest-only.dat"
+                bundled.parent.mkdir(parents=True, exist_ok=True)
+                bundled.write_bytes(b"manifest-listed fixture")
+                self.seal(target)
+                bundled.unlink()
+                with self.assertRaisesRegex(ValueError, "Required Flutter asset is missing/empty: assets/manifest-only.dat"):
+                    self.seal(target)
+
     def test_web_declared_assets_fonts_and_material_icons_must_be_in_the_actual_output(self):
         spec = self.root / "app/pubspec.yaml"
         spec.write_text(spec.read_text("utf-8") +
@@ -903,6 +949,16 @@ class WindowsPortableBundleTests(unittest.TestCase):
         dist = self.worker["metadata"].Distribution.at(self.site / "ordered_set-4.1.0.dist-info")
         with self.assertRaisesRegex(ValueError, "Pinned supplemental license missing or changed"):
             self.worker["dependency_license"]("ordered-set", dist, self.root, self.media)
+
+    def test_declared_magika_without_detector_resource_is_rejected(self):
+        self.dist("magika", "0.6.3")
+        (self.root / "requirements.txt").write_text("magika==0.6.3\n", encoding="utf-8")
+        filename = "magika-0.6.3.LICENSE.txt"
+        notice = self.root / "vendor/lumenis-reuse-notices/windows-python" / filename
+        notice.parent.mkdir(parents=True)
+        notice.write_bytes((REPO_ROOT / "vendor/lumenis-reuse-notices/windows-python" / filename).read_bytes())
+        with self.assertRaisesRegex(ValueError, "Expected exactly one pinned Magika"):
+            self.assemble()
 
     def test_unknown_lgpl_is_identified_and_replaceable_source_is_preserved(self):
         info = self.site / "bundle_fixture-1.0.dist-info"

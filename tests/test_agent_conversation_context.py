@@ -69,12 +69,16 @@ def _journal_fixture_measure(request):
 def _journal_fixture_result(request):
     """Synthetic plan/result receipt for actual Task persistence/recovery tests."""
     from lumenis.system.ai_gateway import owned_service
-    return {'ok': True, 'status': 'COMPLETED', 'provider': 'owned', 'operation': 'agent_plan',
+    return {'ok': True, 'status': 'COMPLETED', 'code': 'OWNED_INFERENCE_COMPLETED',
+        'provider': 'owned', 'operation': 'agent_plan', 'domain_id': request.domain_id, 'scope': request.scope,
+        'attempt_id': 'attempt_' + '1' * 32,
         'request_id': request.request_id, 'request_digest': owned_service.owned_service_request_digest(request),
         'run_id': 'synthetic-journal-run', 'model_id': 'synthetic-isolated-model', 'model_revision': 'test', 'recipe': 'test',
         'source_use_policy_sha256': request.source_use_policy_sha256,
+        'source_use_policy_version': request.source_use_policy_version,
         'source_binding_sha256': request.source_binding_sha256,
         'input_revision_sha256': request.input_revision_sha256, 'source_evidence_refs': list(request.source_evidence_refs),
+        'runtime_sha256': 'a' * 64, 'executor_sha256': 'b' * 64,
         'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120, 'real_input_bound': True,
         'analysis': {'steps': [{'action': 'Read actual local metadata', 'tool': 'zbc.skill_registry_snapshot',
             'params': {}, 'expected_output': 'metadata', 'risk_level': 'low'}]}}
@@ -86,11 +90,12 @@ def test_linked_actor_workspace_human_state_and_request_hashes_are_real_sources(
         task, context, snapshot = _state(ws)
         assert snapshot['conversations'][0]['human_state'] == ws['value']
         assert snapshot['actor_ref'] == 'actor:1' and not snapshot['permission_grant']
-        payload = {**context, 'conversation_context_pack': snapshot, 'committed_step_receipts': []}
+        payload = task_binding._planner_context(task, context)
         request = task_binding._gateway_request(ws['task_id'], 'bounded task planning', json.dumps(snapshot), payload)
         assert request.source_binding_sha256 != task_binding._digest(task['context'])
         assert request.input_revision_sha256 != task_binding._digest(task['user_input'])
-        assert request.source_evidence_refs == ('user-task:' + ws['task_id'],)
+        assert request.source_evidence_refs == ('user-task:' + ws['task_id'],
+            'task-human-corrections:' + ws['task_id'] + ':' + payload['human_correction_memory']['snapshot_sha256'])
         forged = json.loads(json.dumps(payload))
         forged['conversation_context_pack']['conversations'][0]['human_state']['draft'] = 'forged content with copied hash'
         with pytest.raises(PermissionError, match='CONVERSATION_CONTEXT_INVALID'):
@@ -187,12 +192,16 @@ def test_required_human_pack_survives_real_gateway_budget_consumer_optional_evic
                 'prompt_tokens': 100, 'binding_sha256': 'd' * 64, 'count_method': 'synthetic_fixture_only'}
     def synthetic_gateway(request, **kwargs):
         calls.append(request)
-        return {'ok': True, 'status': 'COMPLETED', 'provider': 'owned', 'operation': 'agent_plan',
+        return {'ok': True, 'status': 'COMPLETED', 'code': 'OWNED_INFERENCE_COMPLETED',
+            'provider': 'owned', 'operation': 'agent_plan', 'domain_id': request.domain_id, 'scope': request.scope,
+            'attempt_id': 'attempt_' + '2' * 32,
             'request_id': request.request_id, 'request_digest': owned_service.owned_service_request_digest(request),
             'run_id': 'synthetic-run', 'model_id': 'synthetic-test-runtime', 'model_revision': 'test', 'recipe': 'test',
             'source_use_policy_sha256': request.source_use_policy_sha256,
+            'source_use_policy_version': request.source_use_policy_version,
             'source_binding_sha256': request.source_binding_sha256,
             'input_revision_sha256': request.input_revision_sha256, 'source_evidence_refs': list(request.source_evidence_refs),
+            'runtime_sha256': 'c' * 64, 'executor_sha256': 'd' * 64,
             'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120, 'real_input_bound': True,
             'analysis': {'steps': [{'action': 'Read metadata', 'tool': 'zbc.skill_registry_snapshot',
                 'params': {}, 'expected_output': 'metadata', 'risk_level': 'low'}]}}
@@ -200,7 +209,8 @@ def test_required_human_pack_survives_real_gateway_budget_consumer_optional_evic
     monkeypatch.setattr(owned_service, 'owned_service_status', lambda _: {'binding_sha256': 'd' * 64})
     monkeypatch.setattr(core, 'run_owned_request', synthetic_gateway)
     with ws['app'].test_request_context('/', headers=ws['headers']):
-        task, context, snapshot = _state(ws)
+        task, current, snapshot = _state(ws)
+        context = task_binding._planner_context(task, current)
         context.update(conversation_context_pack=snapshot, committed_step_receipts=[],
                        derived_memory=['optional-large-memory'])
         planner = Planner(gateway_request_factory=lambda system, user, ctx:
@@ -211,6 +221,7 @@ def test_required_human_pack_survives_real_gateway_budget_consumer_optional_evic
     assert ws['value']['draft'] in calls[0].user_payload and 'Never publish' in calls[0].user_payload
     assert 'optional-large-memory' not in calls[0].user_payload
     assert plan.context_budget['required_context_sha256'] == snapshot['sha256']
+    assert plan.context_budget['human_correction_memory_sha256'] == context['human_correction_memory']['snapshot_sha256']
     assert plan.context_budget['omitted_sections'][0]['section'] == 'derived_memory'
     assert context['derived_memory'] == ['optional-large-memory']
 
@@ -359,8 +370,11 @@ def test_existing_task_model_consumer_cooperatively_stops_before_late_adoption(l
     task = result.get_json()['task']
     assert task['status'] == ('cancelled' if stop_reason == 'cancel' else 'failed'), task
     if stop_reason == 'deadline':
-        assert 'AGENT_TASK_DEADLINE_EXCEEDED' in task['error']
-    assert len(calls) == 1 and task['result'] is None
+        assert task['workspace_view']['error_code'] == 'AGENT_TASK_DEADLINE_EXCEEDED'
+    assert len(calls) == 1
+    assert 'result' not in task and task['workspace_view']['output_text'] is None
+    from ai_task_engine import get_task_engine
+    assert get_task_engine().get_task(identifier)['result'] is None
     with sqlite3.connect(ws['path']) as con:
         assert con.execute('SELECT COUNT(*) FROM skill_executions').fetchone()[0] == 0
 
@@ -386,8 +400,8 @@ def test_model_attempt_cold_recovery_never_replays_inference(linked, monkeypatch
     monkeypatch.setattr(owned_service, 'owned_service_status', lambda domain: {'binding_sha256': 'c' * 64})
     monkeypatch.setattr(core, 'run_owned_request', synthetic_inference)
     record = DurableExecutionAdapter.record_model_response
-    def commit_then_die(self, *args):
-        record(self, *args)
+    def commit_then_die(self, *args, **kwargs):
+        record(self, *args, **kwargs)
         raise SystemExit(91)
     with monkeypatch.context() as crash:
         if crash_at != 'unknown_inference_result':
@@ -425,13 +439,22 @@ def test_model_attempt_cold_recovery_never_replays_inference(linked, monkeypatch
     assert response.status_code == 200, response.get_json()
     task = response.get_json()['task']
     assert task['status'] == ('succeeded' if crash_at == 'committed_model_receipt' else 'failed'), task
+    assert 'result' not in task
+    from ai_task_engine import get_task_engine
+    stored_task = get_task_engine().get_task(identifier)
     if crash_at == 'unknown_inference_result':
-        assert task['error'] == 'AGENT_MODEL_RESULT_UNKNOWN_NO_REPLAY'
+        assert stored_task['error'] == 'AGENT_MODEL_RESULT_UNKNOWN_NO_REPLAY'
+        assert task['workspace_view']['error_code'] == 'AGENT_MODEL_RESULT_UNKNOWN_NO_REPLAY'
     elif crash_at == 'changed_human_context':
-        assert task['error'] == 'AGENT_MODEL_INPUT_CHANGED_NO_REPLAY'
+        assert stored_task['error'] == 'AGENT_MODEL_INPUT_CHANGED_NO_REPLAY'
+        assert task['workspace_view']['error_code'] == 'AGENT_MODEL_INPUT_CHANGED_NO_REPLAY'
     else:
+        assert stored_task['result'] is not None
         reopened = ws['app'].test_client().get('/api/ai/tasks/' + identifier, headers=ws['headers'])
-        assert reopened.status_code == 200 and reopened.get_json()['task']['result'] == task['result']
+        assert reopened.status_code == 200
+        reopened_task = reopened.get_json()['task']
+        assert 'result' not in reopened_task and reopened_task['workspace_view'] == task['workspace_view']
+        assert get_task_engine().get_task(identifier)['result'] == stored_task['result']
     with sqlite3.connect(ws['path']) as con:
         assert con.execute("SELECT COUNT(*) FROM ai_task_step WHERE task_id=? AND phase='agent_model_request'",
                            (identifier,)).fetchone()[0] == 1
@@ -470,8 +493,8 @@ owned_service.owned_service_status=lambda domain:{'binding_sha256':'c'*64}
 core.run_owned_request=lambda request,**kwargs:_journal_fixture_result(request)
 from agent_runtime.durable_adapter import DurableExecutionAdapter
 record=DurableExecutionAdapter.record_model_response
-def commit_then_exit(self,*args):
- record(self,*args)
+def commit_then_exit(self,*args,**kwargs):
+ record(self,*args,**kwargs)
  os._exit(92)
 DurableExecutionAdapter.record_model_response=commit_then_exit
 from ai_api import bp
@@ -506,10 +529,17 @@ print(response.status_code,response.get_json(),flush=True)
     monkeypatch.setattr(owned_service, 'measure_owned_request', no_replay)
     response = ws['app'].test_client().post('/api/ai/tasks/' + identifier + '/run', headers=ws['headers'])
     assert response.status_code == 200, response.get_json()
-    assert response.get_json()['task']['status'] == 'succeeded', response.get_json()
+    task = response.get_json()['task']
+    assert task['status'] == 'succeeded', response.get_json()
+    assert 'result' not in task
+    from ai_task_engine import get_task_engine
+    stored_result = get_task_engine().get_task(identifier)['result']
+    assert stored_result is not None
     reopened = ws['app'].test_client().get('/api/ai/tasks/' + identifier, headers=ws['headers'])
     assert reopened.status_code == 200
-    assert reopened.get_json()['task']['result'] == response.get_json()['task']['result']
+    reopened_task = reopened.get_json()['task']
+    assert 'result' not in reopened_task and reopened_task['workspace_view'] == task['workspace_view']
+    assert get_task_engine().get_task(identifier)['result'] == stored_result
     with sqlite3.connect(ws['path']) as con:
         assert con.execute('SELECT COUNT(*) FROM skill_executions').fetchone()[0] == 1
 
@@ -557,8 +587,14 @@ def test_actual_gateway_envelope_reaches_agent_journal_and_local_skill_once(link
                                  (identifier,)).fetchone()
             assert json.loads(detail[0])['result']['operation'] == 'agent_plan'
             assert con.execute('SELECT COUNT(*) FROM skill_executions').fetchone()[0] == 1
+        from ai_task_engine import get_task_engine
+        stored_result = get_task_engine().get_task(identifier)['result']
+        assert stored_result is not None
         repeated = ws['api'].post('/api/ai/tasks/' + identifier + '/run', headers=ws['headers'])
-        assert repeated.get_json()['task']['result'] == task['result']
+        repeated_task = repeated.get_json()['task']
+        assert repeated_task['status'] == 'succeeded' and 'result' not in repeated_task
+        assert repeated_task['workspace_view'] == task['workspace_view']
+        assert get_task_engine().get_task(identifier)['result'] == stored_result
         assert runtime.generated == 1
     finally:
         owned_service._SLOTS.clear()

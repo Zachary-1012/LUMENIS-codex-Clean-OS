@@ -212,6 +212,16 @@ def check_permission(ctx, user_role="user", skill_info=None):
         return payload
 
     target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    if 'shared_agent_task_id' in request_context:
+        try:
+            binding = _shared_agent_binding(ctx)
+            return {'allowed': True, 'reason': 'Authorized input-only Shared task helper',
+                    'code': 'PERMISSION_GRANTED', 'operation_type': 'read',
+                    'resource': 'skill:' + ctx.skill_id, 'caller': binding['actor_ref'],
+                    'audit_id': binding['scope_audit_id'], 'requires_approval': False}
+        except (PermissionError, ValueError, TypeError, KeyError):
+            return {'allowed': False, 'reason': 'Shared task or content permission unavailable',
+                    'code': 'SHARED_AGENT_SCOPE_DENIED'}
     if (ctx.workspace_principal is not None and isinstance(request_context, dict)
             and set(request_context) == {'agent_task_id'}):
         try:
@@ -631,6 +641,8 @@ def _trace_json(value, limit=8 * 1024 * 1024):
 def _agent_scope_binding(ctx, *, connection=None, committed_result_read=False):
     """Bind an account Skill invocation to its current server-owned Agent task."""
     request = ctx.request_context if isinstance(ctx.request_context, dict) else {}
+    if 'shared_agent_task_id' in request:
+        return _shared_agent_binding(ctx, connection=connection, committed_result_read=committed_result_read)
     if 'agent_task_id' not in request:
         if str(ctx.execution_id).startswith('skillscope_agentstep_'):
             raise PermissionError('AGENT_SKILL_TASK_BINDING_REQUIRED')
@@ -1450,6 +1462,9 @@ def registered_background_handler(skill_id):
     def run(ctx):
         if ctx.skill_id != skill_id:
             raise PermissionError('REGISTERED_HANDLER_BINDING_MISMATCH')
+        shared_agent = 'shared_agent_task_id' in (ctx.request_context or {})
+        if shared_agent:
+            _shared_agent_binding(ctx)
         if ctx.execution_id.startswith('skilljob_'):
             rows = query_executions(execution_id=ctx.execution_id, limit=1, strict=True)
             admitted = json.loads(rows[0].get('permission_json') or '{}') if rows else {}
@@ -1471,6 +1486,8 @@ def registered_background_handler(skill_id):
             raise PermissionError('BACKGROUND_BINDING_CHANGED')
         if _product_result_is_success(result):
             _validate_instance(contract['output_schema'], result, 'registered local output')
+        if shared_agent:
+            _shared_agent_binding(ctx)
         return result
     return run
 
@@ -1593,6 +1610,9 @@ def _record_source_free_execution(ctx, *, registry_binding):
             'trace_sha256': _execution_scope_digest(row),
             'agent_task_id': (ctx.request_context or {}).get('agent_task_id'),
             'producer': 'registered_background_handler', 'handler_version': _SOURCE_FREE_HANDLER_VERSION, 'source_use': 'user-input-only'}
+        if 'shared_agent_task_id' in (ctx.request_context or {}):
+            binding = _shared_agent_binding(ctx)
+            material['shared_agent_binding'] = {key: value for key, value in binding.items() if key != 'scope_audit_id'}
         identifier = store.record_evidence(source='skill_execution_local_producer',
             feature_id=ctx.execution_id, product=ctx.product, inputs=material,
             outputs={'result_validation': 'bounded-local-producer'},
@@ -1644,7 +1664,21 @@ def read_source_free_execution(row, actor):
                 or not info or info.get('status') != 'enabled'
                 or material.get('registry_binding') != _background_binding(info)):
             return None
-        if row['user_id'] is not None:
+        if row.get('product') == 'SHARED':
+            binding = material.get('shared_agent_binding')
+            if type(binding) is not dict:
+                return None
+            ctx = SkillExecutionContext(execution_id=row['execution_id'], skill_id=row['skill_id'],
+                user_id=row['user_id'], domain=row['domain'], product=row['product'], task=row['task'],
+                action_type=ActionType(row['action_type']), input_payload=inputs,
+                workspace_principal=actor if row['user_id'] is None else None,
+                request_context={'shared_agent_task_id': binding.get('task_id')})
+            if row['user_id'] is not None and (not isinstance(actor, dict) or actor.get('id') != row['user_id']):
+                return None
+            fresh = _shared_agent_binding(ctx, committed_result_read=True)
+            if {key: value for key, value in fresh.items() if key != 'scope_audit_id'} != binding:
+                return None
+        elif row['user_id'] is not None:
             if (not isinstance(actor, dict) or type(actor.get('id')) is not int
                     or actor['id'] != row['user_id'] or not user or user['status'] != 'active'
                     or not check_dual_domain_permission(actor['id'], row['product'], module=row['skill_id'], action='read')):
@@ -1667,3 +1701,65 @@ def read_source_free_execution(row, actor):
         return row
     except Exception:
         return None
+
+
+def _shared_agent_binding(ctx, *, connection=None, committed_result_read=False):
+    """Recheck the same Task and Shared Permission; it grants no business scope."""
+    from ai_task_engine import get_task_engine
+    from agent_runtime.task_binding import authorized_context, _current_binding, _digest, _shared_registered_skill
+    from account.skills import get_skill_info
+    from lumenis.system.security.permission import authorize_shared_workspace
+    request = ctx.request_context or {}
+    if type(request) is not dict or set(request) != {'shared_agent_task_id'}:
+        raise PermissionError('SHARED_AGENT_BINDING_INVALID')
+    task_id = request['shared_agent_task_id']
+    task = get_task_engine().get_task(task_id)
+    actor = ctx.workspace_principal if ctx.user_id is None else {'id': ctx.user_id}
+    context = authorized_context(task, actor, connection=connection)
+    _current_binding(task_id, ctx.skill_id)
+    expected = ('skillscope_' if ctx.user_id is not None else '') + 'agentstep_' + _digest(
+        {'task': task_id, 'skill': ctx.skill_id, 'inputs': ctx.input_payload})[:32]
+    if (context['domain_id'] != 'shared' or context['product'] != 'SHARED'
+            or context['actor_id'] != ctx.user_id or ctx.product != 'SHARED' or ctx.domain is not None
+            or ctx.action_type is not ActionType.READ or ctx.execution_id != expected
+            or ctx.task != task['user_input'] or not _shared_registered_skill(get_skill_info(ctx.skill_id))
+            or (task['status'] == 'cancelled' and not committed_result_read)):
+        raise PermissionError('SHARED_AGENT_BINDING_INVALID')
+    validate_source_free_input(ctx.skill_id, ctx.input_payload)
+    _, audit_id = authorize_shared_workspace(context['actor'], context['scope'], module='content',
+        action='read', connection=connection, _return_audit=True)
+    return {'task_id': task_id, 'actor_ref': 'workspace:local' if ctx.user_id is None else 'actor:' + str(ctx.user_id),
+        'scope': dict(context['scope']), 'scope_audit_id': audit_id,
+        'binding_sha256': _digest({'task_id': task_id, 'context': task['context'], 'user_input': task['user_input']})}
+
+
+def execute_shared_agent_skill(task_id, skill_id, inputs, *, actor, execution_id, execution_control=None):
+    """Use the original guarded execution chain for an independent Shared task.
+
+    Only admitted local input-only helpers are supported by this adapter. Media,
+    sources, model calls, exports and publishing keep their existing own gates.
+    """
+    from ai_task_engine import get_task_engine
+    from agent_runtime.task_binding import authorized_context, _current_binding
+    from account.skills import get_skill_info
+    task = get_task_engine().get_task(task_id)
+    context = authorized_context(task, actor)
+    _current_binding(task_id, skill_id)
+    info = get_skill_info(skill_id)
+    runtime = SkillRuntimeInfo(skill_id=skill_id, name=info.get('name') or skill_id,
+        product='SHARED', domain=None, enabled=info.get('status') == 'enabled',
+        source=info.get('source') or 'builtin', version=info.get('version') or '1.0.0')
+    ctx = run_execution_chain(skill_id=skill_id, task=task['user_input'], input_payload=inputs,
+        action_type=ActionType.READ, user_id=context['actor_id'], product='SHARED', domain=None,
+        skill_info=runtime, handler=registered_background_handler(skill_id),
+        request_context={'shared_agent_task_id': task_id},
+        workspace_principal=context['actor'] if context['actor_id'] is None else None,
+        execution_id=execution_id, execution_control=execution_control)
+    if ctx.status is ExecutionStatus.COMPLETED:
+        _record_source_free_execution(ctx, registry_binding=_background_binding(info))
+        rows = query_executions(execution_id=execution_id, limit=1, strict=True)
+        if not rows or read_source_free_execution(rows[0], actor) is None:
+            raise PermissionError('SHARED_AGENT_RESULT_UNAVAILABLE')
+        ctx.execute_result = json.loads(rows[0]['output_json'])
+    return {'success': ctx.status is ExecutionStatus.COMPLETED, 'execution_id': execution_id,
+            'status': ctx.status.value, 'result': ctx.execute_result, 'error': ctx.error}

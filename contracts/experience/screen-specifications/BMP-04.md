@@ -35,13 +35,13 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 - **Role / context:** A BMP operator traces how a selected BrandFocus moves through channels toward response or conversion.
 - **User task / completion:** compare channels over a declared window, inspect the path stages and understand which measures are observed versus unavailable. Completion requires a per-channel source, trace, unit, definition and comparable window.
 - **Invariant:** BrandFocus is a distinct BMP scope. The screen must not use a Subject ID, global dashboard or missing value as a brand attribution.
-- **Global rule:** `GLOBAL / ALL` is the default global universe for propagation when the response and every channel row carry explicit canonical global scope, verified lineage and `read_allowed`. Focused BrandFocus rows without those markers are rejected, never promoted.
+- **Global rule:** `GLOBAL / ALL` is the default global universe for propagation when the response and every channel row carry explicit canonical actor/task scope, verified lineage and `read_allowed`. Focused BrandFocus rows without those markers are rejected, never promoted.
 - **Out of scope:** publishing, campaign edits, attribution claims beyond returned fields, audience identity, external effects and fabricated reach.
 
 ## 2. Route, entry, exit and return
 
 - **Entry:** host shell opens BMP-04; read is `GET /api/experience/screen/BMP-04` through `LumenisCoreClient.screen('BMP-04')`.
-- **Required context:** verified BMP/ZBMP `FOCUS`, distinct Subject and BrandFocus IDs, applied binding and allowed read, or `GLOBAL_ALL` with explicit global grant, canonical scope, verified lineage and `read_allowed`.
+- **Required context:** verified BMP/ZBMP `FOCUS`, distinct Subject and BrandFocus IDs, applied binding and allowed read, or `GLOBAL_ALL` with explicit actor-directory read grant, canonical scope, verified lineage and `read_allowed`.
 - **Exit / return:** channel selection is local presentation state. Back returns from channel detail to the river and restores the selected channel/window filter when possible.
 - **Trace:** stage metrics preserve source, evidence trace, definition and window. No write, attribution recalculation or new Evidence is created.
 
@@ -50,8 +50,8 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | Priority | UI field / action | Current owner | Exact source / callable | Definition / units / window | Freshness and missing behavior | Binding ID | Evidence |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | Runtime envelope and owner | Experience API adapter + BMP | `GET /api/experience/screen/BMP-04`; envelope and `truth` | Runtime-bound ZBMP/zbmp response | Mismatch blocks all flow rows | BACKEND-GAP-021 | `experience_runtime.py::screen_viewmodel`; `bmp04_snapshot.dart` |
-| P0 | Focus/global read binding | SYSTEM context / Permission | `focus_context` + `focus_binding` | FOCUS exact Subject/BrandFocus; GLOBAL_ALL explicit global grant/canonical scope/verified lineage/read permission | Unknown blocks channel data | BACKEND-GAP-021 | Current _build_bmp04(binding) returns verified focus/global binding; App consumption remains separately tested |
-| P1 | Propagation channel | BMP propagation owner | Future `sections[type=channels|propagation].items[]` with channel, optional BrandFocus, stage metrics, source, trace, row scope/read/lineage fields | FOCUS exact BrandFocus; GLOBAL_ALL requires explicit global scope, verified lineage and row read permission; every metric includes value, unit, definition and comparable window | Missing metric remains unavailable; direct untyped numbers are rejected | BACKEND-GAP-021 | Current `brand_propagation` output is unscoped and lacks the required contract |
+| P0 | Focus/global read binding | SYSTEM context / Permission | `focus_context` + `focus_binding` | FOCUS exact Subject/BrandFocus; GLOBAL_ALL explicit actor-directory read grant/canonical scope/verified lineage/read permission | Unknown blocks channel data | BACKEND-GAP-021 | Current _build_bmp04(binding) returns verified focus/global binding; App consumption remains separately tested |
+| P1 | Propagation channel | BMP propagation owner | Future `sections[type=channels|propagation].items[]` with channel, optional BrandFocus, stage metrics, source, trace, row scope/read/lineage fields | FOCUS exact BrandFocus; GLOBAL_ALL requires explicit actor/task scope, verified lineage and row read permission; every metric includes value, unit, definition and comparable window | Missing metric remains unavailable; direct untyped numbers are rejected | BACKEND-GAP-021 | Current `brand_propagation` output is unscoped and lacks the required contract |
 | P1 | Stage relation | BMP canonical content/metric owner | channel/content/exposure/response/conversion stage fields | Path order must be explicit; no unsupported reach/conversion derivation | Partial paths show only observed stages | BACKEND-GAP-021 | `Bmp04Channel` parser is strict by design |
 | P2 | Channel selector | App presentation state | `Bmp04ViewModel` local selection | No server mutation | Empty selection shows all verified channels | BMP04-UI-LOCAL | `bmp04_view_model.dart` |
 
@@ -60,7 +60,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | State | Trigger / evidence | User-visible meaning | Available actions | Recovery / return behavior | Acceptance ID |
 | --- | --- | --- | --- | --- | --- |
 | Loading | Initial read or refresh | 正在读取品牌传播路径 | None; announce busy | Do not flash prior-focus metrics | BMP04-W-001 |
-| Global / all blocked | Global grant/lineage/read contract is absent, or only focused rows are returned | 当前全局范围暂不能查看未核验传播路径 | Retry; return to context selector | Reject focused rows; do not relabel them global | BMP04-W-002 |
+| Global / all blocked | Actor-directory scope/lineage/read contract is absent, or only focused rows are returned | 当前全局范围暂不能查看未核验传播路径 | Retry; return to context selector | Reject focused rows; do not relabel them global | BMP04-W-002 |
 | Global / all ready | Authorized global binding plus valid global channels | 查看全球传播路径与可比窗口 | Select channel | Preserve global view | BMP04-W-003 |
 | Empty | Valid focus or global scope but no verified channel | 当前范围暂无传播路径资料 | Refresh | Keep stage labels but no invented totals | BMP04-W-004 |
 | Not collected / unknown | No channel collection or unknown state | 传播资料尚未采集完成 | Refresh | No zero or blank-as-zero display | BMP04-W-005 |
@@ -123,14 +123,14 @@ The real propagation API/Permission/Evidence and runtime/E2E gate is not passed 
 ## 10. Review decision and open questions
 
 - **Decision:** `BLOCKED` for full acceptance; bounded implementation remains `DESIGN_EXPLORATION`.
-- **Open owners:** BMP must define stage and metric semantics; SYSTEM must return verified context/read; Shared Evidence must validate channel traces; Sol must review the river/table composition.
+- **Open owners:** BMP must define stage and metric semantics; SYSTEM must return verified context/read; Shared Evidence must validate channel traces; the currently authorized frontend reviewer must review the river/table composition.
 - **Required before acceptance:** live comparable-window data, random entity checks, runtime responsive/a11y proof and explicit rollback/observability for any future attribution capability.
 
 ## 11. Real delivery and data-maturity overlay
 
 - **REAL USER JOB:** understand how a selected brand's content propagates through channels and where observed response begins or remains unknown.
 - **REAL DELIVERY CARD:** real BrandFocus/window → scoped channel read → stage-by-stage propagation result → source-backed detail. Current backend scoped observation entry exists; complete stage result/source-backed interaction and App E2E remain unverified, so commercial readiness is `NO`.
-- **GLOBAL UNIVERSE / DATA MATURITY IMPACT:** `GLOBAL / ALL` may show the global propagation universe only through explicit global scope/lineage/read markers; focused rows cannot become global propagation. Current endpoint supplies scoped observations, not complete analyzed channels; stage-analysis coverage and full random-sample App acceptance remain NOT RUN. Do not turn analysis_state=NOT_COMPUTED into a completed propagation graph.
+- **SUBJECT SCOPE / TASK DATA QUALITY IMPACT:** `GLOBAL / ALL` may show the current task propagation results only through explicit actor/task scope, lineage and read markers; focused rows cannot become global propagation. Current endpoint supplies scoped observations, not complete analyzed channels; stage-analysis coverage and full random-sample App acceptance remain NOT RUN. Do not turn analysis_state=NOT_COMPUTED into a completed propagation graph.
 - **CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION:** `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE`; the bounded slice reuses current contracts and adds no parallel attribution engine or provider.
 
 

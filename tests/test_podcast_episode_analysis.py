@@ -1,4 +1,4 @@
-import json,wave,math
+import hashlib,json,wave,math
 import pytest
 from podcast.intelligence.episode_analysis import build_episode_analysis_files
 from lumenis.shared.content_creation.video_editing import fingerprint_local_media,VideoEditingError
@@ -20,6 +20,21 @@ def test_real_decode_and_run_metadata(asset):
 def test_missing_is_not_zero(asset):
  assert build(asset)['report']['metrics']['story_node_density']['value'] is None
  assert build(asset,nodes=[])['report']['metrics']['story_node_density']['value']==0
+
+def test_long_episode_is_fully_decoded_without_pcm_file_size_cap(tmp_path,monkeypatch):
+ monkeypatch.setenv('LUMENIS_LOCAL_ASSET_DIR',str(tmp_path));p=tmp_path/'long-episode.wav'
+ with wave.open(str(p),'wb') as w:
+  w.setparams((1,2,16000,0,'NONE','not compressed'));w.writeframes(bytes(650*16000*2))
+ asset=fingerprint_local_media(str(p));before=hashlib.sha256(p.read_bytes()).hexdigest()
+ result=build(asset,nodes=[{'node_id':'late','node_type':'insight_peak','start_sec':649,'end_sec':649.5}])
+ report=result['report']
+ assert report['schema']=='lumenis.podcast-analysis/v2'
+ assert report['decoded_duration_seconds']==pytest.approx(650)
+ assert report['decoded_sample_count']==650*16000
+ assert report['decode_method']=='ffmpeg_normalized_pcm_stream'
+ assert report['metrics']['insight_density']['value']==pytest.approx(60/650)
+ assert report['run']['inference_performed'] is False
+ assert hashlib.sha256(p.read_bytes()).hexdigest()==before
 @pytest.mark.parametrize('edit',[{'end_sec':3},{'start_sec':math.nan},{'node_type':'auto_fact'},{'node_id':''},{'end_sec':True}])
 def test_invalid_node(asset,edit):
  n={'node_id':'one','node_type':'story','start_sec':0,'end_sec':1};n.update(edit)

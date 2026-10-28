@@ -3,6 +3,16 @@ import hashlib,re,shutil,subprocess,platform
 from pathlib import Path
 
 
+def _available_filter_names(output):
+    """Parse FFmpeg's two- or three-character filter flag column."""
+    names = set()
+    for line in (output or "").splitlines():
+        match = re.match(r"^\s*[TSC.]{2,3}\s+([A-Za-z0-9_]+)\s", line)
+        if match:
+            names.add(match.group(1))
+    return names
+
+
 def inspect_media_toolchain():
     from shared_artifacts import _ffmpeg_path
     from .video_editing import _ffprobe_path
@@ -14,7 +24,7 @@ def inspect_media_toolchain():
             return (result.stdout+result.stderr)[:2000000] if result.returncode==0 else None
         except (OSError,subprocess.SubprocessError):return None
     ffmpeg=_ffmpeg_path();probe=_ffprobe_path();filters=command(ffmpeg,'-hide_banner','-filters')
-    names=set(re.findall(r'^\s*[TSC.]{3}\s+(\S+)\s',filters or '',re.MULTILINE))
+    names = _available_filter_names(filters)
     needed={'flite':'local_english_synthetic_speech','afftdn':'explicit_fft_noise_reduction','ass':'ASS_subtitle_playback','drawtext':'burned_captions','loudnorm':'measured_loudness_mastering','sidechaincompress':'voiceover_music_ducking'}
     states={name:{'available':name in names,'capability':capability} for name,capability in needed.items()}
     font={'available':CAPTION_FONT.is_file(),'filename':CAPTION_FONT.name,'path':str(CAPTION_FONT),'glyph_probe':'序境 中文 English 한국어','glyphs_available':False}

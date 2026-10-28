@@ -72,6 +72,7 @@ class CoreSh04Repository implements Sh04Repository {
       title: title,
       expectedMarkdown: parent.markdown,
       markdown: markdown,
+      continueAsReport: parent.isLegacyVisualReport,
     ),
   );
 

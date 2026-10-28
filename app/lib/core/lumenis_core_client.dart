@@ -23,6 +23,7 @@ class LumenisCoreException implements Exception {
     this.messageKey,
     this.errorCode,
     this.sourceConfirmation,
+    this.browserConfirmation,
   });
 
   final String message;
@@ -30,9 +31,37 @@ class LumenisCoreException implements Exception {
   final String? messageKey;
   final String? errorCode;
   final ContentSourceConfirmation? sourceConfirmation;
+  final BrowserNavigationConfirmation? browserConfirmation;
 
   @override
   String toString() => 'LumenisCoreException: $message';
+}
+
+class BrowserNavigationConfirmation {
+  const BrowserNavigationConfirmation(this.id, this.target);
+  final String id;
+  final String target;
+  static BrowserNavigationConfirmation? tryParse(Map value) {
+    final id = value['confirmation_id'];
+    final target = value['confirmation_target'];
+    if (id is! String ||
+        !RegExp(r'^bnc_[A-Za-z0-9_-]{24,64}$').hasMatch(id) ||
+        target is! String ||
+        target.length > 2048 ||
+        RegExp(r'[\x00-\x1f]').hasMatch(target)) {
+      return null;
+    }
+    final uri = Uri.tryParse(target);
+    if (uri == null ||
+        !const ['http', 'https'].contains(uri.scheme) ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasQuery ||
+        uri.hasFragment) {
+      return null;
+    }
+    return BrowserNavigationConfirmation(id, target);
+  }
 }
 
 class ContentSourceConfirmation {
@@ -534,6 +563,85 @@ class LumenisCoreClient {
   Future<Map<String, dynamic>> runtimeIdentity() =>
       _get('/api/experience/runtime/identity', withContext: false);
 
+  Future<Map<String, dynamic>> agentTasks({int offset = 0}) => _request(
+    'GET',
+    '/api/ai/tasks?limit=40&offset=$offset',
+    requestHeaders: const {'Cache-Control': 'no-store'},
+  );
+
+  Future<Map<String, dynamic>> agentTask(String taskId) {
+    _validateAgentTaskId(taskId);
+    return _request(
+      'GET',
+      '/api/ai/tasks/${Uri.encodeComponent(taskId)}',
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> agentTaskForRequest(String requestId) {
+    _validateAgentRequestId(requestId);
+    return _request(
+      'GET',
+      '/api/ai/tasks?request_id=$requestId',
+      requestHeaders: const {'Cache-Control': 'no-store'},
+    );
+  }
+
+  Future<Map<String, dynamic>> startAgentTask(
+    String input, {
+    required String requestId,
+  }) {
+    _validateAgentRequestId(requestId);
+    final selected = _contextEnvelope?['context'];
+    final focus = selected is Map && selected['mode'] == 'FOCUS';
+    return _request(
+      'POST',
+      '/api/ai/tasks',
+      payload: {
+        'execution_mode': 'agent',
+        'request_id': requestId,
+        'input': input,
+        if (focus)
+          'selection': {
+            'mode': 'FOCUS',
+            'domain_id': selected['domain_id'],
+            'subject_id': selected['subject_id'],
+          }
+        else ...{
+          'domain_id': 'shared',
+          'scope': const SharedWorkspaceScope().toJson(),
+        },
+      },
+    );
+  }
+
+  static void _validateAgentRequestId(String requestId) {
+    if (!RegExp(r'^[0-9a-f]{32}$').hasMatch(requestId)) {
+      throw const FormatException('Invalid request identifier.');
+    }
+  }
+
+  Future<Map<String, dynamic>> agentTaskAction(String taskId, String action) {
+    _validateAgentTaskId(taskId);
+    if (action != 'cancel' && action != 'run') {
+      throw const FormatException('Unsupported task action.');
+    }
+    return _request(
+      'POST',
+      '/api/ai/tasks/${Uri.encodeComponent(taskId)}/$action',
+      payload: const {},
+      connectionTimeout: const Duration(seconds: 70),
+    );
+  }
+
+  static void _validateAgentTaskId(String taskId) {
+    if (!RegExp(
+      r'^(?:task_|skilljob_)[A-Za-z0-9_-]{8,128}$',
+    ).hasMatch(taskId)) {
+      throw const FormatException('Invalid task identifier.');
+    }
+  }
+
   Future<Map<String, dynamic>> workspaceDraft(String scopeKey) => _get(
     '/v4/ai/workspace-draft?${Uri(queryParameters: {'scope_key': scopeKey}).query}',
     withContext: false,
@@ -624,6 +732,27 @@ class LumenisCoreClient {
 
   /// Reads the actor-authorized context selection. The returned selection is
   /// not a permission grant; the Core must reauthorize every consumer request.
+  Future<Map<String, dynamic>> updateSubjectDirectory({
+    required String domainId,
+    required String subjectId,
+    required String action,
+    required String requestId,
+    String? previousArtifactId,
+    String? expectedDraftDigest,
+  }) => _request(
+    'POST',
+    '/api/settings/subjects/working-set',
+    withContext: false,
+    payload: {
+      'domain_id': domainId,
+      'subject_id': subjectId,
+      'action': action,
+      'request_id': requestId,
+      'previous_artifact_id': ?previousArtifactId,
+      'expected_draft_digest': ?expectedDraftDigest,
+    },
+  );
+
   Future<Map<String, dynamic>> settingsContext() async {
     final response = await _get('/api/settings/context');
     _acceptContextEnvelope(response);
@@ -1353,6 +1482,50 @@ class LumenisCoreClient {
         operationContext: _mediaContentContext(domainId),
       );
 
+  Future<Map<String, dynamic>> readContentProjectTranscripts({
+    required String? domainId,
+    required List<String> assetRefs,
+    required String projectId,
+    int offset = 0,
+  }) => _request(
+    'POST',
+    '/api/experience/shared-skills/shared.content_project/inspect',
+    operationContext: _mediaContentContext(domainId),
+    payload: {
+      'action_type': 'READ',
+      'input': {
+        'asset_refs': assetRefs,
+        'transcripts': {
+          'project_id': projectId,
+          'offset': offset,
+          'limit': 200,
+        },
+      },
+    },
+  );
+
+  Future<Map<String, dynamic>> previewContentWordCut({
+    required String? domainId,
+    required List<String> assetRefs,
+    required String projectId,
+    required List<Map<String, dynamic>> selections,
+  }) => _request(
+    'POST',
+    '/api/experience/shared-skills/shared.content_project/inspect',
+    operationContext: _mediaContentContext(domainId),
+    payload: {
+      'action_type': 'READ',
+      'input': {
+        'asset_refs': assetRefs,
+        'transcript_edit': {
+          'project_id': projectId,
+          'source_selections': selections,
+          'synchronize': true,
+        },
+      },
+    },
+  );
+
   Future<Map<String, dynamic>> previewContentSpeech({
     required String? domainId,
     required String text,
@@ -1469,6 +1642,7 @@ class LumenisCoreClient {
     required String outputKind,
     bool? demoAcknowledged,
     String? previousArtifactId,
+    List<String>? sourceProjectArtifactRefs,
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
@@ -1479,6 +1653,9 @@ class LumenisCoreClient {
     }
     if (previousArtifactId != null) {
       _validateContentArtifactId(previousArtifactId);
+    }
+    for (final ref in sourceProjectArtifactRefs ?? const <String>[]) {
+      _validateContentArtifactId(ref);
     }
     return _request(
       'POST',
@@ -1493,6 +1670,7 @@ class LumenisCoreClient {
           'output_kind': outputKind,
           'demo_acknowledged': ?demoAcknowledged,
           'previous_artifact_id': previousArtifactId,
+          'source_project_artifact_refs': ?sourceProjectArtifactRefs,
           'title': ?title,
           if (!renderMedia) 'render_media': false,
           if (renderOptions.isNotEmpty) 'render_options': renderOptions,
@@ -1505,6 +1683,48 @@ class LumenisCoreClient {
         'Export response timed out; server completion is unknown.',
         errorCode: 'CONTENT_EXPORT_TIMEOUT',
       ),
+    );
+  }
+
+  Future<Map<String, dynamic>> startContentExportTask({
+    required String? domainId,
+    required String requestId,
+    required Map<String, dynamic> input,
+  }) => _request(
+    'POST',
+    '/api/experience/content-projects/export/tasks',
+    operationContext: _mediaContentContext(domainId),
+    payload: {'action_type': 'EXPORT', 'request_id': requestId, 'input': input},
+  );
+
+  Future<Map<String, dynamic>> contentExportTask({
+    required String? domainId,
+    required int taskId,
+    String? action,
+  }) {
+    if (taskId <= 0 ||
+        (action != null && !const ['cancel', 'resume'].contains(action))) {
+      throw const FormatException('Invalid export task action.');
+    }
+    return _request(
+      action == null ? 'GET' : 'POST',
+      '/api/experience/content-projects/export/tasks/$taskId${action == null ? '' : '/$action'}',
+      operationContext: _mediaContentContext(domainId),
+      payload: action == null ? null : const {},
+    );
+  }
+
+  Future<Map<String, dynamic>> contentExportTasks({
+    required String? domainId,
+    String? cursor,
+  }) {
+    final query = Uri(
+      queryParameters: {'limit': '20', 'cursor': ?cursor},
+    ).query;
+    return _request(
+      'GET',
+      '/api/experience/content-projects/export/tasks?$query',
+      operationContext: _mediaContentContext(domainId),
     );
   }
 
@@ -1806,23 +2026,6 @@ class LumenisCoreClient {
     }
   }
 
-  /// Browser sessions use the server-issued open-workspace principal.
-  ///
-  /// This deliberately omits the development Basic credential and all business
-  /// context headers.  The Browser API accepts it only on the explicitly open,
-  /// loopback workspace transport and refuses forged identity headers, cookies
-  /// and remote origins.  A client credential must never become a substitute
-  /// for a Browser actor/session boundary.
-  /// User-requested refresh for the selected scope.
-  Future<Map<String, dynamic>> startManualCollection() => _request(
-    'POST',
-    '/api/collect',
-    payload: const <String, Object?>{
-      'operator': 'human_ui',
-      'confirm_read_only': true,
-    },
-  );
-
   Future<Map<String, dynamic>> collectionSources() => _request(
     'GET',
     '/api/experience/cth/platform-collection',
@@ -1852,6 +2055,139 @@ class LumenisCoreClient {
         if (!detail) 'max_results': limit,
       },
       connectionTimeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<Map<String, dynamic>> collectionRequests({
+    required String domainId,
+    int? before,
+  }) => _request(
+    'GET',
+    '/api/experience/cth/platform-collection/tasks${before == null ? '' : '?before=$before'}',
+    operationContext: _contentContext(domainId),
+    requestHeaders: const {'Cache-Control': 'no-store'},
+  );
+
+  Future<Map<String, dynamic>> collectionRequest({
+    required String domainId,
+    required int taskId,
+    int? beforePage,
+  }) => _request(
+    'GET',
+    '/api/experience/cth/platform-collection/tasks/$taskId${beforePage == null ? '' : '?before_page=$beforePage'}',
+    operationContext: _contentContext(domainId),
+    requestHeaders: const {'Cache-Control': 'no-store'},
+  );
+
+  Future<Map<String, dynamic>> collectionRequestAction({
+    required String domainId,
+    required String action,
+    int? taskId,
+    String? requestId,
+    String? confirmedResource,
+    Map<String, dynamic>? sourceRequest,
+  }) {
+    if (!const {
+      'prepare',
+      'confirm',
+      'start',
+      'step',
+      'cancel',
+      'resume',
+      'recover',
+    }.contains(action)) {
+      throw const FormatException('Invalid collection action.');
+    }
+    return _request(
+      'POST',
+      '/api/experience/cth/platform-collection/search',
+      operationContext: _contentContext(domainId),
+      payload: {
+        ...?sourceRequest,
+        'operator': 'human_ui',
+        'confirm_read_only': true,
+        'action': action,
+        'task_id': ?taskId,
+        'request_id': ?requestId,
+        'confirmed_resource': ?confirmedResource,
+      },
+      connectionTimeout: const Duration(minutes: 2),
+    );
+  }
+
+  Future<Map<String, dynamic>> collectedSourceResults({
+    required String domainId,
+    required String evidenceRef,
+    String? sourceId,
+  }) => _request(
+    'GET',
+    '/api/experience/cth/platform-collection/results?${Uri(queryParameters: {'evidence_ref': evidenceRef, 'source_id': ?sourceId}).query}',
+    operationContext: _contentContext(domainId),
+    requestHeaders: const {'Cache-Control': 'no-store'},
+  );
+
+  Future<ContentProjectFile> collectedMediaFile({
+    required String domainId,
+    required int taskId,
+    required String evidenceRef,
+    required String sha256,
+  }) async {
+    if (taskId <= 0 ||
+        !RegExp(r'^app_evidence_records:[1-9][0-9]*$').hasMatch(evidenceRef) ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(sha256)) {
+      throw const FormatException('Invalid collected media reference.');
+    }
+    final scope = _contentContext(domainId);
+    final uri =
+        _uri(
+          '/api/experience/cth/platform-collection/tasks/$taskId/media/${evidenceRef.split(':').last}',
+        ).replace(
+          queryParameters: {
+            'format': 'media',
+            'sha256': sha256,
+            'context': jsonEncode(scope),
+          },
+        );
+    final response = await sendLumenisBinaryRequest(
+      LumenisTransportRequest(
+        method: 'HEAD',
+        uri: uri,
+        headers: {...scope, 'Accept': 'image/*,audio/*,video/*'},
+        followRedirects: false,
+        connectionTimeout: const Duration(seconds: 45),
+      ),
+      maxBytes: 4096,
+    );
+    if (response.statusCode != 200) {
+      throw LumenisCoreException(
+        'Media unavailable.',
+        statusCode: response.statusCode,
+      );
+    }
+    final type = response.contentType?.split(';').first.trim().toLowerCase();
+    final extension = const {
+      'image/png': 'png',
+      'image/jpeg': 'jpg',
+      'image/webp': 'webp',
+      'video/mp4': 'mp4',
+      'video/webm': 'webm',
+      'audio/wav': 'wav',
+      'audio/x-wav': 'wav',
+      'audio/mpeg': 'mp3',
+      'audio/mp4': 'm4a',
+      'audio/ogg': 'ogg',
+      'audio/flac': 'flac',
+    }[type];
+    if (extension == null ||
+        response.headers['etag'] != '"$sha256"' ||
+        response.headers['accept-ranges'] != 'bytes' ||
+        (int.tryParse(response.headers['content-length'] ?? '') ?? 0) <= 0) {
+      throw const FormatException('Invalid collected media response.');
+    }
+    return ContentProjectFile.stream(
+      uri: uri,
+      filename: 'source-${evidenceRef.split(':').last}.$extension',
+      mediaType: type!,
     );
   }
 
@@ -2958,6 +3294,7 @@ class LumenisCoreClient {
     required String title,
     required String expectedMarkdown,
     required String markdown,
+    bool continueAsReport = false,
   }) {
     _validateSavedWorkArtifactId(artifactId);
     _validateSavedWorkRequestId(requestId);
@@ -2973,6 +3310,7 @@ class LumenisCoreClient {
         'request_id': requestId,
         'expected_sha256': expectedSha256,
         'reason': reason,
+        if (continueAsReport) 'continue_as_report': true,
         'edits': [
           {'pointer': '/title', 'expected': expectedTitle, 'value': title},
           {
@@ -3215,6 +3553,7 @@ class LumenisCoreClient {
     required String url,
     required String leaseToken,
     required LumenisBrowserFrameBinding frameBinding,
+    String? confirmationId,
   }) {
     _validateBrowserSessionId(sessionId);
     _validateBrowserLeaseToken(leaseToken);
@@ -3226,6 +3565,7 @@ class LumenisCoreClient {
       payload: <String, Object?>{
         'url': url,
         'frame_binding': frameBinding.toJson(),
+        'confirmation_id': ?confirmationId,
       },
       withContext: false,
       requestHeaders: {
@@ -3639,6 +3979,7 @@ class LumenisCoreClient {
         String? messageKey;
         String? errorCode;
         ContentSourceConfirmation? sourceConfirmation;
+        BrowserNavigationConfirmation? browserConfirmation;
         try {
           final errorBody = jsonDecode(reply.body);
           if (errorBody is Map && errorBody['message_key'] is String) {
@@ -3652,6 +3993,13 @@ class LumenisCoreClient {
             if (RegExp(r'^[A-Z][A-Z_0-9]{0,99}$').hasMatch(code)) {
               errorCode = code;
             }
+          }
+          if (reply.statusCode == 409 &&
+              errorBody is Map &&
+              errorCode == 'BROWSER_NAVIGATION_CONFIRMATION_REQUIRED') {
+            browserConfirmation = BrowserNavigationConfirmation.tryParse(
+              errorBody,
+            );
           }
           if (reply.statusCode == 403 &&
               errorBody is Map &&
@@ -3670,6 +4018,7 @@ class LumenisCoreClient {
           messageKey: messageKey,
           errorCode: errorCode,
           sourceConfirmation: sourceConfirmation,
+          browserConfirmation: browserConfirmation,
         );
       }
       final decoded = jsonDecode(reply.body);

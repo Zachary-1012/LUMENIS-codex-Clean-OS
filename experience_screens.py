@@ -34,11 +34,9 @@ from experience_runtime import (  # noqa: E402
     STATE_OFFLINE,
     _is_err,
     _safe,
-    days_labels_series,
     metric,
     section,
     shared_skill_surface,
-    today_str,
 )
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -1148,37 +1146,43 @@ def _int_or_none(v: Any) -> Optional[int]:
 
 
 def _build_sys02() -> Dict[str, Any]:
-    """采集器状态：collector_status_api.get_all_status（真实连通状态，未验证不标 ACTIVE）。"""
-    from collector_status_api import get_all_status
+    from lumenis.system.collector.adapters.secondary_collection import get_collection_surface
 
-    st = _safe(get_all_status, default={})
-    st = st if isinstance(st, dict) and not _is_err(st) else {}
-    summ = st.get("summary") if isinstance(st.get("summary"), dict) else {}
+    st = _safe(get_collection_surface, default={})
+    available = isinstance(st, dict) and not _is_err(st) and st.get('ok') is True
+    st = st if available else {}
     plats = st.get("platforms") if isinstance(st.get("platforms"), list) else []
+    summ = {key: (sum(p.get('status') in values for p in plats) if available else None)
+            for key, values in {'ready': {'READY', 'CONFIGURED'},
+                'needs_login': {'AUTH_REQUIRED', 'SESSION_EXPIRED'},
+                'needs_verification': {'NEED_VERIFY'},
+                'unavailable': {'BLOCKED', 'RATE_LIMITED', 'COOLING_DOWN', 'UNAVAILABLE',
+                                'PROVIDER_UNAVAILABLE', 'PLANNED'}}.items()}
 
     def _k(key: str, label: str, icon: str = "ops") -> Dict[str, Any]:
         v = _int_or_none(summ.get(key))
         return metric(f"sys02.{key}", label, value=v,
                       state=STATE_READY if v is not None else STATE_EMPTY,
-                      icon=icon, source="collector_status_api.get_all_status")
+                      icon=icon, source="SYSTEM.Collector.get_collection_surface")
 
-    kpis = [_k("active", "真连通 ACTIVE/VERIFIED"), _k("partial", "受限 PARTIAL"),
-            _k("missing", "缺登录态 MISSING"), _k("blocked", "被反爬 BLOCKED")]
+    kpis = [_k("ready", "可发起请求"), _k("needs_login", "需要登录"),
+            _k("needs_verification", "需要验证"), _k("unavailable", "暂不可用")]
     rows = [{
-        "平台": p.get("display") or p.get("platform"),
-        "状态": p.get("cookie_status") or "—",
-        "解析记录": _int_or_none(p.get("records_parsed")),
-        "说明": p.get("error") or "—",
+        "平台": p.get("name") or p.get("platform"),
+        "状态": p.get("status") or "UNAVAILABLE",
+        "解析记录": None,
+        "说明": (p.get("health") or {}).get("message") or "—",
     } for p in plats if isinstance(p, dict)]
     tbl = section("table", STATE_READY if rows else STATE_EMPTY,
-                  title="采集器连通状态（真实；未连通如实标 MISSING/INVALID/BLOCKED）",
+                  title="来源连接",
                   columns=[{"label": "平台", "key": "平台"}, {"label": "状态", "key": "状态"},
                            {"label": "解析记录", "key": "解析记录", "numeric": True},
                            {"label": "说明", "key": "说明"}], rows=rows)
     note = section("note", STATE_READY, kind="RULE", code="NO-FAKE-ACTIVE",
-                   text="状态来自最近一次真连通验证缓存与 cookie 文件级检查；未做真连通验证不标 ACTIVE。")
+                   text="连接准备状态与每次采集结果分别记录。")
     sections = [_head("SYS-02"), section("kpis", STATE_READY, items=kpis), tbl, note]
-    return _envelope("SYS-02", sections, truth={"summary": summ, "total_platforms": st.get("total_platforms")})
+    return _envelope("SYS-02", sections, truth={"summary": summ,
+        "total_platforms": len(plats) if available else None, "source_status_available": available})
 
 
 def _build_sys07() -> Dict[str, Any]:
@@ -1236,6 +1240,159 @@ def _build_sys08() -> Dict[str, Any]:
     return _envelope("SYS-08", sections)
 
 
+def _sh02_collection_task_links(evidence_ids, *, identity, scope):
+    """Read routing references from the original queue without initializing it."""
+    import sqlite3
+    from lumenis.shared.database import DatabaseRepository
+    from lumenis.system.collector.guard.task_queue import DEFAULT_PATH
+
+    if not evidence_ids or not os.path.isfile(DEFAULT_PATH):
+        return {}, "NOT_RECORDED"
+    identity_key, identity_value = next(iter(identity.items()))
+    source_match = (
+        "CAST(json_extract(payload, '$.progress.result.evidence_ref') AS TEXT)=? "
+        "OR EXISTS (SELECT 1 FROM json_each(json_extract(payload, '$.progress.result_pages')) "
+        "WHERE CAST(json_extract(value, '$.evidence_ref') AS TEXT)=?)"
+    )
+    try:
+        with DatabaseRepository(DEFAULT_PATH).connection(read_only=True) as queue:
+            if not queue.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tasks'").fetchone():
+                return {}, "NOT_RECORDED"
+            links = {}
+            for evidence_id in evidence_ids:
+                match = queue.execute(
+                    "SELECT id,payload FROM tasks WHERE task_type='collector_manual_request' "
+                    "AND json_extract(payload, ?) IS ? "
+                    "AND json_extract(payload, '$.binding.scope.domain_id') IS ? "
+                    "AND json_extract(payload, '$.binding.scope.global_scope') IS ? "
+                    "AND json_extract(payload, '$.binding.scope.subject_id') IS NULL "
+                    "AND json_extract(payload, '$.binding.scope.brand_focus_id') IS NULL "
+                    f"AND ({source_match}) ORDER BY id DESC LIMIT 1",
+                    [f"$.binding.identity.{identity_key}", identity_value, scope["domain_id"], True,
+                     evidence_id, evidence_id],
+                ).fetchone()
+                if match is None:
+                    continue
+                payload = json.loads(match["payload"])
+                owner = payload.get("binding") or {}
+                if owner.get("identity") != identity or owner.get("scope") != scope:
+                    continue
+                progress = payload.get("progress") or {}
+                for page in [progress.get("result") or {}, *(progress.get("result_pages") or [])]:
+                    source_ref = str(page.get("evidence_ref") or "")
+                    if source_ref in evidence_ids:
+                        links.setdefault(source_ref, {"task_id": match["id"],
+                            "endpoint": f"/api/experience/cth/platform-collection/tasks/{match['id']}"})
+            return links, "AVAILABLE" if links else "NOT_RECORDED"
+    except (sqlite3.Error, ValueError, TypeError):
+        # A missing operational history does not erase independently verified
+        # source custody. No constructor, CREATE TABLE or retry runs on a read.
+        return {}, "UNAVAILABLE"
+
+
+def _sh02_collected_inspections(connection, *, binding, domain, limit):
+    """Project signed GLOBAL source custody; never assert a focused fact/use grant."""
+    from lumenis.auth.service import get_current_user
+    from lumenis.shared.evidence.store import classify_evidence_integrity
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    from lumenis.system.collector.adapters.secondary_collection import (
+        _business_batch_binding, read_collected_items,
+    )
+
+    product, stored_domain = ("CTH", "cth") if domain == "CTH" else ("ZBMP", "zbmp")
+    # Use exactly the same candidate window as list_scoped_canonical. A valid
+    # inspection can explain its UNASSIGNED rejection, never another bad row.
+    candidates = connection.execute(
+        "SELECT canonical_id,source_id,evidence_ref,scope_status,subject_id,brand_focus_id "
+        "FROM (SELECT * FROM canonical_data WHERE product_id=? AND domain_id=? "
+        "ORDER BY captured_at DESC,canonical_id ASC LIMIT ?) "
+        "WHERE scope_status='UNASSIGNED' AND COALESCE(subject_id,'')='' "
+        "AND COALESCE(brand_focus_id,'')=''",
+        (product, stored_domain, limit),
+    ).fetchall()
+    if not candidates:
+        return [], {"returned_count": 0, "unavailable_count": 0}
+    if binding.get("actor_scope") == "sealed_local":
+        actor = resolve_local_workspace_principal(module="collector", action="read")
+        if actor is None:
+            raise PermissionError("MATERIAL_SCOPE_CHANGED")
+    else:
+        actor = get_current_user(read_only=True)
+        if (not isinstance(actor, dict) or type(actor.get("id")) is not int
+                or actor["id"] != binding.get("actor_id")):
+            raise PermissionError("MATERIAL_SCOPE_CHANGED")
+    collector_scope = {"domain_id": "cth" if domain == "CTH" else "bmp",
+                       "global_scope": True, "subject_id": None, "brand_focus_id": None}
+    rows, parents = [], {}
+    for candidate in candidates:
+        source_id = str(candidate["source_id"])
+        evidence_id = str(candidate["evidence_ref"] or "")
+        if re.fullmatch(r"[1-9]\d*", evidence_id) is None:
+            continue
+        if evidence_id not in parents:
+            evidence = connection.execute("SELECT * FROM app_evidence_records WHERE id=?", (evidence_id,)).fetchone()
+            integrity = classify_evidence_integrity(evidence)
+            try:
+                saved = read_collected_items(f"app_evidence_records:{evidence_id}", actor=actor, scope=collector_scope)
+                items = saved.get("items") or []
+            except (PermissionError, ValueError):
+                items = []
+            parents[evidence_id] = ({item["source_id"]: item for item in items}, integrity)
+        items, integrity = parents[evidence_id]
+        item = items.get(source_id)
+        if (not item or item.get("canonical_ref") != candidate["canonical_id"]
+                or item.get("scope_status") != "UNASSIGNED"
+                or integrity.get("assurance") != "writer-authenticated"):
+            continue
+        selectors = {"mode": "GLOBAL_ALL", "domain_id": domain}
+        reference = f"app_evidence_records:{evidence_id}"
+        rows.append({
+            "id": candidate["canonical_id"], "kind": "COLLECTED_SOURCE",
+            "summary": (item.get("title") or item.get("body_preview") or "")[:180],
+            "source": item["platform"], "captured_at": item.get("captured_at"),
+            "published_at": item.get("published_at"), "freshness": "UNKNOWN", "origin": domain,
+            "lineage": ["SOURCE", "EVIDENCE"],
+            "projection": {
+                "contract": "lumenis.shared.experience-row-projection", "version": 3,
+                "purpose": "SOURCE_INSPECTION", "read_allowed": True,
+                "scope": {"mode": "GLOBAL_ALL", "global_all_granted": True},
+                "canonical_reference": candidate["canonical_id"],
+                "stored_scope": {"product_id": product, "domain_id": stored_domain,
+                    "subject_id": None, "brand_focus_id": None, "scope_status": "UNASSIGNED", "global": True},
+                "evidence": {"canonical_reference": f"evidence:collector:{evidence_id}",
+                    "evidence_id": evidence_id, "source_id": source_id},
+                "integrity": {"verified": True, "lineage_verified": True,
+                              "assurance": integrity["assurance"]},
+            },
+            "inspection": {
+                "contract": "lumenis.collected-source-inspection/v1", "source_id": source_id,
+                "evidence_ref": reference, "scope_status": "UNASSIGNED",
+                "body_state": item.get("body_state"),
+                "original_body_available": item.get("original_body_available"),
+                "body_character_count": item.get("body_character_count"),
+                "body_preview": item.get("body_preview"), "url": item.get("url"),
+                "author_id": item.get("author_id"), "author_name": item.get("author_name"),
+                "metrics": item.get("metrics"), "metric_states": item.get("metric_states"),
+                "media": item.get("media"), "source_version_state": item.get("source_version_state"),
+                "source_use": {"state": "CHECK_SOURCE_USE_PER_ACTION", "grants_source_use": False,
+                               "research_reference": "NOT_EVALUATED", "quote_reference": "NOT_EVALUATED"},
+                "original": {"endpoint": "/api/experience/cth/platform-collection/results",
+                    "query": {"evidence_ref": reference, "source_id": source_id}, "scope": selectors},
+            },
+        })
+    if rows:
+        current = _business_batch_binding(actor, {collector_scope["domain_id"]: collector_scope}, "human", None)
+        ids = list({row["inspection"]["evidence_ref"].split(":")[1] for row in rows})
+        links, history_state = _sh02_collection_task_links(ids, identity=current["identity"], scope=collector_scope)
+        for row in rows:
+            inspection = row["inspection"]
+            task = links.get(inspection["evidence_ref"].split(":")[1])
+            inspection["collection_task"] = ({**task, "scope": inspection["original"]["scope"]} if task else None)
+            inspection["collection_task_state"] = "AVAILABLE" if task else history_state
+        _business_batch_binding(actor, {collector_scope["domain_id"]: collector_scope}, "human", None)
+    return rows, {"returned_count": len(rows), "unavailable_count": len(candidates) - len(rows)}
+
+
 def _build_sh02(*, binding: dict[str, Any]) -> dict[str, Any]:
     from canonical_data import list_scoped_canonical
     from lumenis.shared.database import get_repository
@@ -1288,8 +1445,16 @@ def _build_sh02(*, binding: dict[str, Any]) -> dict[str, Any]:
                         "integrity": proof["integrity"],
                     },
                 })
+            if mode == "GLOBAL_ALL":
+                inspections, inspection_coverage = _sh02_collected_inspections(
+                    con, binding=binding, domain=domain, limit=result["limit"])
+                rows.extend(inspections)
+                coverage[domain]["inspection"] = inspection_coverage
+                coverage[domain]["unresolved_rejected_count"] = max(
+                    0, result["rejected_count"] - len(inspections))
     rows.sort(key=lambda row: (row["captured_at"] or "", row["id"]), reverse=True)
-    partial = any(value["truncated"] or value["rejected_count"] for value in coverage.values())
+    partial = any(value["truncated"] or value.get("unresolved_rejected_count", value["rejected_count"])
+                  for value in coverage.values())
     response = _envelope("SH-02", [_head("SH-02")], truth={
         "data_state": "partial" if partial else "available" if rows else "empty",
         "coverage": coverage,

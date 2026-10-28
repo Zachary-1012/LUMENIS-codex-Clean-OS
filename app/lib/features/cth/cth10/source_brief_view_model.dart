@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 
+import '../../shared/sh02/sh02_repository.dart';
+
 enum SourceBriefPhase { idle, loading, ready, failed }
 
 enum SourceBriefSavedWorkState { idle, saving, saved, reopened, failed }
@@ -25,6 +27,27 @@ enum SourceBriefTaskState {
   succeeded,
   failed,
   interrupted,
+}
+
+enum SourceBriefDomainImportState {
+  idle,
+  preparing,
+  prepared,
+  importing,
+  imported,
+  startingBrief,
+  briefUnconfirmed,
+  ready,
+  failed,
+}
+
+enum SourceBriefDomainImportError {
+  accessDenied,
+  contextChanged,
+  invalidInput,
+  rejected,
+  unavailable,
+  unconfirmed,
 }
 
 enum SourceBriefErrorKind {
@@ -455,6 +478,19 @@ class SourceBriefViewModel extends ChangeNotifier {
       SourceBriefSharedAdoptionState.idle;
   SourceBriefErrorKind? _sharedAdoptionErrorKind;
   SourceBriefSharedSavedWork? _sharedAdoptedWork;
+  SourceBriefDomainImportState _domainImportState =
+      SourceBriefDomainImportState.idle;
+  SourceBriefDomainImportError? _domainImportError;
+  Sh02PickedDocument? _pendingDomainFile;
+  Map<String, dynamic>? _pendingDomainProvenance;
+  String? _domainImportContext;
+  String? _domainImportResource;
+  final List<String> _domainSourceIds = [];
+  String? _domainTaskRequestId;
+  String? _domainTaskQuestion;
+  List<String>? _domainTaskSourceIds;
+  String? _domainTaskId;
+  int _domainImportGeneration = 0;
 
   SourceBriefSavedWorkState get savedWorkState => _savedWorkState;
   SourceBriefErrorKind? get savedWorkErrorKind => _savedWorkErrorKind;
@@ -475,6 +511,21 @@ class SourceBriefViewModel extends ChangeNotifier {
   SourceBriefSharedAdoptionPreview? get sharedAdoptionPreview =>
       _pendingSharedAdoption?.preview;
   SourceBriefSharedSavedWork? get sharedAdoptedWork => _sharedAdoptedWork;
+  SourceBriefDomainImportState get domainImportState => _domainImportState;
+  SourceBriefDomainImportError? get domainImportError => _domainImportError;
+  List<String> get domainSourceIds =>
+      _domainContextMatches ? List.unmodifiable(_domainSourceIds) : const [];
+  bool get domainContextMatches => _domainContextMatches;
+  bool get canConfirmDomainImport =>
+      _domainContextMatches &&
+      _domainImportState == SourceBriefDomainImportState.prepared &&
+      _domainImportResource != null;
+  bool get canContinueDomainBrief =>
+      _domainContextMatches &&
+      _domainSourceIds.isNotEmpty &&
+      (_domainImportState == SourceBriefDomainImportState.briefUnconfirmed ||
+          _domainTaskId != null &&
+              _domainImportState == SourceBriefDomainImportState.imported);
   SourceBriefRevisionDraft? pendingRevisionDraftFor(
     SourceBriefSavedWork parent,
   ) => _pendingRevision?.matches(parent, _pendingRevision!.draft) == true
@@ -1632,6 +1683,339 @@ class SourceBriefViewModel extends ChangeNotifier {
     }
   }
 
+  /// Starts the existing two-step domain-document admission. Preparation is
+  /// retained with the exact picked bytes and provenance so an uncertain
+  /// response can be reconciled without selecting a different file.
+  Future<bool> prepareDomainDocument({
+    required Sh02PickedDocument file,
+    required Map<String, dynamic> provenance,
+  }) async {
+    if (_disposed || _busy) return false;
+    if (!_domainCanImport) {
+      _domainImportError = _selection?.globalScope == true
+          ? SourceBriefDomainImportError.invalidInput
+          : SourceBriefDomainImportError.contextChanged;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    if (!_validDomainProvenance(provenance)) {
+      _domainImportError = SourceBriefDomainImportError.invalidInput;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    final signature = _contextSignature(client.currentContextEnvelope);
+    if (_domainImportContext != null && _domainImportContext != signature) {
+      _domainImportError = SourceBriefDomainImportError.contextChanged;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    if (_pendingDomainFile != null &&
+        !_samePickedDocument(_pendingDomainFile!, file)) {
+      _domainImportError = SourceBriefDomainImportError.unconfirmed;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    _domainImportContext ??= signature;
+    _pendingDomainFile ??= file;
+    _pendingDomainProvenance ??= Map.unmodifiable(provenance);
+    final operation = ++_domainImportGeneration;
+    _domainImportState = SourceBriefDomainImportState.preparing;
+    _domainImportError = null;
+    notifyListeners();
+    try {
+      final response = await client.importDomainDocument(
+        domainId: _domainId,
+        filename: _pendingDomainFile!.filename,
+        bytes: _pendingDomainFile!.bytes,
+        provenance: _pendingDomainProvenance!,
+      );
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (!_domainContextMatches) {
+        throw const LumenisCoreException(
+          'Domain context changed.',
+          statusCode: 409,
+        );
+      }
+      final prepared = _domainImportPayload(response);
+      if (prepared['state'] != 'PREPARED' ||
+          _safeIdentifier(prepared['resource']) == null) {
+        throw const FormatException('Domain document preparation unavailable.');
+      }
+      _domainImportResource = prepared['resource'] as String;
+      _domainImportState = SourceBriefDomainImportState.prepared;
+      notifyListeners();
+      return true;
+    } catch (error) {
+      if (_isDomainImportCurrent(operation)) {
+        _failDomainImport(error, SourceBriefDomainImportState.preparing);
+      }
+      return false;
+    }
+  }
+
+  /// Applies the user-confirmed import using the same prepared resource, then
+  /// starts the source brief with a stable request identity.
+  Future<bool> confirmDomainDocument({String? businessQuestion}) async {
+    final file = _pendingDomainFile;
+    final provenance = _pendingDomainProvenance;
+    final resource = _domainImportResource;
+    if (_disposed ||
+        _busy ||
+        !canConfirmDomainImport ||
+        file == null ||
+        provenance == null ||
+        resource == null) {
+      return false;
+    }
+    final operation = ++_domainImportGeneration;
+    _domainImportState = SourceBriefDomainImportState.importing;
+    _domainImportError = null;
+    notifyListeners();
+    try {
+      final response = await client.importDomainDocument(
+        domainId: _domainId,
+        filename: file.filename,
+        bytes: file.bytes,
+        provenance: provenance,
+        mode: 'import',
+        confirmedResource: resource,
+      );
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (!_domainContextMatches) {
+        throw const LumenisCoreException(
+          'Domain context changed.',
+          statusCode: 409,
+        );
+      }
+      final imported = _domainImportPayload(response);
+      final sourceId = _safeIdentifier(imported['source_id']);
+      if (sourceId == null ||
+          imported['evidence_id'] is! int ||
+          imported['scope_status'] != 'VERIFIED') {
+        throw const FormatException('Domain import receipt unavailable.');
+      }
+      if (!_domainSourceIds.contains(sourceId)) _domainSourceIds.add(sourceId);
+      _pendingDomainFile = null;
+      _pendingDomainProvenance = null;
+      _domainImportResource = null;
+      _domainTaskRequestId = null;
+      _domainTaskQuestion = null;
+      _domainTaskSourceIds = null;
+      _domainTaskId = null;
+      _domainImportState = SourceBriefDomainImportState.imported;
+      notifyListeners();
+      return await _startImportedDomainBrief(
+        businessQuestion: businessQuestion,
+      );
+    } catch (error) {
+      if (_isDomainImportCurrent(operation)) {
+        _failDomainImport(error, SourceBriefDomainImportState.importing);
+      }
+      return false;
+    }
+  }
+
+  /// Continues an imported file's task using its original request id and
+  /// frozen source list; this never re-imports the document.
+  Future<bool> continueDomainBrief({String? businessQuestion}) async {
+    if (_disposed || _busy || !canContinueDomainBrief) return false;
+    if (_domainTaskId case final taskId?) {
+      await openTask(taskId);
+      if (_taskId == taskId && _errorKind == null) {
+        _domainImportState = SourceBriefDomainImportState.ready;
+        _domainImportError = null;
+        notifyListeners();
+        return true;
+      }
+      _domainImportState = SourceBriefDomainImportState.briefUnconfirmed;
+      _domainImportError = SourceBriefDomainImportError.unconfirmed;
+      notifyListeners();
+      return false;
+    }
+    return _startImportedDomainBrief(businessQuestion: businessQuestion);
+  }
+
+  Future<bool> _startImportedDomainBrief({String? businessQuestion}) async {
+    if (!_domainContextMatches || _domainSourceIds.isEmpty) {
+      _domainImportState = SourceBriefDomainImportState.failed;
+      _domainImportError = SourceBriefDomainImportError.contextChanged;
+      notifyListeners();
+      return false;
+    }
+    if (_domainTaskRequestId == null) {
+      _domainTaskRequestId =
+          'domain_materials_${DateTime.now().microsecondsSinceEpoch}';
+      _domainTaskQuestion = businessQuestion?.trim();
+      _domainTaskSourceIds = List.unmodifiable(_domainSourceIds);
+    }
+    final requestId = _domainTaskRequestId!;
+    final question = _domainTaskQuestion;
+    final sourceIds = _domainTaskSourceIds!;
+    final operation = ++_domainImportGeneration;
+    _domainImportState = SourceBriefDomainImportState.startingBrief;
+    _domainImportError = null;
+    notifyListeners();
+    try {
+      final response = await client.startDomainSourceBriefTask(
+        domainId: _domainId,
+        sourceIds: sourceIds,
+        requestId: requestId,
+        businessQuestion: question,
+      );
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (!_domainContextMatches) {
+        throw const LumenisCoreException(
+          'Domain context changed.',
+          statusCode: 409,
+        );
+      }
+      final task = _asMap(response['task']);
+      final taskId = _safeIdentifier(task?['task_id']);
+      if (response['ok'] != true || taskId == null) {
+        throw const FormatException('Source brief task start unconfirmed.');
+      }
+      _domainTaskId = taskId;
+      await openTask(taskId);
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (_taskId != taskId || _errorKind != null) {
+        _domainImportState = SourceBriefDomainImportState.briefUnconfirmed;
+        _domainImportError = SourceBriefDomainImportError.unconfirmed;
+        notifyListeners();
+        return false;
+      }
+      _domainImportState = SourceBriefDomainImportState.ready;
+      _domainImportError = null;
+      _domainTaskRequestId = null;
+      _domainTaskQuestion = null;
+      _domainTaskSourceIds = null;
+      notifyListeners();
+      return true;
+    } catch (error) {
+      if (_isDomainImportCurrent(operation)) {
+        _failDomainImport(error, SourceBriefDomainImportState.startingBrief);
+      }
+      return false;
+    }
+  }
+
+  Map<String, dynamic> _domainImportPayload(Map<String, dynamic> response) {
+    if (response['ok'] != true || response['result'] is! Map) {
+      throw const FormatException('Invalid domain import response.');
+    }
+    return Map<String, dynamic>.from(response['result'] as Map);
+  }
+
+  void _failDomainImport(Object error, SourceBriefDomainImportState stage) {
+    final status = error is LumenisCoreException ? error.statusCode : null;
+    if (status == 401 || status == 403) {
+      _clearDomainImport();
+      _domainImportError = SourceBriefDomainImportError.accessDenied;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return;
+    }
+    if (!_domainContextMatches) {
+      _domainImportError = SourceBriefDomainImportError.contextChanged;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return;
+    }
+    final rejected =
+        error is LumenisCoreException &&
+        const {400, 404, 410, 413, 415, 422}.contains(status);
+    if (stage != SourceBriefDomainImportState.startingBrief && rejected) {
+      _pendingDomainFile = null;
+      _pendingDomainProvenance = null;
+      _domainImportResource = null;
+    }
+    _domainImportError = stage == SourceBriefDomainImportState.startingBrief
+        ? rejected
+              ? SourceBriefDomainImportError.rejected
+              : SourceBriefDomainImportError.unconfirmed
+        : rejected
+        ? SourceBriefDomainImportError.rejected
+        : SourceBriefDomainImportError.unavailable;
+    _domainImportState = stage == SourceBriefDomainImportState.startingBrief
+        ? SourceBriefDomainImportState.briefUnconfirmed
+        : SourceBriefDomainImportState.failed;
+    notifyListeners();
+  }
+
+  bool get _domainCanImport =>
+      !_disposed &&
+      !_busy &&
+      _selection != null &&
+      !_selection!.globalScope &&
+      _scopeLabel != null;
+
+  bool get _domainContextMatches =>
+      _domainImportContext != null &&
+      _domainImportContext ==
+          _contextSignature(client.currentContextEnvelope) &&
+      _selection?.globalScope == false &&
+      _scopeLabel != null;
+
+  bool _isDomainImportCurrent(int generation) =>
+      !_disposed && generation == _domainImportGeneration;
+
+  bool _validDomainProvenance(Map<String, dynamic> value) {
+    final title = value['title'];
+    final rights = value['rights'];
+    final statement = value['rights_statement'];
+    final use = value['intended_use'];
+    final published = value['published_at'];
+    final captured = value['captured_at'];
+    final url = value['source_url'];
+    return title is String &&
+        title.trim().isNotEmpty &&
+        const {'public-reference-only', 'owner-approved'}.contains(rights) &&
+        statement is String &&
+        statement.trim().isNotEmpty &&
+        use == 'research_reference' &&
+        (url == null || url is String) &&
+        (published == null ||
+            published is String &&
+                _validDomainDate(published) &&
+                DateTime.tryParse(published) != null) &&
+        captured is String &&
+        _validDomainDate(captured) &&
+        DateTime.tryParse(captured) != null;
+  }
+
+  bool _validDomainDate(String value) =>
+      DateTime.tryParse(value) != null &&
+      RegExp(r'(Z|[+-]\d{2}:\d{2})$').hasMatch(value.trim());
+
+  bool _samePickedDocument(Sh02PickedDocument left, Sh02PickedDocument right) {
+    if (left.filename != right.filename ||
+        left.bytes.length != right.bytes.length) {
+      return false;
+    }
+    for (var index = 0; index < left.bytes.length; index++) {
+      if (left.bytes[index] != right.bytes[index]) return false;
+    }
+    return true;
+  }
+
+  void _clearDomainImport() {
+    _domainImportGeneration += 1;
+    _domainImportState = SourceBriefDomainImportState.idle;
+    _domainImportError = null;
+    _pendingDomainFile = null;
+    _pendingDomainProvenance = null;
+    _domainImportContext = null;
+    _domainImportResource = null;
+    _domainSourceIds.clear();
+    _domainTaskRequestId = null;
+    _domainTaskQuestion = null;
+    _domainTaskSourceIds = null;
+    _domainTaskId = null;
+  }
+
   Future<void> reopenJob(String jobId) async {
     if (_disposed) return;
     final operation = _beginOperation();
@@ -1664,6 +2048,9 @@ class SourceBriefViewModel extends ChangeNotifier {
     _generation += 1;
     _clearReportState();
     _clearSavedResearchHistory();
+    if (_domainImportState != SourceBriefDomainImportState.briefUnconfirmed) {
+      _clearDomainImport();
+    }
     _busy = false;
     _errorKind = null;
     _phase = _selection == null
@@ -2038,6 +2425,7 @@ class SourceBriefViewModel extends ChangeNotifier {
   void _forgetContext() {
     _clearReportState();
     _clearSavedResearchHistory();
+    _clearDomainImport();
     _selection = null;
     _scopeLabel = null;
   }
@@ -2083,6 +2471,7 @@ class SourceBriefViewModel extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _generation += 1;
+    _clearDomainImport();
     super.dispose();
   }
 }

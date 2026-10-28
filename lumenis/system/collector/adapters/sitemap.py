@@ -25,12 +25,23 @@ class SitemapAdapter(BasePlatformAdapter):
 
     def __init__(self, *, fetcher: Callable[[str], PublicResponse] | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._uses_public_transport = fetcher is None
         self.fetcher = fetcher or fetch_public_url
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
         sitemap_url = str(kwargs.get("sitemap_url") or keyword or "").strip()
         try:
-            response = self.fetcher(sitemap_url)
+            check_continue = kwargs.get("check_continue")
+            before_fetch = kwargs.get("before_fetch")
+            response = (
+                self.fetcher(
+                    sitemap_url, check_continue=check_continue, before_fetch=before_fetch,
+                )
+                if self._uses_public_transport and (
+                    check_continue is not None or before_fetch is not None
+                )
+                else self.fetcher(sitemap_url)
+            )
             root = ElementTree.fromstring(response.content)
             root_name = root.tag.rsplit("}", 1)[-1]
             if root_name not in {"sitemapindex", "urlset"}:

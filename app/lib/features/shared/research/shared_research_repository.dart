@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'dart:math';
+
+import 'package:flutter/foundation.dart';
+
 import '../../../core/lumenis_core_client.dart';
 
 Map<String, dynamic> researchMap(Object? value) {
@@ -290,4 +295,441 @@ class CoreSharedResearchRepository implements SharedResearchRepository {
     }
     return item;
   }
+}
+
+enum _ResearchPendingKind { start, save, revise }
+
+/// Owner-level task and saved-work state for Shared Research.
+///
+/// This keeps task identity, idempotency keys, readback, recovery, and version
+/// lineage outside any particular presentation. A surface can bind to this
+/// controller without becoming another research owner.
+final class SharedResearchController extends ChangeNotifier {
+  SharedResearchController({
+    required this.repository,
+    Map<String, String> sources = const {},
+  }) : sources = Map.unmodifiable(sources) {
+    _selectedSourceIds.addAll(sources.keys.take(100));
+  }
+
+  final SharedResearchRepository repository;
+  final Map<String, String> sources;
+  final Set<String> _selectedSourceIds = {};
+  final List<SharedResearchDocument> historyItems = [];
+  final List<SharedResearchTask> taskItems = [];
+  String question = '';
+  String title = '';
+  String markdown = '';
+
+  SharedResearchDocument? opened;
+  SharedResearchTask? task;
+  String? historyCursor;
+  String? taskCursor;
+  String? notice;
+  bool loading = false;
+  bool busy = false;
+  bool historyIncomplete = false;
+  bool editing = false;
+  int _generation = 0;
+  int _loadGeneration = 0;
+  bool _disposed = false;
+  Timer? _poll;
+  _PendingResearchOperation? _pending;
+
+  bool get hasPendingOperation => _pending != null;
+  Set<String> get selectedSourceIds => Set.unmodifiable(_selectedSourceIds);
+  bool get hasUnsavedEdits =>
+      opened != null &&
+      (title != opened!.title || markdown != opened!.markdown);
+
+  Future<void> loadInitial({String? artifactId}) async {
+    await load();
+    if (!_disposed && artifactId != null) await openDocument(artifactId);
+  }
+
+  Future<void> load({bool moreHistory = false, bool moreTasks = false}) async {
+    if (_disposed || busy || loading) return;
+    final generation = ++_loadGeneration;
+    loading = true;
+    notice = null;
+    _notify();
+    try {
+      final history = moreTasks
+          ? null
+          : await repository.history(
+              cursor: moreHistory ? historyCursor : null,
+            );
+      final tasks = moreHistory
+          ? null
+          : await repository.tasks(cursor: moreTasks ? taskCursor : null);
+      if (_isLoadStale(generation)) return;
+      if (history != null) {
+        if (moreHistory) {
+          historyItems.addAll(history.items);
+        } else {
+          historyItems
+            ..clear()
+            ..addAll(history.items);
+        }
+        historyCursor = history.cursor;
+        historyIncomplete = moreHistory
+            ? historyIncomplete || history.incomplete
+            : history.incomplete;
+      }
+      if (tasks != null) {
+        if (moreTasks) {
+          final known = taskItems.map((item) => item.id).toSet();
+          taskItems.addAll(tasks.items.where((item) => !known.contains(item.id)));
+        } else {
+          taskItems
+            ..clear()
+            ..addAll(tasks.items);
+        }
+        taskCursor = tasks.cursor;
+      }
+    } catch (error) {
+      if (!_isLoadStale(generation)) _handleError(error);
+    } finally {
+      if (!_isLoadStale(generation)) {
+        loading = false;
+        _notify();
+      }
+    }
+  }
+
+  void selectSource(String sourceId, bool selected) {
+    if (_disposed || busy || !sources.containsKey(sourceId)) return;
+    if (selected) {
+      if (_selectedSourceIds.length < 100) _selectedSourceIds.add(sourceId);
+    } else {
+      _selectedSourceIds.remove(sourceId);
+    }
+    _notify();
+  }
+
+  void updateQuestion(String value) {
+    if (_disposed || busy || _pending != null || value == question) return;
+    question = value;
+    _notify();
+  }
+
+  void editTitle(String value) {
+    if (_disposed || _pending != null || value == title) return;
+    title = value;
+    _notify();
+  }
+
+  void editMarkdown(String value) {
+    if (_disposed || _pending != null || value == markdown) return;
+    markdown = value;
+    _notify();
+  }
+
+  void setEditing(bool value) {
+    if (_disposed || busy || _pending != null || opened == null) return;
+    editing = value;
+    _notify();
+  }
+
+  Future<bool> start() async {
+    final prompt = question.trim();
+    if (_disposed ||
+        busy ||
+        _pending != null ||
+        prompt.length < 4 ||
+        _selectedSourceIds.isEmpty ||
+        hasUnsavedEdits) {
+      return false;
+    }
+    _poll?.cancel();
+    _generation++;
+    _pending = _PendingResearchOperation.start(
+      question: prompt,
+      sources: List.unmodifiable(_selectedSourceIds),
+      requestId: _requestId(),
+    );
+    await checkPendingOperation();
+    return _pending == null;
+  }
+
+  Future<bool> openDocument(
+    String artifactId, {
+    bool discardLocalEdits = false,
+  }) async {
+    if (_disposed || busy || _pending != null || artifactId.isEmpty) {
+      return false;
+    }
+    if (hasUnsavedEdits && !discardLocalEdits) return false;
+    final generation = ++_generation;
+    _poll?.cancel();
+    busy = true;
+    opened = null;
+    task = null;
+    title = '';
+    markdown = '';
+    editing = false;
+    notice = null;
+    _notify();
+    try {
+      final current = await repository.open(artifactId);
+      if (_isStale(generation) || current.id != artifactId) {
+        throw const FormatException('Wrong research version.');
+      }
+      _showDocument(current);
+      return true;
+    } catch (error) {
+      if (!_isStale(generation)) _handleError(error);
+      return false;
+    } finally {
+      if (!_isStale(generation)) {
+        busy = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<bool> readTask(
+    String taskId, {
+    bool resume = false,
+    bool select = false,
+    bool discardLocalEdits = false,
+  }) async {
+    if (_disposed || busy || _pending != null || taskId.isEmpty) return false;
+    if (select && hasUnsavedEdits && !discardLocalEdits) return false;
+    final generation = ++_generation;
+    busy = true;
+    notice = null;
+    if (select) _poll?.cancel();
+    _notify();
+    try {
+      final current = await repository.task(taskId, resume: resume);
+      if (_isStale(generation) || current.id != taskId) {
+        throw const FormatException('Wrong research task.');
+      }
+      _showTask(current);
+      return true;
+    } catch (error) {
+      if (!_isStale(generation)) _handleError(error);
+      return false;
+    } finally {
+      if (!_isStale(generation)) {
+        busy = false;
+        _notify();
+      }
+    }
+  }
+
+  Future<bool> saveResult() async {
+    final currentTask = task;
+    if (_disposed ||
+        busy ||
+        _pending != null ||
+        currentTask == null ||
+        currentTask.state != 'succeeded' ||
+        currentTask.markdown == null) {
+      return false;
+    }
+    _pending = _PendingResearchOperation.save(
+      task: currentTask,
+      requestId: _requestId(),
+    );
+    await checkPendingOperation();
+    return _pending == null;
+  }
+
+  Future<bool> reviseSaved() async {
+    final parent = opened;
+    final nextTitle = title.trim();
+    final nextMarkdown = markdown;
+    if (_disposed ||
+        busy ||
+        _pending != null ||
+        parent == null ||
+        !hasUnsavedEdits ||
+        nextTitle.isEmpty ||
+        nextMarkdown.trim().isEmpty) {
+      return false;
+    }
+    _pending = _PendingResearchOperation.revise(
+      parent: parent,
+      title: nextTitle,
+      markdown: nextMarkdown,
+      requestId: _requestId(),
+    );
+    await checkPendingOperation();
+    return _pending == null;
+  }
+
+  /// Replays the exact pending request with the same idempotency key after an
+  /// uncertain response. It never invents a new task or version identity.
+  Future<void> checkPendingOperation() async {
+    final operation = _pending;
+    if (_disposed || busy || operation == null) return;
+    busy = true;
+    notice = null;
+    _notify();
+    try {
+      switch (operation.kind) {
+        case _ResearchPendingKind.start:
+          final result = await repository.start(
+            operation.question!,
+            operation.sources!,
+            operation.requestId,
+          );
+          _showTask(result);
+        case _ResearchPendingKind.save:
+          final result = await repository.save(
+            operation.task!,
+            operation.requestId,
+          );
+          _showDocument(result);
+        case _ResearchPendingKind.revise:
+          final result = await repository.revise(
+            operation.parent!,
+            operation.title!,
+            operation.markdown!,
+            operation.requestId,
+          );
+          _showDocument(result);
+      }
+      if (!_disposed) _pending = null;
+    } catch (error) {
+      if (!_disposed) _handleError(error);
+    } finally {
+      if (!_disposed) {
+        busy = false;
+        _notify();
+      }
+    }
+    if (!_disposed && _pending == null) await load();
+  }
+
+  void _showDocument(SharedResearchDocument item) {
+    opened = item;
+    editing = false;
+    task = null;
+    title = item.title;
+    markdown = item.markdown;
+    notice = null;
+    _poll?.cancel();
+    _notify();
+  }
+
+  void _showTask(SharedResearchTask value) {
+    task = value;
+    editing = false;
+    final index = taskItems.indexWhere((item) => item.id == value.id);
+    if (index < 0) {
+      taskItems.insert(0, value);
+    } else {
+      taskItems[index] = value;
+    }
+    opened = null;
+    title = value.question;
+    markdown = value.markdown ?? '';
+    notice = null;
+    _poll?.cancel();
+    if (value.state == 'pending' || value.state == 'running') {
+      _poll = Timer(const Duration(seconds: 2), () {
+        unawaited(readTask(value.id));
+      });
+    }
+    _notify();
+  }
+
+  void _handleError(Object error) {
+    _poll?.cancel();
+    final restricted =
+        error is LumenisCoreException &&
+        const {401, 403, 404, 409, 410}.contains(error.statusCode);
+    if (restricted) {
+      _generation++;
+      opened = null;
+      task = null;
+      title = '';
+      markdown = '';
+      _pending = null;
+      historyItems.clear();
+      taskItems.clear();
+      notice = 'source_or_version_changed';
+    } else {
+      notice = 'result_unconfirmed';
+    }
+    _notify();
+  }
+
+  String _requestId() =>
+      'research_${DateTime.now().microsecondsSinceEpoch}_${Random.secure().nextInt(1 << 30)}';
+
+  bool _isStale(int generation) => _disposed || generation != _generation;
+
+  bool _isLoadStale(int generation) =>
+      _disposed || generation != _loadGeneration;
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _generation++;
+    _poll?.cancel();
+    super.dispose();
+  }
+}
+
+final class _PendingResearchOperation {
+  const _PendingResearchOperation._({
+    required this.kind,
+    required this.requestId,
+    this.question,
+    this.sources,
+    this.task,
+    this.parent,
+    this.title,
+    this.markdown,
+  });
+
+  factory _PendingResearchOperation.start({
+    required String question,
+    required List<String> sources,
+    required String requestId,
+  }) => _PendingResearchOperation._(
+    kind: _ResearchPendingKind.start,
+    question: question,
+    sources: sources,
+    requestId: requestId,
+  );
+
+  factory _PendingResearchOperation.save({
+    required SharedResearchTask task,
+    required String requestId,
+  }) => _PendingResearchOperation._(
+    kind: _ResearchPendingKind.save,
+    task: task,
+    requestId: requestId,
+  );
+
+  factory _PendingResearchOperation.revise({
+    required SharedResearchDocument parent,
+    required String title,
+    required String markdown,
+    required String requestId,
+  }) => _PendingResearchOperation._(
+    kind: _ResearchPendingKind.revise,
+    parent: parent,
+    title: title,
+    markdown: markdown,
+    requestId: requestId,
+  );
+
+  final _ResearchPendingKind kind;
+  final String requestId;
+  final String? question;
+  final List<String>? sources;
+  final SharedResearchTask? task;
+  final SharedResearchDocument? parent;
+  final String? title;
+  final String? markdown;
 }

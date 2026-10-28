@@ -350,26 +350,20 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
     assert last_metric["source_id"] == note[0] and last_metric["evidence_id"]
     assert fetches == [source_url] * 6
 
-    for blocked_url in (
-        "https://www.youtube.com/feeds/videos.xml?channel_id=blocked",
-        "https://m.youtube.com/feeds/videos.xml?channel_id=blocked",
+    for public_feed_url in (
+        "https://www.youtube.com/feeds/videos.xml?channel_id=fixture-channel-01",
+        "https://m.youtube.com/feeds/videos.xml?channel_id=fixture-channel-01",
     ):
-        try:
-            surface._prelaunch_public_import_resource(scope, blocked_url, platform="web_atom")
-        except ValueError:
-            pass
-        else:
-            raise AssertionError("YouTube Atom feeds must remain blocked pending authorized route")
-    blocked_fetches: list[str] = []
-    blocked = AtomAdapter(fetcher=lambda url: (
-        blocked_fetches.append(url) or PublicResponse(
+        assert surface._prelaunch_public_import_resource(scope, public_feed_url, platform="web_atom")
+    public_fetches: list[str] = []
+    public_feed = AtomAdapter(fetcher=lambda url: (
+        public_fetches.append(url) or PublicResponse(
             url=url, content=_feed(1234),
             content_type="application/atom+xml", status_code=200,
         )
-    )).search("https://www.youtube.com/feeds/videos.xml?channel_id=blocked")
-    assert blocked.status.value == "BLOCKED"
-    assert blocked.metadata["blocked_reason"] == "source_policy"
-    assert blocked_fetches == []
+    )).search("https://www.youtube.com/feeds/videos.xml?channel_id=fixture-channel-01")
+    assert public_feed.status.value == "SUCCESS"
+    assert len(public_fetches) == 1
     with sqlite3.connect(db_path) as conn:
         before_blocked_attempt = (
             conn.execute("SELECT COUNT(*) FROM app_evidence_records").fetchone()[0],
@@ -379,8 +373,7 @@ def test_prelaunch_atom_repeats_without_duplicate_evidence_or_metrics(tmp_path, 
         "web_atom", "https://www.youtube.com/feeds/videos.xml?channel_id=blocked",
         max_results=1,
     )
-    # The live Collector identity fence runs before source-policy evaluation;
-    # the adapter-level check above independently asserts the BLOCKED result.
+    # Public access does not grant a caller/Source import authorization.
     assert blocked_attempt["status"] == "AUTH_REQUIRED"
     with sqlite3.connect(db_path) as conn:
         after_blocked_attempt = (

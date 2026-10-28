@@ -71,22 +71,31 @@ entry-state fetch is not a prerequisite for the editor or host navigation.
 
 > 集中视觉规划输入（不替代本屏现行合同）：[对应草图](../../../00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md#acc-03)。本规范保留 Owner、调用、Permission、SourceUse、字段、效果、状态、恢复与验收合同。
 
-Use the existing wallpaper-aware Shell with its restrained brand and controls.
+Use the original wallpaper-aware workstation frame with separate botanical navigation,
+a thin pixel-aligned work surface and compact task controls. The gypsophila mark
+and all five assigned plants retain their current Experience roles. Pixel geometry
+aligns to physical pixels at fractional display scales; text remains normally
+rasterized for readability. Navigation hover/focus/selection feedback is reversible
+and bounded to 90 ms; reduced motion changes state immediately. The four work
+objects retain keyboard and screen-reader activation while using interruptible
+spring feedback. No plant or animation is a new product state or data claim.
 The main conversation occupies one comfortable reading width up to 940 logical
 pixels. With no selected conversation, a concise work prompt, input and direct
 business/research/creation actions form the opening workspace. With a conversation,
 show actual messages and their states with the input at the bottom. History is a
 reversible view, not a separate modal required before writing. No marketing hero,
 KPI cards, repeated product title or developer-status inspection CTA.
-Wide layouts provide the existing work routes in a persistent left rail. Narrow
-layouts keep the existing reversible navigation. Context inspectors are optional,
+Wide layouts provide the existing work routes in a horizontal navigation strip,
+with the work area using the available width instead of a permanent left rail.
+Narrow layouts keep reversible navigation. Context inspectors are optional,
 closed initially; readable content retains its space and current user appearance.
 
 Four compact destinations use a small original glyph and a concise label, with
 shared edges and visible focus/pressed state. They are navigation controls,
 not four descriptive cards. Show the actual last-opened page only when present.
-No permanent right-hand business inspector or duplicate AI panel. Below the input,
-real recent work uses readable title rows and fine separators rather than KPI tiles.
+No permanent right-hand business inspector or duplicate AI panel. On wide screens,
+real recent work and conversation history share a compact right column; on narrow
+screens recent work follows the input. Titles and fine separators replace KPI tiles.
 One Work appears at its current verified version; unverified/partial reads remain
 visible as incomplete. Refresh and cursor continuation are explicit. Failed or
 changed-client reads clear stale rows. The route cannot grant permission; each
@@ -173,7 +182,7 @@ USER-VISIBLE RESULT: usable draft/file or actual target screen. FAILURE/RECOVERY
 preserved text and honest independent service/read states. EVIDENCE: pinned source,
 tests and operated runtime. ACCEPTANCE ASSERTION: LIVE_NOT_VERIFIED until that
 exact artifact is mounted and used. COMMERCIAL OVERLAY IMPACT: no release claim.
-GLOBAL UNIVERSE / DATA MATURITY IMPACT: routing measures no market coverage;
+SUBJECT SCOPE / TASK DATA QUALITY IMPACT: routing measures no market coverage;
 Global Commercial, Global Brand and Guangzhou reference coverage stay separate.
 
 ## 10. Research and review
@@ -250,6 +259,6 @@ Owner's task-first correction; exact candidate/live acceptance remains separate.
 
 ## 2026-10-24 当前源码呈现接续（未提升验收状态）
 
-首页沿原 AI-01 会话与同一范围草稿，输入区是独立正视阅读纸层；四个直接工具保持同组入口，按Experience §23重绘像素植物图标与操作轮廓，进入研究、文稿、视频和播客。商业运营、品牌市场及资料分析保持直接可达；已保存工作仍按真实标题/种类/版本逐行呈现，刷新和分页不变。不添加说明卡、成绩或伪项目。宽屏正文不超过940逻辑像素；窄屏按实际宽度换行，长文和放大后保滚动。
+首页沿原AI-01会话与同一范围草稿，以舒展的工作输入区开始，顶部横向导航取代退役侧栏和通用卡片框架。资料、文稿、视频和播客保持同组直接入口，按Experience §23使用像素植物标识与操作轮廓；商业运营、品牌市场及资料分析保持直接可达。已保存工作按真实标题/种类/版本逐行呈现，宽屏置于输入区右侧并与实际会话历史分区，窄屏移到输入区之后；刷新和分页不变。不添加说明卡、成绩或伪项目。主输入与对话保持舒适阅读宽度，整体工作区利用宽屏；窄屏按实际宽度换行，长文和放大后保滚动。
 
 新增 Ctrl/Cmd+Enter 与发送按钮调用同一 `_send` 路径，仍仅在显式动作、非忙碌且无不明操作时发送；打开首页/草稿输入/导航不创建对话、不调用模型。来源、草稿冲突、重试与保存读回仍由原Owner决定。Web/Windows真实视觉、键盘及保存重开验收由本次整合运行单独记录，源码不代表 ACCEPTED。

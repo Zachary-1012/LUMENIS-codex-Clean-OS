@@ -31,6 +31,7 @@ class Sh04Export {
     required this.generatedAt,
     this.contractId = 'lumenis.saved-work',
     this.contractVersion = '1',
+    this.isLegacyVisualReport = false,
   });
 
   /// Used for API calls only. The screen must not render internal identifiers.
@@ -50,6 +51,7 @@ class Sh04Export {
   final String generatedAt;
   final String contractId;
   final String contractVersion;
+  final bool isLegacyVisualReport;
 
   bool get canReviseHere =>
       contractId == 'lumenis.saved-work' && contractVersion == '1';
@@ -144,6 +146,10 @@ class Sh04Export {
       generatedAt: createdAt,
       contractId: contract!['id'] as String,
       contractVersion: contract['version'] as String,
+      isLegacyVisualReport:
+          contract['id'] == 'lumenis.saved-work' &&
+          contract['version'] == '1' &&
+          _asMap(_asMap(document?['payload'])?['visual_document']) != null,
     );
   }
 }

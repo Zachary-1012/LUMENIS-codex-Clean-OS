@@ -14,6 +14,7 @@ import os
 import sys
 import json
 import re
+import subprocess
 
 import pytest
 
@@ -23,6 +24,36 @@ sys.path.insert(0, ROOT)
 
 import data_boundary as dbm                    # noqa: E402
 import runtime_preflight as rp                 # noqa: E402
+
+
+def test_sensitive_scan_accepts_git_confirmed_worktree_deletion(tmp_path, monkeypatch):
+    subprocess.run(["git", "init", str(tmp_path)], check=True, capture_output=True)
+    source = tmp_path / "retired.js"
+    source.write_text("const value = 1;\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "retired.js"], check=True)
+    source.unlink()
+    monkeypatch.setattr(rp, "ROOT_DIR", str(tmp_path))
+    result = rp.check_sensitive_tracked()
+    assert result["status"] == "pass"
+    assert result["meta"]["worktree_deleted"] == ["retired.js"]
+    assert result["meta"]["scanned_count"] == 0
+
+
+def test_sensitive_scan_unconfirmed_missing_source_still_blocks(tmp_path, monkeypatch):
+    monkeypatch.setattr(rp, "ROOT_DIR", str(tmp_path))
+    monkeypatch.setattr(dbm, "git_tracked_files", lambda root: ["missing.py"])
+    result = rp.check_sensitive_tracked()
+    assert result["status"] == "fail"
+    assert result["meta"]["unreadable"] == ["missing.py"]
+
+
+def test_sensitive_scan_unreadable_existing_source_still_blocks(tmp_path, monkeypatch):
+    (tmp_path / "unreadable.py").write_bytes(b"\xff\xfe\xff")
+    monkeypatch.setattr(rp, "ROOT_DIR", str(tmp_path))
+    monkeypatch.setattr(dbm, "git_tracked_files", lambda root: ["unreadable.py"])
+    result = rp.check_sensitive_tracked()
+    assert result["status"] == "fail"
+    assert result["meta"]["unreadable"] == ["unreadable.py"]
 
 
 # ------------------------------------------------------------------ 1) 脱敏

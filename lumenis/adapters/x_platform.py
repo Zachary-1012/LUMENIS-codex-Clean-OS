@@ -21,12 +21,13 @@ X (Twitter) 内容采集适配器
 import re
 import logging
 import os
-from datetime import datetime, timezone
-from urllib.parse import urlsplit
+from datetime import datetime
+from urllib.parse import quote, urlsplit
 
-from .base import BaseAdapter, AdapterResult, CollectedNote
+from .base import BaseAdapter, AdapterResult, CollectedNote, optional_int
 from .cookie_vault import inject_into_context, to_cookie_string
-from .human_browser import HumanBrowser
+from .human_browser import (HumanBrowser, NativeReadCapture, NativePageWindowError, native_page_window,
+                            native_read_scroll, validate_native_page_window_cursor)
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,6 @@ def _configured_browser_worker_url() -> str:
     if enabled not in {"1", "true", "yes"} or account != "X_READONLY":
         raise RuntimeError("X_WORKER_FAILURE:NOT_CONFIGURED")
 
-    from pathlib import Path
     from .cookie_vault import registered_session_data_dir
     import cdp_helper
 
@@ -154,16 +154,17 @@ class XAdapter(BaseAdapter):
         return frozenset(skip_tweet_ids)
 
     def search(self, keyword: str, max_results: int = 20, *,
-               skip_tweet_ids=None) -> AdapterResult:
+               skip_tweet_ids=None, cursor=None) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
         try:
             skip_tweet_ids = self._normalize_skip_tweet_ids(skip_tweet_ids)
         except ValueError as exc:
             return AdapterResult(success=False, error=str(exc))
-        return self._search_browser(
-            keyword, max_results, skip_tweet_ids=skip_tweet_ids,
-        )
+        result = self._native_read("search", keyword.strip(), max_results, cursor=cursor)
+        if skip_tweet_ids and result.success:
+            result.notes = [note for note in result.notes if note.raw_data.get("tweet_id") not in skip_tweet_ids]
+        return result
 
     def _search_browser(self, keyword: str, max_results: int, *,
                         skip_tweet_ids=None) -> AdapterResult:
@@ -667,6 +668,9 @@ class XAdapter(BaseAdapter):
         requested_tweet_id = self._status_id_from_url(url)
         if not requested_tweet_id:
             return AdapterResult(success=False, error="X detail requires the exact observed numeric post ID")
+        return self._native_read("detail", requested_tweet_id, 1)
+
+    def _detail_dom_observation(self, url, requested_tweet_id):
         worker, page, failure = self._open_readonly_page(url, 4.0)
         if failure:
             self._close_worker_page(worker, page)
@@ -706,18 +710,258 @@ class XAdapter(BaseAdapter):
         finally:
             self._close_worker_page(worker, page)
 
-    def comments(self, tweet_id: str, max_comments: int = 20) -> AdapterResult:
-        """Replies stay unavailable until parent relationships can be verified."""
-        return AdapterResult(
-            success=False,
-            error="X comments not supported: reply-to-post relationships cannot be verified from the current page",
-        )
+    def comments(self, tweet_id: str, max_comments: int = 20, *, cursor=None, include_replies=False) -> AdapterResult:
+        url = self._canonical_status_url(tweet_id)
+        target = self._status_id_from_url(url) if url else None
+        if not target:
+            return AdapterResult(success=False, error="X_PAGE_FAILURE:IDENTITY_MISMATCH")
+        return self._native_read("comments", target, max_comments, cursor=cursor, include_replies=include_replies)
+
+    @staticmethod
+    def _native_entries(value):
+        entries, terminated = [], False
+        def visit(node):
+            nonlocal terminated
+            if isinstance(node, dict):
+                if node.get("type") in {"TimelineTerminateTimeline", "TimelineTerminateInstruction"}:
+                    terminated = True
+                if isinstance(node.get("entries"), list):
+                    entries.extend(item for item in node["entries"] if isinstance(item, dict))
+                elif isinstance(node.get("entry"), dict):
+                    entries.append(node["entry"])
+                for key, child in node.items():
+                    if key not in {"entries", "entry", "quoted_status_result", "retweeted_status_result"}:
+                        visit(child)
+            elif isinstance(node, list):
+                for child in node:
+                    visit(child)
+        visit(value)
+        return entries, terminated
+
+    @classmethod
+    def _native_timeline(cls, value):
+        """Only timeline items; embedded quoted/reposted posts are not results."""
+        entries, terminated = cls._native_entries(value)
+        tweets, cursors = [], []
+        def item(content, entry_id):
+            if not isinstance(content, dict) or content.get("promotedMetadata"):
+                return
+            if content.get("cursorType") and isinstance(content.get("value"), str):
+                cursors.append({"cursor": content["value"], "kind": content["cursorType"], "entry_id": entry_id})
+            candidate = (content.get("tweet_results") or {}).get("result")
+            if isinstance(candidate, dict) and isinstance(candidate.get("tweet"), dict):
+                candidate = candidate["tweet"]
+            if isinstance(candidate, dict) and isinstance(candidate.get("legacy"), dict):
+                tweets.append(candidate)
+            for key in ("itemContent", "content", "item"):
+                if isinstance(content.get(key), dict):
+                    item(content[key], entry_id)
+            for child in content.get("items") or []:
+                if isinstance(child, dict):
+                    item(child, entry_id)
+        for entry in entries:
+            item(entry.get("content"), entry.get("entryId"))
+        return tweets, cursors, terminated, bool(entries)
+
+    @staticmethod
+    def _native_user(tweet):
+        user = ((tweet.get("core") or {}).get("user_results") or {}).get("result")
+        return user if isinstance(user, dict) else {}
+
+    def _native_note(self, tweet):
+        legacy = tweet.get("legacy") or {}
+        tid = tweet.get("rest_id") or legacy.get("id_str")
+        if not isinstance(tid, str) or not re.fullmatch(r"[1-9][0-9]{0,29}", tid):
+            return None
+        user = self._native_user(tweet)
+        profile = user.get("legacy") if isinstance(user.get("legacy"), dict) else {}
+        core = user.get("core") if isinstance(user.get("core"), dict) else {}
+        handle = core.get("screen_name") or profile.get("screen_name") or ""
+        name = core.get("name") or profile.get("name") or ""
+        long_form = ((tweet.get("note_tweet") or {}).get("note_tweet_results") or {}).get("result") or {}
+        text = long_form.get("text") if isinstance(long_form.get("text"), str) else legacy.get("full_text")
+        if not isinstance(text, str):
+            return None
+        published = ""
+        if isinstance(legacy.get("created_at"), str):
+            try: published = datetime.strptime(legacy["created_at"], "%a %b %d %H:%M:%S %z %Y").isoformat()
+            except ValueError: pass
+        hints = []
+        for media in (legacy.get("extended_entities") or legacy.get("entities") or {}).get("media") or []:
+            if not isinstance(media, dict):
+                continue
+            urls = [(media.get("media_url_https"), "image" if media.get("type") == "photo" else "video_cover", None)]
+            urls.extend((variant.get("url"), "video", variant.get("content_type")) for variant in
+                        (media.get("video_info") or {}).get("variants") or [] if isinstance(variant, dict))
+            for value, kind, mime in urls:
+                safe = self._sanitize_media_hint_url(value) if isinstance(value, str) else None
+                if safe:
+                    hints.append({"kind": kind, "url": safe, "native_media_id": str(media.get("id_str") or media.get("id") or "") or None,
+                                  "content_type": mime, "locator": "$.legacy.extended_entities.media[]", "bytes_state": "NOT_ACQUIRED"})
+        raw = {"engine": "x_native_timeline", "tweet_id": tid, "username": handle,
+               "native_user_id": user.get("rest_id"), "source_observation": {"rest_id": tid, "legacy": legacy,
+                    "note_tweet": tweet.get("note_tweet"), "user": {"rest_id": user.get("rest_id"), "legacy": profile, "core": core}},
+               "body_state": "PLATFORM_BODY" if long_form.get("text") or legacy.get("truncated") is False else "COMPLETENESS_NOT_OBSERVED",
+               "body_locator": "$.note_tweet.note_tweet_results.result.text" if long_form.get("text") else "$.legacy.full_text",
+               "native_time": legacy.get("created_at"), "parent_comment_id": legacy.get("in_reply_to_status_id_str"),
+               "conversation_id": legacy.get("conversation_id_str"), "media_hints": hints,
+               "metric_observations": {"views": optional_int((tweet.get("views") or {}).get("count"))}}
+        return CollectedNote(title=text[:100], content=text, url=f"https://x.com/i/status/{tid}", author=name,
+            author_id="@" + handle if handle else str(user.get("rest_id") or ""), publish_date=published,
+            likes=optional_int(legacy.get("favorite_count")), comments=optional_int(legacy.get("reply_count")),
+            collects=optional_int(legacy.get("bookmark_count")), shares=optional_int(legacy.get("retweet_count")),
+            cover=next((h["url"] for h in hints if h["kind"] in {"image", "video_cover"}), ""), source_platform="x", raw_data=raw)
+
+    def _native_read(self, capability, target, limit, *, cursor=None, include_replies=False):
+        if type(limit) is not int or not 1 <= limit <= 100:
+            return AdapterResult(success=False, error="X_NATIVE_PAGE_SIZE_INVALID")
+        try:
+            validate_native_page_window_cursor(cursor)
+        except NativePageWindowError:
+            return AdapterResult(success=False, error='X_NATIVE_CURSOR_WINDOW_INVALID')
+        if cursor is not None and (not isinstance(cursor, dict) or not {"cursor"} <= set(cursor) <= {"cursor", "kind", "entry_id", "item_offset", "page_sha256"}
+                or not isinstance(cursor["cursor"], str) or len(cursor["cursor"]) > 4096
+                or not cursor['cursor'] and 'item_offset' not in cursor
+                or any(ord(c) < 32 for c in cursor["cursor"])):
+            return AdapterResult(success=False, error="X_NATIVE_CURSOR_INVALID")
+        if capability in {"author_posts", "author"} and not re.fullmatch(r"[A-Za-z0-9_]{1,15}", target):
+            return AdapterResult(success=False, error="X_AUTHOR_ID_INVALID")
+        url = (f"https://x.com/search?q={quote(target)}&f=live" if capability == "search" else
+               f"https://x.com/i/status/{target}" if capability in {"detail", "comments"} else f"https://x.com/{target}")
+        operations = {"search": ("/SearchTimeline",), "comments": ("/TweetDetail",), "detail": ("/TweetDetail",),
+                      "author": ("/UserByScreenName",), "author_posts": ("/UserTweets", "/UserByScreenName")}[capability]
+        capture = NativeReadCapture(hosts={"x.com", "api.x.com", "twitter.com", "api.twitter.com"}, paths=operations,
+            request_keys={"cursor", "rawQuery", "focalTweetId", "tweetId", "userId", "screen_name", "count"})
+        worker, page = None, None
+        try:
+            worker = _new_browser_worker()
+            worker.connect()
+            inject_into_context(worker._context, "x")
+            page = worker.new_page(stealth=False)
+            capture.attach(page)
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(1200)
+            observed_users = {}
+            def select(observation):
+                request = observation["request"]
+                for obj in observation["objects"]:
+                    data = obj.get("data") if isinstance(obj, dict) else None
+                    if not isinstance(data, dict):
+                        continue
+                    user = ((data.get("user") or {}).get("result") or {})
+                    if isinstance(user, dict) and user.get("rest_id"):
+                        native_handle = (user.get("core") or {}).get("screen_name") or (user.get("legacy") or {}).get("screen_name")
+                        if isinstance(native_handle, str) and native_handle.casefold() == target.casefold():
+                            observed_users[str(user["rest_id"])] = user
+                            if capability == "author":
+                                return {"user": user}
+                    if capability == "author":
+                        continue
+                    if capability == "search" and request.get("rawQuery") != target:
+                        continue
+                    if capability in {"comments", "detail"} and str(request.get("focalTweetId") or request.get("tweetId") or "") != target:
+                        continue
+                    if capability == "author_posts" and request.get("userId") is None:
+                        continue
+                    if str(request.get("cursor") or "") != str((cursor or {}).get("cursor") or ""):
+                        continue
+                    tweets, cursors, terminated, timeline_seen = self._native_timeline(data)
+                    if timeline_seen or terminated:
+                        return {"tweets": tweets, "cursors": cursors, "terminated": terminated, "request": request}
+                return None
+            def advance(_step):
+                if _x_page_failure(str(page.url), title=page.title()):
+                    return False
+                if include_replies and capability == "comments":
+                    control = page.get_by_text(re.compile(r"^(?:Show|View|See) (?:more )?replies$|^显示更多回复$|^查看回复$", re.I)).first
+                    if control.count() and control.is_visible():
+                        control.click(timeout=3000)
+                        return True
+                return native_read_scroll(page)
+            selected = capture.seek(page, select, advance, max_steps=16)
+            if selected is None:
+                failure = capture.failure() or {}
+                code = failure.get("failure_class") or _x_page_failure(str(page.url), title=page.title()) or "NATIVE_PAGE_NOT_OBSERVED"
+                return AdapterResult(success=False, error="X_" + code, metadata={
+                    "failure_class": failure.get("failure_class"), "http_status": failure.get("http_status"),
+                    "retry_after_seconds": failure.get("retry_after_seconds"), "pagination": {
+                        "request_cursor": cursor, "next_cursor": None, "exhausted": None, "page_complete": False}})
+            if capability == "author":
+                user = selected["user"]
+                legacy = user.get("legacy") or {}
+                core = user.get("core") or {}
+                return AdapterResult(success=True, notes=[CollectedNote(title=core.get("name") or legacy.get("name") or "",
+                    content=legacy.get("description") or "", url=url, author_id="@" + target, author=core.get("name") or legacy.get("name") or "",
+                    source_platform="x", raw_data={"engine": "x_native_profile", "username": target, "native_user_id": user.get("rest_id"),
+                        "followers": optional_int(legacy.get("followers_count")), "following_count": optional_int(legacy.get("friends_count")),
+                        "content_count": optional_int(legacy.get("statuses_count")), "source_observation": {"legacy": legacy, "core": core, "rest_id": user.get("rest_id")},
+                        "native_author_aliases": [{"kind": "rest_id", "value": str(user["rest_id"])}, {"kind": "username", "value": target}]})], raw_count=1)
+            notes, seen = [], set()
+            for tweet in selected["tweets"]:
+                note = self._native_note(tweet)
+                if note is None or note.raw_data["tweet_id"] in seen:
+                    continue
+                tid = note.raw_data["tweet_id"]
+                if capability == "detail" and tid != target:
+                    continue
+                if capability == "comments":
+                    parent = note.raw_data.get("parent_comment_id")
+                    if tid == target or not parent or (parent != target and note.raw_data.get("conversation_id") != target):
+                        continue
+                    note.title = ""
+                    note.raw_data.update({"type": "comment", "platform_comment_id": tid, "parent_content_id": target,
+                                          "parent_comment_id": None if parent == target else parent, "reply_to_comment_id": None if parent == target else parent})
+                if capability == "author_posts":
+                    if note.raw_data.get("username", "").casefold() != target.casefold():
+                        continue
+                    request_id = str(selected["request"].get("userId") or "")
+                    if request_id != str(note.raw_data.get("native_user_id") or ""):
+                        return AdapterResult(success=False, error="X_AUTHOR_HISTORY_IDENTITY_MISMATCH")
+                    note.raw_data["author_history_binding"] = {"requested_id": target, "native_user_id": request_id}
+                seen.add(tid)
+                notes.append(note)
+            if capability == "detail" and len(notes) != 1:
+                return AdapterResult(success=False, error="X_PAGE_FAILURE:DETAIL_NOT_RETURNED")
+            if capability == "author_posts" and not notes and str(selected["request"].get("userId") or "") not in observed_users:
+                return AdapterResult(success=False, error="X_PAGE_FAILURE:IDENTITY_MISMATCH")
+            window = native_page_window(notes, limit=limit, cursor=cursor,
+                                        identities=[note.raw_data['tweet_id'] for note in notes])
+            complete = window['page_complete']
+            native_next = next((item for item in selected["cursors"] if item.get("kind") == "Bottom"), None)
+            if native_next and cursor and native_next["cursor"] == cursor["cursor"]:
+                native_next = None
+            base_cursor = {key: value for key, value in (cursor or {}).items() if key not in {'item_offset', 'page_sha256'}}
+            base_cursor.setdefault('cursor', '')
+            return AdapterResult(success=True, notes=window['rows'], raw_count=len(window['rows']), metadata={"pagination": {
+                "request_cursor": cursor, "next_cursor": native_next if complete else {**base_cursor, **window['next_window']},
+                "exhausted": False if not complete else True if selected["terminated"] and native_next is None else False if native_next else None,
+                "page_complete": complete, "native_thread_cursors": selected["cursors"] if capability == "comments" else [],
+                **{key: window[key] for key in ('window_start', 'window_end', 'observed_native_rows', 'page_sha256', 'page_identity_basis')},
+                "coverage_scope": "PROVIDER_VISIBLE_NATIVE_TIMELINE_PAGE", "resume_strategy": "OFFICIAL_PAGE_NATIVE_CURSOR_SEEK",
+                "observed_prior_native_responses": selected["observed_prior_native_responses"], "partial_reason": "REQUESTED_LIMIT_REACHED" if not complete else None}})
+        except NativePageWindowError as exc:
+            return AdapterResult(success=False, raw_count=None, error='X_' + str(exc), metadata={
+                'failure_class': str(exc), 'pagination': {'request_cursor': cursor, 'next_cursor': None,
+                    'exhausted': None, 'page_complete': False, 'resume_requires_fresh_page': True}})
+        except Exception as exc:
+            logger.warning("X native read failed error_type=%s", type(exc).__name__)
+            return AdapterResult(success=False, error=_x_failure_code(exc, phase="worker" if page is None else "page"))
+        finally:
+            capture.close()
+            self._close_worker_page(worker, page)
+
+    def author_posts(self, author_id, *, max_results=20, cursor=None, **kwargs):
+        return self._native_read("author_posts", str(author_id or "").lstrip("@"), max_results, cursor=cursor)
 
     def creator(self, username: str) -> AdapterResult:
         """Read a creator profile through the explicitly configured X worker."""
         handle = str(username or "").strip().lstrip("@")
         if not re.fullmatch(r"[A-Za-z0-9_]{1,15}", handle):
             return AdapterResult(success=False, error="X creator requires a valid handle")
+        return self._native_read("author", handle, 1)
+
+    def _creator_dom_observation(self, handle):
+        """Retained DOM field parser; native author identity owns admission."""
         url = f"https://x.com/{handle}"
         worker, page, failure = self._open_readonly_page(url, 4.0)
         if failure:

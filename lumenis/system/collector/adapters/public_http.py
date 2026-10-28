@@ -5,6 +5,7 @@ from io import StringIO
 import json
 import re
 import threading
+import time
 from datetime import datetime
 from typing import Any, Callable
 from urllib.parse import urljoin, urlsplit
@@ -13,7 +14,7 @@ from bs4 import BeautifulSoup, Comment, NavigableString
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
 from .public_source import (
-    PublicResponse, PublicSourceError, fetch_public_url,
+    PublicResponse, PublicSourceError, PublicSourceHTTPError, fetch_public_url,
     public_source_error_metadata, public_source_provenance,
 )
 from .registry import register_adapter
@@ -23,6 +24,7 @@ from ..guard.rate_limiter import AdaptiveRateLimiter
 MAX_PUBLIC_BODY_CHARS = 16_000
 MAX_PUBLIC_LOCATOR_CHARS = 512
 MAX_PUBLIC_LOCATOR_TOTAL_CHARS = 16_384
+MAX_PUBLIC_MEDIA_REFERENCES = 256
 _CONTENT_SELECTORS = (
     'article, [itemprop="articleBody"], .zw, [class*="-body-"], '
     '.float100, .content_article, .block-text-only .container-sm, main, [role="main"]'
@@ -321,6 +323,176 @@ def _publication_signals(soup: BeautifulSoup) -> tuple[str, str, str]:
     return value, source, "declared"
 
 
+def _public_dom_media(soup, selected_nodes, document_url, media_schema='public-http-dom-media/v2'):
+    """Retain media in the fetched DOM without resolving or fetching a hint."""
+    from .wechat import _public_media_hint_url
+    roots = selected_nodes or ([soup.body] if soup.body is not None else [])
+    base_url = document_url
+    base = soup.find('base', href=True)
+    if base is not None:
+        base_url = _public_media_hint_url(base.get('href'), document_url) or document_url
+    references, total, seen_elements = [], 0, set()
+
+    def add(tag, value, media_type, *, attribute, role='MEDIA_RESOURCE', descriptor=None):
+        nonlocal total
+        total += 1
+        if len(references) >= MAX_PUBLIC_MEDIA_REFERENCES:
+            return
+        observed = _public_media_hint_url(value, base_url)
+        reference = {
+            'media_type': media_type, 'native_tag': tag.name,
+            'url': observed if role in {'MEDIA_RESOURCE', 'COVER'} else None,
+            'url_role': role, 'native_locator': {'element': _node_locator(tag), 'attribute': attribute},
+            'observation_kind': 'NATIVE_DOM_MEDIA_REFERENCE', 'bytes_state': 'NOT_ACQUIRED',
+            'url_state': 'OBSERVED' if observed else 'NO_USABLE_PUBLIC_URL',
+        }
+        if descriptor is not None:
+            reference['native_locator']['srcset_descriptor'] = descriptor
+        if role == 'EMBED_PAGE':
+            reference['observed_page_url'] = observed
+            if media_schema == 'public-http-dom-media/v2' and observed:
+                parts = urlsplit(observed)
+                known_player = (parts.hostname in {'youtube.com','www.youtube.com','www.youtube-nocookie.com'}
+                                and parts.path.startswith('/embed/')
+                                or parts.hostname == 'player.vimeo.com' and parts.path.startswith('/video/')
+                                or parts.hostname == 'player.bilibili.com' and parts.path.startswith('/player'))
+                if known_player:
+                    reference.update(url=observed,media_type='video',
+                        acquisition={'extractor_key':'Generic','representation':'PLAYER_SOURCE','protocol':'https'})
+        elif role == 'TIMED_TEXT':
+            reference['observed_text_url'] = observed
+        if (media_schema == 'public-http-dom-media/v2' and reference['url']
+                and role == 'MEDIA_RESOURCE' and media_type in {'audio','video'}):
+            path = urlsplit(observed).path.lower()
+            declared_type = str(tag.get('type') or '').lower()
+            protocol = ('m3u8' if path.endswith('.m3u8') or declared_type in
+                        {'application/vnd.apple.mpegurl','application/x-mpegurl','audio/mpegurl'}
+                        else 'dash' if path.endswith('.mpd') or declared_type == 'application/dash+xml' else None)
+            if protocol:
+                reference['acquisition'] = {'extractor_key':'Generic','representation':'STREAM_MANIFEST','protocol':protocol}
+        reference['native_attributes'] = {key: str(tag[key])[:1000]
+            for key in ('id', 'alt', 'title', 'type', 'width', 'height', 'media', 'kind', 'srclang', 'label')
+            if isinstance(tag.get(key), str) and tag[key].strip()}
+        references.append(reference)
+
+    def primary(tag):
+        return next(((key, tag[key]) for key in ('data-src', 'data-original', 'data-lazy-src', 'src')
+                     if isinstance(tag.get(key), str) and tag[key].strip()), None)
+
+    def srcset(tag, media_type):
+        attribute = 'data-srcset' if tag.get('data-srcset') else 'srcset'
+        value = tag.get(attribute)
+        if not isinstance(value, str) or not value.strip():
+            return False
+        retained = False
+        cursor = 0
+        while cursor < len(value):
+            while cursor < len(value) and (value[cursor].isspace() or value[cursor] == ','):
+                cursor += 1
+            start = cursor
+            while cursor < len(value) and not value[cursor].isspace():
+                cursor += 1
+            token = value[start:cursor]
+            if not token:
+                break
+            trailing_separator = token.endswith(',')
+            url = token.rstrip(',')
+            descriptor = ''
+            if not trailing_separator:
+                start = cursor
+                while cursor < len(value) and value[cursor] != ',':
+                    cursor += 1
+                descriptor = value[start:cursor].strip()
+            if descriptor and re.fullmatch(
+                    r'(?:[1-9][0-9]*w|(?:[1-9][0-9]*(?:\.[0-9]+)?|0\.[0-9]*[1-9][0-9]*)x)', descriptor) is None:
+                continue
+            add(tag, url, media_type, attribute=attribute, descriptor=descriptor or None)
+            retained = True
+        return retained
+
+    def eligible(tag, root):
+        current = tag
+        while current is not None:
+            if (current.name in {'nav', 'header', 'footer', 'aside', 'form', 'template', 'noscript'}
+                    or _has_navigation_role(current) or current.get('hidden') is not None
+                    or str(current.get('aria-hidden') or '').lower() == 'true'):
+                return False
+            if current is root:
+                return True
+            current = current.parent
+        return False
+
+    for root in roots:
+        for tag in root.select('img, video, audio, iframe'):
+            if id(tag) in seen_elements or not eligible(tag, root):
+                continue
+            seen_elements.add(id(tag))
+            source = primary(tag)
+            if tag.name == 'img':
+                if source is not None:
+                    add(tag, source[1], 'image', attribute=source[0])
+                had_srcset = srcset(tag, 'image')
+                picture = tag.find_parent('picture')
+                if picture is not None:
+                    for picture_source in picture.select('source'):
+                        had_srcset = srcset(picture_source, 'image') or had_srcset
+                if source is None and not had_srcset:
+                    add(tag, None, 'image', attribute='src')
+            elif tag.name in {'video', 'audio'}:
+                if source is not None:
+                    add(tag, source[1], tag.name, attribute=source[0])
+                sources = tag.select('source')
+                for child in sources:
+                    candidate = primary(child)
+                    add(child, candidate[1] if candidate else None, tag.name,
+                        attribute=candidate[0] if candidate else 'src')
+                if source is None and not sources:
+                    add(tag, None, tag.name, attribute='src')
+                poster = tag.get('poster') or tag.get('data-cover')
+                if poster:
+                    add(tag, poster, 'image', attribute='poster', role='COVER')
+                for track in tag.select('track'):
+                    candidate = primary(track)
+                    add(track, candidate[1] if candidate else None, 'timed_text',
+                        attribute=candidate[0] if candidate else 'src', role='TIMED_TEXT')
+            else:
+                add(tag, source[1] if source else None, 'embed',
+                    attribute=source[0] if source else 'src', role='EMBED_PAGE')
+    return references, {
+        'schema': media_schema,
+        'scope': 'SELECTED_CONTENT_DOM' if selected_nodes else 'DOCUMENT_BODY_DOM',
+        'reference_count': total, 'retained_reference_count': len(references),
+        'omitted_reference_count': total - len(references),
+        'truncated': total > len(references), 'bytes_acquired': False,
+        'dynamic_content_executed': False, 'copyright_license': 'NOT_ESTABLISHED',
+    }
+
+
+def has_observed_media_source(item):
+    """A fetched media document may legitimately have no body text.
+
+    This projection grants no acquisition rights. The original reader first
+    recomputes the DOM fields from the retained HTTP response before using it.
+    """
+    raw=item.get('raw') or item.get('source_raw') or item
+    observation=raw.get('media_observation')
+    if (not isinstance(observation,dict) or observation.get('schema') not in {
+            'public-http-dom-media/v1','public-http-dom-media/v2'}
+            or observation.get('bytes_acquired') is not False):
+        return False
+    for media in raw.get('media_list') or []:
+        if (not isinstance(media,dict) or media.get('media_type') not in {'image','video','audio'}
+                or media.get('observation_kind')!='NATIVE_DOM_MEDIA_REFERENCE'
+                or media.get('url_role') not in {'MEDIA_RESOURCE','EMBED_PAGE'}):
+            continue
+        url=media.get('url')
+        if not isinstance(url,str):continue
+        parts=urlsplit(url)
+        if parts.scheme in {'http','https'} and parts.hostname and not parts.username and not parts.password:
+            return True
+    return False
+
+
 class PublicHttpAdapter(BasePlatformAdapter):
     """Keyless public HTML acquisition with an auditable normalized item."""
 
@@ -330,13 +502,15 @@ class PublicHttpAdapter(BasePlatformAdapter):
 
     def __init__(self, *, fetcher: Callable[[str], PublicResponse] | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self._uses_public_transport = fetcher is None
         self.fetcher = fetcher or fetch_public_url
 
     _document_lock = threading.Lock()
     _document_limiter = AdaptiveRateLimiter(jitter=False)
 
     def fetch_document(self, url: str, *, allowed_content_types: tuple[str, ...],
-                       before_fetch: Callable[[], None] | None = None) -> PublicResponse:
+                       before_fetch: Callable[[], None] | None = None,
+                       check_continue: Callable[[], None] | None = None) -> PublicResponse:
         """Retain one bounded document response through the shared safe transport.
 
         The caller owns registered-scope and effect admission. This method adds
@@ -344,29 +518,95 @@ class PublicHttpAdapter(BasePlatformAdapter):
         """
         if not allowed_content_types or not all(isinstance(v, str) for v in allowed_content_types):
             raise ValueError("document content types required")
+        if check_continue is not None and not callable(check_continue):
+            raise ValueError("document continuation check must be callable")
         # One process-wide original Collector limiter, not a fresh limiter per
         # request. Serialize wait+fetch so concurrent callers cannot burst.
         with self._document_lock:
             limiter = self._document_limiter
+            if check_continue is not None:
+                check_continue()
             if not limiter.can_run():
-                raise PublicSourceError("public document collector cooling down")
-            limiter.wait_slot()
+                error = PublicSourceError(
+                    "public document collector cooling down",
+                    reason_code="PUBLIC_SOURCE_LOCAL_COOLDOWN",
+                )
+                error.failure_type = "LOCAL_COOLDOWN"
+                error.retry_after_seconds = max(1, int(limiter.remaining_cooldown() + 0.999))
+                raise error
+
+            def is_cancelled() -> bool:
+                if check_continue is None:
+                    return False
+                try:
+                    check_continue()
+                except InterruptedError:
+                    return True
+                return False
+
+            def cancellable_sleep(seconds: float) -> None:
+                deadline = time.monotonic() + max(0.0, float(seconds))
+                while True:
+                    check_continue()
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return
+                    time.sleep(min(0.25, remaining))
+
+            try:
+                if check_continue is None:
+                    limiter.wait_slot()
+                else:
+                    limiter.wait_slot(sleep=cancellable_sleep, cancelled=is_cancelled)
+            except InterruptedError:
+                if check_continue is not None:
+                    check_continue()
+                raise
             if before_fetch is not None:
                 before_fetch()  # authorization may expire while waiting
+            if check_continue is not None:
+                check_continue()
             try:
-                response = self.fetcher(url)
+                response = (
+                    self.fetcher(
+                        url, check_continue=check_continue, before_fetch=before_fetch,
+                    )
+                    if self._uses_public_transport and (
+                        check_continue is not None or before_fetch is not None
+                    )
+                    else self.fetcher(url)
+                )
+                if (type(response) is PublicResponse
+                        and not 200 <= response.status_code < 300):
+                    raise PublicSourceHTTPError(response.status_code)
                 if (type(response) is not PublicResponse or not 200 <= response.status_code < 300
                         or response.content_type not in allowed_content_types
                         or not 0 < len(response.content) <= 2 * 1024 * 1024):
-                    raise PublicSourceError("unsupported or oversized public document response")
-            except Exception:
-                limiter.on_failure()
+                    raise PublicSourceError(
+                        "unsupported or oversized public document response",
+                        network_attempted=self._uses_public_transport and type(response) is PublicResponse,
+                    )
+            except (PermissionError, InterruptedError):
+                raise
+            except Exception as exc:
+                status_code = getattr(exc, "status_code", None)
+                retry_after = getattr(exc, "retry_after_seconds", None)
+                is_http_429 = (
+                    getattr(exc, "failure_type", None) == "HTTP_STATUS"
+                    and status_code == 429
+                )
+                limiter.on_failure(
+                    force_cooldown=is_http_429 and retry_after is None,
+                    retry_after=retry_after,
+                )
                 raise
             limiter.on_success()
             return response
 
     @staticmethod
-    def _item(response: PublicResponse) -> dict[str, Any]:
+    def _item(response: PublicResponse, *, media_schema='public-http-dom-media/v2') -> dict[str, Any]:
+        if media_schema not in {'public-http-dom-media/v1','public-http-dom-media/v2'}:
+            raise ValueError('PUBLIC_SOURCE_MEDIA_SCHEMA_UNSUPPORTED')
         soup = BeautifulSoup(response.content, "html.parser")
         canonical = soup.find("link", rel=lambda value: value and "canonical" in value)
         canonical_url = response.url
@@ -419,6 +659,9 @@ class PublicHttpAdapter(BasePlatformAdapter):
             completeness = "TRUNCATED_DOCUMENT_BODY" if truncated else "DOCUMENT_BODY_TEXT"
         else:
             completeness = "EMPTY"
+        media, media_observation = _public_dom_media(soup, selected_nodes, response.url,media_schema)
+        cover = next((entry['url'] for entry in media
+                      if entry['media_type'] == 'image' and entry['url']), None)
         published, date_source, date_state = _publication_signals(soup)
         item_id = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()[:32]
         return {
@@ -433,11 +676,30 @@ class PublicHttpAdapter(BasePlatformAdapter):
             "comments": None,
             "collects": None,
             "shares": None,
+            "cover": cover,
+            "media_list": media,
             "captured_at": datetime.now().isoformat(timespec="seconds"),
             "raw": {
                 "content_type": "text/html", "canonical_url": canonical_url,
                 "publication_date_source": date_source,
                 "publication_date_state": date_state,
+                "body_state": completeness,
+                "body_kind": ("SELECTED_SEMANTIC_DOM_TEXT" if selection == "semantic_blocks"
+                              else "DESCRIPTION_EXCERPT" if selection == "meta_description"
+                              else "DOCUMENT_BODY_TEXT" if selection == "document_body" else "NO_TEXT"),
+                "body_scope": {
+                    "representation": "NORMALIZED_TEXT_FROM_FETCHED_HTML",
+                    "selection": selection,
+                    "selected_dom_text_complete": not truncated and selection != "none",
+                    "returned_text_truncated": truncated,
+                    "whole_article_verified": False,
+                    "dynamic_content_executed": False,
+                    "description_is_original_body": False,
+                },
+                "cover": cover,
+                "media_list": media,
+                "media_hints": media,
+                "media_observation": media_observation,
                 "content_observation": {
                     "selection": selection,
                     "selected_locators": locators,
@@ -465,9 +727,20 @@ class PublicHttpAdapter(BasePlatformAdapter):
                 metadata={"healthcheck_scope": "source_input_required"},
             )
         try:
-            response = self.fetcher(target)
+            before_fetch = kwargs.get("before_fetch")
+            if before_fetch is not None and not callable(before_fetch):
+                raise ValueError("public document admission check must be callable")
+            check_continue = kwargs.get("check_continue")
+            if check_continue is not None and not callable(check_continue):
+                raise ValueError("public document continuation check must be callable")
+            response = self.fetch_document(
+                target,
+                allowed_content_types=("text/html", "application/xhtml+xml"),
+                before_fetch=before_fetch,
+                check_continue=check_continue,
+            )
             item = self._item(response)
-            if not item["content"].strip():
+            if not item["content"].strip() and not has_observed_media_source(item):
                 return CollectionResult(
                     status=CollectionStatus.PROVIDER_UNAVAILABLE,
                     platform=self.platform,
@@ -492,15 +765,58 @@ class PublicHttpAdapter(BasePlatformAdapter):
                     "collected_at": collected_at,
                     "publication_date_source": item["raw"]["publication_date_source"],
                     "publication_date_state": item["raw"]["publication_date_state"],
+                    "body_state": item["raw"]["body_state"],
+                    "body_scope": item["raw"]["body_scope"],
+                    "media_observation": item["raw"]["media_observation"],
+                    "source_representation": "MEDIA_DOCUMENT_WITHOUT_BODY_TEXT" if not item['content'].strip()
+                        else "OBSERVED_DOCUMENT_TEXT",
                     **public_source_provenance(response, target),
                 },
             )
+        except (PermissionError, InterruptedError):
+            # Caller-owned Permission and attempt fences must reach the
+            # Collector transaction unchanged; they are not provider errors.
+            raise
         except (PublicSourceError, ValueError) as exc:
+            metadata = {"provider": "public_http", **public_source_error_metadata(exc)}
+            if getattr(exc, "failure_type", None) == "LOCAL_COOLDOWN":
+                metadata.update(
+                    error_type="PUBLIC_DOCUMENT_COOLDOWN",
+                    retry_after_seconds=exc.retry_after_seconds,
+                    network_attempted=False,
+                )
+                return CollectionResult(
+                    status=CollectionStatus.COOLING_DOWN,
+                    platform=self.platform,
+                    message="公开来源处于本地冷却时间内，系统已暂缓请求",
+                    metadata=metadata,
+                )
+            status_code = getattr(exc, "status_code", None)
+            retry_after = getattr(exc, "retry_after_seconds", None)
+            is_retryable_http_wait = (
+                getattr(exc, "failure_type", None) == "HTTP_STATUS"
+                and (status_code == 429 or type(retry_after) is int and retry_after > 0)
+            )
+            if is_retryable_http_wait:
+                if type(retry_after) is not int or retry_after <= 0:
+                    retry_after = max(
+                        1, int(self._document_limiter.remaining_cooldown() + 0.999)
+                    )
+                metadata.update(
+                    retry_after_seconds=retry_after,
+                    network_attempted=True,
+                )
+                return CollectionResult(
+                    status=CollectionStatus.COOLING_DOWN,
+                    platform=self.platform,
+                    message="来源暂缓当前请求，系统会按来源给出的等待时间继续",
+                    metadata=metadata,
+                )
             return CollectionResult(
                 status=CollectionStatus.PROVIDER_UNAVAILABLE,
                 platform=self.platform,
                 message="当前公开页面暂时无法读取，请稍后重试",
-                metadata={"provider": "public_http", **public_source_error_metadata(exc)},
+                metadata=metadata,
             )
         except Exception as exc:
             return CollectionResult(
@@ -514,7 +830,7 @@ class PublicHttpAdapter(BasePlatformAdapter):
         target = str(kwargs.get("url") or content_id or "").strip()
         if not target.lower().startswith(("http://", "https://")):
             return CollectionResult(status=CollectionStatus.NOT_SUPPORTED, platform=self.platform, message="detail requires a public URL")
-        return self.search(target)
+        return self.search(target, **kwargs)
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         if not str(kwargs.get("url") or "").strip():

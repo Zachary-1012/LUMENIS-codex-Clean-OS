@@ -172,10 +172,24 @@ def _binding(monkeypatch, request=None, *, caller="actor-1", source_validator=_s
         None, owned_service.OwnedModelAdmissionRequest, _FakeVerifier,
     ))
     monkeypatch.setattr(owned_service, "_runtime_type", lambda: _FakeRuntime)
+    monkeypatch.setattr(owned_service, "_runtime_type_for_admission", lambda _request: _FakeRuntime)
     return owned_service.OwnedServiceBinding(
         admission_verifier=verifier, runtime=runtime,
         source_validator=source_validator, source_dependency_paths=(),
     ), runtime
+
+
+def test_v1_trained_runtime_admission_is_retired_but_keeps_typed_history(monkeypatch):
+    request = _admission_request()
+    monkeypatch.setattr(owned_service, "_security_contract", lambda: (
+        None, owned_service.OwnedModelAdmissionRequest, _FakeVerifier,
+    ))
+
+    with pytest.raises(owned_service.OwnedServiceBlocked, match="TRAINED_CUDA_RUNTIME_WITHDRAWN_BY_PO"):
+        owned_service._runtime_type_for_admission(request)
+
+    # The legacy request remains structurally readable for audit/revocation.
+    owned_service._validate_admission_request(request)
 
 
 def test_request_digest_is_exact_dataclass_payload_and_prompt_sensitive():
@@ -206,6 +220,8 @@ def test_typed_request_routes_only_after_explicit_hermetic_binding(monkeypatch):
 
     result = owned_service.run_owned_request(request)
     assert result["ok"] is True
+    assert len(result.get('attempt_id', '')) == len('attempt_') + 32
+    assert result['attempt_id'].startswith('attempt_')
     assert result["provider"] == "owned"
     assert result["analysis"] == {"answer": "grounded"}
     assert result["real_input_bound"] is True
@@ -218,6 +234,7 @@ def test_independent_shared_request_needs_its_own_scoped_binding(monkeypatch):
     request = _request(domain_id='shared', scope='shared_workspace:v1', operation='professional_creation')
     unavailable = owned_service.run_owned_request(request)
     assert unavailable['code'] == 'OWNED_SERVICE_EXECUTOR_NOT_BOUND'
+    assert 'attempt_id' not in unavailable
     business, business_runtime = _binding(monkeypatch)
     owned_service.bind_owned_service(business)
     assert owned_service.run_owned_request(request)['code'] == 'OWNED_SERVICE_EXECUTOR_NOT_BOUND'
@@ -242,10 +259,12 @@ def test_actor_and_cancel_mismatch_fail_without_generation(monkeypatch):
     actor_result = owned_service.run_owned_request(request)
     assert actor_result["ok"] is False
     assert actor_result["code"] == "OWNED_SERVICE_ACTOR_MISMATCH"
+    assert 'attempt_id' not in actor_result
     assert runtime.generated == 0
 
     cancelled = owned_service.run_owned_request(request, is_cancelled=lambda: True)
     assert cancelled["status"] == "CANCELLED"
+    assert 'attempt_id' not in cancelled
     assert runtime.generated == 0
 
 
@@ -289,6 +308,7 @@ def test_request_input_drift_invalidates_the_bound_runtime_result(monkeypatch):
     assert result["ok"] is False
     assert result["code"] == "OWNED_RUNTIME_RESULT_INVALID"
     assert result["request_digest"] == owned_service.owned_service_request_digest(changed)
+    assert result['attempt_id'].startswith('attempt_')
 
 
 def test_runtime_text_alias_drift_is_rejected(monkeypatch):
@@ -337,6 +357,7 @@ def test_in_generation_cancellation_maps_runtime_cancel_to_cancelled(monkeypatch
     assert result["ok"] is False
     assert result["status"] == "CANCELLED"
     assert result["code"] == "OWNED_INFERENCE_CANCELLED"
+    assert result['attempt_id'].startswith('attempt_')
     assert runtime.generated == 1
 
 
@@ -425,6 +446,16 @@ def test_domain_slot_status_requires_explicit_canonical_scope():
     assert core.owned_inference_status("zbmp")["reason"] == "OWNED_SERVICE_DOMAIN_INVALID"
 
 
+def test_gateway_observation_reports_each_real_domain_slot_reason():
+    status = core.owned_service_observation()
+
+    assert status["available"] is False
+    assert status["service_binding"] == "NOT_BOUND"
+    assert set(status["domains"]) == {"cth", "bmp", "shared"}
+    assert all(item["reason"] == "OWNED_SERVICE_EXECUTOR_NOT_BOUND"
+               and item["available"] is False for item in status["domains"].values())
+
+
 def test_status_reports_only_verified_bound_token_budget(monkeypatch):
     unavailable = owned_service.owned_service_status('cth')
     assert 'context_window_tokens' not in unavailable
@@ -441,6 +472,25 @@ def test_status_reports_only_verified_bound_token_budget(monkeypatch):
     revoked = owned_service.owned_service_status('cth')
     assert revoked['available'] is False
     assert 'context_window_tokens' not in revoked and 'output_token_limit' not in revoked
+
+
+def test_restart_recovery_rebinds_only_fresh_exact_slots_and_never_replays(monkeypatch):
+    binding, _runtime = _binding(monkeypatch)
+    result = owned_service.restore_owned_service_bindings(
+        lambda domain: binding if domain == "cth" else None,
+    )
+
+    assert result["automatic_replay"] is False
+    assert result["generation_probe_performed"] is False
+    assert result["domains"]["cth"]["state"] == "RESTORED"
+    assert result["domains"]["bmp"]["state"] == "NOT_CONFIGURED"
+    assert result["domains"]["shared"]["state"] == "NOT_CONFIGURED"
+    assert owned_service.owned_service_status("cth")["available"] is True
+
+
+def test_pretrained_restart_restore_cannot_be_called_without_an_owner_resolver():
+    with pytest.raises(TypeError):
+        core.restore_owned_pretrained_service_bindings()
 
 
 def test_measurement_validates_bound_source_and_budget_without_generation(monkeypatch):

@@ -189,7 +189,9 @@ def _post(client, path, body, identity=None):
 
 @pytest.fixture
 def phase_http(tmp_path, monkeypatch, strict_permission_mode):
-    seed = Path(os.environ["LUMENIS_TEST_SEED_DB"]).resolve()
+    seed_value = os.environ.get("LUMENIS_TEST_SEED_DB") or os.environ.get("ZBC_DB_PATH")
+    assert seed_value, "phase HTTP tests require the already-isolated pytest seed"
+    seed = Path(seed_value).resolve()
     assert seed.is_file()
     seed_before = hashlib.sha256(seed.read_bytes()).hexdigest()
     db_path = (tmp_path / "canonical-phase-http.sqlite3").resolve()
@@ -299,553 +301,144 @@ def _read(case, grant, task_id, nonce):
                                environ_overrides={"REMOTE_ADDR": "127.0.0.1"})
 
 
-def test_exact_grant_creates_one_sealed_v2_task_and_prepare_is_idempotent(phase_http):
-    case = phase_http
-    grant = case["grant"]()
-    first = _prepare_task(case, grant)
-    response = _post(case["client"], TASK_URL, case["body"], grant["identity"])
-    assert response.status_code == 200 and response.get_json()["task_id"] == first
-    tasks, steps = _task_rows(case["db"])
-    assert len(tasks) == 1 and steps == []
-    assert len(case["gate"]._approvals) == 1
-    context = json.loads(tasks[0]["context_json"])
-    assert context["managed_owner"] == TASK_OWNER and context["admission"]["schema_version"] == 2
-    assert context["next_sequence"] == 1 and context["last_receipt_sha256"] is None
+def _seed_legacy_history(case, grant):
+    """Seed a historical receipt in the existing isolated Task database only."""
+    from lumenis.system.security import training_receipts as receipt_owner
+
+    with case["app"].test_request_context(
+            "/", headers=_headers_for(grant["identity"]),
+            environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
+        typed, context, args, domain, binding, fingerprints, gate, fresh = runtime._owned_training_phase_material(
+            case["body"])
+        public_key = receipt_owner.get_training_receipt_public_key()
+        engine = ai_task_engine.get_task_engine()
+        with runtime._owned_training_phase_transaction() as (connection, commit):
+            _, reference = runtime._owned_training_phase_reference(
+                typed, context, args, domain, gate, fresh)
+            state = engine.create_training_receipt_task(
+                binding=binding, fingerprints=fingerprints, connection=connection,
+                approval_reference=reference, pinned_public_key=public_key)
+            runtime._commit_owned_training_phase(
+                connection, typed, context, args, domain, gate, fresh, reference,
+                task_id=state["task_id"], mutation="create", state=state, commit=commit)
+
+        task_id = state["task_id"]
+        with runtime._owned_training_phase_transaction() as (connection, commit):
+            _, reference = runtime._owned_training_phase_reference(
+                typed, context, args, domain, gate, fresh)
+            challenge = engine.prepare_training_phase_challenge(
+                task_id, binding, reference, public_key, "initial", connection)
+            state = engine.get_training_receipt_task(
+                task_id, expected_binding=binding, connection=connection)
+            runtime._commit_owned_training_phase(
+                connection, typed, context, args, domain, gate, fresh, reference,
+                task_id=task_id, mutation="challenge", state=state, commit=commit)
+
+        signed = receipt_owner.sign_training_phase_decision(challenge, "allow")
+        receipt_owner.verify_training_phase_decision(
+            signed, expected_challenge=challenge, pinned_public_key=public_key)
+        encoded = json.dumps(signed, ensure_ascii=False, sort_keys=True,
+                             separators=(",", ":"), allow_nan=False).encode("utf-8")
+        with runtime._owned_training_phase_transaction() as (connection, commit):
+            _, reference = runtime._owned_training_phase_reference(
+                typed, context, args, domain, gate, fresh)
+            state = engine.consume_training_phase_challenge(
+                task_id, expected_binding=binding, challenge=challenge,
+                receipt_sha256=hashlib.sha256(encoded).hexdigest(), decision="allow",
+                connection=connection, receipt=signed, expected_approval_reference=reference)
+            runtime._commit_owned_training_phase(
+                connection, typed, context, args, domain, gate, fresh, reference,
+                task_id=task_id, mutation="receipt", state=state, commit=commit)
+    return task_id, binding, challenge, signed
 
 
-def test_missing_exact_grant_and_wrong_scope_grant_create_no_durable_task(phase_http):
+def test_withdrawn_task_and_phase_routes_are_410_without_database_or_worker_effects(
+        phase_http, monkeypatch):
     case = phase_http
     before = _db_snapshot(case["db"])
-    no_grant = _post(case["client"], TASK_URL, case["body"])
-    assert no_grant.status_code in {403, 400}
+    attempted = []
+
+    def fail(name):
+        def forbidden(*_args, **_kwargs):
+            attempted.append(name)
+            raise AssertionError(f"withdrawn route attempted {name}")
+        return forbidden
+
+    task_id = "trainrelay_00000000-0000-4000-8000-000000000001"
+    with monkeypatch.context() as effects:
+        effects.setattr(ai_task_engine, "get_task_engine", fail("task-engine"))
+        effects.setattr(repository, "get_repository", fail("database"))
+        effects.setattr(sqlite3, "connect", fail("sqlite"))
+        effects.setattr(runtime, "_owned_training_phase_body", fail("phase-body"))
+        effects.setattr(runtime, "_owned_training_phase_material", fail("permission-material"))
+        for path, body in (
+            (TASK_URL, {}),
+            (CHALLENGE_URL.format(task_id=task_id), {}),
+            (DECISION_URL.format(task_id=task_id), {}),
+            (RESUME_URL.format(task_id=task_id), {}),
+        ):
+            response = _post(case["client"], path, body)
+            assert response.status_code == 410, (path, response.get_json())
+            assert response.get_json()["code"] == "GPU_TRAINING_WITHDRAWN_BY_PO"
+    assert attempted == []
     assert _db_snapshot(case["db"]) == before
-    wrong_resource = case["gate"].grant_approval(
-        p.OperationType.MODEL_TRAIN.value, resource="owned_training:v1:" + "f" * 64,
-        granted_by="wrong-scope-fixture")
-    wrong = _post(case["client"], TASK_URL, case["body"])
-    assert wrong.status_code in {403, 400}
-    assert _db_snapshot(case["db"]) == before
-    assert wrong_resource in case["gate"]._approvals
 
 
-def test_server_challenge_pending_replay_and_illegal_graph_transition_have_no_duplicate_step(phase_http):
+def test_historical_receipt_remains_read_only_and_non_authorizing(phase_http):
     case = phase_http
     grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    first = _prepare_challenge(case, grant, task_id, "initial")
-    assert first.status_code == 200, (first.get_json(), case["phase_errors"])
-    challenge = first.get_json()["challenge"]
-    assert challenge["phase"] == "initial" and challenge["sequence"] == 1
-    assert "nonce" not in case["last_challenge_request_payload"]
-    replay = _prepare_challenge(case, grant, task_id, "initial")
-    assert replay.status_code == 200 and replay.get_json()["challenge"] == challenge
+    task_id, _binding, challenge, signed = _seed_legacy_history(case, grant)
     before = _db_snapshot(case["db"])
-    illegal = _prepare_challenge(case, grant, task_id, "before_train")
-    assert illegal.status_code in {403, 409}
+
+    response = _read(case, grant, task_id, challenge["nonce"])
+    assert response.status_code == 200, response.get_json()
+    result = response.get_json()
+    assert result["receipt"] == signed and result["challenge"] == challenge
+    assert result["historical"] is True
+    assert result["authorization_usable"] is False
+    assert result["model_execution_claimed"] is False
     assert _db_snapshot(case["db"]) == before
-    tasks, steps = _task_rows(case["db"])
-    assert len(tasks) == 1 and len(steps) == 1
 
 
-@pytest.mark.parametrize("extra", ["actor_id", "principal", "approval_token", "binding", "authorization"])
-def test_client_cannot_supply_extra_authority_fields(phase_http, extra):
+def test_interrupt_stops_inflight_owner_and_preserves_historical_receipt(phase_http):
     case = phase_http
     grant = case["grant"]()
-    before = _db_snapshot(case["db"])
-    response = _post(case["client"], TASK_URL, {**case["body"], extra: "forged"}, grant["identity"])
-    assert response.status_code == 400
-    assert _db_snapshot(case["db"]) == before
+    task_id, binding, challenge, signed = _seed_legacy_history(case, grant)
+    calls = []
 
+    class RetainedWorker:
+        def stop_and_reap(self):
+            calls.append("stop-and-reap")
+            return {"state": "STOPPED_AND_REAPED", "task_id": task_id}
 
-@pytest.mark.parametrize("bad_body", [
-    b'{"training_request":{},"training_request":{},"scope_descriptors":{}}',
-    b'{"training_request":{"value":NaN},"scope_descriptors":{}}',
-    b" " * 65537,
-], ids=["duplicate-json-key", "nan-json", "oversized-body"])
-def test_duplicate_json_keys_nan_and_oversized_body_are_rejected_without_writes(phase_http, bad_body):
-    case = phase_http
-    grant = case["grant"]()
-    before = _db_snapshot(case["db"])
-    response = case["client"].post(
-        TASK_URL, headers={**_headers_for(grant["identity"]), "Content-Type": "application/json"},
-        data=bad_body, environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
-    )
-    assert response.status_code == 400
-    assert _db_snapshot(case["db"]) == before
+    assert task_id not in runtime._OWNED_TRAINING_PARENT_FENCES
+    runtime._OWNED_TRAINING_PARENT_FENCES[task_id] = {
+        "binding": binding, "worker": RetainedWorker(),
+    }
+    try:
+        response = _post(case["client"], INTERRUPT_URL.format(task_id=task_id),
+                         case["body"], grant["identity"])
+        assert response.status_code == 200, response.get_json()
+        result = response.get_json()
+        assert result["state"] == "PHASE_TASK_INTERRUPTED"
+        assert result["task"]["status"] == "unknown"
+        assert result["trainer_process_stopped"] is True
+        assert result["trainer_stop_receipt"]["state"] == "STOPPED_AND_REAPED"
+        assert result["model_execution_claimed"] is False
+        assert calls == ["stop-and-reap"]
+    finally:
+        runtime._OWNED_TRAINING_PARENT_FENCES.pop(task_id, None)
 
-
-def test_wrong_fingerprints_and_client_nonce_cannot_consume_server_challenge(phase_http):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    challenge_response = _prepare_challenge(case, grant, task_id)
-    challenge = challenge_response.get_json()["challenge"]
-    before = _db_snapshot(case["db"])
-    for field in ("request_sha256", "train_sha256", "scope_sha256"):
-        wrong = {**challenge, field: "f" * 64}
-        result = _issue(case, grant, task_id, wrong)
-        assert result.status_code in {400, 403, 409}
-        assert _db_snapshot(case["db"]) == before
-    client_nonce = {**challenge, "nonce": "e" * 64}
-    result = _issue(case, grant, task_id, client_nonce)
-    assert result.status_code in {400, 403, 409}
-    assert _db_snapshot(case["db"]) == before
-
-
-def test_real_signature_persists_once_and_lost_post_response_recovers_exact_history(phase_http, monkeypatch):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    challenge = _prepare_challenge(case, grant, task_id).get_json()["challenge"]
-    sign = receipts.sign_training_phase_decision
-    sign_calls = []
-
-    def observed_sign(*args, **kwargs):
-        sign_calls.append(1)
-        return sign(*args, **kwargs)
-
-    monkeypatch.setattr(receipts, "sign_training_phase_decision", observed_sign)
-    original_post = case["client"].post
-
-    class LostResponse(RuntimeError):
-        pass
-
-    def lose_after_server_commit(*args, **kwargs):
-        response = original_post(*args, **kwargs)
-        assert response.status_code == 200
-        raise LostResponse("client transport lost response after dispatch")
-
-    monkeypatch.setattr(case["client"], "post", lose_after_server_commit)
-    with pytest.raises(LostResponse):
-        _issue(case, grant, task_id, challenge)
-    monkeypatch.setattr(case["client"], "post", original_post)
-    recovered_post = _issue(case, grant, task_id, challenge)
-    assert recovered_post.status_code == 200
-    assert recovered_post.get_json()["state"] == "PHASE_RECEIPT_ALREADY_COMMITTED"
-    assert sign_calls == [1]
-    receipt = recovered_post.get_json()["receipt"]
-    receipts.verify_training_phase_decision(
-        receipt, expected_challenge=challenge,
-        pinned_public_key=case["initial_public_key"],
-    )
-    assert recovered_post.get_json()["model_execution_claimed"] is False
-    tasks, steps = _task_rows(case["db"])
-    assert len(tasks) == 1 and len(steps) == 1
-    context = json.loads(tasks[0]["context_json"])
-    assert context["next_sequence"] == 2 and context["admission"]["last_phase"] == "initial"
-    historical = _read(case, grant, task_id, challenge["nonce"])
-    assert historical.status_code == 200
-    historic_json = historical.get_json()
-    assert historic_json["receipt"] == receipt and historic_json["challenge"] == challenge
-    assert historic_json["historical"] is True and historic_json["authorization_usable"] is False
-    assert historic_json["model_execution_claimed"] is False
-
-
-def test_http_guards_allow_only_exact_five_post_handler_rules(phase_http):
-    case = phase_http
-    resolver = case["resolver"]
-    pairs = [
-        ("experience_runtime.prepare_owned_training_phase_task", TASK_URL),
-        ("experience_runtime.prepare_owned_training_phase_challenge",
-         TASK_URL + "/<task_id>/challenges"),
-        ("experience_runtime.issue_owned_training_phase_decision",
-         TASK_URL + "/<task_id>/challenge-decisions"),
-        ("experience_runtime.interrupt_owned_training_phase_task", TASK_URL + "/<task_id>/interrupt"),
-        ("experience_runtime.resume_owned_training_phase_task", TASK_URL + "/<task_id>/resume"),
-    ]
-    for endpoint, rule in pairs:
-        concrete = rule.replace("<task_id>", "trainrelay_00000000-0000-4000-8000-000000000001")
-        assert resolver(concrete, "POST") is p.OperationType.DB_WRITE
-        assert resolver(concrete + "/suffix", "POST") is p.OperationType.DB_WRITE
-        exact_app = Flask("exact-hook-check-" + endpoint.rsplit(".", 1)[-1])
-        _actual_app_guards(exact_app, case["gate"])
-        hit = []
-        exact_app.add_url_rule(rule, endpoint=endpoint,
-                               view_func=lambda **_kw: (hit.append("exact"), "ok")[1],
-                               methods=["POST"])
-        exact_path = concrete
-        exact = exact_app.test_client().post(
-            exact_path, environ_overrides={"REMOTE_ADDR": "127.0.0.1"})
-        assert exact.status_code == 200 and hit == ["exact"]
-
-    before = _db_snapshot(case["db"])
-    task_url = TASK_URL
-    suffix_app = Flask("suffix-hook-check")
-    _actual_app_guards(suffix_app, case["gate"])
-    suffix_app.add_url_rule(task_url + "/suffix", endpoint="experience_runtime.prepare_owned_training_phase_task",
-                            view_func=lambda: "should-not-run", methods=["POST"])
-    suffix = suffix_app.test_client().post(
-        task_url + "/suffix", environ_overrides={"REMOTE_ADDR": "127.0.0.1"})
-    assert suffix.status_code == 403
-    wrong_endpoint_app = Flask("endpoint-hook-check")
-    _actual_app_guards(wrong_endpoint_app, case["gate"])
-    wrong_endpoint_app.add_url_rule(task_url, endpoint="other.endpoint",
-                                    view_func=lambda: "should-not-run", methods=["POST"])
-    wrong_endpoint = wrong_endpoint_app.test_client().post(
-        task_url, environ_overrides={"REMOTE_ADDR": "127.0.0.1"})
-    assert wrong_endpoint.status_code == 403
-    assert _db_snapshot(case["db"]) == before
-
-
-def test_account_wrong_identity_deleted_session_and_revoked_module_scope_are_denied(phase_http):
-    case = phase_http
-    account_a = case["grant"]("account", actor_id=1)
-    task_id = _prepare_task(case, account_a)
-    account_b = case["grant"]("account", actor_id=2)
-    before = _db_snapshot(case["db"])
-    denied_wrong_account = _prepare_challenge(case, account_b, task_id)
-    assert denied_wrong_account.status_code in {403, 409}
-    assert _db_snapshot(case["db"]) == before
-
-    with sqlite3.connect(case["db"]) as conn:
-        conn.execute("DELETE FROM v4_member_authorizations WHERE user_id=1 AND module='owned_training'")
-    after_revoke = _db_snapshot(case["db"])
-    denied_scope = _prepare_challenge(case, account_a, task_id)
-    assert denied_scope.status_code in {400, 403}
-    assert _db_snapshot(case["db"]) == after_revoke
-
-    with sqlite3.connect(case["db"]) as conn:
-        conn.execute("INSERT INTO v4_member_authorizations(user_id,product_id,module,action,data_scope) "
-                     "VALUES(1,'CTH','owned_training','write',?)",
-                     (json.dumps({"global": True}),))
-        conn.execute("DELETE FROM v4_sessions WHERE token=?", (account_a["identity"][7:],))
-    after_delete = _db_snapshot(case["db"])
-    denied_session = _read(case, account_a, task_id, "a" * 64)
-    assert denied_session.status_code in {400, 401, 403}
-    assert _db_snapshot(case["db"]) == after_delete
-
-
-def test_forged_transport_and_closed_workspace_cannot_advance_task(phase_http):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    before = _db_snapshot(case["db"])
-    url = CHALLENGE_URL.format(task_id=task_id)
-    response = case["client"].post(
-        url, headers=_headers_for(None), json={**case["body"], "phase": "initial"},
-        environ_overrides={"REMOTE_ADDR": "192.0.2.8"},
-    )
-    assert response.status_code in {400, 401, 403}
-    assert _db_snapshot(case["db"]) == before
-
-    forwarded = case["client"].post(
-        url, headers={**_headers_for(None), "X-Forwarded-For": "127.0.0.1"},
-        json={**case["body"], "phase": "initial"},
-        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
-    )
-    assert forwarded.status_code in {400, 401, 403}
-    assert _db_snapshot(case["db"]) == before
-
-    forged = case["client"].post(
-        url, headers={**_headers_for(None), "X-Actor-ID": "1"},
-        json={**case["body"], "phase": "initial"},
-        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
-    )
-    assert forged.status_code in {400, 401, 403}
-    assert _db_snapshot(case["db"]) == before
-
-    case["app"].config["LUMENIS_OPEN_WORKSPACE"] = False
-    closed = _prepare_challenge(case, grant, task_id)
-    assert closed.status_code in {400, 401, 403}
-    assert _db_snapshot(case["db"]) == before
-
-
-@pytest.mark.parametrize("grant_change", ["revoke", "expire", "replace", "lost"])
-def test_revoked_expired_or_replaced_training_grant_denies_next_phase_without_writes(phase_http, grant_change):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    before = _db_snapshot(case["db"])
-    if grant_change in {"revoke", "replace"}:
-        assert case["gate"].revoke_approval(grant["approval_token"])
-    if grant_change == "lost":
-        case["gate"]._approvals.pop(grant["approval_token"])
-    if grant_change == "expire":
-        case["gate"]._approvals[grant["approval_token"]].expires_at = datetime.now() - timedelta(seconds=1)
-    if grant_change == "replace":
-        replacement = case["gate"].grant_approval(
-            p.OperationType.MODEL_TRAIN.value, resource=grant["resource"],
-            granted_by="replacement-approval-fixture")
-        assert replacement != grant["approval_token"]
-    before_attempt = _db_snapshot(case["db"])
-    denied = _prepare_challenge(case, grant, task_id)
-    assert denied.status_code in {403, 409}
-    assert _db_snapshot(case["db"]) == before_attempt
-    assert before["ai_task"] == before_attempt["ai_task"]
-
-
-def test_key_rotation_denies_new_challenge_but_preserves_historical_get_pin(phase_http, monkeypatch):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    challenge = _prepare_challenge(case, grant, task_id).get_json()["challenge"]
-    committed = _issue(case, grant, task_id, challenge)
-    assert committed.status_code == 200
-    old_receipt = committed.get_json()["receipt"]
-    old_pin = case["initial_public_key"]
-    new_id = "rotated-" + uuid.uuid4().hex[:12]
-    new_private = Ed25519PrivateKey.generate().private_bytes(
-        encoding=serialization.Encoding.Raw, format=serialization.PrivateFormat.Raw,
-        encryption_algorithm=serialization.NoEncryption(),
-    )
-    import base64
-    monkeypatch.setenv("LUMENIS_TRAINING_RECEIPT_KEY_RING", json.dumps({
-        new_id: base64.b64encode(new_private).decode("ascii")
-    }))
-    monkeypatch.setenv("LUMENIS_TRAINING_RECEIPT_ACTIVE_KEY_ID", new_id)
-    before = _db_snapshot(case["db"])
-    denied = _prepare_challenge(case, grant, task_id, "before_output_dir")
-    assert denied.status_code in {403, 409, 503}
-    assert _db_snapshot(case["db"]) == before
-    historical = _read(case, grant, task_id, challenge["nonce"])
-    assert historical.status_code == 200
-    assert historical.get_json()["receipt"] == old_receipt
-    assert historical.get_json()["pinned_public_key"] == old_pin
-    assert historical.get_json()["authorization_usable"] is False
-
-
-def test_interrupt_resume_preserves_history_and_requires_fresh_epoch(phase_http):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    first_challenge = _prepare_challenge(case, grant, task_id).get_json()["challenge"]
-    committed = _issue(case, grant, task_id, first_challenge)
-    assert committed.status_code == 200
-    old_receipt = committed.get_json()["receipt"]
-    before_context = json.loads(_task_rows(case["db"])[0][0]["context_json"])
-
-    interrupted = _post(case["client"], INTERRUPT_URL.format(task_id=task_id),
-                        case["body"], grant["identity"])
-    assert interrupted.status_code == 200, interrupted.get_json()
-    assert interrupted.get_json()["task"]["status"] == "unknown"
-    assert interrupted.get_json()["trainer_process_stopped"] is False
-    assert interrupted.get_json()["model_execution_claimed"] is False
-    interrupted_context = json.loads(_task_rows(case["db"])[0][0]["context_json"])
-    assert interrupted_context["next_sequence"] == 2
-    assert interrupted_context["last_receipt_sha256"] == before_context["last_receipt_sha256"]
-
+    before_resume = _db_snapshot(case["db"])
     resumed = _post(case["client"], RESUME_URL.format(task_id=task_id),
                     case["body"], grant["identity"])
-    assert resumed.status_code == 200, resumed.get_json()
-    assert resumed.get_json()["model_execution_claimed"] is False
-    resumed_context = json.loads(_task_rows(case["db"])[0][0]["context_json"])
-    assert resumed_context["run_digest"] != before_context["run_digest"]
-    assert resumed_context["next_sequence"] == 2
-    assert resumed_context["admission"]["last_phase"] == before_context["admission"]["last_phase"] == "initial"
+    assert resumed.status_code == 410
+    assert resumed.get_json()["code"] == "GPU_TRAINING_WITHDRAWN_BY_PO"
+    assert _db_snapshot(case["db"]) == before_resume
 
-    old_replay = _issue(case, grant, task_id, first_challenge)
-    assert old_replay.status_code == 200
-    assert old_replay.get_json()["state"] == "PHASE_RECEIPT_ALREADY_COMMITTED"
-    assert old_replay.get_json()["receipt"] == old_receipt
-    assert old_replay.get_json()["authorization_usable"] is False
-    assert old_replay.get_json()["model_execution_claimed"] is False
-    new_challenge_response = _prepare_challenge(case, grant, task_id, "before_output_dir")
-    assert new_challenge_response.status_code == 200
-    new_challenge = new_challenge_response.get_json()["challenge"]
-    assert new_challenge["phase"] == "before_output_dir"
-    assert new_challenge["sequence"] == 2 and new_challenge["run_digest"] != first_challenge["run_digest"]
-
-
-def test_history_get_remains_historical_after_challenge_expiry(phase_http, monkeypatch):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    challenge = _prepare_challenge(case, grant, task_id).get_json()["challenge"]
-    committed = _issue(case, grant, task_id, challenge)
-    assert committed.status_code == 200
-    receipt = committed.get_json()["receipt"]
-    class ExpiredClock:
-        @staticmethod
-        def time():
-            return challenge["expires_at"] + 1
-    monkeypatch.setattr(receipts, "time", ExpiredClock)
-    historical = _read(case, grant, task_id, challenge["nonce"])
-    assert historical.status_code == 200
-    result = historical.get_json()
-    assert result["receipt"] == receipt
-    assert result["historical"] is True and result["authorization_usable"] is False
-    assert result["model_execution_claimed"] is False
-
-
-def test_revoke_between_fence_and_real_commit_lease_rolls_back_all_staged_rows(phase_http, monkeypatch):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    challenge = _prepare_challenge(case, grant, task_id).get_json()["challenge"]
-    before = _db_snapshot(case["db"])
-    before_tasks, before_steps = _task_rows(case["db"])
-    assert len(before_tasks) == 1 and len(before_steps) == 1 and before_steps[0]["status"] == "pending"
-    gate = case["gate"]
-    original = type(gate).owned_training_phase_commit_lease
-    calls = []
-    fence = __import__("lumenis.system.security.effect_fence", fromlist=["EffectFence"])
-    original_fence = fence.EffectFence.authorize_training_phase_metadata
-
-    def observe_real_fence(self, **kwargs):
-        decision = original_fence(self, **kwargs)
-        calls.append(("fence", decision.allowed))
-        return decision
-
-    monkeypatch.setattr(fence.EffectFence, "authorize_training_phase_metadata", observe_real_fence)
-
-    @contextmanager
-    def revoke_before_real_lease(self, *args, **kwargs):
-        calls.append(("lease-enter", None))
-        assert self is gate
-        assert self.revoke_approval(grant["approval_token"])
-        with original(self, *args, **kwargs):
-            yield
-
-    monkeypatch.setattr(type(gate), "owned_training_phase_commit_lease", revoke_before_real_lease)
-    denied = _issue(case, grant, task_id, challenge)
-    assert calls == [("fence", True), ("lease-enter", None)]
-    assert denied.status_code == 403
-    assert _db_snapshot(case["db"]) == before
-    tasks, steps = _task_rows(case["db"])
-    assert tasks == before_tasks and steps == before_steps
-
-
-def test_effect_fence_and_real_lease_precede_one_canonical_commit(phase_http, monkeypatch):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    original_connection = repository.DatabaseRepository.connection
-    statements = []
-    events = []
-
-    @contextmanager
-    def traced_connection(self, **kwargs):
-        with original_connection(self, **kwargs) as conn:
-            conn.set_trace_callback(lambda sql: statements.append(sql.strip().upper()))
-            yield conn
-
-    monkeypatch.setattr(repository.DatabaseRepository, "connection", traced_connection)
-    fence = __import__("lumenis.system.security.effect_fence", fromlist=["get_effect_fence"])
-    original_fence = fence.EffectFence.authorize_training_phase_metadata
-
-    def traced_fence(self, **kwargs):
-        result = original_fence(self, **kwargs)
-        events.append(("fence", result.allowed))
-        return result
-
-    monkeypatch.setattr(fence.EffectFence, "authorize_training_phase_metadata", traced_fence)
-    gate = case["gate"]
-    original_lease = type(gate).owned_training_phase_commit_lease
-
-    @contextmanager
-    def traced_lease(self, *args, **kwargs):
-        events.append(("lease-enter", None))
-        with original_lease(self, *args, **kwargs):
-            yield
-        events.append(("lease-exit", None))
-
-    monkeypatch.setattr(type(gate), "owned_training_phase_commit_lease", traced_lease)
-    result = _prepare_challenge(case, grant, task_id)
-    assert result.status_code == 200, result.get_json()
-    assert events == [("fence", True), ("lease-enter", None), ("lease-exit", None)]
-    commits = [sql for sql in statements if sql == "COMMIT"]
-    assert len(commits) == 1
-    assert any(sql.startswith("BEGIN IMMEDIATE") for sql in statements)
-
-
-def test_task_owner_injected_unrelated_same_connection_write_is_rolled_back(phase_http, monkeypatch):
-    """Regression probe: the metadata Fence must bound all writes in its transaction."""
-    case = phase_http
-    grant = case["grant"]()
-    with sqlite3.connect(case["db"]) as conn:
-        conn.execute("CREATE TABLE unowned_effect_probe(value TEXT NOT NULL)")
-    before = _db_snapshot(case["db"])
-    original = ai_task_engine.TaskEngine.create_training_receipt_task
-
-    def inject_unrelated_write(self, *args, **kwargs):
-        connection = kwargs["connection"]
-        connection.execute("INSERT INTO unowned_effect_probe(value) VALUES('must-rollback')")
-        return original(self, *args, **kwargs)
-
-    monkeypatch.setattr(ai_task_engine.TaskEngine, "create_training_receipt_task", inject_unrelated_write)
-    response = _post(case["client"], TASK_URL, case["body"], grant["identity"])
-    after = _db_snapshot(case["db"])
-    assert after == before, "unrelated SQL on the canonical metadata transaction was committed"
-    assert response.status_code in {400, 403, 409}
-    assert any("OWNED_TRAINING_PHASE_TRANSACTION_EFFECT_DENIED" in error
-               for error in case["phase_errors"])
-
-
-def test_task_owner_premature_commit_is_denied_and_rolls_back(phase_http, monkeypatch):
-    """The Task owner cannot commit before Fence and the live Gate lease."""
-    case = phase_http
-    grant = case["grant"]()
-    before = _db_snapshot(case["db"])
-    original = ai_task_engine.TaskEngine.create_training_receipt_task
-
-    def attempt_premature_commit(self, *args, **kwargs):
-        kwargs["connection"].commit()
-        return original(self, *args, **kwargs)
-
-    monkeypatch.setattr(ai_task_engine.TaskEngine, "create_training_receipt_task", attempt_premature_commit)
-    response = _post(case["client"], TASK_URL, case["body"], grant["identity"])
-    assert response.status_code in {400, 403, 409}
-    assert _db_snapshot(case["db"]) == before
-    assert any("OWNED_TRAINING_PHASE_TRANSACTION_EFFECT_DENIED" in error
-               for error in case["phase_errors"])
-
-
-def test_unrecognized_task_owner_savepoint_is_denied_and_rolled_back(phase_http, monkeypatch):
-    """The transaction permits only the sealed savepoint names used by TaskEngine."""
-    case = phase_http
-    grant = case["grant"]()
-    before = _db_snapshot(case["db"])
-    original = ai_task_engine.TaskEngine.create_training_receipt_task
-
-    def attempt_unrecognized_savepoint(self, *args, **kwargs):
-        kwargs["connection"].execute("SAVEPOINT unrecognized_task_effect")
-        return original(self, *args, **kwargs)
-
-    monkeypatch.setattr(ai_task_engine.TaskEngine, "create_training_receipt_task", attempt_unrecognized_savepoint)
-    response = _post(case["client"], TASK_URL, case["body"], grant["identity"])
-    assert response.status_code in {400, 403, 409}
-    assert _db_snapshot(case["db"]) == before
-    assert any("OWNED_TRAINING_PHASE_TRANSACTION_EFFECT_DENIED" in error
-               for error in case["phase_errors"])
-
-
-def test_rejected_commit_lease_has_no_committed_effect_audit_semantics(phase_http, monkeypatch):
-    case = phase_http
-    grant = case["grant"]()
-    task_id = _prepare_task(case, grant)
-    challenge = _prepare_challenge(case, grant, task_id).get_json()["challenge"]
-    gate = case["gate"]
-    prior_ids = {row["audit_id"] for row in gate.get_audit_log(limit=10000)}
-    original = type(gate).owned_training_phase_commit_lease
-
-    @contextmanager
-    def revoke_before_real_lease(self, *args, **kwargs):
-        assert self.revoke_approval(grant["approval_token"])
-        with original(self, *args, **kwargs):
-            yield
-
-    monkeypatch.setattr(type(gate), "owned_training_phase_commit_lease", revoke_before_real_lease)
-    denied = _issue(case, grant, task_id, challenge)
-    assert denied.status_code == 403
-    new_audits = [row for row in gate.get_audit_log(limit=10000) if row["audit_id"] not in prior_ids]
-    committed_claims = [row for row in new_audits
-                        if row.get("operation_type") == "owned_training_phase_metadata_fence"
-                        and ("COMMIT_VERIFIED" in row.get("reason", "")
-                             or row.get("result") in {"committed", "executed"})]
-    assert committed_claims == [], "failed lease left an audit record that implies a committed effect"
-    admission_audits = [row for row in new_audits
-                        if row.get("operation_type") == "owned_training_phase_metadata_fence"
-                        and row.get("reason") == "OWNED_TRAINING_PHASE_METADATA_ADMITTED_NOT_COMMITTED"]
-    assert len(admission_audits) == 1, "Fence audit must describe admission, not a committed effect"
-
-
-def test_explicit_global_training_write_does_not_open_generic_production_truth_write(phase_http):
-    case = phase_http
-    task_id = _prepare_task(case, case["grant"]())
-    assert task_id.startswith("trainrelay_")
-    fence = __import__("lumenis.system.security.effect_fence", fromlist=["get_effect_fence"])
-    from lumenis.system.security.effect_fence import AgentAction
-    denied = fence.get_effect_fence().check(
-        action=AgentAction.WRITE, target="production_truth:unrelated", payload={"operation": "write"},
-    )
-    assert denied.allowed is False
+    history = _read(case, grant, task_id, challenge["nonce"])
+    assert history.status_code == 200
+    assert history.get_json()["receipt"] == signed
+    assert history.get_json()["historical"] is True
+    assert history.get_json()["authorization_usable"] is False
+    assert history.get_json()["task"]["status"] == "unknown"

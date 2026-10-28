@@ -11,6 +11,7 @@ only Evidence/Canonical write boundary.
 import hashlib
 import ipaddress
 import json
+import math
 import os
 import re
 import socket
@@ -18,6 +19,9 @@ from collections import OrderedDict
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
+from pathlib import Path
+import time
 from typing import Iterable
 from urllib.parse import urljoin, urlparse, urlsplit, urlunsplit
 
@@ -29,6 +33,7 @@ from .platform_naming import normalize_platform
 
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MAX_MEDIA_RESPONSE_BYTES = 500 * 1024 * 1024
 MAX_REDIRECTS = 3
 PUBLIC_SCHEMES = {"http", "https"}
 USER_AGENT = "LUMENIS-Public-Collector/1.0 (+read-only; evidence-bound)"
@@ -48,6 +53,110 @@ POST_COVER_MEDIA_HOSTS: dict[str, tuple[str, ...]] = {
 class PublicSourceError(RuntimeError):
     """A public-source request was rejected or could not be read safely."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        network_attempted: bool = False,
+        reason_code: str = "PUBLIC_SOURCE_UNAVAILABLE",
+    ):
+        if (not isinstance(reason_code, str)
+                or reason_code not in _PUBLIC_SOURCE_RECOVERY_ACTIONS):
+            reason_code = "PUBLIC_SOURCE_UNAVAILABLE"
+        self.network_attempted = bool(network_attempted)
+        self.reason_code = reason_code
+        self.error_kind = reason_code
+        self.recovery_action = _PUBLIC_SOURCE_RECOVERY_ACTIONS[reason_code]
+        super().__init__(message)
+
+
+_PUBLIC_SOURCE_RECOVERY_ACTIONS = {
+    "PUBLIC_SOURCE_UNAVAILABLE": "RETRY_LATER_OR_CHOOSE_ANOTHER_SOURCE",
+    "PUBLIC_SOURCE_DNS_UNRESOLVED": "CHECK_NETWORK_AND_RETRY",
+    "PUBLIC_SOURCE_DNS_RESOLVER_UNAVAILABLE": "CHECK_NETWORK_AND_RETRY",
+    "PUBLIC_SOURCE_DNS_RESPONSE_INVALID": "RETRY_LATER_OR_CHOOSE_ANOTHER_SOURCE",
+    "PUBLIC_SOURCE_URL_INVALID": "CHECK_PUBLIC_URL",
+    "PUBLIC_SOURCE_URL_REJECTED": "CHOOSE_ANOTHER_PUBLIC_SOURCE",
+    "PUBLIC_SOURCE_CONFIGURATION_INVALID": "CONTACT_OPERATOR",
+    "PUBLIC_SOURCE_TRANSPORT_UNAVAILABLE": "CONTACT_OPERATOR",
+    "PUBLIC_SOURCE_HTTP_ACCESS_RESTRICTED": "CHOOSE_ANOTHER_PUBLIC_SOURCE",
+    "PUBLIC_SOURCE_HTTP_PAGE_NOT_FOUND": "CHECK_PUBLIC_URL",
+    "PUBLIC_SOURCE_HTTP_RATE_LIMITED": "RETRY_AFTER_COOLDOWN",
+    "PUBLIC_SOURCE_HTTP_SERVER_ERROR": "RETRY_LATER",
+    "PUBLIC_SOURCE_HTTP_ERROR": "REVIEW_PUBLIC_SOURCE",
+    "PUBLIC_SOURCE_NETWORK_REQUEST_FAILED": "CHECK_NETWORK_AND_RETRY",
+    "PUBLIC_SOURCE_RESPONSE_INVALID": "REVIEW_PUBLIC_SOURCE",
+    "PUBLIC_SOURCE_RESPONSE_TOO_LARGE": "CHOOSE_ANOTHER_PUBLIC_PAGE",
+    "PUBLIC_SOURCE_REDIRECT_LIMIT": "REVIEW_PUBLIC_SOURCE_URL",
+    "PUBLIC_SOURCE_TRANSFER_TIMEOUT": "RETRY_LATER",
+    "PUBLIC_SOURCE_LOCAL_COOLDOWN": "RETRY_AFTER_COOLDOWN",
+    "PUBLIC_SOURCE_MEDIA_STAGING_INVALID": "CONTACT_OPERATOR",
+}
+
+
+def safe_public_source_failure_fields(value: object) -> dict[str, str]:
+    """Return only known public failure codes and their fixed recovery actions."""
+    if isinstance(value, BaseException):
+        reason_code = getattr(value, "reason_code", None)
+        error_kind = getattr(value, "error_kind", None)
+        recovery_action = getattr(value, "recovery_action", None)
+    elif isinstance(value, Mapping):
+        reason_code = value.get("reason_code")
+        error_kind = value.get("error_kind")
+        recovery_action = value.get("recovery_action")
+    else:
+        return {}
+    if not isinstance(reason_code, str):
+        return {}
+    expected_action = _PUBLIC_SOURCE_RECOVERY_ACTIONS.get(reason_code)
+    if (not expected_action or error_kind not in (None, reason_code)
+            or recovery_action not in (None, expected_action)):
+        return {}
+    return {
+        "reason_code": reason_code,
+        "error_kind": reason_code,
+        "recovery_action": expected_action,
+    }
+
+
+def _http_failure_reason(status_code: int) -> str:
+    if status_code in {401, 403}:
+        return "PUBLIC_SOURCE_HTTP_ACCESS_RESTRICTED"
+    if status_code == 404:
+        return "PUBLIC_SOURCE_HTTP_PAGE_NOT_FOUND"
+    if status_code == 429:
+        return "PUBLIC_SOURCE_HTTP_RATE_LIMITED"
+    if 500 <= status_code <= 599:
+        return "PUBLIC_SOURCE_HTTP_SERVER_ERROR"
+    return "PUBLIC_SOURCE_HTTP_ERROR"
+
+
+def _parse_retry_after_seconds(value: object) -> int | None:
+    """Read a standards-shaped Retry-After value without retaining its text."""
+    if not isinstance(value, str):
+        return None
+    raw = value.strip()
+    if not raw or len(raw) > 128:
+        return None
+    if raw.isascii() and raw.isdecimal():
+        seconds = int(raw)
+        return seconds if seconds > 0 else None
+    try:
+        retry_at = parsedate_to_datetime(raw)
+        if retry_at.tzinfo is None:
+            return None
+        delay = (retry_at.astimezone(timezone.utc) - datetime.now(timezone.utc)).total_seconds()
+    except (OverflowError, TypeError, ValueError):
+        return None
+    return max(1, math.ceil(delay)) if delay > 0 else None
+
+
+class _AnonymousAuth(requests.auth.AuthBase):
+    def __call__(self, request):
+        # Retain approved environment proxy routing without Requests probing
+        # personal netrc files for a newly created anonymous Source session.
+        return request
+
 
 class PublicSourceHTTPError(PublicSourceError):
     """A non-success HTTP response rejected by the bounded transport."""
@@ -62,8 +171,14 @@ class PublicSourceHTTPError(PublicSourceError):
         final_url: str = "",
         redirect_chain: Iterable[str] = (),
         resolution_trace: Iterable[dict[str, str]] = (),
+        retry_after_seconds: int | None = None,
     ):
         self.status_code = int(status_code)
+        self.retry_after_seconds = (
+            retry_after_seconds
+            if type(retry_after_seconds) is int and retry_after_seconds > 0
+            else None
+        )
         redirects = tuple(redirect_chain)
         resolutions = tuple(resolution_trace)
         self.provenance = (
@@ -73,17 +188,29 @@ class PublicSourceHTTPError(PublicSourceError):
             if requested_url or final_url or redirects or resolutions
             else {}
         )
-        super().__init__(f"public source returned HTTP {self.status_code}")
+        super().__init__(
+            f"public source returned HTTP {self.status_code}",
+            network_attempted=True,
+            reason_code=_http_failure_reason(self.status_code),
+        )
 
 
-def public_source_error_metadata(error: BaseException) -> dict[str, str | int]:
-    """Preserve an observed HTTP status while keeping other failures typed."""
+def public_source_error_metadata(error: BaseException) -> dict[str, str | int | bool]:
+    """Expose a safe failure reason while preserving observed HTTP details."""
+    failure_fields = safe_public_source_failure_fields(error)
     status_code = getattr(error, "status_code", None)
     if (getattr(error, "failure_type", None) == "HTTP_STATUS"
             and isinstance(status_code, int) and not isinstance(status_code, bool)):
-        metadata: dict[str, str | int] = {
+        metadata: dict[str, str | int | bool] = {
             "error_type": f"HTTP_{status_code}", "http_status": status_code,
+            **failure_fields,
         }
+        retry_after = getattr(error, "retry_after_seconds", None)
+        if type(retry_after) is int and retry_after > 0:
+            metadata["retry_after_seconds"] = retry_after
+        attempted = getattr(error, "network_attempted", None)
+        if type(attempted) is bool:
+            metadata["network_attempted"] = attempted
         provenance = getattr(error, "provenance", None)
         if isinstance(provenance, Mapping):
             metadata.update({
@@ -91,7 +218,13 @@ def public_source_error_metadata(error: BaseException) -> dict[str, str | int]:
                 if isinstance(key, str) and isinstance(value, str)
             })
         return metadata
-    return {"error_type": type(error).__name__}
+    metadata: dict[str, str | int | bool] = {
+        "error_type": type(error).__name__, **failure_fields,
+    }
+    attempted = getattr(error, "network_attempted", None)
+    if type(attempted) is bool:
+        metadata["network_attempted"] = attempted
+    return metadata
 
 
 @dataclass(frozen=True)
@@ -105,10 +238,17 @@ class PublicResponse:
     resolution_trace: tuple[dict[str, str], ...] = ()
 
 
-def _is_blocked_youtube_feed(url: str) -> bool:
-    parts = urlsplit(url)
-    host = (parts.hostname or "").lower()
-    return (host == "youtube.com" or host.endswith(".youtube.com")) and parts.path == "/feeds/videos.xml"
+@dataclass(frozen=True)
+class PublicMediaResponse:
+    url: str
+    sha256: str
+    size_bytes: int
+    content_type: str
+    status_code: int
+    requested_url: str = ""
+    redirect_chain: tuple[str, ...] = ()
+    resolution_trace: tuple[dict[str, str], ...] = ()
+    extraction: dict | None = None
 
 
 def public_source_provenance(response: PublicResponse, requested_url: str) -> dict[str, str]:
@@ -156,10 +296,16 @@ def _resolved_addresses(hostname: str) -> Iterable[str]:
     try:
         infos = socket.getaddrinfo(hostname, None, type=socket.SOCK_STREAM)
     except OSError as exc:
-        raise PublicSourceError("public source hostname could not be resolved") from exc
+        raise PublicSourceError(
+            "public source hostname could not be resolved",
+            reason_code="PUBLIC_SOURCE_DNS_UNRESOLVED",
+        ) from exc
     addresses = {str(info[4][0]) for info in infos if info and info[4]}
     if not addresses:
-        raise PublicSourceError("public source hostname has no address")
+        raise PublicSourceError(
+            "public source hostname has no address",
+            reason_code="PUBLIC_SOURCE_DNS_UNRESOLVED",
+        )
     return addresses
 
 
@@ -179,20 +325,32 @@ def _doh_addresses(hostname: str) -> tuple[str, ...]:
             timeout=(3, 6), allow_redirects=False, stream=True,
         )
         if response.status_code != 200:
-            raise PublicSourceError("public source secure DNS unavailable")
+            raise PublicSourceError(
+                "public source secure DNS unavailable",
+                reason_code="PUBLIC_SOURCE_DNS_RESOLVER_UNAVAILABLE",
+            )
         chunks: list[bytes] = []
         size = 0
         for chunk in response.iter_content(chunk_size=4096):
             size += len(chunk)
             if size > MAX_DOH_BYTES:
-                raise PublicSourceError("public source secure DNS response too large")
+                raise PublicSourceError(
+                    "public source secure DNS response too large",
+                    reason_code="PUBLIC_SOURCE_DNS_RESPONSE_INVALID",
+                )
             chunks.append(chunk)
         payload = json.loads(b"".join(chunks))
         if not isinstance(payload, dict) or payload.get("Status") != 0:
-            raise PublicSourceError("public source secure DNS did not resolve")
+            raise PublicSourceError(
+                "public source secure DNS did not resolve",
+                reason_code="PUBLIC_SOURCE_DNS_UNRESOLVED",
+            )
         answers = payload.get("Answer") or []
         if not isinstance(answers, list) or len(answers) > 32:
-            raise PublicSourceError("public source secure DNS response invalid")
+            raise PublicSourceError(
+                "public source secure DNS response invalid",
+                reason_code="PUBLIC_SOURCE_DNS_RESPONSE_INVALID",
+            )
         names = {hostname.lower().rstrip(".")}
         for _ in range(8):
             additional = {
@@ -211,10 +369,16 @@ def _doh_addresses(hostname: str) -> tuple[str, ...]:
             and str(item.get("name") or "").lower().rstrip(".") in names
         ))
         if not addresses or any(not _is_globally_routable(ip) for ip in addresses):
-            raise PublicSourceError("public source secure DNS returned no public address")
+            raise PublicSourceError(
+                "public source secure DNS returned no public address",
+                reason_code="PUBLIC_SOURCE_DNS_UNRESOLVED",
+            )
         return addresses
     except (requests.RequestException, ValueError, TypeError) as exc:
-        raise PublicSourceError("public source secure DNS unavailable") from exc
+        raise PublicSourceError(
+            "public source secure DNS unavailable",
+            reason_code="PUBLIC_SOURCE_DNS_RESOLVER_UNAVAILABLE",
+        ) from exc
     finally:
         if response is not None:
             response.close()
@@ -274,30 +438,51 @@ def load_public_source_host_pins(value: str | None = None) -> dict[str, tuple[st
         result = {}
         for key, item in pairs:
             if key in result:
-                raise PublicSourceError("public source host pin configuration is invalid")
+                raise PublicSourceError(
+                    "public source host pin configuration is invalid",
+                    reason_code="PUBLIC_SOURCE_CONFIGURATION_INVALID",
+                )
             result[key] = item
         return result
 
     try:
         payload = json.loads(str(raw), object_pairs_hook=reject_duplicate_pairs)
     except (TypeError, ValueError) as exc:
-        raise PublicSourceError("public source host pin configuration is invalid") from exc
+        raise PublicSourceError(
+            "public source host pin configuration is invalid",
+            reason_code="PUBLIC_SOURCE_CONFIGURATION_INVALID",
+        ) from exc
     if not isinstance(payload, dict):
-        raise PublicSourceError("public source host pin configuration is invalid")
+        raise PublicSourceError(
+            "public source host pin configuration is invalid",
+            reason_code="PUBLIC_SOURCE_CONFIGURATION_INVALID",
+        )
     pins: dict[str, tuple[str, ...]] = {}
     for hostname, values in payload.items():
         if not isinstance(hostname, str) or not isinstance(values, list) or not values:
-            raise PublicSourceError("public source host pin configuration is invalid")
+            raise PublicSourceError(
+                "public source host pin configuration is invalid",
+                reason_code="PUBLIC_SOURCE_CONFIGURATION_INVALID",
+            )
         key = _canonical_hostname(hostname)
         if key in pins:
-            raise PublicSourceError("public source host pin configuration is invalid")
+            raise PublicSourceError(
+                "public source host pin configuration is invalid",
+                reason_code="PUBLIC_SOURCE_CONFIGURATION_INVALID",
+            )
         checked: list[str] = []
         for value_item in values:
             if not isinstance(value_item, str) or not _is_globally_routable(value_item):
-                raise PublicSourceError("public source host pin configuration is invalid")
+                raise PublicSourceError(
+                    "public source host pin configuration is invalid",
+                    reason_code="PUBLIC_SOURCE_CONFIGURATION_INVALID",
+                )
             checked.append(str(ipaddress.ip_address(value_item)))
         if len(set(checked)) != len(checked):
-            raise PublicSourceError("public source host pin configuration is invalid")
+            raise PublicSourceError(
+                "public source host pin configuration is invalid",
+                reason_code="PUBLIC_SOURCE_CONFIGURATION_INVALID",
+            )
         pins[key] = tuple(checked)
     return pins
 
@@ -320,13 +505,23 @@ def _validate_public_url_and_pin(
         hostname = parsed.hostname
         port = parsed.port
     except ValueError as exc:
-        raise PublicSourceError("public source URL is invalid") from exc
+        raise PublicSourceError(
+            "public source URL is invalid", reason_code="PUBLIC_SOURCE_URL_INVALID",
+        ) from exc
     if scheme not in PUBLIC_SCHEMES:
-        raise PublicSourceError("only http and https public sources are allowed")
+        raise PublicSourceError(
+            "only http and https public sources are allowed",
+            reason_code="PUBLIC_SOURCE_URL_REJECTED",
+        )
     if parsed.username or parsed.password:
-        raise PublicSourceError("credentials in public source URLs are not allowed")
+        raise PublicSourceError(
+            "credentials in public source URLs are not allowed",
+            reason_code="PUBLIC_SOURCE_URL_REJECTED",
+        )
     if not hostname or port is not None and not (1 <= port <= 65535):
-        raise PublicSourceError("public source URL is invalid")
+        raise PublicSourceError(
+            "public source URL is invalid", reason_code="PUBLIC_SOURCE_URL_INVALID",
+        )
     hostname = hostname.lower()
     is_dns_name = True
     try:
@@ -336,7 +531,10 @@ def _validate_public_url_and_pin(
     else:
         is_dns_name = False
         if not _is_globally_routable(hostname):
-            raise PublicSourceError("private or local network sources are not allowed")
+            raise PublicSourceError(
+                "private or local network sources are not allowed",
+                reason_code="PUBLIC_SOURCE_URL_REJECTED",
+            )
     pins = load_public_source_host_pins() if host_pins is None else host_pins
     pinned = _host_pin(hostname, pins)
     resolver = "operator_pin" if pinned else "system_dns"
@@ -351,7 +549,10 @@ def _validate_public_url_and_pin(
             addresses = _doh_addresses(hostname)
             resolver = "doh_google"
     if not addresses:
-        raise PublicSourceError("public source address could not be resolved")
+        raise PublicSourceError(
+            "public source address could not be resolved",
+            reason_code="PUBLIC_SOURCE_DNS_UNRESOLVED",
+        )
     if (
         not pinned and is_dns_name
         and addresses
@@ -362,7 +563,10 @@ def _validate_public_url_and_pin(
         resolver = "doh_google"
     for address in addresses:
         if not _is_globally_routable(address):
-            raise PublicSourceError("private or local network sources are not allowed")
+            raise PublicSourceError(
+                "private or local network sources are not allowed",
+                reason_code="PUBLIC_SOURCE_URL_REJECTED",
+            )
     # Bind this exact request authority to one address that was checked above.
     # Requests/urllib3 must never resolve the hostname again while connecting.
     canonical_hostname = hostname.rstrip(".").lower()
@@ -395,17 +599,26 @@ def _validate_allowed_https_host(value: str, allowed_suffixes: tuple[str, ...]) 
         hostname = parsed.hostname
         port = parsed.port
     except ValueError as exc:
-        raise PublicSourceError("media URL is invalid") from exc
+        raise PublicSourceError(
+            "media URL is invalid", reason_code="PUBLIC_SOURCE_URL_INVALID",
+        ) from exc
     if scheme != "https" or parsed.username or parsed.password:
-        raise PublicSourceError("media URL must use HTTPS without credentials")
+        raise PublicSourceError(
+            "media URL must use HTTPS without credentials",
+            reason_code="PUBLIC_SOURCE_URL_REJECTED",
+        )
     if not hostname or port not in (None, 443):
-        raise PublicSourceError("media URL authority is not approved")
+        raise PublicSourceError(
+            "media URL authority is not approved", reason_code="PUBLIC_SOURCE_URL_REJECTED",
+        )
     hostname = _canonical_hostname(hostname)
     if not any(
         hostname == suffix or hostname.endswith("." + suffix)
         for suffix in allowed_suffixes
     ):
-        raise PublicSourceError("media URL host is not approved")
+        raise PublicSourceError(
+            "media URL host is not approved", reason_code="PUBLIC_SOURCE_URL_REJECTED",
+        )
 
 
 class PublicSourceHTTPAdapter(HTTPAdapter):
@@ -421,7 +634,10 @@ class PublicSourceHTTPAdapter(HTTPAdapter):
         if not hasattr(HTTPAdapter, "get_connection_with_tls_context") or not hasattr(
             HTTPAdapter, "build_connection_pool_key_attributes"
         ):
-            raise PublicSourceError("public source transport requires compatible Requests TLS pin APIs")
+            raise PublicSourceError(
+                "public source transport requires compatible Requests TLS pin APIs",
+                reason_code="PUBLIC_SOURCE_TRANSPORT_UNAVAILABLE",
+            )
         self.host_pins = host_pins if host_pins is not None else load_public_source_host_pins()
         super().__init__(**kwargs)
 
@@ -499,12 +715,92 @@ def fetch_public_url(
     max_bytes: int = MAX_RESPONSE_BYTES,
     session: requests.Session | None = None,
     allowed_host_suffixes: Iterable[str] | None = None,
+    check_continue=None,
+    before_fetch=None,
 ) -> PublicResponse:
     """Fetch a small public response with bounded, revalidated redirects."""
-    if _is_blocked_youtube_feed(url):
-        raise PublicSourceError("YouTube video feeds are blocked pending an authorized access route")
-    if max_bytes <= 0 or max_bytes > MAX_RESPONSE_BYTES:
+    return _fetch_public_response(url, timeout=timeout, max_bytes=max_bytes,
+        session=session, allowed_host_suffixes=allowed_host_suffixes,
+        check_continue=check_continue, before_fetch=before_fetch)
+
+
+def extract_public_media(source_url, *, captured_response=None, extractor_key="Generic",
+                         check_continue=None, max_requests=16):
+    """Resolve a public format plan through the existing guarded transport."""
+    from .public_media import extract_public_media as extract
+    return extract(source_url,captured_response=captured_response,extractor_key=extractor_key,
+                   check_continue=check_continue,max_requests=max_requests)
+
+
+def fetch_extracted_public_media(plan, *, selection_id=None, selection_ids=None,
+                                 destination, max_bytes, check_continue=None,
+                                 allow_segment_assembly=False):
+    """Acquire selected bytes; caller retains SourceUse and Artifact custody."""
+    from .public_media import fetch_extracted_public_media as acquire
+    return acquire(plan,selection_id=selection_id,selection_ids=selection_ids,
+        destination=destination,max_bytes=max_bytes,check_continue=check_continue,
+        allow_segment_assembly=allow_segment_assembly)
+
+
+def fetch_public_media(url: str, *, destination: Path, max_bytes: int,
+                       timeout: float = 15.0, check_continue=None,
+                       allowed_host_suffixes: Iterable[str] | None = None) -> PublicMediaResponse:
+    """Stream an observed original through the same anonymous, pinned transport.
+
+    The caller supplies a fresh private staging path and owns SourceUse,
+    storage reservation and Artifact admission. No session/profile is accepted.
+    A failed/cancelled transfer removes only its exclusively created file.
+    """
+    destination = Path(destination)
+    if (not destination.is_absolute() or destination.exists()
+            or any(parent.is_symlink() or getattr(parent, "is_junction", lambda: False)()
+                   for parent in (destination, *destination.parents))):
+        raise PublicSourceError(
+            "media staging path is invalid", reason_code="PUBLIC_SOURCE_MEDIA_STAGING_INVALID",
+        )
+    if type(max_bytes) is not int or not 0 < max_bytes <= MAX_MEDIA_RESPONSE_BYTES:
+        raise ValueError("max_bytes is outside the media safety bound")
+    if check_continue is not None:
+        check_continue()
+    created = False
+    try:
+        with destination.open("xb") as target:
+            created = True
+            result = _fetch_public_response(url, timeout=timeout, max_bytes=max_bytes,
+                allowed_host_suffixes=allowed_host_suffixes, media_target=target,
+                check_continue=check_continue)
+            target.flush()
+            os.fsync(target.fileno())
+        return result
+    except BaseException:
+        if created:
+            destination.unlink(missing_ok=True)
+        raise
+
+
+def _fetch_public_response(url, *, timeout=10.0, max_bytes=MAX_RESPONSE_BYTES,
+                           session=None, allowed_host_suffixes=None,
+                           media_target=None, check_continue=None, before_fetch=None):
+    bound = MAX_MEDIA_RESPONSE_BYTES if media_target is not None else MAX_RESPONSE_BYTES
+    if type(max_bytes) is not int or max_bytes <= 0 or max_bytes > bound:
         raise ValueError("max_bytes is outside the public-source safety bound")
+    deadline = time.monotonic() + 120 if media_target is not None else None
+    network_attempted = False
+
+    def check():
+        if check_continue is not None:
+            try:
+                check_continue()
+            except InterruptedError as exc:
+                exc.network_attempted = network_attempted
+                raise
+        if deadline is not None and time.monotonic() > deadline:
+            raise PublicSourceError(
+                "media transfer deadline exceeded",
+                reason_code="PUBLIC_SOURCE_TRANSFER_TIMEOUT",
+                network_attempted=network_attempted,
+            )
+    check()
     allowed_suffixes = None
     if allowed_host_suffixes is not None:
         if isinstance(allowed_host_suffixes, str):
@@ -525,6 +821,8 @@ def fetch_public_url(
         url, host_pins=host_pins, resolution_trace=resolution_trace,
     )
     client = session or requests.Session()
+    if session is None:
+        client.auth = _AnonymousAuth()
     # Caller-owned sessions retain their normal proxy configuration; only the
     # HTTP transport is replaced with the pin-aware equivalent.  Replacing the
     # entire map prevents a more-specific caller mount from bypassing guards.
@@ -540,10 +838,13 @@ def fetch_public_url(
     headers = {"User-Agent": USER_AGENT, "Accept": "text/html,application/xml,application/rss+xml,application/atom+xml,*/*;q=0.1"}
     try:
         for _ in range(MAX_REDIRECTS + 1):
-            if _is_blocked_youtube_feed(current):
-                raise PublicSourceError("YouTube video feeds are blocked pending an authorized access route")
+            check()
+            if before_fetch is not None:
+                before_fetch()
+                check()
             response = None
             try:
+                network_attempted = True
                 response = client.get(
                     current,
                     headers=headers,
@@ -574,24 +875,68 @@ def fetch_public_url(
                         final_url=getattr(response, "url", None) or current,
                         redirect_chain=tuple(redirect_chain),
                         resolution_trace=tuple(resolution_trace),
+                        retry_after_seconds=_parse_retry_after_seconds(
+                            response.headers.get("Retry-After")
+                        ),
+                    )
+                if media_target is not None and (response.status_code != 200
+                        or response.headers.get("Content-Range")):
+                    raise PublicSourceError(
+                        "media original requires a complete response",
+                        reason_code="PUBLIC_SOURCE_RESPONSE_INVALID",
+                        network_attempted=network_attempted,
                     )
                 content_length = response.headers.get("Content-Length")
+                expected_length = None
                 if content_length:
                     try:
-                        too_large = int(content_length) > max_bytes
+                        expected_length = int(content_length)
+                        too_large = expected_length < 0 or expected_length > max_bytes
                     except ValueError as exc:
-                        raise PublicSourceError("public source response size is invalid") from exc
+                        raise PublicSourceError(
+                            "public source response size is invalid",
+                            reason_code="PUBLIC_SOURCE_RESPONSE_INVALID",
+                            network_attempted=network_attempted,
+                        ) from exc
                     if too_large:
-                        raise PublicSourceError("public source response exceeds size limit")
+                        raise PublicSourceError(
+                            "public source response exceeds size limit",
+                            reason_code="PUBLIC_SOURCE_RESPONSE_TOO_LARGE",
+                        )
                 chunks: list[bytes] = []
                 size = 0
+                digest = hashlib.sha256()
                 for chunk in response.iter_content(chunk_size=64 * 1024):
+                    check()
                     if not chunk:
                         continue
                     size += len(chunk)
                     if size > max_bytes:
-                        raise PublicSourceError("public source response exceeds size limit")
-                    chunks.append(chunk)
+                        raise PublicSourceError(
+                            "public source response exceeds size limit",
+                            reason_code="PUBLIC_SOURCE_RESPONSE_TOO_LARGE",
+                        )
+                    if media_target is None:
+                        chunks.append(chunk)
+                    else:
+                        media_target.write(chunk)
+                        digest.update(chunk)
+                check()
+                if media_target is not None:
+                    # Content-Length describes transferred bytes only when no
+                    # content encoding changed their representation.
+                    if (not size or expected_length is not None
+                            and not response.headers.get("Content-Encoding")
+                            and size != expected_length):
+                        raise PublicSourceError(
+                            "media original response is incomplete",
+                            reason_code="PUBLIC_SOURCE_RESPONSE_INVALID",
+                            network_attempted=network_attempted,
+                        )
+                    return PublicMediaResponse(url=current, sha256=digest.hexdigest(), size_bytes=size,
+                        content_type=str(response.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower(),
+                        status_code=response.status_code, requested_url=url,
+                        redirect_chain=tuple(redirect_chain), resolution_trace=tuple(resolution_trace))
                 return PublicResponse(
                     url=current,
                     content=b"".join(chunks),
@@ -604,9 +949,18 @@ def fetch_public_url(
             finally:
                 if response is not None:
                     response.close()
-        raise PublicSourceError("public source redirect limit exceeded")
+        raise PublicSourceError(
+            "public source redirect limit exceeded",
+            reason_code="PUBLIC_SOURCE_REDIRECT_LIMIT",
+        )
+    except PublicSourceError as exc:
+        exc.network_attempted = network_attempted
+        raise
     except requests.RequestException as exc:
-        raise PublicSourceError("public source request failed") from exc
+        raise PublicSourceError(
+            "public source request failed", network_attempted=network_attempted,
+            reason_code="PUBLIC_SOURCE_NETWORK_REQUEST_FAILED",
+        ) from exc
     finally:
         if session is None:
             client.close()

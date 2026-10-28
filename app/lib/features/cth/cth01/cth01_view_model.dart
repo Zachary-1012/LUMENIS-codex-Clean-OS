@@ -23,8 +23,11 @@ class Cth01ViewModel extends ChangeNotifier {
   Cth01LoadMessage? message;
   int? selectedSignalIndex;
   bool _disposed = false;
+  int _generation = 0;
 
   Future<void> load() async {
+    if (_disposed) return;
+    final generation = ++_generation;
     status = Cth01LoadStatus.loading;
     message = null;
     data = null;
@@ -32,9 +35,12 @@ class Cth01ViewModel extends ChangeNotifier {
     _notify();
 
     try {
-      data = await _repository.load();
+      final result = await _repository.load();
+      if (_disposed || generation != _generation) return;
+      data = result;
       status = Cth01LoadStatus.loaded;
     } on Cth01ContextUnavailable catch (error) {
+      if (_disposed || generation != _generation) return;
       status = Cth01LoadStatus.blocked;
       message = switch (error.reason) {
         Cth01BlockReason.contextUnavailable =>
@@ -42,12 +48,15 @@ class Cth01ViewModel extends ChangeNotifier {
         Cth01BlockReason.pageNotBound => Cth01LoadMessage.pageNotBound,
       };
     } on LumenisCoreException catch (error) {
+      if (_disposed || generation != _generation) return;
       status = Cth01LoadStatus.failed;
       message = _messageForCoreError(error);
     } on FormatException {
+      if (_disposed || generation != _generation) return;
       status = Cth01LoadStatus.failed;
       message = Cth01LoadMessage.genericUnavailable;
     } catch (_) {
+      if (_disposed || generation != _generation) return;
       status = Cth01LoadStatus.failed;
       message = Cth01LoadMessage.genericUnavailable;
     }
@@ -82,6 +91,7 @@ class Cth01ViewModel extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _generation++;
     super.dispose();
   }
 }

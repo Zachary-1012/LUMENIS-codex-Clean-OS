@@ -58,6 +58,58 @@ def test_other_platform_aliases():
     assert normalize_platform("微博") == "weibo"
 
 
+def test_google_discovery_source_preserves_identity_snippet_and_unknown_metrics():
+    from lumenis.system.collector.adapters.secondary_collection import _native_record
+    from lumenis.system.collector.adapters.registry import get_adapter
+    from types import SimpleNamespace
+    calls = []
+    def search(keyword, **kwargs):
+        calls.append((keyword,kwargs))
+        note = SimpleNamespace(url='https://publisher.example.test/original',title='Source title',content='Search excerpt',
+            author_id='publisher.example.test',author='Publisher',publish_date='',raw_data={})
+        return SimpleNamespace(success=True,notes=[note],error=None,raw_count=1,metadata={})
+    adapter = get_adapter('谷歌',backend=SimpleNamespace(search=search))
+    result = adapter.search('fixture query',max_results=1)
+    assert result.ok and calls == [('fixture query',{'max_results':1})]
+    record = _native_record(result.items[0],'google','fixture query','2026-10-25T12:00:00Z')
+    canonical = to_canonical_record(record,'google')
+    normalized = map_raw_to_normalized(record,'google')
+    assert canonical['content_id'] == result.items[0]['platform_content_id'] == normalized['platform_content_id']
+    assert canonical['url'] == record['url'] and canonical['published_at'] is None
+    assert record['body_state'] == 'FEED_OR_INDEX_EXCERPT' and record['original_body_available'] is False
+    assert normalized['like_count'] is normalized['comment_count'] is normalized['view_count'] is None
+    assert normalize_platform('google_news_rss') == 'web_rss'
+
+
+def test_github_typed_source_ids_keep_repository_compatibility_and_metric_meaning():
+    repository = {'repo_id':123,'stargazers_count':1000,'forks_count':4,'watchers_count':20,'open_issues_count':7}
+    old = to_canonical_record(repository,'github')
+    assert old['content_id'] == '123'
+    assert old['like_count'] is old['comment_count'] is old['share_count'] is None
+    for kind in ('issue','pull_request','release'):
+        identity = kind + ':owner/project:9'
+        source = {'native_content_id':identity,'native_object_kind':kind,'native_object_id':10,
+            'native_source_url':'https://github.com/owner/project/issues/9','reactions':{'+1':0},'comments':0,
+            'stargazers_count':1000,'forks_count':4,'watchers_count':20,'open_issues_count':7}
+        normalized = map_raw_to_normalized(source,'github')
+        assert normalized['platform_content_id'] == identity
+        assert normalized['like_count'] == 0
+        assert normalized['comment_count'] == (0 if kind in {'issue','pull_request'} else None)
+        assert normalized['view_count'] is normalized['share_count'] is None
+        assert normalized['url'] == source['native_source_url']
+        assert to_canonical_record({'native_object_kind':kind,'repo_id':123},'github')['content_id'] is None
+
+
+def test_reddit_net_votes_never_become_likes():
+    for votes in (-12, 0, 80):
+        record = {'post_id':'p1','score':votes,'net_votes':votes,'num_comments':0}
+        canonical = to_canonical_record(record,'reddit')
+        normalized = map_raw_to_normalized(record,'reddit')
+        assert canonical['like_count'] is normalized['like_count'] is None
+        assert canonical['comment_count'] == normalized['comment_count'] == 0
+        assert normalized['raw_data']['net_votes'] == normalized['raw_data']['score'] == votes
+
+
 def test_wechat_media_hints_reach_existing_media_projection_without_inference():
     raw = {
         "source_platform": "wechat",
@@ -691,6 +743,40 @@ def test_shard_c_douyin_canonical_record_preserves_bigint():
     cid = normalize_content_id("douyin", canonical["content_id"])
     assert cid == "7342000000000000000"
     assert isinstance(cid, str)
+
+
+def test_channels_public_source_identity_is_stable_without_fabricating_native_object_id():
+    import hashlib
+    import json
+    from lumenis.system.collector.adapters.channels import ChannelsAdapter
+    from lumenis.system.collector.adapters.public_source import PublicResponse
+    from lumenis.system.collector.adapters.secondary_collection import _native_record
+    html = ('<script type="application/ld+json">' + json.dumps({
+        '@type':'VideoObject','name':'Public source title','description':'Public source description',
+    }) + '</script>').encode()
+    def fetch(url, **kwargs):
+        return PublicResponse(url=url,requested_url=url,content=html,content_type='text/html',status_code=200)
+    adapter = ChannelsAdapter(provider_config={'provider_mode':'public'},public_fetcher=fetch)
+    urls = ['https://weixin.qq.com/sph/public-source-one','https://weixin.qq.com/sph/public-source-two']
+    identities = []
+    for url in [urls[0], urls[0], urls[1]]:
+        result = adapter.detail(url)
+        assert result.ok
+        native = _native_record(result.items[0],'channels',url,'2026-10-26T00:00:00Z')
+        canonical = to_canonical_record(native,'channels')
+        expected = 'public-url:' + hashlib.sha256(url.encode()).hexdigest()
+        assert canonical['content_id'] == expected
+        assert map_raw_to_normalized(native,'channels')['platform_content_id'] == expected
+        assert native['object_id'] is None
+        assert canonical['raw']['native_identity_state'] == 'PUBLIC_URL_IDENTITY_ONLY'
+        assert canonical['raw']['source_identity_kind'] == 'PUBLIC_URL_SHA256'
+        identities.append(canonical['content_id'])
+        for key in ('native_identity_state','source_identity_kind','source_content_id','url'):
+            invalid = dict(native)
+            invalid[key] = 'changed'
+            assert to_canonical_record(invalid,'channels')['content_id'] is None
+    assert identities[0] == identities[1] and identities[0] != identities[2]
+    assert to_canonical_record({'object_id':'actual-native-id'},'channels')['content_id'] == 'actual-native-id'
 
 
 if __name__ == "__main__":

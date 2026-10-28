@@ -62,7 +62,7 @@ _MAX_EDIT_BATCH_COMMANDS = 128
 # File-only protocols still allow playlist demuxers to open other local files.
 # User sources are self-contained media; generated concat lists belong only to
 # the renderer's private working directory, never to this input boundary.
-MEDIA_INPUT_DEMUXERS = "mov,matroska,avi,wav,mp3,flac,ogg,aac,aiff"
+MEDIA_INPUT_DEMUXERS = "mov,matroska,avi,wav,mp3,flac,ogg,aac,aiff,mpegts"
 _MEDIA_ASSET_FACTORY_TOKEN = object()
 
 

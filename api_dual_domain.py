@@ -21,14 +21,12 @@ Compatibility Layer：现有 /api/* 端点保持不变，本模块仅新增域�
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 import time
-import uuid
 from datetime import datetime as _datetime, timedelta as _timedelta
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, jsonify, request, g
+from flask import Blueprint, jsonify, request
 
 from domain_isolation import (
     DomainContext,
@@ -40,21 +38,13 @@ from domain_isolation import (
     PRODUCT_SYSTEM,
     domain_summary,
     get_domain_context,
-    set_domain_context,
     clear_domain_context,
     domain_to_product,
-    product_to_domain,
 )
 from subject_context import (
-    CTH_BRAND_KEY,
-    PRODUCT_CTH as SC_PRODUCT_CTH,
-    PRODUCT_ZBMP as SC_PRODUCT_ZBMP,
-    SubjectContext,
-    set_thread_context,
     clear_thread_context,
-    get_subject_context,
 )
-from domain_adapter import get_adapter, CTH_ONLY_FIELDS, ZBMP_ONLY_FIELDS
+from domain_adapter import get_adapter
 from lumenis.shared.database import get_repository
 
 
@@ -105,10 +95,23 @@ def authorize_business_work_request(operation, *, actor_ref, scope):
 
 def authorize_business_related_read(principal, *, actor_ref, original_scope, operation):
     """Server-only read adapter; an unsealed JSON principal is never accepted."""
-    from lumenis.system.security.permission import check_local_workspace_scope_permission
-    if operation != "read" or getattr(principal, "principal_ref", None) != actor_ref:
+    from lumenis.system.security.permission import (
+        LocalWorkspacePrincipal, check_actor_scope_permission, check_local_workspace_scope_permission,
+    )
+    if operation != "read":
         raise PermissionError("BUSINESS_LENS_READ_ONLY_PRINCIPAL_REQUIRED")
-    result = check_local_workspace_scope_permission(
+    if type(principal) is LocalWorkspacePrincipal and principal.principal_ref == actor_ref:
+        checker = check_local_workspace_scope_permission
+    elif (isinstance(principal, dict) and type(principal.get("id")) is int
+          and principal["id"] > 0 and actor_ref == f"actor:{principal['id']}"):
+        from lumenis.auth.service import get_current_user
+        current = get_current_user(read_only=True)
+        if not isinstance(current, dict) or current.get("id") != principal["id"]:
+            raise PermissionError("BUSINESS_LENS_READ_ONLY_PRINCIPAL_REQUIRED")
+        checker = check_actor_scope_permission
+    else:
+        raise PermissionError("BUSINESS_LENS_READ_ONLY_PRINCIPAL_REQUIRED")
+    result = checker(
         principal, domain_id=original_scope.get("domain_id"), module="reports", action="read",
         subject_id=original_scope.get("subject_id"), brand_focus_id=original_scope.get("brand_focus_id"),
         global_scope=original_scope.get("global"))
@@ -579,7 +582,6 @@ class BusinessDecisionWorkflow:
                 'profit': None, 'causal_roi': None, 'spending_authorization': 'NOT_GRANTED'}
 
     def _observation(self, connection, payload, actor_ref, scope, previous_costs, previous_observation=None, prior=None):
-        import re
         from decimal import Decimal
         observed = self._timestamp(payload["observed_at"])
         window = payload["window"]
@@ -889,15 +891,19 @@ class BusinessDecisionWorkflow:
         verified = _verify_report(dict(row), job_id=job_id, actor_id=actor_ref)
         if not _same_business_scope(verified["snapshot"]["scope"], scope):
             raise PermissionError("SOURCE_BRIEF_SCOPE_MISMATCH")
-        import canonical_data
         for source in verified["source_brief"]["records"]:
             record = self._canonical_source(connection, source["source_id"], scope)
             if str(record["scope_evidence_ref"]) != str(source["scope_evidence_ref"]):
                 raise PermissionError("BUSINESS_WORK_SOURCE_LINEAGE_CHANGED")
-            canonical_data._validate_canonical_scope(connection, canonical_data.CanonicalRecord(
-                source_id=source["source_id"], product_id=scope["product_id"], domain_id=scope["domain_id"],
-                subject_id=scope.get("subject_id"), brand_focus_id=scope.get("brand_focus_id"),
-                scope_status="VERIFIED", scope_evidence_ref=str(source["scope_evidence_ref"])))
+            if scope["global"]:
+                from lumenis.shared.reporting.saved_work import SavedWorkError, authorize as authorize_source
+                try:
+                    authorize_source(actor, {"domain_id": record["domain_id"],
+                        "subject_id": record.get("subject_id") or None,
+                        "brand_focus_id": record.get("brand_focus_id") or None,
+                        "global_scope": False}, action="read", connection=connection)
+                except SavedWorkError as exc:
+                    raise PermissionError("BUSINESS_LENS_SOURCE_SCOPE_DENIED") from exc
         if require_content:
             admitted = resolve_report_sources(job_id, actor=actor, actor_id=actor_ref,
                                               expected_scope=verified["snapshot"]["scope"], connection=connection)
@@ -925,16 +931,32 @@ class BusinessDecisionWorkflow:
 
     @staticmethod
     def _canonical_source(connection, source_id, scope):
-        from canonical_data import CANONICAL_SOURCE_LEVEL_PREDICATE
+        from canonical_data import CANONICAL_SOURCE_LEVEL_PREDICATE, CanonicalRecord, _validate_canonical_scope
+        if type(scope.get("global")) is not bool:
+            raise PermissionError("BUSINESS_WORK_SOURCE_SCOPE_INVALID")
+        # GLOBAL is a requested read range. Each admitted source retains its
+        # own verified Subject/BrandFocus and current SourceUse authorization.
+        # It cannot require an invented empty-focus VERIFIED source, nor admit
+        # UNASSIGNED observations as domain facts.
+        focus_clause = ""
+        parameters = [source_id, scope["product_id"], scope["domain_id"]]
+        if not scope["global"]:
+            focus_clause = "AND COALESCE(subject_id,'')=? AND COALESCE(brand_focus_id,'')=? "
+            parameters.extend([scope.get("subject_id") or "", scope.get("brand_focus_id") or ""])
         rows = connection.execute(
             "SELECT * FROM canonical_data WHERE source_id=? AND product_id=? AND domain_id=? "
-            "AND COALESCE(subject_id,'')=? AND COALESCE(brand_focus_id,'')=? AND scope_status='VERIFIED' "
-            "AND " + CANONICAL_SOURCE_LEVEL_PREDICATE,
-            (source_id, scope["product_id"], scope["domain_id"], scope.get("subject_id") or "", scope.get("brand_focus_id") or ""),
+            + focus_clause + "AND scope_status='VERIFIED' AND " + CANONICAL_SOURCE_LEVEL_PREDICATE,
+            parameters,
         ).fetchall()
         if len(rows) != 1:
             raise PermissionError("BUSINESS_WORK_SOURCE_SCOPE_INVALID")
-        return dict(rows[0])
+        record = dict(rows[0])
+        proof = _validate_canonical_scope(connection, CanonicalRecord(**{
+            key: record.get(key) for key in ("source_id", "product_id", "domain_id", "subject_id",
+                                            "brand_focus_id", "scope_status", "scope_evidence_ref")}))
+        if proof is None:
+            raise PermissionError("BUSINESS_WORK_SOURCE_SCOPE_INVALID")
+        return record
 
     def _bound_report(self, connection, history, actor_ref, scope):
         origin = self._active_origin(history)
@@ -3533,14 +3555,42 @@ class BusinessDecisionWorkflow:
                 "state": "SAVED_PREVIOUS_REVISION" if changed else "SAVED_CURRENT_REVISION",
                 "publish_status": "not_performed"}
 
-    def focus_lens(self, work_id, *, actor_ref, scope, authorize, related_reports, authorize_related):
+    def focus_lens_from_reports(self, work_id, *, actor_ref, scope, authorize, related_reports,
+                                revision=None):
+        """Resolve chosen report scopes on the server before the existing reader."""
+        from lumenis.shared.reporting.business_brief import _current_actor
+        from lumenis.shared.reporting.source_brief_job import _verify_report
+        self._authorize(authorize, actor_ref, scope, "read")
+        if not isinstance(related_reports, list) or len(related_reports) > 4:
+            raise ValueError("BUSINESS_LENS_CONTEXT_LIMIT")
+        actor = _current_actor(actor_ref, self._source_actor or self._action_actor)
+        descriptors = []
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            for chosen in related_reports:
+                if not isinstance(chosen, dict) or set(chosen) != {"job_id", "purpose"}:
+                    raise ValueError("BUSINESS_LENS_CONTEXT_DESCRIPTOR_INVALID")
+                job_id, purpose = self._text(chosen["job_id"], 256), self._text(chosen["purpose"])
+                row = connection.execute("SELECT * FROM daily_reports WHERE report_id=? "
+                    "ORDER BY id DESC LIMIT 1", (job_id,)).fetchone()
+                if row is None:
+                    raise LookupError("BUSINESS_WORK_SOURCE_REPORT_NOT_FOUND")
+                report = _verify_report(dict(row), job_id=job_id, actor_id=actor_ref)
+                descriptors.append({"job_id": job_id, "purpose": purpose,
+                                    "original_scope": report["snapshot"]["scope"]})
+        authorize_related = lambda original, operation: authorize_business_related_read(
+            actor, actor_ref=actor_ref, original_scope=original, operation=operation)
+        return self.focus_lens(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize,
+            related_reports=descriptors, authorize_related=authorize_related, revision=revision)
+
+    def focus_lens(self, work_id, *, actor_ref, scope, authorize, related_reports, authorize_related,
+                   revision=None):
         """Read separately authorized reports without rebinding their Evidence.
 
         W6 supplies fresh server read receipts for each ORIGINAL scope. A
         requested contextual citation is not an accepted entity relationship.
         Shared report exact-scope contracts and stores remain unchanged.
         """
-        focus = self.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize)
+        focus = self.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize, revision=revision)
         if not isinstance(related_reports, list) or len(related_reports) > 4:
             raise ValueError("BUSINESS_LENS_CONTEXT_LIMIT")
         if related_reports and not callable(authorize_related):
@@ -3554,8 +3604,8 @@ class BusinessDecisionWorkflow:
                 original = descriptor["original_scope"]
                 if not isinstance(original, dict) or original.get("product_id") != scope["product_id"]:
                     raise PermissionError("BUSINESS_LENS_DOMAIN_MISMATCH")
-                if original.get("global") is True:
-                    raise RuntimeError("BUSINESS_LENS_GLOBAL_REPORT_SOURCE_SCOPE_OWNER_REQUIRED")
+                if not _same_business_scope(original, original):
+                    raise PermissionError("BUSINESS_LENS_CONTEXT_SCOPE_INVALID")
                 job_id = self._text(descriptor["job_id"], 256)
                 purpose = self._text(descriptor["purpose"])
                 if job_id in seen:
@@ -3568,16 +3618,26 @@ class BusinessDecisionWorkflow:
                                  "original_scope": original, "task_focus_scope": scope, "purpose": purpose,
                                  "relationship_state": "OPERATOR_CONTEXT_REQUEST_NOT_VERIFIED_RELATION",
                                  "source_brief": report["source_brief"],
+                                 "source_scope_policy": "EACH_ORIGINAL_FOCUS_REAUTHORIZED" if original["global"]
+                                     else "EXACT_REPORT_SCOPE",
                                  "multimodal": {"state": "unavailable", "reason": "SOURCE_USE_REQUIRED"},
                                  "interpretation": "BACKGROUND_ONLY_NOT_FOCUS_FACT_OR_CAUSATION"})
                 # Revocation during the read must prevent returning material.
                 self._authorize(receipt, actor_ref, original, "read")
         # A later related read may revoke an earlier scope. Recheck every
         # original scope at the response boundary before returning any material.
-        for context in contexts:
-            original = context["original_scope"]
-            receipt = lambda operation, original=original: authorize_related(original, operation)
-            self._authorize(receipt, actor_ref, original, "read")
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            for context in contexts:
+                original = context["original_scope"]
+                receipt = lambda operation, original=original: authorize_related(original, operation)
+                self._authorize(receipt, actor_ref, original, "read")
+                # A later background read can revoke a focused source inside
+                # an earlier GLOBAL report. A fresh global receipt alone is
+                # insufficient; repeat the original per-source owner checks.
+                report = self._report(connection, context["job_id"], actor_ref, original, require_content=False)
+                if (report["row"]["artifact_hash"] != context["artifact_hash"]
+                        or report["source_brief"] != context["source_brief"]):
+                    raise RuntimeError("BUSINESS_LENS_CONTEXT_SOURCE_CHANGED")
         self._authorize(authorize, actor_ref, scope, "read")
         return {"state": "SCOPED_REFERENCES_PREPARED", "task_focus_scope": scope,
                 "focus_work": focus, "related_context": contexts,
@@ -4173,6 +4233,7 @@ def _authorize_cth_read(connection: sqlite3.Connection, *, module: str) -> Dict[
 
         actor = get_current_user(read_only=True)
         if isinstance(actor, dict) and type(actor.get("id")) is int and actor["id"] > 0:
+            reader, reader_identity = actor, ("actor", actor["id"])
             decision = check_actor_scope_permission(
                 actor, domain_id=DOMAIN_CTH, action="read", module=module,
                 subject_id=subject_id, global_scope=global_scope,
@@ -4182,6 +4243,7 @@ def _authorize_cth_read(connection: sqlite3.Connection, *, module: str) -> Dict[
             principal = resolve_local_workspace_principal(module=module, action="read")
             if principal is None:
                 raise CTHScopedReadError("AUTH_REQUIRED", 401)
+            reader, reader_identity = principal, ("workspace", principal.principal_ref)
             decision = check_local_workspace_scope_permission(
                 principal, domain_id=DOMAIN_CTH, action="read", module=module,
                 subject_id=subject_id, global_scope=global_scope,
@@ -4207,6 +4269,8 @@ def _authorize_cth_read(connection: sqlite3.Connection, *, module: str) -> Dict[
         "subject_id": subject_id,
         "global": global_scope,
         "permission_audit_id": audit_id,
+        "_reader_actor": reader,
+        "_reader_identity": reader_identity,
     }
 
 
@@ -4355,7 +4419,39 @@ def read_cth_scoped_canonical(
     except Exception as exc:
         raise CTHScopedReadError("CTH_CANONICAL_SCOPE_UNAVAILABLE", 503) from exc
 
-    return {"scope": {key: value for key, value in scope.items() if key != "permission_audit_id"},
+    from lumenis.system.security.permission import (
+        LocalWorkspacePrincipal, check_actor_scope_permission, check_local_workspace_scope_permission,
+    )
+    checker = (check_local_workspace_scope_permission if type(scope["_reader_actor"]) is LocalWorkspacePrincipal
+               else check_actor_scope_permission)
+    checked = set()
+    for record in canonical["records"]:
+        subject = record.get("subject_id")
+        if not isinstance(subject, str) or not subject or record.get("brand_focus_id"):
+            raise CTHScopedReadError("INVALID_CTH_CANONICAL_SCOPE", 400)
+        if subject in checked:
+            continue
+        decision = checker(scope["_reader_actor"], domain_id=DOMAIN_CTH, action="read", module=module,
+                           subject_id=subject, global_scope=False, connection=connection)
+        if (decision.verification_state != "verified" or not isinstance(decision.audit_id, str)
+                or not decision.audit_id):
+            raise CTHScopedReadError("CTH_SOURCE_SCOPE_AUTHORIZATION_UNAVAILABLE", 503)
+        if decision.allowed is not True:
+            raise CTHScopedReadError("CTH_SOURCE_SCOPE_READ_DENIED", 403)
+        checked.add(subject)
+    if canonical["records"]:
+        refreshed = canonical_data.list_scoped_canonical(
+            connection, product_id=PRODUCT_CTH, subject_id=scope["subject_id"], limit=limit,
+            canonical_ids=[record["canonical_id"] for record in canonical["records"]])
+        if ({row["canonical_id"]: row for row in refreshed["records"]}
+                != {row["canonical_id"]: row for row in canonical["records"]}):
+            raise CTHScopedReadError("CTH_CANONICAL_SOURCE_CHANGED", 409)
+    current = _authorize_cth_read(connection, module=module)
+    public_keys = ("mode", "domain_id", "product_id", "subject_id", "global")
+    if (current["_reader_identity"] != scope["_reader_identity"]
+            or any(current[key] != scope[key] for key in public_keys)):
+        raise CTHScopedReadError("CTH_SCOPE_CHANGED", 403)
+    return {"scope": {key: scope[key] for key in public_keys},
             "permission_audit_id": scope["permission_audit_id"], "canonical": canonical}
 
 

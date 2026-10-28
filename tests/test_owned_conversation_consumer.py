@@ -61,7 +61,7 @@ def test_actual_owned_conversation_preserves_complete_context_provenance_and_reo
     assert turn['state'] == 'completed', body
     assert turn['content']['text'] == 'A grounded answer.'
     proof = turn['content']['owned_provenance']
-    assert proof['operation'] == 'source_free_conversation' and proof['domain_id'] == 'shared'
+    assert proof['operation'] == 'conversation_response' and proof['domain_id'] == 'shared'
     assert proof['scope'] == 'shared_workspace:v1' and proof['quality_state'] == 'NOT_EVALUATED'
     assert proof['product_acceptance'] is False and len(proof['request_digest']) == 64
     assert turn['content']['context_accounting']['history_turns_included'] == 40

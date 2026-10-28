@@ -1277,6 +1277,17 @@ def select_account(account_name: str):
     if account_name not in ACCOUNT_PROFILES:
         return False, (f"身份 [{account_name}] 不在双子星库 Contract 硬白名单中。"
                        f"允许身份: {list(ACCOUNT_PROFILES.keys())}")
+    # Enforce the current SYSTEM policy at this lowest-level selector too.
+    # Legacy callers must not be able to probe or activate the protected
+    # Mainland profile merely because it remains in the compatibility map.
+    try:
+        policy = collection_policy_gate(account=account_name, region="intl")
+    except Exception:  # noqa: BLE001 - unavailable policy is a denial.
+        return False, "POLICY_UNAVAILABLE"
+    if (not isinstance(policy, dict) or policy.get("ok") is not True
+            or policy.get("account") != account_name
+            or policy.get("region") != "intl"):
+        return False, "POLICY_BLOCKED"
     cookie_path, cdp_profile_dir = ACCOUNT_PROFILES[account_name]
     # RETINAUT 等未配置身份（XHS_RETINAUT is None 或 cookie 文件不存在）给出友好错误
     if cookie_path is None:

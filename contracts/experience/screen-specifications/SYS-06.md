@@ -309,10 +309,10 @@ Ready / Loading / 数据缺失（显示缺失，不补 0/50）/ 不可用（显�
 
 ### Existing contract — Purpose-built desktop and web composition
 
-- Desktop/Web: capability summary sits beside filtered instance states; a boundary explanation names allowed read scope and unbound operations.
-- Tablet/mobile stack summary and instance states; state text remains beside each instance.
-- No browser viewport, credential inspector, port list or action toolbar is rendered.
-- Any future browser action needs explicit target authorization, Permission, audit and Effect Fence.
+- Desktop/Web: the actual controlled webpage occupies the main viewport, with session tabs, address entry, navigation and an optional page-question pane. The pane preserves the question when navigating or returning to work.
+- Narrow layouts switch between the page and question pane while retaining the same task, session and question.
+- Credentials, tokens, ports, profiles and internal paths never appear in the interface. Human actions use the existing server-issued lease and current frame binding.
+- Page extraction follows explicit release of human control. An excerpt is labeled as source material; a useful answer, source admission and saved result require their actual existing-owner receipts.
 
 
 
@@ -366,23 +366,24 @@ SESSION/target/page revision、捕获TTL、request身份和当前权限由服务
 
 ### Existing contract — Purpose-built mobile composition
 
-- Single active task: inspect controlled capacity.
-- Summary first, instance states second, safety boundary always visible.
-- Back/return does not open a personal browser; refresh re-reads capability only.
+- The current task keeps its page, question and return destination. Page and question views are reachable without losing either state.
+- Navigation and reading actions remain visible at usable touch sizes; full page content scrolls within the browser viewport.
+- Back/return preserves the product session and never opens a personal profile. Refresh operates on the selected controlled page through the existing browser owner.
 
 ## 7. Actions, authorization and effects
 
 | Action | Owner/effect | Current behavior |
 | --- | --- | --- |
-| Read capability | Browser Surface GET; actor/session scope currently unverified | Safe projection only; 401/403/offline distinct |
-| Open/snapshot/extract | Future Browser owner + Permission/effect fence | No control; unavailable/unbound |
+| Read capability/session | Existing Browser Surface, actor/session scope | Actual server state; 401/403/offline distinct |
+| Open/navigate/reload/stop | Existing Browser Runtime and Permission | Real selected session; human operations require the server lease and current frame |
+| Snapshot/extract/read page | Existing Browser Runtime and Source owners | Current target/revision only; explicit human-control release; source excerpt remains distinct from analysis and admitted evidence |
 | Social or account write | Explicitly out of scope | Never rendered or invoked |
 
 ## 8. Accessibility, motion and localization
 
-- Aggregate metrics have semantic labels; instance state uses text, icon and color.
+- Browser controls have semantic labels; session and action states use text and icon as well as color.
 - Hidden sensitive fields are not present in the widget tree; screen reader cannot discover them.
-- No browser visual capture or chart is shown.
+- The actual browser frame has a descriptive label and keyboard-accessible navigation and visible-link actions; a frame alone does not prove complete page accessibility or analysis.
 - zh-CN/en/ko boundary copy wraps; reduced motion suppresses decorative state transitions.
 
 ## 9. Executable acceptance
@@ -392,11 +393,11 @@ SESSION/target/page revision、捕获TTL、request身份和当前权限由服务
 | SYS06-LEAK-01 | Account, port, profile, session and path fields never render | Adversarial snapshot/widget tests |
 | SYS06-STATE-01 | Empty/offline capability does not become online or zero | Snapshot/widget tests |
 | SYS06-BOUNDARY-01 | No personal browsing or write action is exposed | Source/widget review |
-| SYS06-REAL-USER-01 | Authorized operator reads a real capability report and can distinguish controlled read scope from unbound action | Authenticated runtime E2E required |
+| SYS06-REAL-USER-01 | User opens a real page, navigates it, asks a page-bound question, obtains a grounded editable result, saves/revises/reopens it and returns to the original task; denied, expired and interrupted work recovers honestly | Authenticated runtime E2E required; source excerpt or frame alone cannot close this outcome |
 
 ## 10. Cross-cutting gates and review
 
-- GLOBAL UNIVERSE / DATA MATURITY IMPACT: none; browser capacity is infrastructure, not global entity coverage.
+- SUBJECT SCOPE / TASK DATA QUALITY IMPACT: page context and results retain the active task, actor, source identity and approved scope; actual page capture and downstream results require their own evidence.
 - RANDOM ENTITY DATA ACCEPTANCE: not applicable; no business entity sample, count zero.
 - CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION: the bounded reading-surface exploration below adapts return, focus and state presentation through existing owners. Browser action binding remains gated. Future acquisition improvements must preserve Source/Evidence/Canonical lineage and rollback.
 - Decision: `DESIGN_EXPLORATION`; Sol must verify the browser authorization boundary and prohibited identities remain untouched.

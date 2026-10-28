@@ -248,6 +248,64 @@ def test_failed_unobserved_count_is_null_and_observed_empty_page_is_zero(comment
     assert page['status'] == ('SUCCESS' if successful else 'PROVIDER_UNAVAILABLE')
 
 
+def test_top_level_comment_scope_does_not_require_unrequested_reply_totals(comments_case, monkeypatch):
+    from lumenis.system.collector.adapters.base import CollectionResult, CollectionStatus
+    case = comments_case
+    result = CollectionResult(CollectionStatus.SUCCESS, 'xhs', comments=[{
+        'platform_comment_id': 'top-level-only', 'content': 'Observed top level statement',
+        'parent_content_id': case['source_id']}], metadata={'pagination': {
+            'request_cursor': None, 'next_cursor': None, 'exhausted': True,
+            'page_complete': True, 'coverage_scope': 'EXPLICIT_TOP_LEVEL_FIXTURE'}})
+    monkeypatch.setattr(case['adapter'], 'comments', lambda *args, **kwargs: result)
+    page = collect(case, monkeypatch)
+    assert page['status'] == 'SUCCESS'
+    assert page['coverage_state'] == 'COMPLETE_FOR_DECLARED_SCOPE'
+    assert page['requested_reply_scope'] == 'TOP_LEVEL_ONLY'
+    assert page['reply_coverage_state'] == 'NOT_REQUESTED'
+    assert page['replies_complete'] is None
+
+
+def test_explicit_incomplete_provider_page_cannot_be_marked_success_when_exhausted(comments_case, monkeypatch):
+    from lumenis.system.collector.adapters.base import CollectionResult, CollectionStatus
+    case = comments_case
+    result = CollectionResult(CollectionStatus.SUCCESS, 'xhs', comments=[{
+        'platform_comment_id': 'incomplete-provider-page', 'content': 'Observed partial page statement',
+        'parent_content_id': case['source_id']}], metadata={'pagination': {
+            'request_cursor': None, 'next_cursor': None, 'exhausted': True,
+            'page_complete': False, 'coverage_scope': 'EXPLICIT_INCOMPLETE_PAGE_FIXTURE'}})
+    monkeypatch.setattr(case['adapter'], 'comments', lambda *args, **kwargs: result)
+    page = collect(case, monkeypatch)
+    assert page['status'] == 'COMMENTS_PARTIAL'
+    assert page['coverage_state'] == 'PARTIAL'
+    assert page['pagination_exhausted'] is True
+    assert page['recovery_required'] is True
+    assert page['partial_reason'] == 'PAGE_COMPLETION_NOT_ESTABLISHED'
+    assert page['continuation'] == {'page_ref': page['page_ref']}
+
+
+def test_requested_reply_scope_without_provider_completion_stays_unknown(comments_case, monkeypatch):
+    from lumenis.system.collector.adapters.base import CollectionResult, CollectionStatus
+    case = comments_case
+    case['arguments']['include_replies'] = True
+    blocked = case['entry'].collect_comments(case['source_id'], **case['arguments'])
+    assert blocked['status'] == 'APPROVAL_REQUIRED'
+    case['gate'].grant_approval('data_import', resource=blocked['approval_resource'],
+                                granted_by='isolated reply-scope fixture')
+    result = CollectionResult(CollectionStatus.SUCCESS, 'xhs', comments=[{
+        'platform_comment_id': 'reply-scope-unknown', 'content': 'Observed statement',
+        'parent_content_id': case['source_id']}], metadata={'pagination': {
+            'request_cursor': None, 'next_cursor': None, 'exhausted': True,
+            'page_complete': True, 'coverage_scope': 'EXPLICIT_UNKNOWN_REPLY_FIXTURE'}})
+    monkeypatch.setattr(case['adapter'], 'comments', lambda *args, **kwargs: result)
+    page = collect(case, monkeypatch)
+    assert page['status'] == 'COMMENTS_PARTIAL'
+    assert page['coverage_state'] == 'PARTIAL'
+    assert page['requested_reply_scope'] == 'INCLUDE_REPLIES'
+    assert page['reply_coverage_state'] == 'UNKNOWN'
+    assert page['replies_complete'] is None
+    assert page['partial_reason'] == 'REPLY_COVERAGE_NOT_ESTABLISHED'
+
+
 def test_comment_original_artifact_same_page_cold_read_and_distinct_page_identity(comments_case, monkeypatch):
     case = comments_case
     first = collect(case, monkeypatch)

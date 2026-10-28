@@ -3,10 +3,9 @@ from __future__ import annotations
 import datetime
 import os
 import re
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
-from .config import PLATFORM_CAPABILITIES
 from .registry import register_adapter
 
 
@@ -541,10 +540,71 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                              detail_source_url=content_id, **kwargs)
 
     def comments(self, content_id: str, *, include_replies=False, **kwargs: Any) -> CollectionResult:
-        if kwargs.get('cursor') is not None:
-            return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
-                metadata={'error_type': 'NATIVE_COMMENT_CURSOR_NOT_OBSERVED'},
-                message='已注册浏览器评论观察未提供可核验的原生分页游标')
+        return self._native_page('comments', content_id, include_replies=include_replies, **kwargs)
+
+    def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
+        return self._native_page('author', creator_id, **kwargs)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._native_page('author_posts', author_id, **kwargs)
+
+    def _native_page(self, operation, target, **kwargs):
+        try:
+            if operation == 'comments':
+                target = validate_xhs_detail_target(target)
+            elif not isinstance(target, str) or re.fullmatch(r'[0-9a-fA-F]{24}', target) is None:
+                return self._failed_result('XHS_AUTHOR_ID_INVALID')
+            backend = self._load_backend()
+            method = getattr(backend, 'collect_native_xiaohongshu', None)
+            if not callable(method):
+                return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
+                    message='已注册小红书提供方尚未接入原生页读取', metadata={'error_type': 'NATIVE_PROVIDER_NOT_IMPLEMENTED'})
+            options = {key: kwargs[key] for key in ('region', 'account', 'time_budget', 'worker_chunk_seconds', 'acquisition_fingerprint') if key in kwargs}
+            raw = method(target, operation=operation, cursor=kwargs.get('cursor'),
+                max_results=kwargs.get('max_comments', 20) if operation == 'comments' else kwargs.get('max_results', 20),
+                include_replies=kwargs.get('include_replies', False), **options)
+            result = raw.get('native_result') if isinstance(raw, dict) else None
+            result = result if isinstance(result, dict) else {}
+            items = result.get('items') if isinstance(result.get('items'), list) else []
+            comments = result.get('comments') if isinstance(result.get('comments'), list) else []
+            error = str(raw.get('error') or '')
+            success = raw.get('ok') is True and raw.get('identity_verified') is True and bool(result)
+            if success:
+                status = CollectionStatus.SUCCESS if items or comments else CollectionStatus.NO_NEW_DATA
+            elif any(code in error for code in ('IDENTITY_MISMATCH', 'ACCESS_BLOCKED', 'POLICY_BLOCKED')):
+                status = CollectionStatus.BLOCKED
+            elif any(code in error for code in ('SESSION_EXPIRED', 'AUTH_REQUIRED', 'WEB_SESSION_NOT_PRESENT')):
+                status = CollectionStatus.SESSION_EXPIRED
+            elif any(code in error for code in ('IDENTITY_NOT_VERIFIED', 'NEED_VERIFY', 'VERIFICATION_REQUIRED')):
+                status = CollectionStatus.NEED_VERIFY
+            elif 'RATE_LIMITED' in error:
+                status = CollectionStatus.COOLING_DOWN
+            elif any(code in error for code in ('NOT_CONFIGURED', 'SCRIPT_UNAVAILABLE')):
+                status = CollectionStatus.NOT_CONFIGURED
+            elif any(code in error for code in ('ENDPOINT_UNAVAILABLE', 'TIMEOUT', 'PROVIDER_UNAVAILABLE')):
+                status = CollectionStatus.PROVIDER_UNAVAILABLE
+            else:
+                status = CollectionStatus.COLLECT_ERROR
+            pagination = result.get('pagination') if isinstance(result.get('pagination'), dict) else {
+                'request_cursor': kwargs.get('cursor'), 'next_cursor': None, 'exhausted': None, 'page_complete': False}
+            summary = raw.get('summary') if isinstance(raw.get('summary'), dict) else {}
+            return CollectionResult(status, self.platform, items=items if success else [], comments=comments if success else [],
+                raw_count=len(items) + len(comments) if success else None, new_count=len(items) + len(comments) if success else 0,
+                message='' if success else '香港/国际采集未完成；请通过原任务恢复入口处理当前平台状态',
+                metadata={'provider': 'authorized_browser_worker', 'source': 'www.rednote.com', 'region': 'intl',
+                    'acquisition_capability': operation, 'pagination': pagination, 'include_replies_requested': kwargs.get('include_replies', False),
+                    'identity_verified': raw.get('identity_verified') is True,
+                    'identity_failure_stage': raw.get('identity_failure_stage'),
+                    'error_type': None if success else re.sub(r'[^A-Z0-9_: ]', '', error)[:120],
+                    'http_status': summary.get('http_status'), 'retry_after_seconds': summary.get('retry_after_seconds')})
+        except (ValueError, TypeError):
+            return self._failed_result('XHS_NATIVE_INPUT_INVALID')
+        except Exception as exc:
+            return CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, self.platform,
+                message='香港/国际采集提供方暂不可用', metadata={'provider': 'authorized_browser_worker', 'error_type': type(exc).__name__})
+
+    def _loaded_detail_comments(self, content_id, *, include_replies=False, **kwargs):
+        """Retained observation mapper; native comments owns acquisition."""
         observed = self.detail(content_id, **kwargs)
         if not observed.ok:
             return observed

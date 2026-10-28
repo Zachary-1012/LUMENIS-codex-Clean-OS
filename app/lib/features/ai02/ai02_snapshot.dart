@@ -1,312 +1,143 @@
-enum Ai02TaskState {
-  pending,
-  running,
-  completed,
-  blocked,
-  unavailable,
-  unknown,
-}
-
-enum Ai02BindingState { bound, unavailable, blocked, unknown }
-
-enum Ai02ScopeMode { globalAll, focus, unknown }
-
-class Ai02ExecutionProof {
-  const Ai02ExecutionProof({
-    required this.actorBound,
-    required this.scopeMode,
-    required this.scopeAuthorized,
-    required this.scopeDomainId,
-    required this.scopeSubjectId,
-    required this.readAllowed,
-    required this.executeAllowed,
-    required this.evidenceRefsPresent,
-    required this.evidenceLineageVerified,
-    required this.evidenceIntegrityVerified,
-    required this.callableContract,
-  });
-
-  const Ai02ExecutionProof.unverified()
-    : actorBound = false,
-      scopeMode = Ai02ScopeMode.unknown,
-      scopeAuthorized = false,
-      scopeDomainId = null,
-      scopeSubjectId = null,
-      readAllowed = false,
-      executeAllowed = false,
-      evidenceRefsPresent = false,
-      evidenceLineageVerified = false,
-      evidenceIntegrityVerified = false,
-      callableContract = false;
-
-  final bool actorBound;
-  final Ai02ScopeMode scopeMode;
-  final bool scopeAuthorized;
-  final String? scopeDomainId;
-  final String? scopeSubjectId;
-  final bool readAllowed;
-  final bool executeAllowed;
-  final bool evidenceRefsPresent;
-  final bool evidenceLineageVerified;
-  final bool evidenceIntegrityVerified;
-  final bool callableContract;
-
-  bool get exactScope {
-    if (!scopeAuthorized || scopeDomainId == null) return false;
-    return switch (scopeMode) {
-      Ai02ScopeMode.globalAll => scopeSubjectId == null,
-      Ai02ScopeMode.focus => scopeSubjectId != null,
-      Ai02ScopeMode.unknown => false,
-    };
-  }
-
-  bool get ready =>
-      actorBound &&
-      exactScope &&
-      readAllowed &&
-      executeAllowed &&
-      evidenceRefsPresent &&
-      evidenceLineageVerified &&
-      evidenceIntegrityVerified &&
-      callableContract;
-}
-
 class Ai02TaskStep {
-  const Ai02TaskStep({
-    required this.key,
-    required this.label,
-    required this.state,
-  });
-
-  final String key;
+  const Ai02TaskStep(this.label, this.status);
   final String label;
-  final Ai02TaskState state;
+  final String status;
+}
 
-  factory Ai02TaskStep.fromJson(Map<String, dynamic> json, int index) {
-    final key = _safeId(json['key'] ?? json['id']) ?? 'stage-${index + 1}';
-    final label = _safeText(json['label'] ?? json['label_key']);
-    if (label == null) {
-      throw const FormatException('AI-02 task step has no safe label.');
+class Ai02WorkRef {
+  const Ai02WorkRef(this.kind, this.artifactId, this.title);
+  final String kind, artifactId, title;
+}
+
+class Ai02Task {
+  const Ai02Task({
+    required this.id,
+    required this.title,
+    required this.input,
+    required this.status,
+    required this.canCancel,
+    required this.canResume,
+    required this.steps,
+    required this.works,
+    this.createdAt,
+    this.updatedAt,
+    this.output,
+    this.errorCode,
+    this.requestId,
+    this.resultRestricted = false,
+  });
+  final String id, title, input, status;
+  final bool canCancel, canResume;
+  final DateTime? createdAt, updatedAt;
+  final String? output, errorCode;
+  final String? requestId;
+  final bool resultRestricted;
+  final List<Ai02TaskStep> steps;
+  final List<Ai02WorkRef> works;
+  bool get active => const {
+    'pending',
+    'queued',
+    'created',
+    'running',
+    'executing',
+    'parsing',
+    'dispatching',
+    'cancel_requested',
+  }.contains(status);
+
+  factory Ai02Task.fromJson(Map<String, dynamic> row) {
+    final id = row['task_id'] ?? row['execution_id'];
+    final view = row['workspace_view'];
+    if (id is! String ||
+        !RegExp(r'^(?:task_|skilljob_)[A-Za-z0-9_-]{8,128}$').hasMatch(id) ||
+        view is! Map ||
+        view['status'] is! String ||
+        view['can_cancel'] is! bool ||
+        view['can_resume'] is! bool) {
+      throw const FormatException('Invalid task workspace response.');
     }
-    return Ai02TaskStep(
-      key: key,
-      label: label,
-      state: _parseState(json['state']),
+    String text(Object? value, {int max = 16000}) =>
+        value is String && value.length <= max ? value : '';
+    final input = text(view['input']);
+    final title = text(view['title'], max: 240);
+    final output = text(view['output_text'], max: 200000);
+    final steps = <Ai02TaskStep>[];
+    for (final row
+        in view['steps'] is List ? view['steps'] as List : const []) {
+      if (row is Map && row['label'] is String && row['status'] is String) {
+        steps.add(Ai02TaskStep(text(row['label'], max: 240), row['status']));
+      }
+    }
+    final works = <Ai02WorkRef>[];
+    for (final row
+        in view['work_refs'] is List ? view['work_refs'] as List : const []) {
+      if (row is! Map) continue;
+      final artifact = row['artifact_id'];
+      if (artifact is String &&
+          RegExp(r'^ART-[a-f0-9]{16}$').hasMatch(artifact) &&
+          const {
+            'report',
+            'manuscript',
+            'media',
+            'video',
+            'podcast',
+          }.contains(row['kind'])) {
+        works.add(
+          Ai02WorkRef(row['kind'], artifact, text(row['title'], max: 240)),
+        );
+      }
+    }
+    final error = view['error_code'];
+    final requestId = row['request_id'] ?? view['request_id'];
+    if (requestId != null &&
+        (requestId is! String ||
+            !RegExp(r'^[0-9a-f]{32}$').hasMatch(requestId))) {
+      throw const FormatException('Invalid task request identity.');
+    }
+    return Ai02Task(
+      id: id,
+      title: title,
+      input: input,
+      status: view['status'],
+      canCancel: view['can_cancel'] == true,
+      canResume: view['can_resume'] == true,
+      createdAt: DateTime.tryParse('${view['created_at']}'),
+      updatedAt: DateTime.tryParse('${view['updated_at']}'),
+      output: output.isEmpty ? null : output,
+      requestId: requestId as String?,
+      resultRestricted: view['result_access_state'] == 'RESTRICTED',
+      errorCode:
+          error is String && RegExp(r'^[A-Z][A-Z0-9_]{1,95}$').hasMatch(error)
+          ? error
+          : null,
+      steps: List.unmodifiable(steps),
+      works: List.unmodifiable(works),
     );
   }
 }
 
 class Ai02Snapshot {
-  const Ai02Snapshot({
-    required this.bindingState,
-    required this.steps,
-    required this.evidenceRefs,
-    required this.executionProof,
-    required this.unavailableFields,
-    this.generatedAt,
-  });
-
-  final Ai02BindingState bindingState;
-  final List<Ai02TaskStep> steps;
-  final List<String> evidenceRefs;
-  final Ai02ExecutionProof executionProof;
-  final List<String> unavailableFields;
-  final String? generatedAt;
-
-  bool get isBound => bindingState == Ai02BindingState.bound;
-  bool get hasExecutableRoute => isBound && executionProof.ready;
-
+  const Ai02Snapshot({required this.tasks, this.nextOffset});
+  final List<Ai02Task> tasks;
+  final int? nextOffset;
   factory Ai02Snapshot.fromResponse(Map<String, dynamic> response) {
-    if (response['ok'] != true || response['screen'] != 'AI-02') {
-      throw const FormatException('AI-02 response is not valid.');
+    if (response['ok'] != true ||
+        response['tasks'] is! List ||
+        response['has_more'] is! bool ||
+        (response['has_more'] == true && response['next_offset'] is! int)) {
+      throw const FormatException('Invalid task list response.');
     }
-    final binding = _asMap(response['binding']);
-    final sections = _asMapList(response['sections']);
-    final rawSteps =
-        response['task_steps'] ??
-        sections
-            .expand(
-              (section) => _asList(
-                section['task_steps'] ?? section['steps'] ?? section['items'],
-              ),
-            )
-            .toList(growable: false);
-    final steps = <Ai02TaskStep>[];
-    if (rawSteps is List) {
-      for (var index = 0; index < rawSteps.length; index++) {
-        final item = rawSteps[index];
-        if (item is! Map) continue;
-        try {
-          steps.add(
-            Ai02TaskStep.fromJson(
-              item.map((key, value) => MapEntry('$key', value)),
-              index,
-            ),
-          );
-        } on FormatException {
-          // A malformed stage is not shown as a fabricated stage.
-        }
-      }
-    }
-    final refs = <String>[];
-    final rawRefs =
-        response['evidence_refs'] ??
-        sections
-            .expand((section) => _asList(section['evidence_refs']))
-            .toList();
-    if (rawRefs is List) {
-      for (final ref in rawRefs) {
-        final safe = _safeEvidenceId(ref);
-        if (safe != null && !refs.contains(safe)) refs.add(safe);
-      }
-    }
-    final actor = _asMap(response['actor'] ?? binding?['actor']);
-    final scope = _asMap(response['scope'] ?? binding?['scope']);
-    final permission = _asMap(response['permission']);
-    final evidence = _asMap(response['evidence']);
-    final scopeMode = _parseScopeMode(scope?['mode']);
-    final scopeDomainId = _safeDomain(scope?['domain_id'] ?? scope?['domain']);
-    final scopeSubjectId = _safeId(scope?['subject_id']);
-    final executionProof = Ai02ExecutionProof(
-      actorBound:
-          actor?['bound'] == true &&
-          actor?['source'] == 'server' &&
-          _safeId(actor?['id']) != null,
-      scopeMode: scopeMode,
-      scopeAuthorized: scope?['authorized'] == true,
-      scopeDomainId: scopeDomainId,
-      scopeSubjectId: scopeSubjectId,
-      readAllowed:
-          permission?['read'] == true && permission?['decision'] == 'ALLOW',
-      executeAllowed:
-          permission?['execute'] == true && permission?['decision'] == 'ALLOW',
-      evidenceRefsPresent: refs.isNotEmpty,
-      evidenceLineageVerified: evidence?['lineage_verified'] == true,
-      evidenceIntegrityVerified: evidence?['integrity_verified'] == true,
-      callableContract: _hasCallableContract(response['actions']),
-    );
-    final isBound =
-        response['bound'] == true && response['source'] == 'runtime';
-    final state = isBound
-        ? Ai02BindingState.bound
-        : binding?['blocked'] is List
-        ? Ai02BindingState.blocked
-        : Ai02BindingState.unavailable;
+    final tasks = (response['tasks'] as List)
+        .map((row) {
+          if (row is! Map) throw const FormatException('Invalid task row.');
+          return Ai02Task.fromJson(Map<String, dynamic>.from(row));
+        })
+        .toList(growable: false);
     return Ai02Snapshot(
-      bindingState: state,
-      steps: steps,
-      evidenceRefs: refs,
-      executionProof: executionProof,
-      unavailableFields: _asStringList(binding?['unavailable']),
-      generatedAt: _safeText(response['generated_at']),
+      tasks: tasks,
+      nextOffset: response['has_more'] == true
+          ? response['next_offset'] as int
+          : null,
     );
   }
-}
-
-Ai02TaskState _parseState(Object? value) => switch ('$value'.toLowerCase()) {
-  'pending' || 'scheduled' => Ai02TaskState.pending,
-  'running' || 'in_progress' => Ai02TaskState.running,
-  'completed' || 'done' => Ai02TaskState.completed,
-  'blocked' || 'denied' => Ai02TaskState.blocked,
-  'unavailable' || 'offline' => Ai02TaskState.unavailable,
-  _ => Ai02TaskState.unknown,
-};
-
-Map<String, Object?>? _asMap(Object? value) {
-  if (value is! Map) return null;
-  return value.map((key, value) => MapEntry('$key', value));
-}
-
-List<Map<String, Object?>> _asMapList(Object? value) {
-  if (value is! List) return const [];
-  return value
-      .map(_asMap)
-      .whereType<Map<String, Object?>>()
-      .toList(growable: false);
-}
-
-List<Object?> _asList(Object? value) => value is List ? value : const [];
-
-List<String> _asStringList(Object? value) => value is List
-    ? value
-          .whereType<String>()
-          .where((item) => item.length <= 100)
-          .toList(growable: false)
-    : const [];
-
-Ai02ScopeMode _parseScopeMode(Object? value) => switch (value) {
-  'GLOBAL_ALL' => Ai02ScopeMode.globalAll,
-  'FOCUS' => Ai02ScopeMode.focus,
-  _ => Ai02ScopeMode.unknown,
-};
-
-String? _safeDomain(Object? value) {
-  final text = value is String ? value.trim().toUpperCase() : '';
-  return switch (text) {
-    'CTH' => 'CTH',
-    'BMP' || 'ZBMP' => 'BMP',
-    _ => null,
-  };
-}
-
-bool _hasCallableContract(Object? value) {
-  if (value is! List) return false;
-  for (final item in value) {
-    if (item is! Map || item['capability_status'] != 'VERIFIED_AVAILABLE') {
-      continue;
-    }
-    if (_safeId(item['action_id'] ?? item['id']) == null) continue;
-    final callable = _asMap(item['callable']);
-    final requestFields = _asStringList(callable?['request_fields']);
-    final responseFields = _asStringList(callable?['response_fields']);
-    final requestIsSupported =
-        requestFields.contains('task') || requestFields.contains('intent');
-    final responseIsSupported =
-        responseFields.contains('execution_id') &&
-        responseFields.contains('status');
-    if (callable?['available'] == true &&
-        callable?['method'] == 'POST' &&
-        callable?['route'] == '/api/experience/ai/intent' &&
-        requestIsSupported &&
-        responseIsSupported) {
-      return true;
-    }
-  }
-  return false;
-}
-
-String? _safeId(Object? value) {
-  if (value is! String || value.trim().isEmpty || value.length > 80) {
-    return null;
-  }
-  final text = value.trim();
-  return RegExp(r'^[A-Za-z0-9._:-]+$').hasMatch(text) ? text : null;
-}
-
-String? _safeEvidenceId(Object? value) {
-  if (value is! String || value.length > 100) return null;
-  final text = value.trim();
-  if (text.isEmpty || text.contains('/') || text.contains('\\')) return null;
-  return RegExp(r'^(EV[-:][A-Za-z0-9_.:-]+|[A-Z]{2,8}-\d+)$').hasMatch(text)
-      ? text
-      : null;
-}
-
-String? _safeText(Object? value) {
-  if (value is! String || value.trim().isEmpty || value.length > 180) {
-    return null;
-  }
-  final text = value.trim();
-  final lower = text.toLowerCase();
-  if (text.contains(RegExp(r'[\r\n\x00]')) ||
-      text.contains('/') ||
-      text.contains('\\') ||
-      lower.contains('token') ||
-      lower.contains('secret') ||
-      lower.contains('password') ||
-      lower.contains('provider=') ||
-      lower.contains('model=')) {
-    return null;
-  }
-  return text;
 }

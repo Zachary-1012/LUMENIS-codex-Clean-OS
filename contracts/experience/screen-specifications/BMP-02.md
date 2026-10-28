@@ -27,15 +27,15 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 ## 1. User problem and product invariant
 
 - **Role / context:** A BMP operator compares one authorized BrandFocus with its owned brands, sub-brands and competitor entities.
-- **User task / completion:** choose or confirm a BrandFocus, or inspect the default global product universe, understand the portfolio relationship, and inspect one source-backed entity profile. FOCUS completion requires exact `brand_focus_id`; GLOBAL_ALL completion requires explicit global scope, verified lineage and row read permission, plus source and item-level trace.
+- **User task / completion:** choose or confirm a BrandFocus, or inspect the current actor-authorized China-operating subject/brand directory, understand the portfolio relationship, and inspect one source-backed entity profile. FOCUS completion requires exact `brand_focus_id`; GLOBAL_ALL completion requires explicit actor/task scope, verified lineage and row read permission, plus source and item-level trace.
 - **Invariant:** `subject_id` identifies the selected context only; `brand_focus_id` is a distinct BMP business scope. The screen must never infer brand ownership from a Subject, author, source or display name.
-- **Global rule:** `GLOBAL / ALL` is the default full-universe view. It may show real global portfolio rows only when the response and every row carry explicit canonical global scope, verified lineage and `read_allowed`; a focused BrandFocus row without those markers is rejected, never promoted.
+- **Scope rule:** An unfocused portfolio contains only authorized, evidenced China-operating brands. Legacy `GLOBAL / ALL` markers do not widen that scope. Each row retains verified lineage and `read_allowed`; selecting BrandFocus never creates permission. Overseas comparison material remains cited research, not an implicitly registered active brand.
 - **Out of scope:** changing context, creating a brand, editing competitor sets, CTH records, publishing, reports and any write or external effect.
 
 ## 2. Route, entry, exit and return
 
 - **Entry:** the canonical App Shell may open BMP-02; this batch does not alter shell routing. The screen reads `GET /api/experience/screen/BMP-02` through `LumenisCoreClient.screen('BMP-02')`.
-- **Required context:** either a server-returned `FOCUS` context for `domain_id=BMP`, `product_id=ZBMP`, a non-empty `subject_id`, a distinct `brand_focus_id`, `focus_binding.applied=true` and an allowed read decision, or `GLOBAL_ALL` with the explicit global grant, canonical scope, verified lineage and `read_allowed` contract above. The route cannot grant authorization.
+- **Required context:** either a server-returned `FOCUS` context for `domain_id=BMP`, `product_id=ZBMP`, a non-empty `subject_id`, a distinct `brand_focus_id`, `focus_binding.applied=true` and an allowed read decision, or `GLOBAL_ALL` with the explicit actor-directory read grant, canonical scope, verified lineage and `read_allowed` contract above. The route cannot grant authorization.
 - **Exit / return:** entity selection is local presentation state. Return restores the selected entity, search query and role filter when the host keeps the screen alive. No context mutation occurs.
 - **Trace position:** the selected entity dossier retains its source and trace reference in the response-backed view model; a future trace route is not invented here.
 
@@ -45,7 +45,7 @@ approval_reference: Product Owner approval of App / Experience Constitution §§
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | P0 | Envelope and product identity | Experience API adapter + BMP | `GET /api/experience/screen/BMP-02`; `ok`, `screen`, `bound`, `source`, `truth.product_id`, `truth.domain_id` | Must be runtime-bound and exactly `ZBMP` / `zbmp` | Mismatch blocks all business rows | BACKEND-GAP-019 | `experience_runtime.py::screen_viewmodel`; `bmp02_snapshot.dart` |
 | P0 | BrandFocus context and read decision | SYSTEM context / Permission + BMP scope | `focus_context` and `focus_binding` in the response | `FOCUS` requires distinct Subject/BrandFocus; `GLOBAL_ALL` requires `scope_verified=true`, `global_all_granted=true`, `evidence_lineage=verified`, canonical global scope and `read_allowed=true` | Unknown or denied blocks entity rows | BACKEND-GAP-019 | Current BMP-02 builder does not return a verified focus/global binding |
-| P1 | Portfolio entities | BMP canonical owner | Future `sections[type=brands|portfolio].items[]` with `id`, optional `brand_focus_id`, `name`, `role`, `source`, `evidence_ref`, `read_allowed`, `scope_mode`, `canonical_scope`, `lineage` | FOCUS rows require exact BrandFocus; GLOBAL_ALL rows require explicit global scope, verified lineage and row read permission | Missing, focused-without-global-markers or cross-focus rows are omitted, never reassigned | BACKEND-GAP-019 | `_build_bmp02()` currently returns a curated directory without BrandFocus/global lineage |
+| P1 | Portfolio entities | BMP canonical owner | Future `sections[type=brands|portfolio].items[]` with `id`, optional `brand_focus_id`, `name`, `role`, `source`, `evidence_ref`, `read_allowed`, `scope_mode`, `canonical_scope`, `lineage` | FOCUS rows require exact BrandFocus; GLOBAL_ALL rows require explicit actor/task scope, verified lineage and row read permission | Missing, focused-without-global-markers or cross-focus rows are omitted, never reassigned | BACKEND-GAP-019 | `_build_bmp02()` currently returns a curated directory without BrandFocus/global lineage |
 | P1 | Selected entity profile | BMP canonical owner + Shared Evidence | Same entity row plus optional typed metrics, category, capture time and window | Each value remains source-backed and scope-matched | Null stays unavailable; no missing→0 conversion | BACKEND-GAP-019 | `Bmp02Brand` parser and dossier are bounded to verified rows |
 | P2 | Search and role filter | App presentation state | `Bmp02ViewModel` local filters | No server mutation | Empty filter state keeps the focus banner and offers clear filter | BMP02-UI-LOCAL | `bmp02_view_model.dart` |
 
@@ -124,13 +124,13 @@ The real Product Core/API/Permission/Evidence acceptance is blocked until the ba
 
 - **Decision:** `BLOCKED` for full acceptance; the bounded renderer is `DESIGN_EXPLORATION` with a fail-closed implementation.
 - **Open owners:** BMP must define the canonical portfolio/competitor response and metric lineage; SYSTEM must return the actor/read decision; Shared Evidence must validate item traces; App Shell must later bind the host BrandFocus selector.
-- **Changes required before DESIGN_READY / ACCEPTED:** a current callable with per-record BrandFocus, Permission and Evidence proof; live runtime/E2E on desktop/web/mobile; and Sol review of this screen-specific composition.
+- **Changes required before DESIGN_READY / ACCEPTED:** a current callable with per-record BrandFocus, Permission and Evidence proof; live runtime/E2E on desktop/web/mobile; and actual review of this screen-specific composition.
 
 ## 11. Real delivery and data-maturity overlay
 
 - **REAL USER JOB:** understand the selected brand's portfolio position and competitor set well enough to choose the next market-intelligence drill-in.
 - **REAL DELIVERY CARD:** real BrandFocus input → scoped portfolio read → visible entity relationship and source-backed profile → local selection return. Current callable fails the scoped-read entry gate, so commercial completion is blocked.
-- **GLOBAL UNIVERSE / DATA MATURITY IMPACT:** `GLOBAL / ALL` is the default global product universe when the explicit global contract is present; focused rows are never promoted. Current endpoint lacks that contract, so global coverage remains blocked. Random entity acceptance is `NOT RUN / current canonical scoped population unavailable`.
+- **SUBJECT SCOPE / TASK DATA QUALITY IMPACT:** `GLOBAL / ALL` is the current actor-authorized China-operating subject/brand directory when the explicit global contract is present; focused rows are never promoted. Current endpoint lacks that contract, so task-scope read acceptance remains unverified. Random entity acceptance is `NOT RUN / current canonical scoped population unavailable`.
 - **CONTINUOUS FRONTIER RESEARCH / CAPABILITY EVOLUTION:** `RESEARCH COMPLETE / NO JUSTIFIED UPGRADE` for this bounded slice. The Experience Constitution and current Product Core are sufficient references; no third-party dependency or alternate data owner is introduced.
 
 

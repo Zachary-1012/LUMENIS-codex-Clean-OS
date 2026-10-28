@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """小红书 CDP 真人采集通道（独立进程，Python Playwright）。
 
-为什么不用 node rednote_collector.cjs：node 版 Playwright connectOverCDP 对 Edge152 会 ws 已连但握手 30s 超时；
-Python 版 connect_over_cdp 已实测可稳定连接 9222 持久 Edge（登录态长期复用）。
+复用原 Python Playwright connect_over_cdp 路径，只解析已注册的香港/国际
+Worker与现有授权上下文；端点、身份和当前自我导航必须通过原Session核验。
 collector 通过 venv python 子进程调用本脚本以隔离崩溃；stdout 末尾打印 ---RESULT_JSON--- 结果。
 
 铁律：只识别不绕过——300012/IP风险/安全限制 => ip_blocked；验证码/安全验证 => verification_required；
@@ -123,6 +123,15 @@ def _assert_collection_identity(context, *, expected_user_id=None):
             raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','SELF_NAVIGATION_TARGET_INVALID')
         self_ids.add(match.group(1).lower())
     if not self_ids:
+        for page in rednote_pages:
+            try:
+                login = page.get_by_text(re.compile(r"^(?:登录探索更多内容|登入探索更多內容|Log in to explore|Sign in to explore)", re.I)).first
+                if login.count() and login.is_visible():
+                    raise CollectionIdentityError('SESSION_EXPIRED', 'OFFICIAL_LOGIN_REQUIRED')
+            except CollectionIdentityError:
+                raise
+            except Exception:
+                pass
         raise CollectionIdentityError('COLLECTOR_IDENTITY_NOT_VERIFIED','SELF_NAVIGATION_NOT_OBSERVED')
     if len(self_ids) != 1 or not hmac.compare_digest(next(iter(self_ids)), expected.lower()):
         raise CollectionIdentityError('COLLECTOR_IDENTITY_MISMATCH','SELF_NAVIGATION_USER_ID_MISMATCH')
@@ -1639,6 +1648,214 @@ def collect_direct(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, progr
                 progress(result)
 
 
+def _native_source_time(value):
+    if type(value) not in {int, float}:
+        return ''
+    try:
+        from datetime import timezone
+        return datetime.fromtimestamp(value / 1000 if value > 100_000_000_000 else value, timezone.utc).isoformat()
+    except (ValueError, OSError, OverflowError):
+        return ''
+
+
+def _native_media_hints(node):
+    hints = []
+    for image in node.get('image_list') or node.get('pictures') or []:
+        if not isinstance(image, dict):
+            continue
+        values = [image.get('url_default'), image.get('url_pre'), image.get('url')]
+        values.extend(value.get('url') for value in image.get('info_list') or [] if isinstance(value, dict))
+        for value in values:
+            if not isinstance(value, str): continue
+            try:
+                parsed = urlsplit(value)
+                if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password: continue
+            except ValueError:
+                continue
+            hints.append({'kind': 'image', 'url': value, 'native_media_id': image.get('file_id'),
+                          'locator': '$.image_list[]', 'bytes_state': 'NOT_ACQUIRED'})
+    return hints
+
+
+def collect_native_page(keyword, *, operation, target, cursor=None, max_results=20,
+                        include_replies=False, cdp_url=CDP_URL, progress=None, deadline=None):
+    """One native read page through the original identity-verified HK worker."""
+    if operation not in {'comments', 'author', 'author_posts'} or type(max_results) is not int or not 1 <= max_results <= 100:
+        raise ValueError('INVALID_NATIVE_OPERATION')
+    _assert_collection_host()
+    if operation == 'comments':
+        parsed = urlsplit(target)
+        match = re.fullmatch(r'/(?:explore|search_result|discovery/item)/([0-9a-fA-F]{24})/?', parsed.path)
+        if parsed.scheme != 'https' or parsed.hostname != COLLECTION_HOST or parsed.username or parsed.password or not match:
+            raise ValueError('DETAIL_SOURCE_UNVERIFIED')
+        native_target = match[1].lower()
+        source_url = target
+    else:
+        if not isinstance(target, str) or re.fullmatch(r'[0-9a-fA-F]{24}', target) is None:
+            raise ValueError('XHS_AUTHOR_ID_INVALID')
+        native_target = target.lower()
+        source_url = COLLECTION_ORIGIN + '/user/profile/' + native_target
+    reply_root = None
+    if cursor is not None:
+        if (not isinstance(cursor, dict) or cursor.get('mode') not in {'roots', 'replies', 'posts'}
+                or not isinstance(cursor.get('cursor'), str) or len(cursor['cursor']) > 4096
+                or any(ord(c) < 32 for c in cursor['cursor'])):
+            raise ValueError('XHS_NATIVE_CURSOR_INVALID')
+        if operation == 'author_posts' and set(cursor) != {'mode', 'cursor'} or operation == 'author_posts' and cursor['mode'] != 'posts':
+            raise ValueError('XHS_NATIVE_CURSOR_INVALID')
+        if operation == 'comments' and cursor['mode'] == 'replies':
+            reply_root = cursor.get('root_id')
+            if (not isinstance(reply_root, str) or re.fullmatch(r'[0-9a-fA-F]{24}', reply_root) is None
+                    or not isinstance(cursor.get('pending_roots'), list) or len(cursor['pending_roots']) > 100
+                    or any(not isinstance(v, str) or re.fullmatch(r'[0-9a-fA-F]{24}', v) is None for v in cursor['pending_roots'])):
+                raise ValueError('XHS_NATIVE_CURSOR_INVALID')
+        elif operation == 'comments' and (set(cursor) != {'mode', 'cursor'} or cursor['mode'] != 'roots'):
+            raise ValueError('XHS_NATIVE_CURSOR_INVALID')
+    result = {'ok': False, 'keyword': keyword, 'mode': operation, 'notes': [], 'summary': {},
+              'native_result': {'items': [], 'comments': [], 'pagination': {
+                  'request_cursor': cursor, 'next_cursor': None, 'exhausted': None, 'page_complete': False}}}
+    from lumenis.adapters.base import optional_int
+    from lumenis.adapters.human_browser import NativeReadCapture, native_read_scroll
+    from playwright.sync_api import sync_playwright
+    # These are the first-party native services called by the approved RedNote
+    # page itself. No Mainland page/profile or cookie is opened or selected.
+    capture = NativeReadCapture(hosts={COLLECTION_HOST, 'edith.rednote.com', 'edith.xiaohongshu.com'},
+        paths=('/comment/page', '/comment/sub/page') if operation == 'comments' else ('/user/otherinfo',) if operation == 'author' else ('/user_posted',),
+        request_keys={'note_id', 'root_comment_id', 'cursor', 'user_id', 'target_user_id', 'num'})
+    with sync_playwright() as playwright:
+        browser, context = _connect_verified_collection_context(playwright, cdp_url)
+        result['identity_verified'] = True
+        page = context.new_page()
+        try:
+            capture.attach(page)
+            if progress: progress(result)
+            robust_goto(page, source_url)
+            if _risk_check(page, result) or _budget_reached(result, deadline): return result
+            page.wait_for_timeout(700)
+            def select(observation):
+                request = observation['request']
+                if operation == 'comments':
+                    if request.get('note_id') != native_target or bool(reply_root) != ('/sub/' in observation['path']): return None
+                    if reply_root and request.get('root_comment_id') != reply_root: return None
+                elif str(request.get('target_user_id') or request.get('user_id') or '') != native_target:
+                    return None
+                if str(request.get('cursor') or '') != str((cursor or {}).get('cursor') or ''): return None
+                for obj in observation['objects']:
+                    if not isinstance(obj, dict): continue
+                    if obj.get('success') is not True or obj.get('code') not in (0, None):
+                        observation['failure_class'] = 'PROVIDER_REJECTED'
+                        return None
+                    data = obj.get('data')
+                    if not isinstance(data, dict): continue
+                    if operation == 'author':
+                        basic = data.get('basic_info')
+                        if isinstance(basic, dict):
+                            if basic.get('user_id') is not None and basic['user_id'] != native_target:
+                                observation['failure_class'] = 'IDENTITY_MISMATCH'; return None
+                            return {'body': data, 'rows': [basic]}
+                    rows = data.get('comments' if operation == 'comments' else 'notes')
+                    if isinstance(rows, list): return {'body': data, 'rows': rows}
+                return None
+            def advance(_step):
+                if _risk_check(page, result) or _budget_reached(result, deadline): return False
+                if reply_root:
+                    anchor = page.locator(f'[data-id="{reply_root}"], [data-comment-id="{reply_root}"]').first
+                    if anchor.count():
+                        button = anchor.get_by_text(re.compile(r'^(?:展开|查看|View|Show).{0,20}(?:回复|回覆|repl)', re.I)).first
+                        if button.count() and button.is_visible():
+                            # Only this explicit read label; interaction blacklist
+                            # continues to protect posting/liking/following.
+                            button.click(timeout=3000); return True
+                return native_read_scroll(page)
+            selected = capture.seek(page, select, advance, max_steps=18)
+            if selected is None:
+                failure = capture.failure() or {}
+                result['error'] = result.get('error') or failure.get('failure_class') or 'XHS_NATIVE_PAGE_NOT_OBSERVED'
+                result['summary'].update(http_status=failure.get('http_status'), retry_after_seconds=failure.get('retry_after_seconds'))
+                return result
+            body, rows = selected['body'], selected['rows']
+            complete = len(rows) <= max_results
+            more = body.get('has_more') if type(body.get('has_more')) is bool else None
+            next_value = body.get('cursor')
+            next_cursor = {'mode': 'posts' if operation == 'author_posts' else 'roots', 'cursor': next_value} if (
+                more is True and isinstance(next_value, str) and next_value and next_value != (cursor or {}).get('cursor') and complete) else None
+            exhausted = not more if more is not None and complete else None
+            items, comments, pending, seen = [], [], [], set()
+            if operation == 'author':
+                basic = rows[0]
+                counts = {item.get('type'): item.get('count') for item in body.get('interactions') or [] if isinstance(item, dict)}
+                items.append({'platform_content_id': native_target, 'author_id': native_target,
+                    'author_nickname': basic.get('nickname') or '', 'title': basic.get('nickname') or '', 'content': basic.get('desc') or '',
+                    'url': source_url, 'likes': None, 'comments': None, 'collects': None, 'shares': None,
+                    'raw': {'engine': 'xhs_native_profile', 'user_id': native_target, 'source_observation': body,
+                        'followers': optional_int(counts.get('fans')), 'following_count': optional_int(counts.get('follows')),
+                        'received_likes_count': None, 'received_likes_and_collects_count': optional_int(counts.get('interaction')),
+                        'metric_display': counts}})
+                exhausted = True
+            elif operation == 'author_posts':
+                for node in rows[:max_results]:
+                    if not isinstance(node, dict): continue
+                    nid = node.get('note_id') or node.get('id')
+                    author = node.get('user') or {}
+                    if not isinstance(nid, str) or re.fullmatch(r'[0-9a-fA-F]{24}', nid) is None: continue
+                    if author.get('user_id') is not None and author['user_id'] != native_target:
+                        raise ValueError('XHS_AUTHOR_HISTORY_IDENTITY_MISMATCH')
+                    interaction = node.get('interact_info') or {}
+                    items.append({'platform_content_id': nid, 'note_id': nid, 'title': node.get('display_title') or '',
+                        'content': node.get('desc') or '', 'author_id': author.get('user_id') or '', 'author_nickname': author.get('nickname') or '',
+                        'url': COLLECTION_ORIGIN + '/explore/' + nid, 'publish_datetime': _native_source_time(node.get('time')),
+                        'likes': optional_int(interaction.get('liked_count')), 'comments': optional_int(interaction.get('comment_count')),
+                        'collects': optional_int(interaction.get('collected_count')), 'shares': optional_int(interaction.get('share_count')),
+                        'raw': {'engine': 'xhs_native_author_posts', 'source_observation': node, 'body_state': 'FEED_OR_INDEX_EXCERPT',
+                            'body_kind': 'author_feed_preview', 'media_hints': _native_media_hints(node),
+                            'author_history_binding': {'requested_id': native_target, 'basis': 'EXACT_NATIVE_USER_RESOURCE'}}})
+            else:
+                flattened = []
+                for node in rows[:max_results]:
+                    if not isinstance(node, dict): continue
+                    cid = node.get('id')
+                    flattened.append((node, reply_root))
+                    inline = node.get('sub_comments') if isinstance(node.get('sub_comments'), list) else []
+                    flattened.extend((child, cid) for child in inline if isinstance(child, dict))
+                    count = optional_int(node.get('sub_comment_count'))
+                    if not reply_root and count is not None and count > len(inline) and isinstance(cid, str): pending.append(cid)
+                for node, parent in flattened:
+                    cid = node.get('id')
+                    if not isinstance(cid, str) or re.fullmatch(r'[0-9a-fA-F]{24}', cid) is None or cid in seen: continue
+                    seen.add(cid)
+                    user = node.get('user_info') or {}
+                    target_comment = node.get('target_comment') or {}
+                    comments.append({'platform_comment_id': cid, 'parent_content_id': native_target, 'parent_comment_id': parent,
+                        'reply_to_comment_id': target_comment.get('id'), 'content': node.get('content') if isinstance(node.get('content'), str) else '',
+                        'author_id': user.get('user_id') or '', 'author_nickname': user.get('nickname') or '',
+                        'publish_datetime': _native_source_time(node.get('create_time')), 'likes': optional_int(node.get('like_count')),
+                        'url': COLLECTION_ORIGIN + '/explore/' + native_target + '#comment-' + cid,
+                        'raw': {'source_observation': node, 'media_hints': _native_media_hints(node), 'native_id_locator': '$.data.comments[].id'}})
+                if reply_root:
+                    if next_cursor: next_cursor = {**cursor, 'cursor': next_value}
+                    elif exhausted is True and cursor['pending_roots']:
+                        next_cursor = {**cursor, 'root_id': cursor['pending_roots'][0], 'cursor': '', 'pending_roots': cursor['pending_roots'][1:]}
+                    elif exhausted is True:
+                        next_cursor, exhausted = cursor.get('next_root'), cursor.get('root_exhausted')
+                elif include_replies and pending:
+                    next_cursor = {'mode': 'replies', 'root_id': pending[0], 'cursor': '', 'pending_roots': pending[1:],
+                                   'next_root': next_cursor, 'root_exhausted': exhausted}
+                    exhausted = False
+            result['native_result'] = {'items': items, 'comments': comments, 'pagination': {
+                'request_cursor': cursor, 'next_cursor': next_cursor, 'exhausted': exhausted, 'page_complete': complete,
+                'coverage_scope': 'NATIVE_AUTHOR_PROFILE' if operation == 'author' else 'PROVIDER_VISIBLE_NATIVE_PAGE',
+                'resume_strategy': 'OFFICIAL_PAGE_NATIVE_CURSOR_SEEK', 'observed_prior_native_responses': selected['observed_prior_native_responses'],
+                'partial_reason': 'REQUESTED_LIMIT_REACHED' if not complete else 'NATIVE_NEXT_CURSOR_NOT_OBSERVED' if more and not next_cursor else None}}
+            result.update(ok=True, total=len(items) + len(comments))
+            result['summary'].update(acquisition_capability=operation, interactions_made=0)
+            if progress: progress(result)
+            return result
+        finally:
+            capture.close()
+            try: page.close()
+            except Exception: pass
+
+
 def collect(keyword, max_scroll=3, max_details=10, cdp_url=CDP_URL, human=1, progress=None, deadline=None,
             resume_ids=None, resume_cards=None, budget_kind='worker_chunk', detail_media_mode='legacy',
             detail_url=None):
@@ -1683,6 +1900,10 @@ def main():
     ap.add_argument('--resume-from', default='')
     ap.add_argument('--detail-url', default=None,
                     help='Exact permitted RedNote note URL; reuse the same identity-verified worker')
+    ap.add_argument('--operation', choices=('search', 'detail', 'comments', 'author', 'author_posts'), default='search')
+    ap.add_argument('--target', default=None)
+    ap.add_argument('--native-cursor', default=None)
+    ap.add_argument('--include-replies', action='store_true')
     args = ap.parse_args()
     if args.time_budget is not None and (not math.isfinite(args.time_budget) or args.time_budget <= 0):
         ap.error('--time-budget must be a finite positive number when supplied')
@@ -1738,9 +1959,15 @@ def main():
             resume_options = {'resume_cards': _resume_pending_cards(previous, resume_ids)} if previous is not None else {}
             if args.detail_url is not None:
                 resume_options['detail_url'] = args.detail_url
-            res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human,
-                          progress, deadline, resume_ids, budget_kind=budget_kind,
-                          detail_media_mode=args.detail_media_mode, **resume_options)
+            if args.operation in {'comments', 'author', 'author_posts'}:
+                native_cursor = json.loads(args.native_cursor) if args.native_cursor else None
+                res = collect_native_page(args.keyword, operation=args.operation, target=args.target,
+                    cursor=native_cursor, max_results=args.max_details, include_replies=args.include_replies,
+                    cdp_url=args.cdp_url, progress=progress, deadline=deadline)
+            else:
+                res = collect(args.keyword, args.max_scroll, args.max_details, args.cdp_url, args.human,
+                              progress, deadline, resume_ids, budget_kind=budget_kind,
+                              detail_media_mode=args.detail_media_mode, **resume_options)
     except Exception as e:
         res = initial
         if args.output:

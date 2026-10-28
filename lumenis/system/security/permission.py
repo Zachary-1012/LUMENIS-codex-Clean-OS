@@ -606,7 +606,7 @@ _RESOURCE_SCOPE_ACTIONS = frozenset({"read", "write"})
 # discriminator; identity and grants are always resolved on the server.
 _SHARED_WORKSPACE_SCOPE_KIND = "shared_workspace"
 _SHARED_WORKSPACE_VERSION = 1
-_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports", "conversation", "learning", "owned_model_admission"})
+_SHARED_WORKSPACE_MODULES = frozenset({"content", "reports", "conversation", "learning", "owned_model_admission", "skills"})
 _SHARED_WORKSPACE_OPERATIONS = frozenset({OperationType.DATA_EXPORT, OperationType.DB_WRITE, OperationType.AI_CALL, OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT, OperationType.RUNTIME_OPERATION})
 _SHARED_WORKSPACE_ADMISSION_SEAL = object()
 
@@ -1376,7 +1376,16 @@ def _shared_workspace_admission_valid(
         if operation_type is OperationType.RUNTIME_OPERATION:
             if (admission.module != 'owned_model_admission' or admission.action != 'write'
                     or type(resource) is not str
-                    or re.fullmatch(r'owned_model_admission:v1:[0-9a-f]{64}', resource) is None):
+                    or re.fullmatch(r'owned_model_admission:v(?:1|2):[0-9a-f]{64}', resource) is None):
+                return False
+        elif (operation_type is OperationType.CONFIG_MODIFY and admission.module == 'skills'
+                and admission.action == 'write' and type(resource) is str
+                and re.fullmatch(r'builtin-skill-status:v1:[0-9a-f]{64}', resource)):
+            from account.skills import validate_builtin_skill_status_resource
+            actor = admission.principal if admission.principal is not None else {'id': admission.actor_id}
+            if not validate_builtin_skill_status_resource(resource, actor=actor,
+                    scope={'scope_kind': _SHARED_WORKSPACE_SCOPE_KIND, 'version': _SHARED_WORKSPACE_VERSION},
+                    connection=admission.connection):
                 return False
         elif operation_type in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}:
             if (admission.module != "learning" or admission.action != "write"
@@ -1390,7 +1399,14 @@ def _shared_workspace_admission_valid(
                     operation=operation_type, connection=admission.connection):
                 return False
         elif operation_type is OperationType.AI_CALL:
-            if (admission.module == 'conversation' and admission.action == 'write'
+            if (admission.module == 'content' and admission.action == 'read'
+                    and type(resource) is str and resource.startswith('agent-owned-ai:v1:')):
+                from agent_runtime.task_binding import validate_shared_agent_ai_resource
+                actor = admission.principal if admission.principal is not None else {'id': admission.actor_id}
+                if not validate_shared_agent_ai_resource(resource, actor=actor,
+                        scope={'scope_kind': _SHARED_WORKSPACE_SCOPE_KIND, 'version': _SHARED_WORKSPACE_VERSION}):
+                    return False
+            elif (admission.module == 'conversation' and admission.action == 'write'
                     and type(resource) is str and resource.startswith('conversation-owned-ai:v1:')):
                 from lumenis.ai_hub.conversations import validate_conversation_ai_resource
                 actor = admission.principal if admission.principal is not None else {'id': admission.actor_id}
@@ -1540,9 +1556,18 @@ def check_shared_workspace_effect(
             creation_valid = validate_creation_ai_resource(resource, actor=actor, scope=scope) is True
         except Exception:
             creation_valid = False
+    agent_valid = (module == 'content' and action == 'read'
+        and operation is OperationType.AI_CALL and type(resource) is str
+        and re.fullmatch(r'agent-owned-ai:v1:task_[0-9a-f]{16}:([1-9]|1[0-5]):[0-9a-f]{64}:[0-9a-f]{64}', resource) is not None)
+    if agent_valid:
+        try:
+            from agent_runtime.task_binding import validate_shared_agent_ai_resource
+            agent_valid = validate_shared_agent_ai_resource(resource, actor=actor, scope=scope) is True
+        except Exception:
+            agent_valid = False
     model_admission_valid = (module == 'owned_model_admission' and action == 'write'
         and operation is OperationType.RUNTIME_OPERATION and type(resource) is str
-        and re.fullmatch(r'owned_model_admission:v1:[0-9a-f]{64}', resource) is not None)
+        and re.fullmatch(r'owned_model_admission:v(?:1|2):[0-9a-f]{64}', resource) is not None)
     learning_valid = (module == "learning" and action == "write"
         and operation in {OperationType.CONFIG_MODIFY, OperationType.DATA_IMPORT}
         and type(resource) is str and re.fullmatch(r"learning-exchange:[0-9a-f]{64}", resource) is not None)
@@ -1553,9 +1578,20 @@ def check_shared_workspace_effect(
                                                                   operation=operation, connection=connection)
         except Exception:
             learning_valid = False
+    skill_status_valid = (module == 'skills' and action == 'write'
+        and operation is OperationType.CONFIG_MODIFY and type(resource) is str
+        and re.fullmatch(r'builtin-skill-status:v1:[0-9a-f]{64}', resource) is not None)
+    if skill_status_valid:
+        try:
+            from account.skills import validate_builtin_skill_status_resource
+            skill_status_valid = validate_builtin_skill_status_resource(resource, actor=actor, scope=scope,
+                                                                          connection=connection) is True
+        except Exception:
+            skill_status_valid = False
     if (type(operation) is not OperationType or not (
             (operation is OperationType.DATA_EXPORT and resource_valid)
-            or conversation_valid or owned_conversation_valid or learning_valid or creation_valid or model_admission_valid)):
+            or conversation_valid or owned_conversation_valid or learning_valid or creation_valid or agent_valid
+            or model_admission_valid or skill_status_valid)):
         return _shared_workspace_denial(
             permission_gate, operation, resource, caller, "SHARED_WORKSPACE_OPERATION_INVALID",
         )
@@ -1566,10 +1602,10 @@ def check_shared_workspace_effect(
         )
         result = permission_gate.check(
             operation, resource=resource, caller=caller,
-            exact_approval_required=learning_valid or model_admission_valid,
+            exact_approval_required=learning_valid or model_admission_valid or skill_status_valid,
             _shared_workspace_admission=admission,
         )
-        if learning_valid and result.allowed:
+        if (learning_valid or skill_status_valid) and result.allowed:
             with permission_gate._approval_lock:
                 approval = permission_gate._approvals.get(result.approval_token)
                 exact = bool(approval and approval.resource == resource and approval.operation == operation.value
@@ -1577,7 +1613,8 @@ def check_shared_workspace_effect(
                              and approval.is_valid(operation.value, resource))
             if not exact:
                 return _shared_workspace_denial(permission_gate, operation, resource, caller,
-                                                "LEARNING_EXCHANGE_EXACT_ACTOR_APPROVAL_REQUIRED")
+                    'SKILL_STATUS_EXACT_ACTOR_APPROVAL_REQUIRED' if skill_status_valid
+                    else 'LEARNING_EXCHANGE_EXACT_ACTOR_APPROVAL_REQUIRED')
         return result
     except Exception:
         logger.exception("Shared workspace Permission Gate unavailable")
@@ -3488,7 +3525,7 @@ class PermissionGate:
             subject_id=source_scope['subject_id'], brand_focus_id=source_scope['brand_focus_id'],
             source_ids=[str(evidence['asset_id'])], source_level=True, limit=2)['records']
         if (len(current) != 1 or current[0].get('source_table') != 'notes'
-                or current[0].get('source_platform') != 'public_http'
+                or current[0].get('source_platform') != document.get('platform')
                 or current[0].get('url') != document.get('source_url')
                 or any((current[0].get(key) or None) != source_scope[key]
                        for key in ('subject_id', 'brand_focus_id'))
@@ -4871,6 +4908,26 @@ class PermissionGate:
                                    duration_minutes=1, granted_by=caller)
 
     @contextmanager
+    def builtin_skill_status_commit_lease(self, token, *, resource, caller):
+        """Hold exact builtin-status approval against withdrawal through commit."""
+        if type(resource) is not str or re.fullmatch(r'builtin-skill-status:v1:[0-9a-f]{64}', resource) is None:
+            raise PermissionError('SKILL_STATUS_EXACT_RESOURCE_REQUIRED')
+        operation = OperationType.CONFIG_MODIFY
+        with self._approval_lock:
+            approval = self._approvals.get(token)
+            spec = self.get_operation_spec(operation)
+            if (self is not get_permission_gate() or not self.fail_closed or is_testing_bypass_enabled()
+                    or not self.has_permission(PermissionLevel.HUMAN_APPROVAL)
+                    or not self.has_permission(PermissionLevel.COMMIT)
+                    or type(spec) is not OperationSpec or spec.permission is not PermissionLevel.COMMIT
+                    or spec.risk is not RiskLevel.HIGH or spec.auto_allow is not False
+                    or not approval or approval.operation != operation.value
+                    or approval.resource != resource or approval.granted_by != caller
+                    or not approval.issuance_audit_id or not approval.is_valid(operation.value, resource)):
+                raise PermissionError('SKILL_STATUS_APPROVAL_REVOKED')
+            yield
+
+    @contextmanager
     def content_review_commit_lease(self, token, *, resource, caller, purpose="content-review"):
         """Serialize only the final commit with exact-token withdrawal."""
         if purpose not in {"content-review", "content-pattern-recovery"} or not resource.startswith(purpose + ":v1:"):
@@ -6057,7 +6114,7 @@ def prepare_learning_candidate(learning, *, suggestion_id, revision, action, app
         raise PermissionError("LEARNING_LOCAL_APPROVAL_ROUTE_REQUIRED")
     principal = resolve_local_workspace_principal(module='learning_review', action='write')
     task = get_task_engine().get_task(binding['task_id'])
-    context = authorized_context(task, principal)
+    authorized_context(task, principal)
     scoped = check_local_workspace_scope_permission(principal, domain_id=binding['domain_id'],
         module='learning_review', action='write', **binding['scope'])
     if not scoped.allowed or (action == 'review' and type(approved) is not bool) or (action == 'apply' and approved is not None):

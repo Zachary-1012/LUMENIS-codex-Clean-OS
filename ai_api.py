@@ -25,7 +25,10 @@ import database as db
 
 def _owned_runtime_status():
     try:
-        status = intelligence.owned_inference_status()
+        # Product availability must reflect the server-held production slots.
+        # The no-argument owned_inference_status() is an offline evaluation
+        # candidate view and cannot establish that a serving executor is bound.
+        status = intelligence.owned_service_observation()
     except Exception:
         status = None
     if not isinstance(status, dict):
@@ -34,6 +37,26 @@ def _owned_runtime_status():
             'state': 'UNAVAILABLE', 'reason': 'OWNED_RUNTIME_STATUS_UNAVAILABLE',
         }
     return status
+
+
+def _owned_evaluation_candidate_status():
+    """Expose offline candidate state separately from serving availability."""
+    try:
+        candidate = intelligence.owned_inference_status()
+    except Exception:
+        candidate = None
+    if not isinstance(candidate, dict):
+        candidate = {}
+    return {
+        'classification': 'EVALUATION_ONLY',
+        'state': candidate.get('state') if isinstance(candidate.get('state'), str) else 'UNKNOWN',
+        'reason': candidate.get('reason') if isinstance(candidate.get('reason'), str) else 'OWNED_CANDIDATE_STATUS_UNAVAILABLE',
+        'candidate_loaded': candidate.get('candidate_loaded') is True,
+        'evaluation_callable': candidate.get('evaluation_callable') is True,
+        'promotion_status': candidate.get('promotion_status') if isinstance(candidate.get('promotion_status'), str) else 'UNKNOWN',
+        'generation_probe_performed': candidate.get('generation_probe_performed') is True,
+        'fallback_allowed': False,
+    }
 
 
 def _run_owned_analysis(text, analysis_type, note_id=None):
@@ -103,6 +126,7 @@ def api_ai_status():
         'provider': 'owned', 'interface': 'system-ai-gateway',
         'service_binding': status.get('service_binding') or 'NOT_BOUND',
         'fallback_allowed': False, 'providers': ['owned_gateway'], 'runtime': status,
+        'evaluation_candidate': _owned_evaluation_candidate_status(),
     })
 
 @bp.route('/api/ai/test', methods=['POST'])
@@ -720,7 +744,9 @@ def _scoped_report_task_boundary():
         engine = _get_engine()
         task = engine.get_task(task_id)
         if task and not (task.get('context') or {}).get('source_brief_job_id'):
-            include_result = request.endpoint != 'ai_api.api_ai_tasks_cancel'
+            include_result = request.endpoint not in {
+                'ai_api.api_ai_tasks_cancel', 'ai_api.api_ai_tasks_get',
+            }
             if not _task_row_read_allowed(task, include_result=include_result):
                 return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         if task and (task.get('context') or {}).get('source_brief_job_id'):
@@ -740,6 +766,8 @@ def _scoped_report_task_boundary():
 def api_ai_tasks():
     """Single compatibility entry for TaskEngine and Skill Execution tasks."""
     if request.method == 'GET':
+        if 'request_id' in request.args:
+            return api_ai_task_request_lookup()
         return api_ai_tasks_list()
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
@@ -820,13 +848,13 @@ def api_ai_tasks_create(data=None):
             task = engine.create_mathematical_task(user_input, context, created_by=created_by)
         else:
             task = engine.create_task(user_input, context=context, created_by=created_by)
-        return jsonify({'ok': True, 'task': task})
+        return jsonify({'ok': True, 'task': _task_workspace_record(task)})
     except PermissionError:
         return jsonify({'ok': False, 'code': 'ANALYSIS_SOURCE_PERMISSION_DENIED'}), 403
     except (ValueError, LookupError):
         return jsonify({'ok': False, 'code': 'ANALYSIS_SOURCE_INVALID'}), 400
-    except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+    except Exception:
+        return jsonify({'ok': False, 'code': 'ANALYSIS_TASK_CREATION_UNAVAILABLE'}), 503
 
 
 def api_ai_skill_execution_create(data):
@@ -883,15 +911,26 @@ def _task_row_read_allowed(record, *, kind='TASK_ENGINE', include_result=True):
                 return False
             if include_result is not True:
                 # Stopping one's existing task does not require continued access
-                # to a revoked child Skill's output. No output is returned here.
-                authorized_context(record, current)
+                # to a revoked child Skill's output. Keep that status-only
+                # exception, while still requiring read access to any linked
+                # conversation whose content supplied the task context.
+                context = authorized_context(record, current)
+                from agent_runtime.task_binding import _conversation_snapshot
+                _conversation_snapshot(record, context)
                 return True
             return authorize_task_result_read(record, current) is True
         if not isinstance(actor, dict) or type(actor.get('id')) is not int:
             return False
         if kind == 'SKILL_EXECUTION':
-            if not (record.get('user_id') == actor['id'] and check_dual_domain_permission(
-                    actor['id'], record.get('product'), module=record.get('skill_id'), action='read')):
+            if record.get('user_id') != actor['id']:
+                return False
+            if include_result is not True:
+                # A creator may read the state of and stop their own durable
+                # Skill request after its result scope has been revoked. This
+                # status-only check does not read the result or grant execution.
+                return str(record.get('execution_id') or '').startswith('skilljob_')
+            if not check_dual_domain_permission(
+                    actor['id'], record.get('product'), module=record.get('skill_id'), action='read'):
                 return False
             from lumenis.shared.agents.skills.execution import verified_execution_scope, _queued_execution_scope
             scoped_id = str(record.get('execution_id') or '').startswith(('skillscope_', 'skilljob_scoped_', 'agentstep_'))
@@ -909,11 +948,25 @@ def _task_row_read_allowed(record, *, kind='TASK_ENGINE', include_result=True):
         return False
 
 
+def _task_projection_result_access(record, *, kind='TASK_ENGINE'):
+    """Return full-result permission, safe status-only permission, or None."""
+    if _task_row_read_allowed(record, kind=kind):
+        return True
+    if (_task_row_read_allowed(record, kind=kind, include_result=False)
+            and (kind == 'SKILL_EXECUTION'
+                 or kind == 'TASK_ENGINE' and record.get('created_by') == 'agent_runtime')):
+        return False
+    return None
+
+
 def authorize_local_agent_root_request():
-    """Exact Basic-perimeter delegation; every handler repeats its owner checks."""
+    """Exact account/workspace perimeter delegation to the original Agent owner."""
+    from lumenis.auth.service import get_current_user
     from lumenis.system.security.permission import resolve_local_workspace_principal
     try:
-        principal = resolve_local_workspace_principal(module='skills', action='read')
+        principal = get_current_user(read_only=True)
+        if not isinstance(principal, dict) or type(principal.get('id')) is not int:
+            principal = resolve_local_workspace_principal(module='skills', action='read')
         if principal is None:
             return False
         routes = {
@@ -926,6 +979,7 @@ def authorize_local_agent_root_request():
             'api_ai_task_memory': ('/api/ai/tasks/<task_id>/memory', {'GET', 'POST', 'DELETE'}),
             'api_ai_task_learning': ('/api/ai/tasks/<task_id>/learning', {'GET', 'POST'}),
             'api_ai_task_context': ('/api/ai/tasks/<task_id>/context', {'GET'}),
+            'api_ai_task_deliverable': ('/api/ai/tasks/<task_id>/deliverable', {'POST'}),
         }
         entry = routes.get((request.endpoint or '').removeprefix('ai_api.'))
         if (not request.endpoint or not request.endpoint.startswith('ai_api.') or not entry
@@ -950,7 +1004,180 @@ def authorize_local_agent_root_request():
 
 def _task_notification(record, kind):
     from agent_focus.notification import project_persisted_task_notification
-    return project_persisted_task_notification(record, task_kind=kind)
+    notification = project_persisted_task_notification(record, task_kind=kind)
+    # The notification owner derives its title from the stored user input. Keep
+    # that useful title, but apply the same display projection before returning it.
+    try:
+        from agent_runtime.task_binding import _workspace_text
+        event = notification.get('event') if isinstance(notification, dict) else None
+        if isinstance(event, dict):
+            event['title'] = _workspace_text(event.get('title'), limit=120) or '任务'
+            if not isinstance(event.get('message'), str) or not re.fullmatch(r'[a-z_]{1,64}', event['message']):
+                event['message'] = '状态已更新'
+    except Exception:
+        return {'task_kind': kind, 'delivery': 'in-product-projection', 'external_delivery': False}
+    return notification
+
+
+def _task_actor_for_projection():
+    from lumenis.auth.service import get_current_user
+    actor = get_current_user(read_only=True)
+    if isinstance(actor, dict):
+        return actor
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    return resolve_local_workspace_principal(module='skills', action='read')
+
+
+def _task_workspace_record(record, *, kind='TASK_ENGINE', include_result=True):
+    """Project durable owner data into the user workspace DTO, preserving scoped legacy work."""
+    from agent_runtime.task_binding import _workspace_text
+
+    if kind == 'TASK_ENGINE' and record.get('created_by') == 'agent_runtime':
+        from agent_runtime.task_binding import agent_task_workspace_view
+        view = agent_task_workspace_view(record, actor=_task_actor_for_projection(), engine=_get_engine(),
+                                         include_result=include_result)
+        return {
+            'task_id': record.get('task_id'), 'task_kind': kind,
+            'user_input': view['input'], 'status': view['status'],
+            'created_at': view['created_at'], 'updated_at': view['updated_at'],
+            'request_id': view.get('request_id'),
+            'workspace_view': view,
+        }
+
+    if kind == 'SKILL_EXECUTION':
+        raw_input = record.get('task') or ''
+        user_input = _workspace_text(raw_input, limit=16000) or ''
+        status = record.get('status') if isinstance(record.get('status'), str) else 'unknown'
+        match = (re.match(r'^([A-Z][A-Z0-9_]{1,95})(?::|$)', record.get('error') or '')
+                 if include_result else None)
+        view = {
+            'title': next((line.strip() for line in user_input.splitlines() if line.strip()), '任务')[:120],
+            'input': user_input, 'status': status,
+            'created_at': record.get('created_at'), 'updated_at': record.get('updated_at'),
+            'can_cancel': status in {'pending', 'running'}, 'can_resume': False,
+            'output_text': None, 'work_refs': [], 'steps': [],
+            'error_code': match.group(1) if match else ('TASK_FAILED' if status in {'failed', 'rejected'} else None),
+        }
+        if not include_result:
+            view['error_code'] = None
+            view['result_access_state'] = 'RESTRICTED'
+        return {
+            'task_id': record.get('execution_id'), 'task_kind': kind,
+            'execution_id': record.get('execution_id'),
+            'user_input': user_input, 'status': status,
+            'created_at': record.get('created_at'), 'updated_at': record.get('updated_at'),
+            'workspace_view': view,
+        }
+
+    raw_input = record.get('user_input') or ''
+    user_input = _workspace_text(raw_input, limit=16000) or ''
+    status = record.get('status') if isinstance(record.get('status'), str) else 'unknown'
+    view = {
+        'title': next((line.strip() for line in user_input.splitlines() if line.strip()), '任务')[:120],
+        'input': user_input, 'status': status,
+        'created_at': record.get('created_at'), 'updated_at': record.get('updated_at'),
+        'can_cancel': status in {'pending', 'ready', 'running'}, 'can_resume': False,
+        'output_text': None, 'work_refs': [], 'steps': [],
+        'error_code': None,
+    }
+    projected = {
+        'task_id': record.get('task_id'), 'task_kind': kind,
+        'user_input': user_input, 'status': status,
+        'created_at': record.get('created_at'), 'updated_at': record.get('updated_at'),
+        'workspace_view': view,
+    }
+    # The existing CTH Source Statistics consumer binds the source job through
+    # these exact fields and validates the committed owner result. Preserve only
+    # that verified business result; never return arbitrary TaskEngine context.
+    context = record.get('context') if isinstance(record.get('context'), dict) else {}
+    if context.get('analysis_operation') == 'source_statistics':
+        job_id = context.get('source_brief_job_id')
+        if isinstance(job_id, str) and re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{7,127}', job_id):
+            projected['context'] = {
+                'analysis_operation': 'source_statistics',
+                'source_brief_job_id': job_id,
+            }
+            if status == 'succeeded' and isinstance(record.get('result'), dict):
+                projected['result'] = record['result']
+                view['output_text'] = _source_statistics_workspace_text(record['result'], job_id)
+                result = record['result']
+                if result.get('base_analysis_status') == 'unavailable':
+                    raw_code = result.get('error')
+                    view['error_code'] = (raw_code if isinstance(raw_code, str)
+                        and re.fullmatch(r'[A-Z][A-Z0-9_]{1,119}', raw_code)
+                        else 'ANALYSIS_SOURCE_UNAVAILABLE')
+                elif view['output_text'] is None:
+                    view['error_code'] = 'ANALYSIS_RESULT_UNAVAILABLE'
+            elif status == 'failed':
+                raw_error = record.get('error')
+                view['error_code'] = (raw_error if isinstance(raw_error, str)
+                    and re.fullmatch(r'[A-Z][A-Z0-9_]{1,119}', raw_error)
+                    else 'TASK_FAILED')
+    return projected
+
+
+def _source_statistics_workspace_text(result, job_id):
+    """Readable allowlisted projection of the verified no-model statistics result."""
+    from agent_runtime.task_binding import _workspace_text
+    if (not isinstance(result, dict) or result.get('analysis_operation') != 'source_statistics'
+            or result.get('base_analysis_status') != 'completed'
+            or result.get('source_brief_job_id') != job_id
+            or not isinstance(result.get('artifact_outcome'), dict)):
+        return None
+    stats = result.get('base_analysis')
+    if not isinstance(stats, dict):
+        return None
+    integer_fields = ('input_count', 'unique_source_count', 'duplicate_projection_count',
+                      'publication_time_known_count', 'publication_time_unknown_count')
+    counts = {}
+    for field in integer_fields:
+        value = stats.get(field)
+        if type(value) is not int or value < 0:
+            return None
+        counts[field] = value
+
+    def render_counts(value):
+        if not isinstance(value, dict) or len(value) > 24:
+            return None
+        rendered = []
+        for name, count in sorted(value.items()):
+            if (not isinstance(name, str) or not name or type(count) is not int or count < 0):
+                return None
+            safe_name = _workspace_text(name, limit=80)
+            if not safe_name:
+                return None
+            rendered.append(f'{safe_name} {count}')
+        return '、'.join(rendered) if rendered else '—'
+
+    platforms = render_counts(stats.get('platform_counts'))
+    source_types = render_counts(stats.get('source_type_counts'))
+    if platforms is None or source_types is None:
+        return None
+    ratio = stats.get('publication_time_known_ratio')
+    if ratio is None:
+        ratio_text = '—'
+    elif type(ratio) in (int, float) and 0 <= ratio <= 1:
+        ratio_text = f'{ratio:.0%}'
+    else:
+        return None
+    coverage = '未知' if stats.get('coverage') == 'UNKNOWN' else '未验证'
+    summary = (
+        f"样本统计：输入 {counts['input_count']} 条，唯一来源 {counts['unique_source_count']} 个，"
+        f"重复投影 {counts['duplicate_projection_count']} 条。"
+        f"平台：{platforms}；来源类型：{source_types}。"
+        f"发布时间已知 {counts['publication_time_known_count']} 条、未知 "
+        f"{counts['publication_time_unknown_count']} 条；已知比例 {ratio_text}。"
+        f"覆盖度：{coverage}；因果结论未建立。"
+    )
+    return _workspace_text(summary, limit=1800)
+
+
+def _agent_task_error_response(exc, *, fallback, status=503):
+    code = str(exc) if isinstance(exc, (PermissionError, ValueError, RuntimeError)) else ''
+    if not re.fullmatch(r'[A-Z][A-Z0-9_]{1,95}', code):
+        code = fallback
+    denied = code.endswith('_DENIED') or code.endswith('_REQUIRED') or code.endswith('_MISMATCH')
+    return jsonify({'ok': False, 'code': code}), 403 if denied else status
 
 
 @bp.route('/api/ai/tasks/<task_id>', methods=['GET'])
@@ -961,15 +1188,20 @@ def api_ai_tasks_get(task_id):
         task = engine.get_task(task_id)
         kind = 'TASK_ENGINE'
         if not task:
+            if not task_id.startswith('skilljob_'):
+                return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
             from lumenis.shared.agents.skills.execution import query_executions
             rows = query_executions(execution_id=task_id, limit=1, strict=True)
             task = rows[0] if rows else None
             kind = 'SKILL_EXECUTION'
-        if not task or not _task_row_read_allowed(task, kind=kind):
-            return jsonify({'ok': False, 'error': 'task not found'}), 404
+        if not task:
+            return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
+        result_access = _task_projection_result_access(task, kind=kind)
+        if result_access is None:
+            return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
         conversation_refs = []
         conversation_links_state = 'not_applicable'
-        if kind in {'TASK_ENGINE', 'SKILL_EXECUTION'}:
+        if result_access and kind in {'TASK_ENGINE', 'SKILL_EXECUTION'}:
             try:
                 from lumenis.ai_hub.conversations import current_actor, task_conversation_refs
                 conversation_refs = task_conversation_refs(current_actor(), task_id)
@@ -978,11 +1210,12 @@ def api_ai_tasks_get(task_id):
                 conversation_links_state = 'not_authorized'
             except Exception:
                 conversation_links_state = 'unavailable'  # Ordinary task read stays usable.
-        return jsonify({'ok': True, 'task': {**task, 'task_kind': kind},
+        return jsonify({'ok': True, 'task': _task_workspace_record(task, kind=kind,
+                            include_result=result_access),
                         'notification': _task_notification(task, kind),
                         'conversation_refs': conversation_refs, 'conversation_links_state': conversation_links_state})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return _agent_task_error_response(e, fallback='TASK_READ_UNAVAILABLE')
 
 
 @bp.route('/api/ai/tasks/<task_id>/run', methods=['POST'])
@@ -994,17 +1227,20 @@ def api_ai_tasks_run(task_id):
         engine = _get_engine()
         task = engine.get_task(task_id)
         if not task:
-            return jsonify({'ok': False, 'error': 'task not found'}), 404
+            return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
+        if not _task_row_read_allowed(task):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         if task.get("created_by") == "agent_runtime":
             from agent_runtime.task_binding import run_agent_task
             result = run_agent_task(task_id)
         else:
             result = engine.run_task(task_id)
-        if result.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(result):
+        result_access = _task_projection_result_access(result)
+        if result_access is None:
             return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
-        return jsonify({'ok': True, 'task': result})
+        return jsonify({'ok': True, 'task': _task_workspace_record(result, include_result=result_access)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return _agent_task_error_response(e, fallback='TASK_RUN_UNAVAILABLE')
 
 
 @bp.route('/api/ai/tasks/<task_id>/steps', methods=['GET'])
@@ -1012,13 +1248,21 @@ def api_ai_tasks_steps(task_id):
     """查询执行步骤时间线。"""
     try:
         engine = _get_engine()
-        steps = engine.get_steps(task_id)
         task = engine.get_task(task_id)
-        if task and task.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(task):
+        if not task:
+            return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
+        if not _task_row_read_allowed(task):
             return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
-        return jsonify({'ok': True, 'steps': steps, 'count': len(steps)})
+        if task.get('created_by') == 'agent_runtime':
+            from agent_runtime.task_binding import agent_task_workspace_view
+            steps = agent_task_workspace_view(task, actor=_task_actor_for_projection(), engine=engine)['steps']
+        else:
+            steps = [{'label': '处理任务',
+                      'status': row.get('status') if row.get('status') in {'pending', 'running', 'completed', 'failed', 'skipped'} else 'unknown'}
+                     for row in engine.get_steps(task_id)]
+        return jsonify({'ok': True, 'task_id': task_id, 'steps': steps, 'count': len(steps)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return _agent_task_error_response(e, fallback='TASK_STEPS_UNAVAILABLE')
 
 
 @bp.route('/api/ai/tasks/<task_id>/evidence', methods=['GET'])
@@ -1026,13 +1270,24 @@ def api_ai_tasks_evidence(task_id):
     """查询证据列表。"""
     try:
         engine = _get_engine()
-        evidence = engine.get_evidence(task_id)
         task = engine.get_task(task_id)
-        if task and task.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(task):
+        if not task:
+            return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
+        if not _task_row_read_allowed(task):
             return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
-        return jsonify({'ok': True, 'evidence': evidence, 'count': len(evidence)})
+        if task.get('created_by') == 'agent_runtime':
+            from agent_runtime.task_binding import agent_task_evidence_view
+            evidence = agent_task_evidence_view(task, actor=_task_actor_for_projection(), engine=engine)
+        else:
+            evidence = [
+                {'kind': row.get('evidence_type') or '任务证据',
+                 'source': row.get('source') if isinstance(row.get('source'), str) and not re.search(r'(?i)(?:[A-Z]:\\|/home/|/Users/|/tmp/)', row.get('source')) else None,
+                 'created_at': row.get('created_at'), 'authenticity_score': row.get('authenticity_score')}
+                for row in engine.get_evidence(task_id)
+            ]
+        return jsonify({'ok': True, 'task_id': task_id, 'evidence': evidence, 'count': len(evidence)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return _agent_task_error_response(e, fallback='TASK_EVIDENCE_UNAVAILABLE')
 
 
 @bp.route('/api/ai/tasks/<task_id>/approve', methods=['POST'])
@@ -1045,10 +1300,17 @@ def api_ai_tasks_approve(task_id):
         approved_by = data.get('approved_by', 'human')
         note = data.get('note', '')
         engine = _get_engine()
+        task = engine.get_task(task_id)
+        if not task:
+            return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
+        if not _task_row_read_allowed(task, include_result=False):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         result = engine.approve_task(task_id, approved_by=approved_by, approval_note=note)
-        return jsonify({'ok': True, 'task': result})
+        if not _task_row_read_allowed(result):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
+        return jsonify({'ok': True, 'task': _task_workspace_record(result)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return _agent_task_error_response(e, fallback='TASK_APPROVAL_UNAVAILABLE')
 
 
 @bp.route('/api/ai/tasks/<task_id>/cancel', methods=['POST'])
@@ -1058,12 +1320,18 @@ def api_ai_tasks_cancel(task_id):
         if task_id.startswith('skilljob_'):
             return _registered_skill_mutation(task_id, cancel=True)
         engine = _get_engine()
+        task = engine.get_task(task_id)
+        if not task:
+            return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
+        if not _task_row_read_allowed(task, include_result=False):
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
         result = engine.cancel_task(task_id)
-        if result.get('created_by') == 'agent_runtime' and not _task_row_read_allowed(result):
-            return jsonify({'ok': True, 'task': {'task_id': task_id, 'status': result.get('status')}})
-        return jsonify({'ok': True, 'task': result})
+        result_access = _task_projection_result_access(result)
+        if result_access is None:
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
+        return jsonify({'ok': True, 'task': _task_workspace_record(result, include_result=result_access)})
     except Exception as e:
-        return jsonify({'ok': False, 'error': str(e)}), 500
+        return _agent_task_error_response(e, fallback='TASK_CANCEL_UNAVAILABLE')
 
 
 def api_ai_tasks_list():
@@ -1088,9 +1356,16 @@ def api_ai_tasks_list():
                 else:
                     rows = query_executions(status=status, limit=batch_size, offset=raw_offset, strict=True)
                 for raw in rows:
+                    if kind == 'SKILL_EXECUTION' and not str(raw.get('execution_id') or '').startswith('skilljob_'):
+                        # Agent child executions and direct execution receipts are
+                        # represented by their parent task or execution owner.
+                        continue
                     row = engine.get_task(raw['task_id']) if kind == 'TASK_ENGINE' else raw
-                    if row is not None and _task_row_read_allowed(row, kind=kind):
-                        visible.append({**dict(row), 'task_kind': kind})
+                    if row is not None:
+                        result_access = _task_projection_result_access(row, kind=kind)
+                        if result_access is not None:
+                            visible.append(_task_workspace_record(dict(row), kind=kind,
+                                                                  include_result=result_access))
                 raw_offset += len(rows)
                 if len(rows) < batch_size:
                     break
@@ -1118,6 +1393,60 @@ def api_ai_tasks_list():
         })
     except Exception:
         return jsonify({'ok': False, 'code': 'AI_TASK_LIST_UNAVAILABLE'}), 503
+
+
+def _agent_task_scope_from_context_headers():
+    """Resolve the exact task scope represented by the current client context."""
+    mode = request.headers.get('X-Lumenis-Context-Mode', 'GLOBAL_ALL')
+    domain_id = request.headers.get('X-Domain-Id')
+    subject_id = request.headers.get('X-Subject-ID')
+    if mode == 'GLOBAL_ALL':
+        if domain_id or subject_id:
+            return None, (jsonify({'ok': False, 'code': 'AGENT_CONTEXT_INVALID'}), 400)
+        return ('shared', {'scope_kind': 'shared_workspace', 'version': 1}), None
+    if mode != 'FOCUS' or not domain_id or not subject_id:
+        return None, (jsonify({'ok': False, 'code': 'AGENT_CONTEXT_INVALID'}), 400)
+    from lumenis_app_api import _context_selection_from_scope
+    resolved, error = _context_selection_from_scope(domain_id, subject_id)
+    if error is not None:
+        return None, error
+    resolved_domain = 'cth' if resolved.domain_id == 'CTH' else 'zbmp'
+    scope = {
+        'global_scope': False,
+        'subject_id': resolved.subject_id if resolved_domain == 'cth' else None,
+        'brand_focus_id': resolved.brand_focus_id if resolved_domain == 'zbmp' else None,
+    }
+    return (resolved_domain, scope), None
+
+
+def api_ai_task_request_lookup():
+    """Read-only recovery lookup for one actor, current scope and client request id."""
+    request_ids = request.args.getlist('request_id')
+    if (len(request_ids) != 1 or set(request.args.keys()) != {'request_id'}
+            or not re.fullmatch(r'[0-9a-f]{32}', request_ids[0])):
+        return jsonify({'ok': False, 'code': 'AGENT_TASK_REQUEST_ID_INVALID'}), 400
+    request_id = request_ids[0]
+    request_scope, error = _agent_task_scope_from_context_headers()
+    if error is not None:
+        return error
+    domain_id, scope = request_scope
+    try:
+        actor = _task_actor_for_projection()
+        from agent_runtime.task_binding import find_agent_task_for_request
+        task = find_agent_task_for_request(_get_engine(), actor=actor, request_id=request_id,
+                                           domain_id=domain_id, scope=scope)
+        if task is None:
+            return jsonify({'ok': True, 'request_id': request_id, 'found': False})
+        result_access = _task_projection_result_access(task)
+        if result_access is None:
+            return jsonify({'ok': True, 'request_id': request_id, 'found': False})
+        return jsonify({
+            'ok': True, 'request_id': request_id, 'found': True,
+            'request_scope': {'domain_id': domain_id, 'scope': scope},
+            'task': _task_workspace_record(task, include_result=result_access),
+        })
+    except Exception as exc:
+        return _agent_task_error_response(exc, fallback='AGENT_TASK_REQUEST_LOOKUP_UNAVAILABLE')
 
 
 @bp.route('/api/ai/skills', methods=['GET'])
@@ -1219,10 +1548,15 @@ def _registered_skill_mutation(task_id, *, cancel):
     from lumenis.shared.agents.skills.execution import (
         query_executions, cancel_registered_skill, run_registered_skill_job)
     rows = query_executions(execution_id=task_id, limit=1, strict=True)
-    if not rows or not _task_row_read_allowed(rows[0], kind='SKILL_EXECUTION'):
+    if not rows or not _task_row_read_allowed(
+            rows[0], kind='SKILL_EXECUTION', include_result=not cancel):
         return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
     row = cancel_registered_skill(task_id) if cancel else run_registered_skill_job(task_id)
-    return jsonify({'ok': True, 'task': {**row, 'task_kind': 'SKILL_EXECUTION'},
+    result_access = _task_projection_result_access(row, kind='SKILL_EXECUTION')
+    if result_access is None:
+        return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
+    return jsonify({'ok': True, 'task': _task_workspace_record(
+                        row, kind='SKILL_EXECUTION', include_result=result_access),
                     'notification': _task_notification(row, 'SKILL_EXECUTION')})
 
 
@@ -1236,14 +1570,70 @@ def _agent_runtime_create(data):
     if actor is None:
         return jsonify({'ok': False, 'code': 'VERIFIED_ACTOR_REQUIRED'}), 403
     try:
-        task = create_agent_task(_get_engine(), actor=actor, goal=data.get('input'),
-            domain_id=data.get('domain_id'), scope=data.get('scope'), steps=data.get('steps'))
-        start_agent_task(task['task_id'])
-        return jsonify({'ok': True, 'accepted': True, 'task': task}), 202
+        request_id = data.get('request_id')
+        if ('request_id' in data and (not isinstance(request_id, str)
+                or re.fullmatch(r'[0-9a-f]{32}', request_id) is None)):
+            return jsonify({'ok': False, 'code': 'AGENT_TASK_REQUEST_ID_INVALID'}), 400
+        selection = data.get('selection')
+        if selection is not None:
+            if ('domain_id' in data or 'scope' in data or not isinstance(selection, dict)
+                    or set(selection) != {'mode', 'domain_id', 'subject_id'}
+                    or selection.get('mode') != 'FOCUS'
+                    or selection.get('domain_id') not in {'CTH', 'BMP'}):
+                return jsonify({'ok': False, 'code': 'AGENT_SELECTION_INVALID'}), 400
+            from lumenis_app_api import _context_selection_from_scope
+            resolved, error = _context_selection_from_scope(
+                selection.get('domain_id'), selection.get('subject_id'))
+            if error is not None:
+                error_response, error_status = (error[0], error[1]) if isinstance(error, tuple) and len(error) == 2 else (error, None)
+                payload = error_response.get_json(silent=True) if hasattr(error_response, 'get_json') else None
+                code = payload.get('code') if isinstance(payload, dict) else None
+                code = code if isinstance(code, str) and re.fullmatch(r'[A-Z][A-Z0-9_]{1,95}', code) else 'AGENT_SELECTION_UNAVAILABLE'
+                status_code = error_status if type(error_status) is int else getattr(error_response, 'status_code', 503)
+                return jsonify({'ok': False, 'code': code}), status_code
+            domain_id = 'cth' if resolved.domain_id == 'CTH' else 'zbmp'
+            scope = {'global_scope': False,
+                     'subject_id': resolved.subject_id if domain_id == 'cth' else None,
+                     'brand_focus_id': resolved.brand_focus_id if domain_id == 'zbmp' else None}
+        else:
+            if 'domain_id' not in data or 'scope' not in data:
+                return jsonify({'ok': False, 'code': 'AGENT_EXPLICIT_SCOPE_REQUIRED'}), 400
+            domain_id, scope = data.get('domain_id'), data.get('scope')
+        request_scope = None
+        if request_id is not None:
+            request_scope, context_error = _agent_task_scope_from_context_headers()
+            if context_error is not None:
+                return context_error
+            if request_scope != (domain_id, scope):
+                return jsonify({'ok': False, 'code': 'AGENT_TASK_CONTEXT_MISMATCH'}), 409
+        engine = _get_engine()
+        task, created = create_agent_task(engine, actor=actor, goal=data.get('input'),
+            domain_id=domain_id, scope=scope, steps=data.get('steps'),
+            request_id=request_id, return_created=True)
+        # An idempotent replay recovers the original durable task only. The
+        # original dispatcher or an explicit user Resume owns execution.
+        if created:
+            start_agent_task(task['task_id'])
+        current = engine.get_task(task['task_id']) or task
+        result_access = _task_projection_result_access(current)
+        if result_access is None:
+            return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
+        response = {'ok': True, 'accepted': True, 'task': _task_workspace_record(
+            current, include_result=result_access)}
+        if request_id is not None:
+            response.update(request_id=request_id, request_scope={
+                'domain_id': domain_id, 'scope': scope}, reused=not created)
+        return jsonify(response), 202 if created else 200
     except PermissionError as exc:
-        return jsonify({'ok': False, 'code': str(exc)}), 403
+        return _agent_task_error_response(exc, fallback='AGENT_TASK_CREATION_DENIED', status=400)
     except (ValueError, TypeError) as exc:
-        return jsonify({'ok': False, 'code': str(exc)}), 400
+        if str(exc) == 'AGENT_TASK_REQUEST_ID_CONFLICT':
+            return jsonify({'ok': False, 'code': 'AGENT_TASK_REQUEST_ID_CONFLICT'}), 409
+        if str(exc) == 'AGENT_TASK_CONTEXT_MISMATCH':
+            return jsonify({'ok': False, 'code': 'AGENT_TASK_CONTEXT_MISMATCH'}), 409
+        return _agent_task_error_response(exc, fallback='AGENT_TASK_INPUT_INVALID', status=400)
+    except Exception as exc:
+        return _agent_task_error_response(exc, fallback='AGENT_TASK_CREATION_UNAVAILABLE')
 
 
 @bp.route('/api/ai/tasks/<task_id>/context', methods=['GET'])
@@ -1277,7 +1667,8 @@ def api_ai_task_context(task_id):
             'external_source_content': 'NOT_READ', 'model_source_use': 'EXACT_TASK_REQUEST_REQUIRED',
             'effect_permission': 'NOT_GRANTED', 'training_admission': 'NOT_GRANTED',
             'model_execution': 'NOT_RUN', 'retrieval': owned_retrieval_status(),
-            'owned_runtime': owned_service_observation('cth' if current['domain_id'] == 'cth' else 'bmp')})
+            'owned_runtime': owned_service_observation('shared' if current['domain_id'] == 'shared'
+                else 'cth' if current['domain_id'] == 'cth' else 'bmp')})
     except PermissionError as exc:
         return jsonify({'ok': False, 'code': str(exc)}), 403
     except (ValueError, TypeError):
@@ -1286,6 +1677,61 @@ def api_ai_task_context(task_id):
         return jsonify({'ok': False, 'code': str(exc)}), 409
     except Exception:
         return jsonify({'ok': False, 'code': 'AGENT_CONTEXT_UNAVAILABLE'}), 503
+
+
+@bp.route('/api/ai/tasks/<task_id>/deliverable', methods=['POST'])
+def api_ai_task_deliverable(task_id):
+    """Explicitly copy a completed local result to the original editable work owner."""
+    try:
+        data = request.get_json(silent=True)
+        if (request.args or type(data) is not dict
+                or set(data) - {'mode', 'step_index', 'expected_resource', 'confirm', 'confirmed_resource'}
+                or data.get('mode') not in {'prepare', 'save'}
+                or type(data.get('step_index', 0)) is not int
+                or bool(set(data) & {'confirm', 'confirmed_resource'}) != {'confirm', 'confirmed_resource'}.issubset(data)):
+            raise ValueError('AGENT_DELIVERABLE_REQUEST_INVALID')
+        if data['mode'] == 'prepare' and set(data) & {'expected_resource', 'confirm', 'confirmed_resource'}:
+            raise ValueError('AGENT_DELIVERABLE_REQUEST_INVALID')
+        task = _get_engine().get_task(task_id)
+        if not task or not _task_row_read_allowed(task):
+            raise PermissionError('TASK_ACCESS_DENIED')
+        from lumenis.auth.service import get_current_user
+        from agent_runtime.task_binding import (authorized_context,
+            prepare_shared_agent_deliverable, save_shared_agent_deliverable)
+        actor = authorized_context(task, get_current_user(read_only=True))['actor']
+        prepared = prepare_shared_agent_deliverable(task_id, actor=actor, step_index=data.get('step_index', 0))
+        if data['mode'] == 'prepare':
+            return jsonify({'ok': True, **prepared})
+        if data.get('expected_resource') != prepared['resource']:
+            raise PermissionError('AGENT_DELIVERABLE_EXACT_RESOURCE_REQUIRED')
+        if 'confirm' in data:
+            from experience_runtime import _content_source_same_origin
+            from lumenis.shared.reporting.saved_work import confirmed_work_operation
+            result = confirmed_work_operation(mode='confirm', resource=prepared['resource'],
+                actor=actor, scope=prepared['scope'], confirm=data['confirm'],
+                confirmed_resource=data['confirmed_resource'], same_origin=_content_source_same_origin(),
+                execute=lambda: save_shared_agent_deliverable(task_id, actor=actor, step_index=data.get('step_index', 0)))
+        else:
+            result = save_shared_agent_deliverable(task_id, actor=actor, step_index=data.get('step_index', 0))
+        return jsonify({'ok': True, 'state': 'SAVED', 'saved': True, **result})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 403
+    except ValueError as exc:
+        from lumenis.shared.reporting.saved_work import committed_readback_state
+        persistence_state = committed_readback_state(exc)
+        if persistence_state:
+            return jsonify({'ok': False, 'code': persistence_state, 'persistence_state': persistence_state}), 409
+        code = str(exc)
+        code = code if re.fullmatch(r'[A-Z0-9_]{1,96}', code) else 'AGENT_DELIVERABLE_REQUEST_INVALID'
+        denied = code in {'WORK_EFFECT_PERMISSION_DENIED', 'WORK_PERMISSION_DENIED', 'WORK_PERMISSION_UNVERIFIED'}
+        return jsonify({'ok': False, 'code': code}), 403 if denied else 400
+    except RuntimeError:
+        return jsonify({'ok': False, 'code': 'AGENT_DELIVERABLE_CONFLICT'}), 409
+    except Exception as exc:
+        from lumenis.shared.reporting.saved_work import committed_readback_state
+        persistence_state = committed_readback_state(exc)
+        return jsonify({'ok': False, 'code': persistence_state or 'AGENT_DELIVERABLE_UNAVAILABLE',
+                        **({'persistence_state': persistence_state} if persistence_state else {})}), 409 if persistence_state else 503
 
 
 @bp.route('/api/ai/tasks/<task_id>/memory', methods=['GET', 'POST', 'DELETE'])

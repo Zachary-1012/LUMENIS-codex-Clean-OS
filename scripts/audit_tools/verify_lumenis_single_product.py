@@ -12,6 +12,11 @@ from pathlib import Path
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
+try:
+    from .experience_gate_mode import frontend_state
+except ImportError:
+    from experience_gate_mode import frontend_state
+
 ROOT = Path(__file__).resolve().parents[2]
 ARCH = ROOT / "00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md"
 EXPERIENCE = ROOT / "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md"
@@ -290,7 +295,15 @@ def main() -> int:
         "app/lib/product/lumenis_app.dart",
         "app/lib/features/launch/launch_surface.dart",
     )
+    try:
+        retired = frontend_state(ROOT) == 'REMOVED_PENDING_REBUILD'
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        errors.append(str(exc))
+        retired = False
+    removed_entries = {'app/lib/main.dart', 'app/lib/product/lumenis_app.dart', 'app/lib/features/launch/launch_surface.dart'}
     for path in required_app_files:
+        if retired and path in removed_entries:
+            continue
         if not (ROOT / path).is_file():
             errors.append(f"missing canonical app foundation: {path}")
 

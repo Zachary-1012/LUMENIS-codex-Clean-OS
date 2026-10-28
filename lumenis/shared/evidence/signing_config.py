@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import ctypes
+import hashlib
+import hmac
 import json
 import os
 import secrets
@@ -135,6 +137,77 @@ def _signed_key_ids(database: Path) -> set[str]:
         raise WorkspaceSigningError("WORKSPACE_SIGNING_DATABASE_UNREADABLE") from None
 
 
+def import_existing_workspace_signing(data_root: str, database_path: str, environ=None) -> Path:
+    env = os.environ if environ is None else environ
+    root, database = Path(data_root).absolute(), Path(database_path).absolute()
+    _assert_regular_path(root)
+    _assert_regular_path(database)
+    root, database = root.resolve(), database.resolve()
+    if root == database or not database.is_relative_to(root) or not database.is_file():
+        raise WorkspaceSigningError("WORKSPACE_SIGNING_DATABASE_OUTSIDE_ROOT")
+    directory = root / "security"
+    file = directory / ("evidence-signing.dpapi" if os.name == "nt" else "evidence-signing.json")
+    _assert_regular_path(file)
+    if file.exists():
+        raise WorkspaceSigningError("WORKSPACE_SIGNING_CONFIGURATION_ALREADY_EXISTS")
+    try:
+        keys = json.loads(env.get("LUMENIS_EVIDENCE_HMAC_KEY_RING", ""))
+        active = env.get("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "").strip()
+        if (not isinstance(keys, dict) or not keys or not active or active not in keys
+                or not all(isinstance(k, str) and k and isinstance(v, str)
+                           and len(v) >= 32 for k, v in keys.items())):
+            raise ValueError("invalid existing signer")
+    except (ValueError, TypeError, AttributeError):
+        raise WorkspaceSigningError("WORKSPACE_SIGNING_KEY_IMPORT_INVALID") from None
+    from lumenis.shared.evidence import store
+    try:
+        with DatabaseRepository(str(database)).connection(read_only=True) as connection:
+            connection.execute("BEGIN")
+            columns = {row[1] for row in connection.execute("PRAGMA table_info(app_evidence_records)")}
+            fields = ("integrity_version", "integrity_algorithm", "integrity_digest", "integrity_key_id")
+            if not set(fields) <= columns:
+                raise WorkspaceSigningError("WORKSPACE_SIGNING_SCHEMA_RECOVERY_REQUIRED")
+            condition = " OR ".join(f"COALESCE({field}, '') <> ''" for field in fields)
+            verified = 0
+            for row in connection.execute("SELECT * FROM app_evidence_records WHERE " + condition):
+                record = dict(row)
+                try:
+                    digest = hmac.new(keys[record["integrity_key_id"]].encode("utf-8"),
+                                      store._integrity_payload(record), hashlib.sha256).hexdigest()
+                    valid = (record["integrity_version"] == store.EVIDENCE_INTEGRITY_VERSION
+                             and record["integrity_algorithm"] == store.EVIDENCE_INTEGRITY_ALGORITHM
+                             and hmac.compare_digest(digest, record["integrity_digest"]))
+                except (KeyError, TypeError, ValueError):
+                    valid = False
+                if not valid:
+                    raise WorkspaceSigningError("WORKSPACE_SIGNING_EXISTING_SIGNATURE_INVALID")
+                verified += 1
+            if not verified:
+                raise WorkspaceSigningError("WORKSPACE_SIGNING_NO_EXISTING_SIGNATURE")
+    except sqlite3.Error:
+        raise WorkspaceSigningError("WORKSPACE_SIGNING_DATABASE_UNREADABLE") from None
+    payload = {"version": 1, "database": database.relative_to(root).as_posix(),
+               "active_id": active, "keys": keys}
+    raw = json.dumps(payload, sort_keys=True).encode("utf-8")
+    protected = _dpapi(raw, decrypt=False) if os.name == "nt" else raw
+    if len(protected) > 65536:
+        raise WorkspaceSigningError("WORKSPACE_SIGNING_KEY_INVALID")
+    directory.mkdir(parents=True, exist_ok=True)
+    _private_directory(directory)
+    _assert_regular_path(file)
+    fd, temporary = tempfile.mkstemp(prefix=".evidence-signing-", dir=directory)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(protected)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary, 0o600)
+        os.link(temporary, file)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+    return file
+
+
 def activate_workspace_signing(data_root: str, database_path: str, environ=None) -> Path:
     env = os.environ if environ is None else environ
     root, database = Path(data_root).absolute(), Path(database_path).absolute()
@@ -150,6 +223,12 @@ def activate_workspace_signing(data_root: str, database_path: str, environ=None)
     relative_db = database.relative_to(root).as_posix()
     if not file.exists():
         if signed_ids:
+            if (env.get("LUMENIS_EVIDENCE_HMAC_KEY_RING")
+                    and env.get("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID")):
+                # A registered legacy environment keyring may recover the
+                # workspace signer only after the import path verifies every
+                # historical signature. It never rewrites Evidence rows.
+                return import_existing_workspace_signing(str(root), str(database), env)
             raise WorkspaceSigningError("WORKSPACE_SIGNING_KEY_RECOVERY_REQUIRED")
         if env.get("LUMENIS_EVIDENCE_HMAC_KEY_RING") or env.get("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID"):
             raise WorkspaceSigningError("WORKSPACE_SIGNING_KEY_IMPORT_REQUIRED")

@@ -70,7 +70,13 @@ def test_fix_106_search_challenge_reports_bounded_diagnostic_without_challenge_b
         'original_body_available': False,
         'challenge_body_included': False,
         'index_only': True,
+        'pagination': {
+            'request_cursor': None, 'next_cursor': None, 'exhausted': None,
+            'page_complete': False, 'coverage_scope': 'PUBLIC_INDEX_VERIFICATION_REQUIRED',
+            'continuation_blocked': True, 'blocked_status': 'NEED_VERIFY',
+        },
     }
+    assert result.raw_count is None
     assert 'PRIVATE_CHALLENGE_TEXT' not in repr(result.metadata)
 
 
@@ -87,6 +93,82 @@ def test_fix_106_original_article_challenge_keeps_need_verify_and_final_status()
     assert result.metadata['challenge_body_included'] is False
     assert 'PRIVATE_CHALLENGE_TEXT' not in result.message
     assert 'PRIVATE_CHALLENGE_TEXT' not in repr(result.metadata)
+
+
+@pytest.mark.parametrize('prompt', [
+    '此验证码用于确认这些请求是您的正常行为而不是自动程序发出的，需要您协助验证。',
+    '此验证码用于确认这些请求是您的正常行为\n而不是自动程序发出的， 需要您协助验证。',
+])
+def test_sogou_http200_verification_explanation_is_not_a_discovery_page(prompt):
+    challenge = response('<title>搜狗搜索</title><main>' + prompt + '<input name="c"></main>'
+        '<li id="sogou_vr_1"><h3><a href="https://mp.weixin.qq.com/s/stale">旧链接</a></h3></li>',
+        'https://weixin.sogou.com/antispider/')
+    assert parse_sogou_discovery(challenge) == ([], None)
+    calls = []
+    def fetch(url):
+        calls.append(url)
+        return challenge
+    result = WechatPublicAdapter(fetcher=fetch).search('query fixture')
+    assert result.status is CollectionStatus.NEED_VERIFY and len(calls) == 1
+    assert result.raw_count is None and result.items == []
+    assert result.metadata['pagination']['next_cursor'] is None
+    assert result.metadata['pagination']['continuation_blocked'] is True
+    assert result.metadata['http_status'] == 200
+
+
+def test_sogou_verification_preserves_original_and_stops_remaining_candidates_and_pages():
+    first = 'https://mp.weixin.qq.com/s/first-permitted'
+    third = 'https://mp.weixin.qq.com/s/independent-permitted'
+    blocked = 'https://weixin.sogou.com/link?url=fixture-blocked'
+    index = response(
+        f'<li id="sogou_vr_1"><h3><a href="{first}">第一篇</a></h3></li>'
+        f'<li id="sogou_vr_2"><h3><a href="{blocked}">第二篇</a></h3></li>'
+        f'<li id="sogou_vr_3"><h3><a href="{third}">第三篇</a></h3></li>'
+        '<a id="sogou_next" href="/weixin?type=2&amp;query=query%20fixture&amp;page=2">下一页</a>',
+        'https://weixin.sogou.com/weixin?type=2&query=query%20fixture&page=1')
+    challenge = response('<main>此验证码用于确认这些请求是您的正常行为而不是自动程序发出的，需要您协助验证。</main>'
+        '<script>window.location="https://mp.weixin.qq.com/s/must-not-follow";</script>',
+        'https://weixin.sogou.com/antispider/')
+    calls = []
+    def fetch(url):
+        calls.append(url)
+        if len(calls) == 1:
+            return index
+        if url == first:
+            return response('<div id="js_content">已取得的合规原文</div>', first)
+        if url == blocked:
+            return challenge
+        if url == third:
+            return response('<div id="js_content">独立可访问原文</div>', third)
+        pytest.fail('verification caused an extra transport attempt')
+    adapter = WechatPublicAdapter(fetcher=fetch)
+    result = adapter.search('query fixture')
+    assert result.status is CollectionStatus.NEED_VERIFY
+    assert calls == ['https://weixin.sogou.com/weixin?type=2&query=query%20fixture&page=1', first, blocked]
+    assert len(result.metadata['discovery_candidates']) == 3 and result.raw_count == 3
+    assert len(result.items) == 1 and result.items[0]['content'] == '已取得的合规原文'
+    assert result.metadata['accepted_count'] == 1 and result.metadata['original_body_available'] is True
+    assert result.metadata['per_request_original_attempt_count'] == 2
+    assert result.metadata['per_request_deferred_source_count'] == 1
+    assert result.metadata['original_outcomes'][-1]['reason'] == 'DISCOVERY_REDIRECT_VERIFICATION_REQUIRED'
+    assert result.metadata['next_search_url'] is None
+    pagination = result.metadata['pagination']
+    assert pagination['next_cursor'] is None and pagination['observed_next_cursor'] == {'page': 2}
+    assert pagination['continuation_blocked'] is True and pagination['page_complete'] is False
+    assert pagination['exhausted'] is None
+    # The challenge pauses this discovery invocation, not an independent,
+    # explicitly requested and permitted original-source read.
+    independent = adapter.detail(third)
+    assert independent.status is CollectionStatus.SUCCESS
+    assert independent.items[0]['content'] == '独立可访问原文'
+
+
+def test_original_article_can_quote_verification_explanation_without_becoming_a_challenge():
+    text = '此验证码用于确认这些请求是您的正常行为而不是自动程序发出的，需要您协助验证。'
+    original = response('<h1 id="activity-name">验证说明介绍</h1><div id="js_content">' + text + '</div>')
+    result = WechatPublicAdapter(fetcher=lambda _url: original).detail('https://mp.weixin.qq.com/s/normal-article')
+    assert result.status is CollectionStatus.SUCCESS
+    assert result.items[0]['content'] == text
 
 
 def test_native_query_tuple_does_not_change_with_referral_parameters():

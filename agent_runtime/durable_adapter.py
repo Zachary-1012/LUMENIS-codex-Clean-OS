@@ -75,21 +75,42 @@ def _sanitize_checkpoint_value(value: Any, token_usage: bool = False):
 
 
 _PLAN_RECEIPT_FIELDS = (
+    "provider", "status", "code", "operation", "attempt_id", "domain_id", "scope",
+    "request_id", "request_digest", "run_id", "model_id", "model_revision", "recipe",
+    "runtime_sha256", "executor_sha256", "source_use_policy_version", "source_use_policy_sha256",
+    "source_binding_sha256", "input_revision_sha256", "source_evidence_refs",
+    "prompt_tokens", "completion_tokens", "total_tokens",
+)
+_PLAN_RECEIPT_KEYS = frozenset(_PLAN_RECEIPT_FIELDS)
+_LEGACY_PLAN_RECEIPT_FIELDS = (
     "provider", "status", "operation", "request_id", "request_digest", "run_id",
     "model_id", "model_revision", "recipe", "source_use_policy_sha256",
     "source_binding_sha256", "input_revision_sha256", "source_evidence_refs",
     "prompt_tokens", "completion_tokens", "total_tokens",
 )
-_PLAN_RECEIPT_KEYS = frozenset(_PLAN_RECEIPT_FIELDS)
+_LEGACY_PLAN_RECEIPT_KEYS = frozenset(_LEGACY_PLAN_RECEIPT_FIELDS)
 _PLAN_TOKEN_FIELDS = ("prompt_tokens", "completion_tokens", "total_tokens")
 
 
-def _validated_plan_inference_receipt(value: Any) -> dict[str, Any] | None:
+def _validated_plan_inference_receipt(
+    value: Any, *, require_attempt_id: bool = False,
+) -> dict[str, Any] | None:
     """Accept only the bounded receipt emitted by the existing Agent Gateway."""
-    if type(value) is not dict or set(value) != _PLAN_RECEIPT_KEYS:
+    if type(value) is not dict:
         return None
+    keys = set(value)
+    allowed_keys = (_PLAN_RECEIPT_KEYS,) if require_attempt_id else (
+        _PLAN_RECEIPT_KEYS, _LEGACY_PLAN_RECEIPT_KEYS,
+    )
+    if all(keys != candidate for candidate in allowed_keys):
+        return None
+    current_receipt = keys == _PLAN_RECEIPT_KEYS
     if (value.get("provider") != "owned" or value.get("status") != "COMPLETED"
-            or value.get("operation") != "agent_plan"):
+            or value.get("operation") != "agent_plan"
+            or current_receipt and value.get("code") != "OWNED_INFERENCE_COMPLETED"):
+        return None
+    if "attempt_id" in value and (type(value["attempt_id"]) is not str
+                                  or not re.fullmatch(r"attempt_[0-9a-f]{32}", value["attempt_id"])):
         return None
     for key in ("request_id", "run_id", "model_id", "model_revision", "recipe"):
         item = value.get(key)
@@ -100,6 +121,15 @@ def _validated_plan_inference_receipt(value: Any) -> dict[str, Any] | None:
         item = value.get(key)
         if type(item) is not str or not re.fullmatch(r"[0-9a-f]{64}", item):
             return None
+    if current_receipt:
+        for key in ("runtime_sha256", "executor_sha256"):
+            item = value.get(key)
+            if type(item) is not str or not re.fullmatch(r"[0-9a-f]{64}", item):
+                return None
+        for key in ("domain_id", "scope", "source_use_policy_version"):
+            item = value.get(key)
+            if type(item) is not str or not item.strip() or len(item) > 1024:
+                return None
     refs = value.get("source_evidence_refs")
     if (type(refs) is not list or not refs or len(refs) > 128
             or any(type(item) is not str or not item.strip() or len(item) > 512 for item in refs)):
@@ -109,7 +139,8 @@ def _validated_plan_inference_receipt(value: Any) -> dict[str, Any] | None:
             or value["completion_tokens"] < 1
             or value["total_tokens"] != value["prompt_tokens"] + value["completion_tokens"]):
         return None
-    return {key: value[key] for key in _PLAN_RECEIPT_FIELDS}
+    fields = _PLAN_RECEIPT_FIELDS if "attempt_id" in value else _LEGACY_PLAN_RECEIPT_FIELDS
+    return {key: value[key] for key in fields}
 
 
 def _validated_context_budget(value, receipt, model):
@@ -120,13 +151,18 @@ def _validated_context_budget(value, receipt, model):
     required = value.get('required_context_sha256')
     if required is not None and not sha(required):
         return None
-    if set(value) == {'required_context_sha256', 'measurement', 'model_execution'}:
+    memory_sha256 = value.get('human_correction_memory_sha256')
+    if memory_sha256 is not None and not sha(memory_sha256):
+        return None
+    no_model_fields = {'required_context_sha256', 'measurement', 'model_execution'}
+    if set(value) in (no_model_fields, no_model_fields | {'human_correction_memory_sha256'}):
         return dict(value) if (model == 'none' and receipt is None
             and value['measurement'] == 'NOT_REQUESTED_NO_MODEL' and value['model_execution'] == 'NOT_RUN') else None
     fields = {'ok', 'fits', 'prompt_tokens', 'context_window_tokens', 'output_token_limit',
               'output_tokens_reserved', 'request_sha256', 'runtime_sha256', 'tokenizer_identity',
               'formatter_sha256', 'count_method', 'generation_performed', 'binding_sha256'}
-    if not fields.issubset(value) or set(value) - fields - {'omitted_sections', 'required_context_sha256'}:
+    if not fields.issubset(value) or set(value) - fields - {
+            'omitted_sections', 'required_context_sha256', 'human_correction_memory_sha256'}:
         return None
     if (value['ok'] is not True or type(value['fits']) is not bool or value['generation_performed'] is not False
             or value['count_method'] != 'loaded_runtime_tokenizer'
@@ -742,9 +778,18 @@ class DurableExecutionAdapter:
                 return None
             if row['status'] != 'completed' or content.get('state') != 'COMPLETED':
                 raise RuntimeError('AGENT_MODEL_RESULT_UNKNOWN_NO_REPLAY')
-            result, budget = self._checked_model_response(request, content.get('result'), content.get('context_budget'))
+            result, budget = self._checked_model_response(
+                request, content.get('result'), content.get('context_budget'),
+                allow_legacy_attempt_receipt=True,
+            )
+            evaluation_call_ref, evaluation_link_state = self._checked_evaluation_link(
+                content.get('evaluation_call_ref'),
+                content.get('evaluation_link_state', 'NOT_RECORDED'),
+            )
             self._require_write_permission('ai_task_step', connection=con)
-            return {'result': result, 'context_budget': budget}
+            return {'result': result, 'context_budget': budget,
+                    'evaluation_call_ref': evaluation_call_ref,
+                    'evaluation_link_state': evaluation_link_state}
 
     def reserve_model_request(self, request):
         """Reserve in the existing Task step table before the model invocation."""
@@ -775,14 +820,21 @@ class DurableExecutionAdapter:
         return identifier
 
     @staticmethod
-    def _checked_model_response(request, result, budget):
+    def _checked_model_response(request, result, budget, *, allow_legacy_attempt_receipt=False):
         """Keep a request-matching receipt and bounded, credential-free plan data."""
-        receipt = _validated_plan_inference_receipt({key: result.get(key) for key in _PLAN_RECEIPT_FIELDS}) if type(result) is dict else None
+        receipt = _validated_plan_inference_receipt(
+            {key: result[key] for key in _PLAN_RECEIPT_FIELDS if key in result},
+            require_attempt_id=not allow_legacy_attempt_receipt,
+        ) if type(result) is dict else None
         if (receipt is None or result.get('ok') is not True or result.get('real_input_bound') is not True
                 or receipt['request_id'] != request.request_id
                 or receipt['request_digest'] != DurableExecutionAdapter._model_request_identity(request)['request_digest']
                 or any(receipt[key] != getattr(request, key) for key in
                        ('source_binding_sha256', 'input_revision_sha256', 'source_use_policy_sha256'))
+                or 'domain_id' in receipt and receipt['domain_id'] != request.domain_id
+                or 'scope' in receipt and receipt['scope'] != request.scope
+                or 'source_use_policy_version' in receipt
+                   and receipt['source_use_policy_version'] != request.source_use_policy_version
                 or receipt['source_evidence_refs'] != list(request.source_evidence_refs)):
             raise RuntimeError('AGENT_MODEL_RECEIPT_INVALID')
         checked_budget = _validated_context_budget(budget, receipt, receipt['model_id'])
@@ -792,7 +844,21 @@ class DurableExecutionAdapter:
             raise RuntimeError('AGENT_MODEL_RESULT_NOT_PERSISTABLE')
         return {'ok': True, 'real_input_bound': True, **receipt, 'analysis': analysis}, checked_budget
 
-    def record_model_response(self, request, reservation, result, budget):
+    @staticmethod
+    def _checked_evaluation_link(evaluation_call_ref, evaluation_link_state):
+        allowed_states = {'VERIFIED', 'NOT_LINKED', 'NOT_RECORDED', 'UNAVAILABLE'}
+        if evaluation_link_state not in allowed_states:
+            raise RuntimeError('AGENT_MODEL_EVALUATION_LINK_INVALID')
+        if evaluation_link_state == 'VERIFIED':
+            if (type(evaluation_call_ref) is not str
+                    or re.fullmatch(r'ai-call:v1:[1-9][0-9]{0,15}:[0-9a-f]{64}', evaluation_call_ref) is None):
+                raise RuntimeError('AGENT_MODEL_EVALUATION_LINK_INVALID')
+        elif evaluation_call_ref is not None:
+            raise RuntimeError('AGENT_MODEL_EVALUATION_LINK_INVALID')
+        return evaluation_call_ref, evaluation_link_state
+
+    def record_model_response(self, request, reservation, result, budget, *,
+                              evaluation_call_ref=None, evaluation_link_state='NOT_RECORDED'):
         """Commit the verified result before tool formation; no prompt/secret retention."""
         if self._operational_admission is None or request.job_id != self._operational_admission.task_id:
             raise PermissionError('AGENT_MODEL_DURABLE_ADMISSION_REQUIRED')
@@ -801,6 +867,9 @@ class DurableExecutionAdapter:
         if type(result) is not dict or result.get('ok') is not True or result.get('status') != 'COMPLETED':
             return
         retained, checked_budget = self._checked_model_response(request, result, budget)
+        evaluation_call_ref, evaluation_link_state = self._checked_evaluation_link(
+            evaluation_call_ref, evaluation_link_state,
+        )
         from lumenis.shared.database import get_repository
         engine = self._require_task_engine()
         with self._operational_admission.guard(), get_repository().transaction() as con:
@@ -813,7 +882,9 @@ class DurableExecutionAdapter:
             if not task or task['status'] == 'cancelled':
                 raise PermissionError('USER_CANCELLED')
             completed = {**content, 'state': 'COMPLETED', 'recovery': 'IMMUTABLE_RESULT_NO_MODEL_REPLAY',
-                         'result': retained, 'context_budget': checked_budget}
+                         'result': retained, 'context_budget': checked_budget,
+                         'evaluation_call_ref': evaluation_call_ref,
+                         'evaluation_link_state': evaluation_link_state}
             con.execute("UPDATE ai_task_step SET status='completed',detail=?,finished_at=?,duration_ms=0 WHERE step_id=? AND status='running'",
                         (json.dumps(completed, ensure_ascii=False, sort_keys=True, allow_nan=False), engine._now(), reservation))
             self._require_write_permission('ai_task_step', connection=con)

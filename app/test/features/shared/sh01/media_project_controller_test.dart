@@ -88,6 +88,7 @@ final class _Repository implements MediaProjectRepository {
   bool legacyRightsFormat = false;
   Completer<void>? pending;
   Map<String, dynamic>? savedProject;
+  bool malformedExportProject = false;
   bool approvalRequired = false;
   bool approvalIssued = false;
   int importCalls = 0;
@@ -147,6 +148,7 @@ final class _Repository implements MediaProjectRepository {
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
+    List<String>? sourceProjectArtifactRefs,
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
@@ -161,6 +163,8 @@ final class _Repository implements MediaProjectRepository {
     if (failure != null) throw failure!;
     savedProject = {
       'source_artifact_refs': ?refs,
+      'source_project_artifact_refs': ?sourceProjectArtifactRefs,
+      'parent_artifact_id': previousArtifactId,
       'schema_version': title == null ? 1 : 2,
       'title': ?title,
       if (title != null) 'project_revision': 1,
@@ -183,7 +187,9 @@ final class _Repository implements MediaProjectRepository {
       'result': {
         'status': renderMedia ? 'rendered_staged' : 'project_saved',
         'artifact': {'artifact_id': 'ART-$calls'},
-        'project': savedProject,
+        'project': malformedExportProject
+            ? const <String, dynamic>{}
+            : savedProject,
         'render': render,
       },
     };
@@ -191,11 +197,11 @@ final class _Repository implements MediaProjectRepository {
 
   bool savedRendered = true;
   Map<String, dynamic> get render => !savedRendered ? {
-    'state': 'not_rendered', 'output_kind': 'video',
+    'state': 'not_rendered', 'output_kind': savedProject!['output_kind'],
     'timeline_version': savedProject!['timeline']['version'],
   } : {
     'state': 'rendered_verified',
-    'output_kind': 'video',
+    'output_kind': savedProject!['output_kind'],
     'size_bytes': 8,
     'media_sha256': 'b' * 64,
     'measurement': {'actual_duration_sec': 4.0},
@@ -943,6 +949,7 @@ void main() {
 
   test('malformed response cannot become a saved version', () async {
     await create();
+    repository.malformedExportProject = true;
     await controller.export(outputKind: 'audio');
     expect(controller.version, isNull);
     expect(controller.failureCode, 'CONTENT_RESPONSE_INVALID');

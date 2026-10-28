@@ -10,7 +10,6 @@ second owner in this module.
 """
 import json
 import time as _time
-import uuid as _uuid
 from flask import Blueprint, request, jsonify
 
 lumenis_bp = Blueprint("lumenis", __name__, url_prefix="/lumenis")
@@ -19,13 +18,14 @@ lumenis_bp = Blueprint("lumenis", __name__, url_prefix="/lumenis")
 domain_api_bp = Blueprint("domain_api", __name__)
 
 
-def _internal_pitch_body():
+def _internal_pitch_body(*, max_bytes=1024 * 1024):
     """Bounded JSON only; client identity and server file paths are forbidden."""
     import math
-    if not request.is_json or (request.content_length or 0) > 1024 * 1024:
+    if (type(max_bytes) is not int or not 1 <= max_bytes <= 8 * 1024 * 1024
+            or not request.is_json or (request.content_length or 0) > max_bytes):
         raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
     raw = request.get_data(cache=True)
-    if len(raw) > 1024 * 1024:
+    if len(raw) > max_bytes:
         raise ValueError("INTERNAL_PITCH_REQUEST_INVALID")
 
     def pairs(values):
@@ -322,12 +322,29 @@ def api_business_work_prepare():
 @domain_api_bp.get("/api/experience/business-works/<work_id>")
 def api_business_work_read(work_id):
     def execute():
-        if (set(request.args) - {"revision"}
+        if (set(request.args) - {"revision", "related_reports"}
                 or any(len(request.args.getlist(key)) != 1 for key in request.args)
                 or ("revision" in request.args and not request.args["revision"])):
             raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
         service, actor_ref, scope, authorize = _business_work_binding("read")
         revision = request.args.get("revision")
+        if "related_reports" in request.args:
+            encoded = request.args["related_reports"]
+            if not encoded or len(encoded) > 16384:
+                raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+            def unique_object(pairs):
+                result = {}
+                for key, value in pairs:
+                    if key in result:
+                        raise ValueError("BUSINESS_WORK_REQUEST_INVALID")
+                    result[key] = value
+                return result
+            try:
+                related = json.loads(encoded, object_pairs_hook=unique_object)
+            except ValueError as exc:
+                raise ValueError("BUSINESS_WORK_REQUEST_INVALID") from exc
+            return service.focus_lens_from_reports(work_id, actor_ref=actor_ref, scope=scope,
+                authorize=authorize, related_reports=related, revision=revision)
         return service.reopen(work_id, actor_ref=actor_ref, scope=scope, authorize=authorize,
                               revision=revision)
     return _business_work_response(execute)

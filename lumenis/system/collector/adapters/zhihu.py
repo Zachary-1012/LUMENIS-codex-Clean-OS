@@ -50,6 +50,14 @@ class ZhihuAdapter(BasePlatformAdapter):
             return CollectionStatus.COOLING_DOWN
         return CollectionStatus.COLLECT_ERROR
 
+    @classmethod
+    def _observed_status(cls,result):
+        kind=(getattr(result,'metadata',None) or {}).get('failure_class')
+        return {'AUTH_REQUIRED':CollectionStatus.SESSION_EXPIRED,'ACCESS_BLOCKED':CollectionStatus.BLOCKED,
+            'RATE_LIMITED':CollectionStatus.COOLING_DOWN,'CONTENT_UNAVAILABLE':CollectionStatus.PROVIDER_UNAVAILABLE,
+            'PROVIDER_UNAVAILABLE':CollectionStatus.PROVIDER_UNAVAILABLE}.get(kind) or cls._v4_status_to_main(
+                result.success,result.notes,result.error)
+
     def _v4_notes_to_items(self, notes: list) -> list[dict]:
         items = []
         for n in notes or []:
@@ -77,7 +85,7 @@ class ZhihuAdapter(BasePlatformAdapter):
             max_results = int(kwargs.get("max_results", 20))
             result = backend.search(keyword, max_results=max_results,
                 **({'cursor':kwargs['cursor']} if kwargs.get('cursor') is not None else {}))
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            status = self._observed_status(result)
             items = self._v4_notes_to_items(result.notes)
             return CollectionResult(
                 status=status,
@@ -103,7 +111,7 @@ class ZhihuAdapter(BasePlatformAdapter):
             backend = self._load_backend()
             fn = getattr(backend, method)
             result = fn(*args, **kwargs)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            status = self._observed_status(result)
             items = self._v4_notes_to_items(result.notes)
             comments = map_v4_comments(result.notes) if method == 'comments' else []
             return CollectionResult(
@@ -127,6 +135,10 @@ class ZhihuAdapter(BasePlatformAdapter):
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("creator", user_id=creator_id)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._delegate_v4('author_posts',author_id,max_results=kwargs.get('max_results',20),
+                                 **({'cursor':kwargs['cursor']} if kwargs.get('cursor') is not None else {}))
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         try:

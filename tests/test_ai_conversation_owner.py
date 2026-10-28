@@ -78,6 +78,47 @@ def test_conversation_task_refs_require_both_owners_and_never_export_derived_his
     assert fake.status_code == 400
 
 
+def test_task_projection_offers_only_current_preparable_shared_visual_without_saving(conversation_client):
+    from tests.test_agent_runtime_http_binding import _shared_task
+    from lumenis.system.security import permission
+    api, app, path = conversation_client
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    with sqlite3.connect(path) as con:
+        con.execute("INSERT OR REPLACE INTO skills_registry(skill_id,name,product,domain,status,version) "
+                    "VALUES('shared.social_card','Local original card','SHARED',NULL,'enabled','1.0')")
+        con.executemany("INSERT INTO v4_member_authorizations(user_id,product_id,module,action) VALUES(1,'SHARED',?,?)",
+                        [('content','read'), ('reports','read'), ('reports','write')])
+    row = create(api, own); root = '/v4/ai/conversations/' + row['conversation_id']
+    made = _shared_task(api, headers=own)
+    assert made.status_code == 202, made.get_json()
+    task_id = made.get_json()['task']['task_id']
+    attached = api.post(root + '/tasks', headers=own, json={'task_id': task_id,
+        'idempotency_key': 'visual-task-link', 'expected_revision': row['revision']})
+    assert attached.status_code == 200, attached.get_json()
+    assert 'deliverable' not in attached.get_json()['turn']['content']
+    assert api.post('/api/ai/tasks/' + task_id + '/run', headers=own).status_code == 200
+    approvals_before = len(permission.get_permission_gate().list_approvals())
+    projected = api.get(root, headers=own).get_json()['conversation']['turns'][0]['content']
+    assert projected['deliverable'] == {'kind': 'visual', 'step_index': 0}
+    prepared = api.post('/api/ai/tasks/' + task_id + '/deliverable', headers=own,
+                        json={'mode': 'prepare', 'step_index': 0})
+    assert prepared.status_code == 200, prepared.get_json()
+    assert prepared.get_json()['state'] == 'READY_TO_SAVE' and prepared.get_json()['saved'] is False
+    assert api.post('/api/ai/tasks/' + task_id + '/deliverable',
+        headers={'Authorization': 'Bearer fixture-session-two'},
+        json={'mode': 'prepare', 'step_index': 0}).status_code in (401, 403)
+    assert len(permission.get_permission_gate().list_approvals()) == approvals_before
+    with sqlite3.connect(path) as con:
+        present = con.execute("SELECT 1 FROM sqlite_master WHERE name='lumenis_shared_artifacts'").fetchone()
+        assert not present or con.execute('SELECT COUNT(*) FROM lumenis_shared_artifacts').fetchone()[0] == 0
+        con.execute("DELETE FROM v4_member_authorizations WHERE user_id=1 AND product_id='SHARED' AND module='reports' AND action='write'")
+    projected = app.test_client().get(root, headers=own).get_json()['conversation']['turns'][0]['content']
+    assert projected['status'] == 'succeeded' and 'deliverable' not in projected
+    with sqlite3.connect(path) as con:
+        con.execute("DELETE FROM v4_member_authorizations WHERE user_id=1 AND product_id='SHARED' AND module='content'")
+    assert app.test_client().get(root, headers=own).get_json()['conversation']['turns'][0]['content'] == {'state': 'source_access_unavailable'}
+
+
 def test_conversation_response_reservation_context_accounting_and_no_auto_retry(conversation_client, monkeypatch):
     from lumenis.ai_hub import service
     api, app, path = conversation_client
@@ -148,7 +189,7 @@ def test_human_context_reopens_corrects_and_invalidates_late_result(conversation
         assert conversations.read_context(actor, row['conversation_id'])['context']['content']['value'] == value
         assert conversations.update_context(actor, row['conversation_id'], value=value,
                     idempotency_key='context-one', expected_revision=1)['idempotent_hit']
-        with pytest.raises(ValueError, match='EXCLUSION_USER_TURN_REQUIRED'):
+        with pytest.raises(ValueError, match='EXCLUSION_TURN_REQUIRED'):
             conversations.update_context(actor, row['conversation_id'], value={**value, 'excluded_turn_ids': ['foreign']},
                     idempotency_key='foreign', expected_revision=row['revision'])
     user = append(api, row, 'continue with the current writing', 'continue')
@@ -175,6 +216,154 @@ def test_human_context_reopens_corrects_and_invalidates_late_result(conversation
     with sqlite3.connect(path) as con:
         assert json.loads(con.execute('SELECT content_json FROM ai_conversation_turns WHERE turn_id=?',
             (first['turn_id'],)).fetchone()[0])['text'] == 'old budget is 100; original human writing'
+
+
+def test_human_context_can_forget_completed_assistant_output_and_dependent_replies(tmp_path, monkeypatch):
+    from lumenis.ai_hub import conversations, service
+    from lumenis.system.ai_gateway import user_api_adapter
+
+    database_path = tmp_path / 'conversation-forget.sqlite3'
+    workspace_binding = 'a' * 64
+
+    def connect_isolated():
+        connection = sqlite3.connect(database_path)
+        connection.row_factory = sqlite3.Row
+        connection.execute('PRAGMA foreign_keys=ON')
+        return connection
+
+    monkeypatch.setattr(conversations, '_connect', connect_isolated)
+    monkeypatch.setattr(conversations, '_identity',
+        lambda actor, action, connection: ('actor:7', workspace_binding))
+    monkeypatch.setattr(user_api_adapter, 'is_selected', lambda: False)
+
+    with connect_isolated() as connection:
+        connection.execute('BEGIN')
+        conversations.ensure_schema(connection)
+        connection.commit()
+
+    actor = {'fixture_actor': 7}
+    conversation = conversations.create_conversation(actor, title='Forget one answer')
+    first_question = conversations.append_user_turn(actor, conversation['conversation_id'],
+        text='Question one', idempotency_key='question-one', expected_revision=conversation['revision'])
+    revision = first_question['revision']
+    generated = []
+    answers = {
+        'Question one': 'Assistant answer one',
+        'Question two': 'Assistant answer two derived from answer one',
+        'Question three': 'Assistant answer after forgetting',
+        'Question four': 'Assistant answer after a later context revision',
+    }
+
+    def synthetic_chat(question, **kwargs):
+        generated.append({'question': question, 'history': kwargs['history']})
+        return {'ok': True, 'status': 'COMPLETED', 'reply': answers[question],
+                'provider': 'isolated-synthetic-test'}
+
+    monkeypatch.setattr(service, 'chat', synthetic_chat)
+    first_response = conversations.respond(actor, conversation['conversation_id'],
+        first_question['turn']['turn_id'], idempotency_key='response-one', expected_revision=revision)
+    assert first_response['turn']['state'] == 'completed'
+    revision = first_response['revision']
+
+    second_question = conversations.append_user_turn(actor, conversation['conversation_id'],
+        text='Question two', idempotency_key='question-two', expected_revision=revision)
+    second_response = conversations.respond(actor, conversation['conversation_id'],
+        second_question['turn']['turn_id'], idempotency_key='response-two',
+        expected_revision=second_question['revision'])
+    assert second_response['turn']['state'] == 'completed'
+    first_response_id = first_response['turn']['turn_id']
+    assert any(item['turn_id'] == first_response_id and item['included'] is True
+               for item in second_response['turn']['content']['context_accounting']['coverage'])
+
+    correction = {'goal': 'Continue from the current human draft', 'constraints': ['do not publish'],
+        'draft': 'Human revision retained', 'decisions': ['forget the old assistant answer'],
+        'excluded_turn_ids': [first_response_id]}
+    saved = conversations.update_context(actor, conversation['conversation_id'], value=correction,
+        idempotency_key='forget-answer-one', expected_revision=second_response['revision'])
+    reopened = conversations.read_conversation(actor, conversation['conversation_id'], limit=100)
+    assert reopened['turns'][-1]['content']['value'] == correction
+    assert any(turn['turn_id'] == first_response_id
+               and turn['content']['text'] == answers['Question one'] for turn in reopened['turns'])
+
+    third_question = conversations.append_user_turn(actor, conversation['conversation_id'],
+        text='Question three', idempotency_key='question-three', expected_revision=saved['revision'])
+    third_response = conversations.respond(actor, conversation['conversation_id'],
+        third_question['turn']['turn_id'], idempotency_key='response-three',
+        expected_revision=third_question['revision'])
+    assert third_response['turn']['state'] == 'completed'
+    final_history = generated[-1]['history']
+    serialized_history = json.dumps(final_history, ensure_ascii=False)
+    assert answers['Question one'] not in serialized_history
+    assert answers['Question two'] not in serialized_history
+    coverage = third_response['turn']['content']['context_accounting']['coverage']
+    reasons = {item['turn_id']: item['reason'] for item in coverage}
+    assert reasons[first_response_id] == 'explicit_human_correction_or_forget'
+    second_response_id = second_response['turn']['turn_id']
+    assert reasons[second_response_id] == 'derived_from_excluded_input'
+
+    final_reopen = conversations.read_conversation(actor, conversation['conversation_id'], limit=100)
+    assert any(turn['turn_id'] == first_response_id
+               and turn['content']['text'] == answers['Question one'] for turn in final_reopen['turns'])
+    assert any(turn['turn_id'] == second_response_id
+               and turn['content']['text'] == answers['Question two'] for turn in final_reopen['turns'])
+
+    # Editing another part of the context with an empty client exclusion list
+    # must not silently bring the previously forgotten answer back into prompts.
+    later_context = conversations.update_context(actor, conversation['conversation_id'],
+        value={**correction, 'draft': 'A later human revision', 'excluded_turn_ids': []},
+        idempotency_key='later-context-edit', expected_revision=third_response['revision'])
+    persisted_context = conversations.read_context(actor, conversation['conversation_id'])
+    assert persisted_context['context']['content']['value']['draft'] == 'A later human revision'
+    assert persisted_context['context']['content']['value']['excluded_turn_ids'] == [first_response_id]
+    with connect_isolated() as connection:
+        task_context = conversations.task_working_context(connection, conversation['conversation_id'], actor)
+    task_prompt = json.dumps(task_context['history'], ensure_ascii=False)
+    assert answers['Question one'] not in task_prompt
+    assert answers['Question two'] not in task_prompt
+    task_coverage = {item['turn_id']: item for item in task_context['context_accounting']['coverage']}
+    assert task_coverage[first_response_id]['reason'] == 'explicit_human_correction_or_forget'
+    fourth_question = conversations.append_user_turn(actor, conversation['conversation_id'],
+        text='Question four', idempotency_key='question-four', expected_revision=later_context['revision'])
+    fourth_response = conversations.respond(actor, conversation['conversation_id'],
+        fourth_question['turn']['turn_id'], idempotency_key='response-four',
+        expected_revision=fourth_question['revision'])
+    final_prompt = json.dumps(generated[-1]['history'], ensure_ascii=False)
+    assert answers['Question one'] not in final_prompt
+    assert answers['Question two'] not in final_prompt
+    assert answers['Question three'] in final_prompt
+
+    with connect_isolated() as connection:
+        sequence = connection.execute(
+            'SELECT COALESCE(MAX(sequence),0)+1 FROM ai_conversation_turns WHERE conversation_id=?',
+            (conversation['conversation_id'],),
+        ).fetchone()[0]
+        now = conversations._now()
+        connection.executemany('''INSERT INTO ai_conversation_turns
+            (turn_id,conversation_id,idempotency_key,request_sha256,sequence,role,origin_kind,
+             content_json,task_id,state,revision,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?,1,?,?)''', [
+            ('turn_reserved_output', conversation['conversation_id'], 'reserved-output', 'b' * 64,
+             sequence, 'assistant', 'model_output', '{"in_reply_to":"none"}', None,
+             'reserved', now, now),
+            ('turn_task_projection', conversation['conversation_id'], 'task-projection', 'c' * 64,
+             sequence + 1, 'assistant', 'task_projection', '{"source_policy":"TASK_OWNER_RECHECK_ON_READ"}',
+             'task-fixture', 'recorded', now, now),
+        ])
+
+    for key, turn_id in (
+        ('forget-reserved-output', 'turn_reserved_output'),
+        ('forget-task-projection', 'turn_task_projection'),
+    ):
+        with pytest.raises(ValueError, match='CONVERSATION_CONTEXT_EXCLUSION_TURN_REQUIRED'):
+            conversations.update_context(actor, conversation['conversation_id'],
+                value={**correction, 'excluded_turn_ids': [turn_id]},
+                idempotency_key=key, expected_revision=fourth_response['revision'])
+    with connect_isolated() as connection:
+        current_revision = connection.execute(
+            'SELECT revision FROM ai_conversations WHERE conversation_id=?',
+            (conversation['conversation_id'],),
+        ).fetchone()[0]
+    assert current_revision == fourth_response['revision']
 
 
 def test_context_http_owner_permission_reopen_conflict_and_no_inference(conversation_client, monkeypatch):

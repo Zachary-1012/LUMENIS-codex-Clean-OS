@@ -1,10 +1,13 @@
 """Hash-pinned local kernels and separately admitted SYSTEM inference runtimes."""
 from __future__ import annotations
 
+import gc
 import hashlib
 import json
+import os
 import re
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -20,6 +23,9 @@ _T4_PACKAGES = {
     "tokenizers": "0.22.2", "triton": "3.6.0",
 }
 _TERMINATORS = ("<|return|>", "<|fim_suffix|>")
+_PRETRAINED_PACKAGE_NAMES = ("safetensors", "tokenizers", "torch", "transformers")
+_PRETRAINED_MEMORY_RESERVE_BYTES = 512 * 1024**2
+_TORCH_CPU_THREADS_LOCK = threading.RLock()
 
 
 class OwnedInferenceBlocked(RuntimeError):
@@ -101,7 +107,6 @@ def _prepare_candidate_files(
         model_dir, train_path, heldout_path, unused, manifest_path=manifest,
         execute=False, recipe=recipe,
     )
-    base_recipe = preflight["base_training_recipe"]
     status_bytes = status_path.read_bytes()
     try:
         status = json.loads(status_bytes.decode("utf-8"))
@@ -427,44 +432,8 @@ def load_owned_production_runtime(
     admission, source_validator, source_dependency_paths=(),
     recipe: str = owned_training.T4_RECIPE,
 ):
-    """Load the common local kernel only after exact, fresh production admission."""
-    _require_model_admission(admission)
-    _require_source_validator(admission, source_validator, source_dependency_paths)
-    parts = _prepare_candidate_files(
-        model_snapshot_dir, train_jsonl_path, heldout_jsonl_path, candidate_output_dir,
-        manifest_path=manifest_path, expected_adapter_sha256=expected_adapter_sha256,
-        expected_adapter_config_sha256=expected_adapter_config_sha256, recipe=recipe,
-    )
-    identity = _production_runtime_identity(
-        parts, admission.request.context_window_tokens, admission.request.output_token_limit,
-    )
-    if any(getattr(admission.request, key, None) != value for key, value in identity.items()):
-        raise OwnedInferenceBlocked("OWNED_RUNTIME_ADMISSION_IDENTITY_MISMATCH")
-    preflight = parts[5]
-    if (admission.request.domain_id != preflight["domain_id"]
-            or not set(admission.request.scopes).issubset(set(preflight["scopes"]))):
-        raise OwnedInferenceBlocked("OWNED_RUNTIME_ADMISSION_SCOPE_MISMATCH")
-    _require_model_admission(admission)
-    kernel = _load_local_kernel(parts)
-    _require_model_admission(admission)
-    # Revalidate the complete manifested base after the loader has read it.
-    # Small adapter/data checks alone cannot detect a base changed during load.
-    parts_after = _prepare_candidate_files(
-        model_snapshot_dir, train_jsonl_path, heldout_jsonl_path, candidate_output_dir,
-        manifest_path=manifest_path, expected_adapter_sha256=expected_adapter_sha256,
-        expected_adapter_config_sha256=expected_adapter_config_sha256, recipe=recipe,
-    )
-    if parts_after[6:10] != parts[6:10]:
-        raise OwnedInferenceBlocked("OWNED_RUNTIME_CHANGED_DURING_LOAD")
-    if identity != _production_runtime_identity(
-        parts, admission.request.context_window_tokens, admission.request.output_token_limit,
-    ):
-        raise OwnedInferenceBlocked("OWNED_RUNTIME_CHANGED_DURING_LOAD")
-    kernel._verify_small_artifacts()
-    return OwnedProductionRuntime(
-        kernel, parts, identity, admission, source_validator, source_dependency_paths,
-        _issuer=_PRODUCTION_RUNTIME_ISSUER,
-    )
+    """Retired CUDA-trained serving path; keep its old signature fail-closed."""
+    raise OwnedInferenceBlocked("TRAINED_CUDA_RUNTIME_WITHDRAWN_BY_PO")
 
 
 def _require_source_validator(admission, validator, dependency_paths):
@@ -633,3 +602,693 @@ class OwnedProductionRuntime:
         "_source_validator", "_source_dependency_paths", "_model_handle",
         "_tokenizer_handle", "_torch_handle", "_kernel_handler", "_formatter_handle",
     )
+
+
+def _pretrained_request_type():
+    from .owned_service import OwnedPretrainedInferenceAdmissionRequest
+
+    return OwnedPretrainedInferenceAdmissionRequest
+
+
+def _pretrained_cpu_packages():
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        packages = tuple((name, version(name)) for name in _PRETRAINED_PACKAGE_NAMES)
+    except PackageNotFoundError as exc:
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_DEPENDENCIES_UNAVAILABLE") from exc
+    if any("cuda" in value.lower() or "+cu" in value.lower() for _name, value in packages):
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_BUILD_REQUIRED")
+    return packages
+
+
+def _pretrained_package_lock_sha256(packages):
+    return hashlib.sha256(json.dumps(
+        [list(item) for item in packages], sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+
+
+def _pretrained_code_identities():
+    from agent_capability.formation import implementation_identity
+    from . import owned_service
+    from lumenis.system.security import owned_model_admission
+
+    dependencies = (__file__, owned_service.__file__, owned_model_admission.__file__)
+    return {
+        "runtime_build_sha256": implementation_identity(_load_pretrained_cpu_kernel, dependencies),
+        "executor_sha256": implementation_identity(OwnedPretrainedProductionRuntime.generate, dependencies),
+    }
+
+
+def _pretrained_artifact_root(request, artifact_root):
+    from .owned_service import validate_pretrained_inference_admission_request
+
+    validate_pretrained_inference_admission_request(request)
+    try:
+        raw = os.fspath(artifact_root)
+        path = Path(raw)
+        if (type(raw) is not str or not path.is_absolute() or path.is_symlink()
+                or raw.startswith(("\\\\", "//")) or "://" in raw):
+            raise ValueError("absolute non-network artifact path required")
+        if any(parent.is_symlink() for parent in (path, *path.parents)):
+            raise ValueError("symlinked artifact path")
+        root = path.resolve(strict=True)
+        if not root.is_dir() or str(root).startswith(("\\\\", "//")):
+            raise ValueError("local artifact directory required")
+    except (OSError, TypeError, ValueError) as exc:
+        raise OwnedInferenceBlocked("PRETRAINED_LOCAL_ARTIFACT_PATH_INVALID") from exc
+
+    expected = {name: (size, digest) for name, size, digest in request.artifact_files}
+    found = {}
+    try:
+        for current, directories, filenames in os.walk(root, followlinks=False):
+            current_path = Path(current)
+            if any((current_path / name).is_symlink() for name in directories):
+                raise OwnedInferenceBlocked("PRETRAINED_LOCAL_ARTIFACT_SYMLINKED")
+            for filename in filenames:
+                item = current_path / filename
+                if item.is_symlink() or not item.is_file():
+                    raise OwnedInferenceBlocked("PRETRAINED_LOCAL_ARTIFACT_FILE_INVALID")
+                relative = item.relative_to(root).as_posix()
+                found[relative] = item
+        if set(found) != set(expected):
+            raise OwnedInferenceBlocked("PRETRAINED_LOCAL_ARTIFACT_FILE_SET_MISMATCH")
+        total_bytes = 0
+        for relative, item in found.items():
+            size, expected_sha = expected[relative]
+            if item.stat().st_size != size or owned_training._sha256(item) != expected_sha:
+                raise OwnedInferenceBlocked("PRETRAINED_LOCAL_ARTIFACT_HASH_MISMATCH")
+            total_bytes += size
+    except OwnedInferenceBlocked:
+        raise
+    except (OSError, ValueError) as exc:
+        raise OwnedInferenceBlocked("PRETRAINED_LOCAL_ARTIFACT_READ_FAILED") from exc
+    return root, found, total_bytes
+
+
+def _pretrained_runtime_payload(request, packages):
+    from .owned_service import pretrained_artifact_identity_sha256
+
+    return {
+        "schema": "owned-pretrained-cpu-runtime-v1",
+        "manifest_sha256": request.manifest_sha256,
+        "artifact_identity_sha256": pretrained_artifact_identity_sha256(request),
+        "runtime_build_sha256": request.runtime_build_sha256,
+        "executor_sha256": request.executor_sha256,
+        "runtime_package_lock_sha256": request.runtime_package_lock_sha256,
+        "packages": [list(item) for item in packages],
+        "device_kind": "cpu",
+        "limits": {
+            "context_window_tokens": request.context_window_tokens,
+            "output_token_limit": request.output_token_limit,
+            "cpu_threads": request.cpu_threads,
+            "memory_limit_bytes": request.memory_limit_bytes,
+            "generation_timeout_seconds": request.generation_timeout_seconds,
+            "max_concurrent_requests": request.max_concurrent_requests,
+        },
+    }
+
+
+def derive_pretrained_inference_runtime_pins(request, artifact_root):
+    """Derive exact local CPU/code pins; this performs no model load or generation."""
+    from dataclasses import replace
+    from .owned_service import (
+        OwnedServiceBlocked, pretrained_inference_manifest_sha256,
+        validate_pretrained_inference_admission_request,
+    )
+
+    if type(request) is not _pretrained_request_type():
+        raise OwnedInferenceBlocked("PRETRAINED_ADMISSION_TYPE_INVALID")
+    _root, _files, total_bytes = _pretrained_artifact_root(request, artifact_root)
+    packages = _pretrained_cpu_packages()
+    identities = _pretrained_code_identities()
+    package_lock = _pretrained_package_lock_sha256(packages)
+    updated = replace(
+        request, runtime_packages=packages,
+        runtime_version=dict(packages)["transformers"],
+        runtime_build_sha256=identities["runtime_build_sha256"],
+        executor_sha256=identities["executor_sha256"],
+        runtime_package_lock_sha256=package_lock,
+        runtime_sha256="0" * 64, manifest_sha256="0" * 64,
+    )
+    manifest_sha = pretrained_inference_manifest_sha256(updated)
+    updated = replace(updated, manifest_sha256=manifest_sha)
+    try:
+        validate_pretrained_inference_admission_request(updated)
+    except OwnedServiceBlocked as exc:
+        raise OwnedInferenceBlocked(exc.code) from exc
+    runtime_sha = hashlib.sha256(json.dumps(
+        _pretrained_runtime_payload(updated, packages), sort_keys=True,
+        separators=(",", ":"), ensure_ascii=False, allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    return replace(updated, runtime_sha256=runtime_sha)
+
+
+def _current_process_rss_bytes():
+    """Read resident memory using only platform standard libraries."""
+    import sys
+
+    try:
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+
+            class _Counters(ctypes.Structure):
+                _fields_ = [
+                    ("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD),
+                    ("PeakWorkingSetSize", ctypes.c_size_t), ("WorkingSetSize", ctypes.c_size_t),
+                    ("QuotaPeakPagedPoolUsage", ctypes.c_size_t), ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                    ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t), ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                    ("PagefileUsage", ctypes.c_size_t), ("PeakPagefileUsage", ctypes.c_size_t),
+                ]
+
+            counters = _Counters()
+            counters.cb = ctypes.sizeof(counters)
+            psapi = ctypes.WinDLL("psapi")
+            kernel32 = ctypes.WinDLL("kernel32")
+            if not psapi.GetProcessMemoryInfo(
+                    kernel32.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
+                raise OSError("process memory read failed")
+            return int(counters.WorkingSetSize)
+        try:
+            with open("/proc/self/statm", "r", encoding="ascii") as stream:
+                fields = stream.read(128).split()
+            if len(fields) < 2:
+                raise OSError("process memory read failed")
+            return int(fields[1]) * int(os.sysconf("SC_PAGE_SIZE"))
+        except OSError:
+            import resource
+
+            maximum = int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss)
+            # macOS reports bytes; the BSD/Linux interfaces report KiB.
+            return maximum if sys.platform == "darwin" else maximum * 1024
+    except Exception as exc:
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_OBSERVATION_UNAVAILABLE") from exc
+
+
+def _pretrained_runtime_identity(request, packages):
+    from .owned_service import (
+        OwnedServiceBlocked, pretrained_artifact_identity_sha256,
+        validate_pretrained_inference_admission_request,
+    )
+
+    try:
+        validate_pretrained_inference_admission_request(request)
+        identities = _pretrained_code_identities()
+        lock_sha = _pretrained_package_lock_sha256(packages)
+        if (request.runtime_packages != packages
+                or request.runtime_version != dict(packages).get("transformers")
+                or request.runtime_package_lock_sha256 != lock_sha
+                or request.runtime_build_sha256 != identities["runtime_build_sha256"]
+                or request.executor_sha256 != identities["executor_sha256"]):
+            raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_PIN_MISMATCH")
+        runtime_sha = hashlib.sha256(json.dumps(
+            _pretrained_runtime_payload(request, packages), sort_keys=True,
+            separators=(",", ":"), ensure_ascii=False, allow_nan=False,
+        ).encode("utf-8")).hexdigest()
+        if request.runtime_sha256 != runtime_sha:
+            raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_PIN_MISMATCH")
+        return {
+            "schema_version": 2, "artifact_kind": "PRETRAINED_INFERENCE",
+            "runtime_sha256": runtime_sha, "executor_sha256": identities["executor_sha256"],
+            "artifact_identity_sha256": pretrained_artifact_identity_sha256(request),
+            "model_id": request.model_id, "model_revision": request.model_revision,
+            "recipe": f"{request.runtime_engine}:{request.quantization_format}",
+            "manifest_sha256": request.manifest_sha256,
+            "runtime_build_sha256": identities["runtime_build_sha256"],
+            "runtime_package_lock_sha256": lock_sha,
+            "tokenizer_sha256": request.tokenizer_sha256,
+            "chat_template_sha256": request.chat_template_sha256,
+            "context_window_tokens": request.context_window_tokens,
+            "output_token_limit": request.output_token_limit,
+            "cpu_threads": request.cpu_threads,
+            "memory_limit_bytes": request.memory_limit_bytes,
+            "generation_timeout_seconds": request.generation_timeout_seconds,
+            "max_concurrent_requests": request.max_concurrent_requests,
+        }
+    except OwnedServiceBlocked as exc:
+        raise OwnedInferenceBlocked(exc.code) from exc
+
+
+def inspect_pretrained_inference_runtime(request, artifact_root):
+    """Verify existing local files and exact CPU/runtime pins without loading weights."""
+    if type(request) is not _pretrained_request_type():
+        raise OwnedInferenceBlocked("PRETRAINED_ADMISSION_TYPE_INVALID")
+    _root, _files, total_bytes = _pretrained_artifact_root(request, artifact_root)
+    packages = _pretrained_cpu_packages()
+    # Reserve room for a state dict and tokenizer/runtime overhead before an
+    # approved process can load any weight shard.
+    if (total_bytes * 2 + _PRETRAINED_MEMORY_RESERVE_BYTES
+            > request.memory_limit_bytes):
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_INSUFFICIENT")
+    identity = _pretrained_runtime_identity(request, packages)
+    return {
+        **identity, "device_kind": "cpu", "weights_loaded": False,
+        "generation_performed": False, "artifact_bytes": total_bytes,
+        "runtime_packages": [list(item) for item in packages],
+    }
+
+
+def _load_pretrained_cpu_kernel(request, artifact_root, expected_identity):
+    root, files, total_bytes = _pretrained_artifact_root(request, artifact_root)
+    memory_limit = request.memory_limit_bytes
+    if total_bytes * 2 + _PRETRAINED_MEMORY_RESERVE_BYTES > memory_limit:
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_INSUFFICIENT")
+    if _current_process_rss_bytes() + total_bytes * 2 + _PRETRAINED_MEMORY_RESERVE_BYTES > memory_limit:
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_INSUFFICIENT")
+    model = None
+    tokenizer = None
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        if getattr(torch.version, "cuda", None) is not None:
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_BUILD_REQUIRED")
+        if getattr(getattr(torch.backends, "cuda", None), "is_built", lambda: False)():
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_BUILD_REQUIRED")
+        tokenizer = AutoTokenizer.from_pretrained(
+            str(root), local_files_only=True, trust_remote_code=False,
+            token=False, use_fast=True,
+        )
+        template_bytes = files[request.chat_template_file].read_bytes()
+        try:
+            chat_template = template_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise OwnedInferenceBlocked("PRETRAINED_CHAT_TEMPLATE_INVALID") from exc
+        if not chat_template.strip():
+            raise OwnedInferenceBlocked("PRETRAINED_CHAT_TEMPLATE_INVALID")
+        tokenizer.chat_template = chat_template
+        model = AutoModelForCausalLM.from_pretrained(
+            str(root), local_files_only=True, trust_remote_code=False,
+            token=False, use_safetensors=True, low_cpu_mem_usage=False,
+            torch_dtype=torch.float32,
+        )
+        config_path = Path(str(getattr(model.config, "_name_or_path", "")))
+        if config_path.resolve(strict=True) != root:
+            raise OwnedInferenceBlocked("PRETRAINED_LOADER_CHANGED_PINNED_MODEL_PATH")
+        if any(parameter.device.type != "cpu" for parameter in model.parameters()):
+            raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_DEVICE_MISMATCH")
+        model.eval()
+        loaded_rss = _current_process_rss_bytes()
+        if loaded_rss > memory_limit:
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_EXCEEDED")
+    except OwnedInferenceBlocked:
+        model = None
+        tokenizer = None
+        gc.collect()
+        raise
+    except Exception as exc:
+        model = None
+        tokenizer = None
+        gc.collect()
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_LOCAL_LOAD_FAILED") from exc
+
+    kernel = _PretrainedCPUTextKernel(model, tokenizer, torch, request, root, expected_identity)
+    model = None
+    tokenizer = None
+    try:
+        root_after, _files_after, bytes_after = _pretrained_artifact_root(request, artifact_root)
+        packages_after = _pretrained_cpu_packages()
+        if (root_after != root or bytes_after != total_bytes
+                or _pretrained_runtime_identity(request, packages_after) != expected_identity):
+            raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_CHANGED_DURING_LOAD")
+        return kernel
+    except Exception:
+        kernel.close()
+        raise
+
+
+class _PretrainedCPUTextKernel:
+    __slots__ = ("artifact_root", "identity", "model", "request", "tokenizer", "torch")
+
+    def __init__(self, model, tokenizer, torch, request, artifact_root, identity):
+        self.model, self.tokenizer, self.torch = model, tokenizer, torch
+        self.request, self.artifact_root, self.identity = request, artifact_root, dict(identity)
+
+    def close(self):
+        """Drop model, tokenizer and request handles after the owning slot stops."""
+        if self.model is None and self.tokenizer is None and self.torch is None:
+            return
+        self.model = None
+        self.tokenizer = None
+        self.torch = None
+        self.request = None
+        self.artifact_root = None
+        self.identity = {}
+        gc.collect()
+
+    def prompt(self, request):
+        messages = [
+            {"role": "system", "content": request.system_prompt},
+            {"role": "user", "content": request.user_payload},
+        ]
+        try:
+            prompt = self.tokenizer.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True,
+            )
+        except Exception as exc:
+            raise OwnedInferenceBlocked("PRETRAINED_CHAT_TEMPLATE_RENDER_FAILED") from exc
+        if type(prompt) is not str or not prompt.strip():
+            raise OwnedInferenceBlocked("PRETRAINED_CHAT_TEMPLATE_RENDER_FAILED")
+        return prompt
+
+    def count_tokens(self, prompt):
+        try:
+            encoded = self.tokenizer(
+                prompt, return_tensors="pt", add_special_tokens=False, truncation=False,
+            )
+            return encoded, int(encoded["input_ids"].shape[1])
+        except Exception as exc:
+            raise OwnedInferenceBlocked("PRETRAINED_TOKENIZER_UNAVAILABLE") from exc
+
+    def generate(self, prompt, max_new_tokens, *, is_cancelled, memory_limit_bytes):
+        from transformers import StoppingCriteria, StoppingCriteriaList
+
+        start = time.monotonic()
+        deadline = start + self.request.generation_timeout_seconds
+        stop_reason = {"value": None, "steps": 0}
+
+        class _BoundedStop(StoppingCriteria):
+            def __call__(_self, input_ids, scores, **kwargs):
+                stop_reason["steps"] += 1
+                if is_cancelled():
+                    stop_reason["value"] = "cancelled"
+                    return True
+                if time.monotonic() >= deadline:
+                    stop_reason["value"] = "timeout"
+                    return True
+                if stop_reason["steps"] % 8 == 0 and _current_process_rss_bytes() > memory_limit_bytes:
+                    stop_reason["value"] = "memory"
+                    return True
+                return False
+
+        encoded, input_tokens = self.count_tokens(prompt)
+        if input_tokens + max_new_tokens > self.request.context_window_tokens:
+            raise OwnedInferenceBlocked("PRETRAINED_CONTEXT_BUDGET_EXCEEDED")
+        eos = self.tokenizer.eos_token_id
+        if type(eos) is not int or eos < 0:
+            raise OwnedInferenceBlocked("PRETRAINED_EOS_TOKEN_UNAVAILABLE")
+        with _TORCH_CPU_THREADS_LOCK:
+            previous_threads = self.torch.get_num_threads()
+            try:
+                self.torch.set_num_threads(self.request.cpu_threads)
+                with self.torch.inference_mode():
+                    generated = self.model.generate(
+                        **encoded, max_new_tokens=max_new_tokens, do_sample=False,
+                        eos_token_id=eos,
+                        pad_token_id=(self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else eos),
+                        use_cache=True, stopping_criteria=StoppingCriteriaList([_BoundedStop()]),
+                    )
+            except OwnedInferenceBlocked:
+                raise
+            except Exception as exc:
+                raise OwnedInferenceBlocked("PRETRAINED_CPU_GENERATION_FAILED") from exc
+            finally:
+                try:
+                    self.torch.set_num_threads(previous_threads)
+                except (RuntimeError, TypeError, ValueError) as exc:
+                    raise OwnedInferenceBlocked("PRETRAINED_CPU_THREAD_RESTORE_FAILED") from exc
+        reason = stop_reason["value"]
+        if reason == "cancelled":
+            raise OwnedInferenceBlocked("OWNED_INFERENCE_CANCELLED")
+        if reason == "timeout":
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_GENERATION_TIMEOUT")
+        if reason == "memory":
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_EXCEEDED")
+        if time.monotonic() >= deadline:
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_GENERATION_TIMEOUT")
+        if _current_process_rss_bytes() > memory_limit_bytes:
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_EXCEEDED")
+        sequences = getattr(generated, "sequences", generated)
+        token_ids = sequences[0][input_tokens:]
+        if hasattr(token_ids, "tolist"):
+            token_ids = token_ids.tolist()
+        if not token_ids or token_ids[-1] != eos:
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_OUTPUT_INCOMPLETE")
+        text = self.tokenizer.decode(token_ids[:-1], skip_special_tokens=True).strip()
+        if not text:
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_OUTPUT_EMPTY")
+        if _HARMONY_CONTROL.search(text):
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_OUTPUT_CONTROL_TOKEN_INVALID")
+        return {
+            "generated_text": "<|start|>assistant<|channel|>final<|message|>" + text + "<|return|>",
+            "finish_reason": "return", "termination_token": "<|return|>",
+            "final_channel_prefill": True,
+            "prompt_tokens": input_tokens, "completion_tokens": len(token_ids),
+            "total_tokens": input_tokens + len(token_ids),
+        }
+
+
+_PRETRAINED_RUNTIME_ISSUER = object()
+
+
+def _require_pretrained_source_validator(admission, validator, dependency_paths):
+    _require_source_validator(admission, validator, dependency_paths)
+
+
+def load_owned_pretrained_production_runtime(
+    request, artifact_root, *, admission, source_validator, source_dependency_paths=(),
+):
+    """Load one exact, approved local pretrained model on CPU; never downloads or discovers."""
+    from .owned_service import OwnedServiceBlocked, validate_pretrained_inference_admission_request
+
+    if (type(request) is not _pretrained_request_type()
+            or type(getattr(admission, "request", None)) is not _pretrained_request_type()
+            or admission.request != request):
+        raise OwnedInferenceBlocked("PRETRAINED_ADMISSION_REQUEST_MISMATCH")
+    _require_model_admission(admission)
+    _require_pretrained_source_validator(admission, source_validator, source_dependency_paths)
+    try:
+        validate_pretrained_inference_admission_request(request)
+    except OwnedServiceBlocked as exc:
+        raise OwnedInferenceBlocked(exc.code) from exc
+    _root, _files, total_bytes = _pretrained_artifact_root(request, artifact_root)
+    packages = _pretrained_cpu_packages()
+    if total_bytes * 2 + _PRETRAINED_MEMORY_RESERVE_BYTES > request.memory_limit_bytes:
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_INSUFFICIENT")
+    if _current_process_rss_bytes() + total_bytes * 2 + _PRETRAINED_MEMORY_RESERVE_BYTES > request.memory_limit_bytes:
+        raise OwnedInferenceBlocked("PRETRAINED_CPU_MEMORY_BUDGET_INSUFFICIENT")
+    identity = _pretrained_runtime_identity(request, packages)
+    _require_model_admission(admission)
+    kernel = _load_pretrained_cpu_kernel(request, artifact_root, identity)
+    try:
+        _require_model_admission(admission)
+        _require_pretrained_source_validator(admission, source_validator, source_dependency_paths)
+        return OwnedPretrainedProductionRuntime(
+            kernel, identity, admission, source_validator, source_dependency_paths,
+            _issuer=_PRETRAINED_RUNTIME_ISSUER,
+        )
+    except Exception:
+        kernel.close()
+        raise
+
+
+class OwnedPretrainedProductionRuntime:
+    """Private CPU-only production executor for an exact v2 admission."""
+
+    __slots__ = (
+        "_admission", "_closed", "_format_handler", "_generate_handler",
+        "_identity", "_kernel", "_lock", "_model_handle", "_semaphore",
+        "_source_dependency_paths", "_source_validator", "_tokenizer_handle",
+        "_torch_handle", "_unload_state",
+    )
+
+    def __init__(self, kernel, identity, admission, source_validator,
+                 source_dependency_paths=(), *, _issuer=None):
+        if (_issuer is not _PRETRAINED_RUNTIME_ISSUER
+                or type(kernel) is not _PretrainedCPUTextKernel):
+            raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_FACTORY_REQUIRED")
+        self._kernel, self._identity, self._admission = kernel, dict(identity), admission
+        self._lock = threading.RLock()
+        self._source_validator = source_validator
+        self._source_dependency_paths = tuple(source_dependency_paths)
+        self._model_handle, self._tokenizer_handle, self._torch_handle = (
+            kernel.model, kernel.tokenizer, kernel.torch,
+        )
+        self._generate_handler = type(kernel).generate
+        self._format_handler = type(kernel).prompt
+        self._semaphore = threading.BoundedSemaphore(admission.request.max_concurrent_requests)
+        self._closed = False
+        self._unload_state = None
+
+    def close(self):
+        """Unload the exact CPU model after its service slot has been removed."""
+        with self._lock:
+            if self._closed:
+                state = self._unload_state or "UNLOAD_FAILED"
+                return {"ok": state == "CLOSED", "state": state, "already_closed": True}
+            self._closed = True
+            kernel = self._kernel
+            self._kernel = None
+            self._identity = {}
+            self._admission = None
+            self._source_validator = None
+            self._source_dependency_paths = ()
+            self._model_handle = None
+            self._tokenizer_handle = None
+            self._torch_handle = None
+            self._generate_handler = None
+            self._format_handler = None
+            try:
+                if kernel is not None:
+                    kernel.close()
+                self._unload_state = "CLOSED"
+            except (RuntimeError, TypeError, ValueError):
+                self._unload_state = "UNLOAD_FAILED"
+            finally:
+                gc.collect()
+        return {"ok": self._unload_state == "CLOSED", "state": self._unload_state,
+                "already_closed": False}
+
+    def identity(self):
+        with self._lock:
+            if (self._closed or self._kernel is None
+                    or self._kernel.model is not self._model_handle
+                    or self._kernel.tokenizer is not self._tokenizer_handle
+                    or self._kernel.torch is not self._torch_handle
+                    or type(self._kernel).generate is not self._generate_handler
+                    or type(self._kernel).prompt is not self._format_handler
+                    or _pretrained_runtime_identity(
+                        self._admission.request, _pretrained_cpu_packages(),
+                    ) != self._identity):
+                raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_HANDLE_CHANGED")
+            _require_model_admission(self._admission)
+            _require_pretrained_source_validator(
+                self._admission, self._source_validator, self._source_dependency_paths,
+            )
+            return dict(self._identity)
+
+    def _verify_source(self, request):
+        from .owned_service import OwnedServiceBlocked, _validate_source_decision
+
+        _require_pretrained_source_validator(
+            self._admission, self._source_validator, self._source_dependency_paths,
+        )
+        try:
+            decision = self._source_validator(request)
+            _validate_source_decision(decision, request)
+        except Exception as exc:
+            if isinstance(exc, OwnedServiceBlocked):
+                raise OwnedInferenceBlocked("OWNED_SOURCE_USE_NOT_AUTHORIZED") from exc
+            raise OwnedInferenceBlocked("OWNED_SOURCE_VALIDATION_UNAVAILABLE") from exc
+        _require_pretrained_source_validator(
+            self._admission, self._source_validator, self._source_dependency_paths,
+        )
+
+    def measure_request(self, request):
+        from .owned_service import (
+            OwnedServiceRequest, owned_service_request_digest,
+            _request_matches_admission, validate_owned_service_request,
+        )
+
+        if type(request) is not OwnedServiceRequest:
+            raise OwnedInferenceBlocked("OWNED_SERVICE_REQUEST_REQUIRED")
+        validate_owned_service_request(request)
+        with self._lock:
+            if self._closed or self._kernel is None or self._admission is None:
+                raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_CLOSED")
+            policy = self._admission.request
+            _request_matches_admission(request, policy, self._admission.public_identity)
+            if policy.action not in {"admit", "rollback"}:
+                raise OwnedInferenceBlocked("OWNED_MODEL_EXECUTION_NOT_ADMITTED")
+            identity = self.identity()
+            self._verify_source(request)
+            prompt = self._kernel.prompt(request)
+            _encoded, count = self._kernel.count_tokens(prompt)
+            if self.identity() != identity:
+                raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_IDENTITY_CHANGED")
+            self._verify_source(request)
+            return {
+                "prompt_tokens": count, "output_tokens_reserved": request.max_output_tokens,
+                "context_window_tokens": identity["context_window_tokens"],
+                "output_token_limit": identity["output_token_limit"],
+                "fits": count + request.max_output_tokens <= identity["context_window_tokens"],
+                "request_sha256": owned_service_request_digest(request),
+                "runtime_sha256": identity["runtime_sha256"],
+                "tokenizer_identity": identity["runtime_sha256"],
+                "formatter_sha256": identity["executor_sha256"],
+                "count_method": "loaded_runtime_tokenizer", "generation_performed": False,
+            }
+
+    def generate(self, request, *, is_cancelled=None):
+        from dataclasses import asdict
+        from .owned_service import (
+            OwnedServiceRequest, _request_matches_admission,
+            validate_owned_service_request,
+        )
+
+        if type(request) is not OwnedServiceRequest:
+            raise OwnedInferenceBlocked("OWNED_SERVICE_REQUEST_REQUIRED")
+        validate_owned_service_request(request)
+        if is_cancelled is not None and not callable(is_cancelled):
+            raise OwnedInferenceBlocked("OWNED_SERVICE_REQUEST_MISMATCH")
+        if not self._semaphore.acquire(blocking=False):
+            raise OwnedInferenceBlocked("PRETRAINED_CPU_RUNTIME_BUSY")
+        try:
+            request_sha = hashlib.sha256(json.dumps(
+                asdict(request), sort_keys=True, separators=(",", ":"),
+                ensure_ascii=False, allow_nan=False,
+            ).encode("utf-8")).hexdigest()
+            with self._lock:
+                if self._closed or self._kernel is None or self._admission is None:
+                    raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_CLOSED")
+                policy = self._admission.request
+                _request_matches_admission(request, policy, self._admission.public_identity)
+                if (policy.action not in {"admit", "rollback"}
+                        or request.max_output_tokens > policy.output_token_limit
+                        or _HARMONY_CONTROL.search(request.system_prompt)
+                        or _HARMONY_CONTROL.search(request.user_payload)):
+                    raise OwnedInferenceBlocked("OWNED_SERVICE_REQUEST_MISMATCH")
+                identity = self.identity()
+                self._verify_source(request)
+                prompt = self._kernel.prompt(request)
+                encoded, prompt_tokens = self._kernel.count_tokens(prompt)
+                if prompt_tokens + request.max_output_tokens > policy.context_window_tokens:
+                    raise OwnedInferenceBlocked("PRETRAINED_CONTEXT_BUDGET_EXCEEDED")
+
+                stop_cause = {"code": None}
+
+                def must_stop():
+                    if is_cancelled is not None:
+                        value = is_cancelled()
+                        if type(value) is not bool:
+                            raise OwnedInferenceBlocked("OWNED_INFERENCE_CANCEL_CHECK_INVALID")
+                        if value:
+                            stop_cause["code"] = "OWNED_INFERENCE_CANCELLED"
+                            return True
+                    try:
+                        decision = self._admission.recheck()
+                        if decision.allowed is not True:
+                            stop_cause["code"] = "OWNED_MODEL_ADMISSION_REVOKED"
+                            return True
+                        return False
+                    except Exception:
+                        stop_cause["code"] = "OWNED_MODEL_ADMISSION_RECHECK_FAILED"
+                        return True
+
+                try:
+                    raw = self._kernel.generate(
+                        prompt, request.max_output_tokens, is_cancelled=must_stop,
+                        memory_limit_bytes=policy.memory_limit_bytes,
+                    )
+                except OwnedInferenceBlocked:
+                    if stop_cause["code"] is not None:
+                        raise OwnedInferenceBlocked(stop_cause["code"])
+                    raise
+                if is_cancelled is not None and is_cancelled():
+                    raise OwnedInferenceBlocked("OWNED_INFERENCE_CANCELLED")
+                if self._admission.recheck().allowed is not True:
+                    raise OwnedInferenceBlocked("OWNED_MODEL_ADMISSION_REVOKED")
+                if self.identity() != identity:
+                    raise OwnedInferenceBlocked("PRETRAINED_RUNTIME_IDENTITY_CHANGED")
+                self._verify_source(request)
+                return {
+                    **raw, **identity,
+                    "text": raw["generated_text"], "request_sha256": request_sha,
+                    "request_digest": request_sha,
+                    "total_tokens": raw["prompt_tokens"] + raw["completion_tokens"],
+                    "device_kind": "cpu", "run_id": "owned-" + uuid.uuid4().hex,
+                }
+        finally:
+            self._semaphore.release()

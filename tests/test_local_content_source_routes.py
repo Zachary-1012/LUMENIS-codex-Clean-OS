@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -47,12 +48,15 @@ def local_client(media_store, monkeypatch):
     app.register_blueprint(experience_runtime.experience_bp)
     # Execute the exact global guard, without unrelated import-time app startups.
     tree = ast.parse(Path("app.py").read_text(encoding="utf-8-sig"))
+    resolver = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                    and node.name == "_pg_resolve_operation_type")
     guard = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
                  and node.name == "_permission_gate_write_check")
     guard.decorator_list = []
     namespace = dict(request=request, jsonify=jsonify, _PG_WRITE_METHODS={"POST", "PUT", "PATCH", "DELETE"},
                      _PG_BYPASS_PATHS=set(), _pg=media_store["gate"],
-                     _pg_resolve_operation_type=lambda *_: p.OperationType.DB_WRITE)
+                     re=re, OperationType=p.OperationType)
+    exec(compile(ast.Module(body=[resolver], type_ignores=[]), "app.py", "exec"), namespace)
     exec(compile(ast.Module(body=[guard], type_ignores=[]), "app.py", "exec"), namespace)
     app.before_request(namespace["_permission_gate_write_check"])
     app.add_url_rule("/api/experience/content-sources/wrong", "wrong_handler", lambda: {"wrong": True}, methods=["POST"])
@@ -312,6 +316,20 @@ def imported_audio_project(client, store):
     }
 
 
+def imported_shared_audio_project(client, store):
+    from lumenis.shared.content_creation.video_editing import Timeline, fingerprint_local_media
+
+    confirmation = shared_upload(client, store).get_json()["confirmation"]
+    assert confirm(client, confirmation["confirmation_id"], headers=SHARED_HEADERS).status_code == 200
+    imported = shared_upload(client, store).get_json()["result"]
+    asset = fingerprint_local_media(store["source"])
+    assert imported["asset"]["asset_id"] == asset.asset_id
+    timeline = Timeline.from_assets([asset]).add_audio_track("voice", audio_role="voiceover")
+    timeline = timeline.add_clip(asset.asset_id, track_id="voice", source_out=.4)
+    return {"asset_refs": [imported["artifact"]["artifact_id"]],
+            "timeline": timeline.to_dict(), "output_kind": "audio"}
+
+
 def export_project(client, payload):
     return client.post("/api/experience/content-projects/export", headers=HEADERS,
                        json={"action_type": "EXPORT", "input": payload})
@@ -484,6 +502,319 @@ def test_shared_content_project_real_api_save_reopen_revise_and_export(local_cli
     assert client.get(package_url, headers={
         "X-Lumenis-Workspace-Scope": json.dumps(SHARED_SCOPE),
     }).data == first_package.data
+
+
+def test_shared_content_export_task_real_route_result_reopens_same_editable_project(
+    local_client, monkeypatch, tmp_path,
+):
+    client, store, _app = local_client
+    from lumenis.system.collector.guard import task_queue
+
+    monkeypatch.setattr(task_queue, "DEFAULT_PATH", str(tmp_path / "content-export-queue.sqlite3"))
+    payload = imported_shared_audio_project(client, store)
+    request_id = "e" * 32
+    submitted = client.post(
+        "/api/experience/content-projects/export/tasks", headers=SHARED_HEADERS,
+        json={"action_type": "EXPORT", "request_id": request_id,
+              "task": "导出可继续编辑的采访音频工程", "input": payload},
+    )
+    assert submitted.status_code == 202, submitted.get_json()
+    task = submitted.get_json()["task"]
+    assert task["task_kind"] == "content_project_export"
+    assert task["status"] in {"pending", "running", "completed"}
+    assert "asset_paths" not in json.dumps(submitted.get_json())
+    assert "approval_token" not in json.dumps(submitted.get_json())
+
+    for _ in range(500):
+        response = client.get(
+            f"/api/experience/content-projects/export/tasks/{task['task_id']}",
+            headers=SHARED_HEADERS,
+        )
+        assert response.status_code == 200, response.get_json()
+        task = response.get_json()["task"]
+        if (task["status"] in {"failed", "cancelled", "interrupted"}
+                or task["status"] == "completed" and isinstance(task.get("result"), dict)
+                and type(task["result"].get("evidence_recorded")) is bool):
+            break
+        import time
+        time.sleep(0.02)
+    assert task["status"] == "completed", task
+    result = task["result"]
+    assert result["status"] == "rendered_staged"
+    assert result["evidence_recorded"] is True
+    artifact_id = result["artifact"]["artifact_id"]
+    assert result["artifact"]["source_execution_id"] == str(task["task_id"])
+    assert result["project"]["source_artifact_refs"] == payload["asset_refs"]
+    assert result["project"]["timeline"] == payload["timeline"]
+    assert result["package_url"] == f"/api/experience/content-projects/{artifact_id}/package"
+    package = client.get(result["package_url"], headers=SHARED_HEADERS)
+    assert package.status_code == 200 and zipfile.is_zipfile(io.BytesIO(package.data))
+    reopened = client.get(f"/api/experience/content-projects/{artifact_id}", headers=SHARED_HEADERS)
+    assert reopened.status_code == 200, reopened.get_json()
+    assert reopened.get_json()["project"]["project"] == result["project"]
+    assert reopened.get_json()["project"]["render"] == result["render"]
+
+
+def test_shared_content_export_rejects_cross_kind_parent_before_enqueue(
+    local_client, monkeypatch, tmp_path,
+):
+    client, store, _app = local_client
+    from lumenis.system.collector.guard import task_queue
+
+    queue_path = tmp_path / "content-export-type-change.sqlite3"
+    monkeypatch.setattr(task_queue, "DEFAULT_PATH", str(queue_path))
+    payload = imported_shared_audio_project(client, store)
+    parent = export_shared_project(client, {
+        **payload, "output_kind": "video", "render_media": False,
+        "title": "视频工程草稿",
+    })
+    assert parent.status_code == 200, parent.get_json()
+    parent_id = parent.get_json()["result"]["artifact"]["artifact_id"]
+    artifacts_before = rows(store)
+    assert len(artifacts_before) == 2
+
+    synchronous = export_shared_project(client, {
+        **payload, "output_kind": "audio", "previous_artifact_id": parent_id,
+        "title": "音频新工程",
+    })
+    assert synchronous.status_code == 400, synchronous.get_json()
+    assert synchronous.get_json()["code"] == "CONTENT_PROJECT_TYPE_CHANGE_REQUIRES_NEW_PROJECT"
+    assert rows(store) == artifacts_before
+
+    rejected = client.post(
+        "/api/experience/content-projects/export/tasks", headers=SHARED_HEADERS,
+        json={"action_type": "EXPORT", "request_id": "a" * 32,
+              "task": "从视频工程另建音频工程", "input": {
+                  **payload, "output_kind": "audio", "previous_artifact_id": parent_id,
+                  "title": "音频新工程",
+                  "delivery_options": {"audio_formats": ["mp3"]},
+              }},
+    )
+    assert rejected.status_code == 400, rejected.get_json()
+    assert rejected.get_json()["code"] == "CONTENT_PROJECT_TYPE_CHANGE_REQUIRES_NEW_PROJECT"
+    assert rows(store) == artifacts_before
+    assert not queue_path.exists()
+
+
+def test_shared_content_export_task_reopens_cross_kind_project_lineage(local_client, monkeypatch, tmp_path):
+    client, store, _app = local_client
+    from lumenis.system.collector.guard import task_queue
+
+    queue_path = tmp_path / "cross-kind-project-lineage.sqlite3"
+    monkeypatch.setattr(task_queue, "DEFAULT_PATH", str(queue_path))
+    payload = imported_shared_audio_project(client, store)
+    source_video = export_shared_project(client, {
+        **payload, "output_kind": "video", "render_media": False,
+        "title": "原视频工程来源",
+    })
+    assert source_video.status_code == 200, source_video.get_json()
+    source_video_id = source_video.get_json()["result"]["artifact"]["artifact_id"]
+
+    derived_input = {
+        **payload,
+        "output_kind": "audio",
+        "previous_artifact_id": None,
+        "source_project_artifact_refs": [source_video_id],
+        "render_media": False,
+        "title": "独立音频工程",
+    }
+    submitted = client.post(
+        "/api/experience/content-projects/export/tasks", headers=SHARED_HEADERS,
+        json={"action_type": "EXPORT", "request_id": "9" * 32,
+              "task": "从视频工程另建可继续编辑的音频工程", "input": derived_input},
+    )
+    assert submitted.status_code == 202, submitted.get_json()
+    task_id = submitted.get_json()["task"]["task_id"]
+    for _ in range(500):
+        response = client.get(
+            f"/api/experience/content-projects/export/tasks/{task_id}", headers=SHARED_HEADERS,
+        )
+        assert response.status_code == 200, response.get_json()
+        task = response.get_json()["task"]
+        if task["status"] in {"failed", "cancelled", "interrupted"} or (
+                task["status"] == "completed" and isinstance(task.get("result"), dict)
+                and type(task["result"].get("evidence_recorded")) is bool):
+            break
+        import time
+        time.sleep(.02)
+    assert task["status"] == "completed", task
+    result = task["result"]
+    audio_id = result["artifact"]["artifact_id"]
+    assert result["project"]["output_kind"] == "audio"
+    assert result["project"]["parent_artifact_id"] is None
+    assert result["project"]["source_project_artifact_refs"] == [source_video_id]
+    reopened = client.get(f"/api/experience/content-projects/{audio_id}", headers=SHARED_HEADERS)
+    assert reopened.status_code == 200, reopened.get_json()
+    assert reopened.get_json()["project"]["project"]["source_project_artifact_refs"] == [source_video_id]
+    assert reopened.get_json()["project"]["project"] == result["project"]
+    listed = client.get("/api/experience/content-projects", headers=SHARED_HEADERS)
+    assert listed.status_code == 200, listed.get_json()
+    summary = next(item for item in listed.get_json()["projects"] if item["artifact_id"] == audio_id)
+    assert summary["source_project_artifact_refs"] == [source_video_id]
+
+    before = [tuple(row) for row in rows(store)]
+    invalid = export_shared_project(client, {
+        **derived_input, "source_project_artifact_refs": ["ART-0000000000000000"],
+        "title": "不得写入的无效来源",
+    })
+    assert invalid.status_code == 404, invalid.get_json()
+    assert invalid.get_json()["code"] == "CONTENT_PROJECT_NOT_FOUND"
+    assert [tuple(row) for row in rows(store)] == before
+
+
+def test_shared_content_export_task_reports_safe_stage_error(local_client, monkeypatch, tmp_path):
+    client, store, _app = local_client
+    from lumenis.system.collector.guard import task_queue
+    import shared_artifacts
+
+    monkeypatch.setattr(task_queue, "DEFAULT_PATH", str(tmp_path / "content-export-safe-error.sqlite3"))
+    payload = imported_shared_audio_project(client, store)
+    artifacts_before = rows(store)
+
+    def failed_stage(*_args, **_kwargs):
+        raise shared_artifacts.LocalArtifactError("CONTENT_RENDER_UNAVAILABLE")
+
+    monkeypatch.setattr(shared_artifacts, "stage_timeline_artifact", failed_stage)
+    submitted = client.post(
+        "/api/experience/content-projects/export/tasks", headers=SHARED_HEADERS,
+        json={"action_type": "EXPORT", "request_id": "b" * 32,
+              "task": "验证媒体处理失败可读回", "input": payload},
+    )
+    assert submitted.status_code == 202, submitted.get_json()
+    task_id = submitted.get_json()["task"]["task_id"]
+    for _ in range(200):
+        readback = client.get(
+            f"/api/experience/content-projects/export/tasks/{task_id}",
+            headers=SHARED_HEADERS,
+        )
+        assert readback.status_code == 200, readback.get_json()
+        task = readback.get_json()["task"]
+        if task["status"] in {"failed", "cancelled", "interrupted"}:
+            break
+        import time
+        time.sleep(0.01)
+    assert task["status"] == "failed", task
+    assert task["error_code"] == "CONTENT_RENDER_UNAVAILABLE"
+    assert task["result"] is None
+    assert str(store["root"]) not in json.dumps(readback.get_json())
+    assert rows(store) == artifacts_before
+
+
+def test_shared_content_export_task_pending_cancel_and_request_id_conflict(
+    local_client, monkeypatch, tmp_path,
+):
+    client, store, _app = local_client
+    import experience_runtime
+    from lumenis.system.collector.guard import task_queue
+
+    monkeypatch.setattr(task_queue, "DEFAULT_PATH", str(tmp_path / "content-export-cancel.sqlite3"))
+    monkeypatch.setattr(experience_runtime, "_start_content_project_export_worker",
+                        lambda *_args, **_kwargs: None)
+    payload = imported_shared_audio_project(client, store)
+    request_id = "c" * 32
+    body = {"action_type": "EXPORT", "request_id": request_id, "input": payload}
+    submitted = client.post("/api/experience/content-projects/export/tasks",
+                            headers=SHARED_HEADERS, json=body)
+    assert submitted.status_code == 202, submitted.get_json()
+    task = submitted.get_json()["task"]
+    assert task["status"] == "pending" and task["can_cancel"] is True
+    newer = client.post("/api/experience/content-projects/export/tasks",
+        headers=SHARED_HEADERS,
+        json={**body, "request_id": "d" * 32},
+    )
+    assert newer.status_code == 202, newer.get_json()
+    # A newer task under another binding must not occupy this actor's page or
+    # hide its older task behind a global queue cursor.
+    foreign_queue = task_queue.TaskQueue()
+    foreign_queue.enqueue_once(
+        "shared_content_project_export",
+        {"request_id": "f" * 32, "request_digest": "a" * 64,
+         "binding": {"actor_ref": "actor:unrelated", "scope_sha256": "b" * 64}},
+        "c" * 64,
+    )
+    foreign_queue.close()
+    listed = client.get("/api/experience/content-projects/export/tasks?limit=1",
+                        headers=SHARED_HEADERS)
+    assert listed.status_code == 200, listed.get_json()
+    first_page = listed.get_json()
+    assert [item["task_id"] for item in first_page["tasks"]] == [newer.get_json()["task"]["task_id"]]
+    assert first_page["next_cursor"] is not None
+    second_page = client.get(
+        "/api/experience/content-projects/export/tasks?limit=1&cursor=" + first_page["next_cursor"],
+        headers=SHARED_HEADERS,
+    )
+    assert second_page.status_code == 200, second_page.get_json()
+    assert [item["task_id"] for item in second_page.get_json()["tasks"]] == [task["task_id"]]
+    conflict = client.post("/api/experience/content-projects/export/tasks",
+        headers=SHARED_HEADERS,
+        json={**body, "input": {**payload, "title": "different immutable request"}})
+    assert conflict.status_code == 409, conflict.get_json()
+    assert conflict.get_json()["code"] == "CONTENT_EXPORT_REQUEST_ID_CONFLICT"
+    cancelled = client.post(
+        f"/api/experience/content-projects/export/tasks/{task['task_id']}/cancel",
+        headers=SHARED_HEADERS, json={},
+    )
+    assert cancelled.status_code == 200, cancelled.get_json()
+    assert cancelled.get_json()["task"]["status"] == "cancelled"
+    assert cancelled.get_json()["task"]["result"] is None
+
+
+def test_shared_content_export_task_running_cancel_finishes_after_skill_returns(
+    local_client, monkeypatch, tmp_path,
+):
+    client, store, _app = local_client
+    import threading
+    import types
+    from lumenis.shared.agents.skills import execution
+    from lumenis.system.collector.guard import task_queue
+
+    monkeypatch.setattr(task_queue, "DEFAULT_PATH", str(tmp_path / "content-export-running-cancel.sqlite3"))
+    payload = imported_shared_audio_project(client, store)
+    entered = threading.Event()
+    release = threading.Event()
+
+    def skill_returns_after_cancel(**_kwargs):
+        entered.set()
+        if not release.wait(10):
+            raise AssertionError("test did not release the skill result")
+        return types.SimpleNamespace(
+            status=types.SimpleNamespace(value="failed"),
+            error="CONTENT_EXPORT_CANCELLED", evidence_record=None,
+        )
+
+    monkeypatch.setattr(execution, "run_execution_chain", skill_returns_after_cancel)
+    request_id = "e" * 32
+    submitted = client.post(
+        "/api/experience/content-projects/export/tasks", headers=SHARED_HEADERS,
+        json={"action_type": "EXPORT", "request_id": request_id,
+              "task": "取消中的真实录屏工程导出", "input": payload},
+    )
+    assert submitted.status_code == 202, submitted.get_json()
+    task_id = submitted.get_json()["task"]["task_id"]
+    assert entered.wait(5), "worker never entered the existing skill execution path"
+    try:
+        cancelled = client.post(
+            f"/api/experience/content-projects/export/tasks/{task_id}/cancel",
+            headers=SHARED_HEADERS, json={},
+        )
+        assert cancelled.status_code == 200, cancelled.get_json()
+        assert cancelled.get_json()["task"]["status"] == "canceling"
+    finally:
+        release.set()
+
+    for _ in range(200):
+        readback = client.get(
+            f"/api/experience/content-projects/export/tasks/{task_id}",
+            headers=SHARED_HEADERS,
+        )
+        assert readback.status_code == 200, readback.get_json()
+        if readback.get_json()["task"]["status"] == "cancelled":
+            break
+        import time
+        time.sleep(0.01)
+    task = readback.get_json()["task"]
+    assert task["status"] == "cancelled", task
+    assert task["result"] is None
 
 
 def test_shared_project_rejects_domain_source_without_exact_cross_scope_use(local_client):

@@ -645,7 +645,7 @@ Product run `40073585988` / job `120812081949`；App run `40073586044` / job `12
 
 **当前证据与真正断点**
 
-当前`conversations.py::_response_context:456–480`取最后6条、每条800字符；`agent_memory/semantic.py::search_assets:151–205`是词项子串计分，且扫描授权候选。原规划已要求向量余弦＋BM25＋cross-encoder，不能将词法检索称神经语义检索。
+2026-10-24原快照`conversations.py::_response_context:456–480`取最后6条、每条800字符；当时`agent_memory/semantic.py::search_assets:151–205`为词项子串计分。2026-10-26双源校准：本地已补ContextPack完整历史/人工条件/排除和派生失效、BM25与原文定位/撤权；仍须区别普通会话未绑定token计量及未绑定神经检索，旧快照不能冒当前本地事实。原规划已要求向量余弦＋BM25＋cross-encoder，不能将词法检索称神经语义检索。
 
 **已确定的实施方案**
 
@@ -705,19 +705,19 @@ Product run `40073585988` / job `120812081949`；App run `40073586044` / job `12
 
 **已确定的实施方案**
 
-保留已批准gpt-oss-20b/NF4路线，基础权重、adapter/训练参数、自有数据、编排和评价分账。每个能力按任务/语言/模态定义输入、SourceUse、模型/权重hash、实际token或媒体预算、输出schema和质量等级；图像、视频、ASR、说话人、TTS、检索/重排各走原Gateway已准入能力，不能拿文本成功替它们。训练数据分来源许可、用途、去重、train/dev/locked-heldout和污染检测；checkpoint完整性、实际重载、推理、同题收益、失败恢复、批准晋升/回滚逐步证实。模型资源缺失只标受影响增强不可用，不偷偷调用外部provider。
+GPU训练与gpt-oss NF4微调路线于2026-10-26由PO撤销，原权重/研究/回执保留历史；固定预训练推理、策略/检索配置、可选CPU专用参数按主规划J27/Architecture §6分类准入，不能先要求训练再推理。每个能力按任务/语言/模态定义输入、SourceUse、模型/权重hash、实际token或媒体预算、输出schema和质量等级；图像、视频、ASR、说话人、TTS、检索/重排各走原Gateway已准入能力，不能拿文本成功替它们。所有评价数据分来源许可、用途、去重、独立最终留出和污染检查；仅可选CPU参数才另有train/dev，分类产物完整性、实际消费、重载、同题独立收益、恢复和批准晋升/回滚分别证实。模型资源缺失只标受影响增强不可用，不偷偷调用外部provider。
 
 **直接修改位置与接线**
 
-原`lumenis/system/ai_gateway/{owned_service,owned_training_runtime}.py`、现有ASR/TTS/多模态adapter、Task消费者和Evaluation。`TrainingProcessFence`、`OwnedTrainingCheckpointClient`原版本/原权限保留。新增已批准的小模型通过原准入，不按五角色强造五个模型。
+原`lumenis/system/ai_gateway/{owned_service,owned_training_runtime}.py`、现有ASR/TTS/多模态adapter、Task消费者和Evaluation。`TrainingProcessFence`、`OwnedTrainingCheckpointClient`保留历史/兼容保护，不作固定预训练推理的强制消费者。新增已批准的小模型通过原准入，不按五角色强造五个模型。
 
 **测试与负向路径**
 
-原owned training/admission/checkpoint/permission/runtime recovery、speech tests；额外做实际加载推理、断点续训、错误权重/adapter、源撤权、长输入、视觉引用定位、否定/数字、多说话人和12语×8任务96格逐项。无合格母语或听感评审就不填PASS；合成测试不替真实语言任务。
+分类admission/permission/runtime recovery及speech原适用检查；实际加载推理、重开恢复、错误权重/tokenizer/策略版本、源撤权；仅可选CPU参数另验训练/重载、长输入、视觉引用定位、否定/数字、多说话人和12语×8任务96格逐项。无合格母语或听感评审就不填PASS；合成测试不替真实语言任务。
 
 **专业工作验收出口**
 
-每个宣传为可用的AI能力确有运行和专业收益，并在真实业务中使用；原生模型训练/运行与外部研发Agent严格分开。无AI与AI增强都完成各自适用验收，而不是用人工可写替代AI目标。
+每个宣传为可用的AI能力确有运行和专业收益，并在真实业务中使用；产品推理/学习与外部研发Agent严格分开，GPU训练撤销但完整AI专业能力不删。无AI与AI增强都完成各自适用验收，而不是用人工可写替代AI目标。
 
 **依赖／边界：**本轮没有运行训练/推理，也未为所有尚未准入图像/视频/声音模型完成最终权重选型；这些真实资源/选型待项必须明确，不把接口骨架算成生成能力已完成。未派工给Codex做泛研究。
 
