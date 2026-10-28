@@ -6,10 +6,10 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `SOURCE_RETIREMENT_ONLY`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-以上标识只说明此源码快照属于获批清退，不表示已合并；main 发布必须经 PR 检查、审阅、合并和远端读回。开发分支不等于 main；不以本文件提前宣称合并、运行加载或验收完成。
+PR #148 已在两项必需检查通过后合入 main，合并提交为 `5b27421cf24e951796a462ecd0b29515b5f12aa1`，可由 [PR #148](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/148) 核对。该记录仅证明源码清退发布，不证明进程加载或产品验收。其后源码仍以实际 Git 读回为准。
 
 | 范围 | 当前源码与验收事实 | 对应依据 |
 | --- | --- | --- |

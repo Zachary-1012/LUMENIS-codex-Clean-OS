@@ -31,8 +31,11 @@ developer tooling and SYSTEM runtime remain in scope.
 
 AI enhances SYSTEM, CTH, BMP and Shared, not only chat or round five. Basic
 business works without model/API/GPU; unavailable AI-exclusive actions do not
-block normal tasks. AI output is derived, never Canonical fact, Permission
-or an external-effect grant.
+block normal tasks. AI produces user-facing answers, analyses and creative work
+through these product owners. Factual answers carry verifiable sources; derived
+claims retain method, uncertainty and version. Verified claims may enter the
+existing Evidence/Canonical admission path. Model output alone never grants
+fact status, Permission or an external effect.
 
 Analysis and mathematics belong to existing backend domain/Shared owners. Users
 provide questions, scope, time and resources; they receive analyzed deliverables,
@@ -85,7 +88,7 @@ resume conditions, defaults and configuration cannot establish current execution
 Publication dispatches no window. Owner, Permission, rights, data, cost,
 shared-write reservations and real acceptance remain binding.
 
-基础业务及数据分析不得依赖 AI/API/GPU。AI 不生产 Canonical 事实；先验无 AI 成果，再验增强。
+基础业务及数据分析不得依赖 AI/API/GPU。AI在产品内交付有来源支撑的事实回答和分析；未经既有Evidence/Canonical验证的生成内容不自动成为规范事实。无AI成果与AI增强分别验收。
 数学研究按 Architecture/Math 采用记录落实计算与约束；权限、权益和数据保护不变。
 
 ### 2026-10-10 OpenAI Math v2 — bounded product implementation
@@ -1697,15 +1700,11 @@ F binds honest states when dispatched. Rule publication does not dispatch
 any window. Current PO decisions determine scheduling; the ledger records
 verified observations, never an inferred historical wait/resume/model order.
 
-### 2026-10-08 useful progressive delivery and logic review
+### Progressive delivery and logic review
 
-The PO requires a whole-product logic review after synchronization and task-shaped
-progressively useful Intelligent UI. Experience §38 owns component choice, useful
-partial results, factual correction, user-edit preservation and wait-time review;
-Architecture retains full J1-J8/U01-U25. Keep existing owner/source gap records,
-not parallel Task Cards. Research/streaming/rule publication is not UI acceptance.
-Current dispatch/pause and the existing monitoring cadence follow direct PO
-instructions and current observations; without actionable work M waits.
+Review whole-product logic after synchronization. Experience §38 owns task-shaped
+progressive results, correction, preserved user edits and wait-time review;
+Architecture retains J1-J8/U01-U25. Research or publication is not UI acceptance.
 
 ### Product-owned internal browser — revised 2026-10-11
 
