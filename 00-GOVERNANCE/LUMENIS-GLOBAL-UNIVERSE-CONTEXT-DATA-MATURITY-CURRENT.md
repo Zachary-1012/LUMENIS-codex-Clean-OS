@@ -54,7 +54,7 @@ C1负责原主体/来源/采集链；C3负责CTH/BMP专业语义和消费者；C
 
 ## 9. Baseline-source research
 
-原研究和原始材料按既有Evidence/采用记录用于开发校准。目录初始内容复用现有记录后核实境内经营与身份，不重新做全球清单研究；本文件不授权外部采集、训练或付费。历史全球覆盖研究不再作为当前执行指令。
+原研究和原始材料按既有Evidence/采用记录用于开发校准。已有主体记录继续沿现有Owner核实境内经营与身份；无业务记录的新工作区不要求预置主体目录，也不把研究候选自动导入业务库。新主体从当前用户输入或已获准任务资料进入同一注册与核验路径；本文件不授权外部采集、训练或付费。历史全球覆盖研究不再作为当前执行指令。
 
 ## 10. Task-semantic vocabulary and targeted acquisition
 
@@ -129,9 +129,13 @@ real task validation, without waiting for complete global directory coverage.
 
 ### User-reviewed foundation vocabulary seed
 
-Use the user-reviewed xujing_topic_seed_100_4confirmed_20261004 XLSX/CSV/JSON as
-versioned foundational test entity/topic inputs through existing Source/registry/
-Evidence/Canonical ingestion, then real runtime queries. JSON has100 topic
+The user-reviewed xujing_topic_seed_100_4confirmed_20261004 XLSX/CSV/JSON may be
+used as versioned test entity/topic inputs through existing Source/registry/
+Evidence/Canonical ingestion, followed by real runtime queries. It is an optional,
+explicitly selected input, not business data that must be bundled, imported into a
+new workspace, or present for normal startup. A fresh workspace may have an empty
+business registry; real task input enters through the existing registry and
+Permission owners, while an unscoped collection request remains denied. JSON has100 topic
 records and41 source records; four named entities have25 terms each. Its own
 metadata remains4/6 entities confirmed,2 unnamed and100 heat UNKNOWN, with no
 verified hotlist. User review approves this input, not fabricated platform
@@ -145,9 +149,11 @@ terms and associations based on actual time, commercial entity, brand, activity
 and event changes, with reason/provenance/effective interval/parent version;
 retain old terms for search/history/rollback. Active query views select applicable
 versions and mark retired/expired/conflicting terms without destroying them.
-C1/W6 store/resolve/import this reviewed source through current owners and ensure
-packaged deployment/runtime uses its admitted version rather than a developer's
-attachment path or a fixture. Preserve current exact identity/source-use checks,
+C1/W6 store/resolve/import this reviewed source through current owners when an
+authorized task explicitly uses it; any packaged/runtime path must resolve the
+admitted version rather than a developer's attachment path or a fixture. This
+does not make seed import a startup step or a prerequisite for other work.
+Preserve current exact identity/source-use checks,
 normal explicit authorization and honest unknowns without asking for another
 manual review of the same100 terms. This seed does not limit ongoing entity/
 source/topic growth or replace whole-universe data coverage.
@@ -156,10 +162,12 @@ source/topic growth or replace whole-universe data coverage.
 
 The Product Owner explicitly prioritizes sourced topic growth over current heat/
 rank positions. Expand existing terms plus new time/entity/brand/activity/event
-terms across additional brands, commercial entities and platforms; the four
-seed subjects and six primary platforms are baselines, not permanent limits.
-Use C1's newly sourced terms through this same versioned owner chain. Hotlist
-verification is not a prerequisite for vocabulary growth or actual collection.
+terms across additional brands, commercial entities and platforms. The four
+entities in the reviewed seed are optional source-backed inputs, not a required
+business-directory preload; the six primary platforms remain a capability
+coverage baseline, not a startup data bundle. Use C1's newly sourced terms
+through this same versioned owner chain. Hotlist verification is not a
+prerequisite for vocabulary growth or actual collection.
 
 Keep LUMENIS corpus-derived heat separate from platform-provided heat/rank.
 The former needs a declared corpus/window/scope/sample/metric/version and actual

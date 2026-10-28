@@ -35,6 +35,8 @@ jobs:
     steps:
       - name: Checkout LUMENIS
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Validate AI-native product constitution execution chain (BLOCKING)
         run: python3 scripts/audit_tools/verify_ai_native_constitution.py
@@ -48,6 +50,14 @@ jobs:
           python3 scripts/audit_tools/verify_experience_authority_exclusive.py
           python3 scripts/audit_tools/verify_experience_anti_template.py --strict
           python3 scripts/audit_tools/verify_experience_screen_blueprints.py
+
+      - name: Validate approved frontend source state (BLOCKING)
+        id: frontend
+        run: python3 scripts/audit_tools/experience_gate_mode.py --source-state --github-output "$GITHUB_OUTPUT"
+
+      - name: Require complete frontend for product release (BLOCKING)
+        if: github.event_name == 'workflow_dispatch'
+        run: python3 scripts/audit_tools/experience_gate_mode.py --require-product
 
       - name: Install pinned Flutter stable (EXECUTION-LAYER)
         shell: bash
@@ -104,10 +114,12 @@ jobs:
           test "$ok" -eq 1
 
       - name: Analyze canonical app
+        if: steps.frontend.outputs.state == 'ACTIVE'
         working-directory: app
         run: flutter analyze
 
       - name: Test reviewed UI and saved-work regressions (BLOCKING)
+        if: steps.frontend.outputs.state == 'ACTIVE'
         working-directory: app
         run: |
           flutter test --no-pub \
@@ -145,6 +157,7 @@ jobs:
             test/features/shared/sh04/sh04_view_model_race_test.dart
 
       - name: Test browser contracts (BLOCKING)
+        if: steps.frontend.outputs.state == 'ACTIVE'
         working-directory: app
         run: |
           flutter test --no-pub --platform chrome \
@@ -153,5 +166,37 @@ jobs:
             test/features/shared/sh01/media_preview_web_test.dart
 
       - name: Build real Web Workspace (BLOCKING)
+        if: steps.frontend.outputs.state == 'ACTIVE'
         working-directory: app
         run: flutter build web --release
+
+      - name: Analyze retained nonvisual source (BLOCKING)
+        if: steps.frontend.outputs.state == 'REMOVED_PENDING_REBUILD'
+        working-directory: app
+        run: flutter analyze lib
+
+      - name: Test retained product clients and data contracts (BLOCKING)
+        if: steps.frontend.outputs.state == 'REMOVED_PENDING_REBUILD'
+        working-directory: app
+        run: |
+          flutter test --no-pub \
+            test/core/lumenis_core_client_test.dart \
+            test/core/internal_pitch_client_test.dart \
+            test/core/ai_conversation_client_test.dart \
+            test/features/ai01/ai01_view_model_test.dart \
+            test/features/ai01/ai01_workspace_draft_test.dart \
+            test/features/cth/cth10/source_brief_view_model_test.dart \
+            test/features/shared/sh01/manuscript_controller_test.dart \
+            test/features/shared/sh01/manuscript_draft_files_test.dart \
+            test/features/shared/sh01/media_project_controller_test.dart \
+            test/features/shared/sh01/native_media_cache_test.dart \
+            test/features/shared/sh01/native_media_preview_controller_test.dart
+          flutter test --no-pub --platform chrome \
+            test/core/lumenis_http_transport_web_test.dart \
+            test/lumenis_core_web_origin_test.dart
+
+      - name: Record frontend acceptance boundary
+        if: always()
+        run: |
+          echo 'Source retirement does not pass a Flutter build, UI acceptance or product release.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Removed presentation tests remain historical and unexecuted until a complete new frontend is available.' >> "$GITHUB_STEP_SUMMARY"

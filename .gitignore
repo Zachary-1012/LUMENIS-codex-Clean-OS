@@ -1,7 +1,6 @@
 # ============================================================
-# Z-Brand Core / CTH-POMS  .gitignore
-# 原则：只入库“源码 + 启动脚本 + 文档 + 业务种子配置”；
-#      凭证 / Cookie / 数据库 / 浏览器登录态 / 模型 / 依赖 / 运行产物 一律不入库。
+# OEVIRA / LUMENIS repository ignore rules
+# Protect local credentials, business/runtime data, sessions, dependencies, and generated artifacts.
 # ============================================================
 # ---------- Python ----------
 __pycache__/

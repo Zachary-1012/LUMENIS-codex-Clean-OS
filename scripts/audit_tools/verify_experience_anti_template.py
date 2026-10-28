@@ -15,6 +15,11 @@ import json
 import sys
 from pathlib import Path
 
+try:
+    from .experience_gate_mode import frontend_state
+except ImportError:
+    from experience_gate_mode import frontend_state
+
 ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "app"
 LIB = APP / "lib"
@@ -60,7 +65,15 @@ def main() -> int:
     args = parser.parse_args()
 
     errors: list[str] = []
+    try:
+        retired = frontend_state(ROOT) == 'REMOVED_PENDING_REBUILD'
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        errors.append(str(exc))
+        retired = False
+    removed_entries = {'app/lib/main.dart', 'app/lib/product/lumenis_app.dart', 'app/lib/features/launch/launch_surface.dart'}
     for path in REQUIRED:
+        if retired and path.relative_to(ROOT).as_posix() in removed_entries:
+            continue
         if not path.is_file():
             errors.append(f"required multi-surface authority file missing: {path.relative_to(ROOT)}")
 
@@ -116,6 +129,8 @@ def main() -> int:
         "experience_authority": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
         "dart_file_count": len(dart_files),
         "legacy_web_authority": False,
+        "source_retirement": retired,
+        "product_accepted": False,
     }
 
     if errors:

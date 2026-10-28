@@ -14,9 +14,10 @@ these processing responsibilities and one Permission, source, version and recove
 
 主体目录仅含有据在中国境内经营的商业主体和品牌（含国际品牌境内经营），不全球扩库。设置统一添加/移除/重加；身份不明先待核，移除停新使用与监测，保留历史成果和权限。详细生命周期与任务取数归现有范围合同。
 
-The current PO pause remains effective: only planning convergence and bounded
-cleanup are authorized until explicit resumption. Remove replaced active rule
-bodies and references in place; publication alone is not product implementation.
+Current task execution follows the latest direct PO instruction. Repository
+documents do not store developers' start, pause, busy or dispatch status. Remove
+replaced active rule bodies and references in place; publication alone is not
+product implementation.
 A standalone image editor/canvas is excluded. Images remain materials for reports,
 documents, covers and media projects, not a separate image-editing product.
 
@@ -55,7 +56,7 @@ Codex and Akang (GrokBot) are equal C1-C6/F/M developers. Only PO assigns work; 
 
 ### 2026-10-26 PO AI route
 
-GPU training is WITHDRAWN_BY_PO, not AI capability. Architecture §6/J27 own typed admission/learning. Current work reconciles the complete product planning dependencies; development remains paused and dirty work/#146 protected. Publication follows the applicable PR authorization; no model/runtime/configuration action or dispatch is implied. See CURRENT.
+GPU training is WITHDRAWN_BY_PO, not AI capability. Architecture §6/J27 own typed admission/learning. Preserve valid unfinished source; publication follows the applicable PR authorization. Model resources, production changes and external effects retain their exact approval boundaries. See CURRENT for source and acceptance facts, not developer dispatch.
 
 2026-10-18 PO: absorb GGI into existing LUMENIS owners; Architecture §7 / LUMENIS-SOURCE-ADOPTION-V1.json. No new runtime/domain. Exchange 1.1.0 boundaries and all original scope remain; acceptance needs evidence.
 
@@ -78,8 +79,8 @@ C1–C6/F/M/W1–W6 只保留原工程源码责任，不形成六轮产品交付
 当前轮需要的跨域依赖须在当前轮关闭，不能推到后轮。
 
 Product Owner alone decides window start/pause/resume, model and reasoning effort.
-GitHub/CURRENT/live ledger record dated, sourced observations, not autonomous
-dispatch. Unknown settings/state are `NOT_VERIFIED`; historical PAUSED/RUNNING,
+Current execution observations belong only in the ignored local live ledger,
+not committed product documents. Unknown settings/state are `NOT_VERIFIED`; historical PAUSED/RUNNING,
 resume conditions, defaults and configuration cannot establish current execution.
 Publication dispatches no window. Owner, Permission, rights, data, cost,
 shared-write reservations and real acceptance remain binding.
@@ -168,6 +169,14 @@ capabilities. REA may study permitted websites, apps and GitHub implementations
 for current capabilities through the existing Owner Index adoption path.
 
 ### Frontend construction and native targets
+
+The direct PO cleanup instruction on 2026-10-28 requires removal of the rejected
+frontend presentation, route entrypoints and page skeletons, including their
+uncommitted visual replacements. This withdraws those implementations, not the
+approved product surfaces, capabilities or Experience requirements. Preserve
+nonvisual owners, valid controllers, user data and original research. The missing
+frontend remains unavailable and its applicable build/acceptance gates remain
+blocking; never restore rejected pages or add a placeholder to claim completion.
 
 F builds from the current Experience, screen specs and owner contracts; separate drafts,
 Figma delivery and per-screen M DESIGN_READY are not coding prerequisites. Reuse assets,
@@ -848,8 +857,9 @@ ACTIVE GATE / TICKET
 
 ## 4. Product ownership
 
-READMEs are stable Chinese/English guides. Keep dispatch, SHAs, progress and
-test/runtime observations in CURRENT/evidence. PO approved the user-work blueprint;
+READMEs are stable Chinese/English guides. Keep source versions and product
+acceptance facts in CURRENT/evidence; do not commit developer start/pause/busy
+or dispatch observations. PO approved the user-work blueprint;
 Owner plans are proposals; direct PO/local readback alone establish dispatch.
 
 ```text
@@ -1564,13 +1574,13 @@ is an unfinished normal path; refusal-only behavior is never its acceptance.
 
 ### User-reviewed foundation vocabulary seed
 
-C1/C5/C6 admit the user-reviewed100-topic/41-source XLSX/CSV/JSON foundation
-through current Source/registry/Evidence/Canonical and actual packaged runtime.
-Global§10 owns its exact schema,4 named entity/2 unnamed/UNKNOWN-hotness states,
-immutable original terms, additive time/entity/brand/activity/event versions,
-active-query selection, history and rollback. User confirmation is already given;
-no repeated human review and no inference of verified hotlist/platform coverage.
-Do not auto-admit the seed to MODEL_TRAIN or depend on developer attachment paths.
+The user-reviewed 100-topic/41-source XLSX/CSV/JSON material is an optional input,
+not bundled business data or a startup/release prerequisite. New workspaces may
+start empty. Import explicitly through the existing Source/registry/Evidence/
+Canonical owners; Global §10 retains its schema, unknown states, provenance,
+history and rollback. Do not invent a default subject or bypass Permission when
+the directory is empty. Preserve existing user data. Do not auto-admit the seed
+to MODEL_TRAIN or depend on developer attachment paths.
 
 ### Local development configuration — 2026-10-04
 

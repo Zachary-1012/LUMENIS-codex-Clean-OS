@@ -458,6 +458,17 @@
     ],
     "mock_fixture_http_success_is_acceptance": false,
     "gate_pass_is_product_closure": false,
-    "affected_regressions_required": true
+    "affected_regressions_required": true,
+    "frontend_source_retirement": {
+      "state": "REMOVED_PENDING_REBUILD",
+      "approval_receipt": "00-GOVERNANCE/evidence/approvals/PO-20261028-SOURCE-RETIREMENT.json",
+      "manifest": "00-GOVERNANCE/evidence/round-15/workspace-continuity-20261024.json",
+      "manifest_key": "rejected_frontend_retirement_20261028",
+      "product_scope_unchanged": true,
+      "product_release_allowed": false,
+      "active_build_required_before_release": true,
+      "removed_manifest_sha256": "a4700153a9462cf891ebd0f4cd527f5bd4eb2009ba28ce462037b95bb59b7535",
+      "already_absent_manifest_sha256": "ae55b25476c85630e1b25bdfa6b6a43c215c5fbe3ccff0eeaf7f879a4437655a"
+    }
   }
 }

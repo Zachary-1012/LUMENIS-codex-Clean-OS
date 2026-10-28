@@ -182,6 +182,7 @@ def _assert_current_round_statuses(current: str) -> None:
 
 
 CURRENT_PUBLICATION_STATES = {
+    "SOURCE_RETIREMENT_ONLY",
     "LOCAL_CANDIDATE_NOT_PUBLISHED",
     "PUBLISHED_SOURCE_VERIFIED",
     "RULES_ONLY_PUBLICATION",
@@ -557,9 +558,19 @@ def _assert_current_publication_truth(
             )
         return
 
+    if state == "SOURCE_RETIREMENT_ONLY":
+        try:
+            from .experience_gate_mode import frontend_state
+        except ImportError:
+            from experience_gate_mode import frontend_state
+        if frontend_state(ROOT) != "REMOVED_PENDING_REBUILD":
+            raise AssertionError("Source retirement publication requires approved removed source")
+        if runtime.group(1) != "NOT_LOADED_OR_NOT_VERIFIED":
+            raise AssertionError("Source retirement cannot claim a loaded product")
+
     if current_path not in paths:
         raise AssertionError(
-            "PUBLISHED_SOURCE_VERIFIED requires CURRENT co-publication in the same commit"
+            state + " requires CURRENT co-publication in the same commit"
         )
     product_paths = sorted(path for path in paths if _is_product_behavior_source(path))
     if not product_paths:
