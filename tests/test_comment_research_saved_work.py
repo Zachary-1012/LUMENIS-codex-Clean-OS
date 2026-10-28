@@ -3,9 +3,6 @@
 The real Collector Producer, Artifact, Permission and SavedWork owners execute
 on disposable data. No fixture is claimed as a real customer's comments.
 """
-import json
-from pathlib import Path
-
 import pytest
 
 import intelligence_library_api as library
@@ -68,9 +65,6 @@ def test_comment_analysis_save_v1_v2_reopen_export_and_independent_exact_grants(
         output = saved_work.export_work(revised['artifact']['artifact_id'],actor=case['actor'],scope=case['scope'],format='md')
         assert 'First source statement' in output['content'].decode('utf-8')
         assert case['repo'].query_one('SELECT COUNT(*) FROM app_evidence_records')[0] == before
-        out = Path('work/product-closure-20261011/workspace-20261024/comment-research-hermetic-response-20261025.json')
-        out.write_text(json.dumps({'evidence_scope':'SYNTHETIC_ACQUISITION_REAL_OWNER_TRANSACTIONS_NOT_USER_ACCEPTANCE',
-            'source_page_ref':first['page_ref'],'analysis':analysis,'v1':saved,'v2':revised},ensure_ascii=False,indent=2),encoding='utf-8')
     finally:
         con.close()
 

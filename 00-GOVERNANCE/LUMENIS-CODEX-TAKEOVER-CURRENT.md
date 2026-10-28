@@ -19,7 +19,7 @@ PR #148 已在两项必需检查通过后合入 main，合并提交为 `5b27421c
 | 业务初始数据 | 新工作区允许为空，不要求内置主体、业务记录、种子或固定语料。用户输入及已获准的导入/采集经原权限与数据链进入产品；已有用户资料不删除。 | [范围与数据合同](LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)；原 Collector 合同 |
 | 保留源码 | 原 Core、CTH/BMP/Shared/SYSTEM、控制器、仓储、平台宿主及接口合同继续保留。源码存在不等于实际能力已经验收。 | [Source Owner Index](LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md) |
 | 运行与数据库 | 本次结构和源码清退不证明某个进程已加载该版本，也不执行生产切换或数据删除。历史 Core 恢复结果只对其记录版本有效。 | 原 Runtime、DB、恢复回执 |
-| PR #146 源码整合 | 归并原采集/数据、Office/媒体、业务、AI/Agent、运行与非视觉客户端改动，并继承 #148/#149 的清退和规则修订；修复任务撤权投影、同步执行重开、签名备份清理与采集失败状态保真；校准当前主体准入、签名推理、导出合同及隔离检查依赖。以 PR 当前提交、必需检查及合并记录判断是否已进入 main；本行不证明运行加载或完整能力验收。 | [PR #146](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/146)；原 workspace continuity 的 `source_reconciliation_20261028` |
+| PR #146 源码整合 | 归并原采集/数据、Office/媒体、业务、AI/Agent、运行与非视觉客户端改动，并继承 #148/#149 的清退和规则修订；修复任务撤权投影、同步执行重开、签名备份清理与采集失败状态保真；校准当前主体准入、签名推理、导出合同及隔离检查依赖，删除测试对开发机临时目录的写入依赖。以 PR 当前提交、必需检查及合并记录判断是否已进入 main；本行不证明运行加载或完整能力验收。 | [PR #146](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/146)；原 workspace continuity 的 `source_reconciliation_20261028` |
 
 没有预装数据不降低能力验收：采集、分析、创作等仍须以获准真实输入验证，缺少数据不得造零值或虚构成果。空库成功启动不等于采集成功或业务闭环。
 
