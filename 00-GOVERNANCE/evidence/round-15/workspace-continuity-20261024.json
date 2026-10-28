@@ -582,7 +582,7 @@
     "base_main": "31a193bdc4cce13464ba1c46551dc7c66ff1dfb0",
     "branch": "codex/retire-rejected-frontend-20261028",
     "primary_workspace_head": "ec831c8e80b6463797d7223cdd3c6a20ae327ef2",
-    "status": "DEVELOPMENT_BRANCH_ONLY_NOT_MAIN",
+    "status": "SOURCE_RETIREMENT_ONLY",
     "full_product_scope": "UNCHANGED_UNFINISHED",
     "deleted_from_main_baseline": [
       {
@@ -1006,37 +1006,24 @@
       "required CI and acceptance gates"
     ],
     "validation": {
-      "source_removed_paths": "PASS_79_ABSENT",
-      "manifest_bindings": "PASS_RETIRED_WALLPAPERS_REMOVED",
-      "governance": [
-        {
-          "check": "verify_ai_native_constitution.py",
-          "exit_code": 0,
-          "output": "AI-NATIVE CONSTITUTION GATE: PASS\n - 18 lightweight principles present\n - AGENTS/README bootstrap routes through the constitution\n - non-bypass status and dirty-worktree protections present\n - missing!=0 and CI anti-bypass regression anchors present\n - Product Gate executes this validator as BLOCKING\n"
-        },
-        {
-          "check": "verify_experience_authority_exclusive.py",
-          "exit_code": 0,
-          "output": "LUMENIS Experience authority exclusivity: PASS\nsole_authority=00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\napproved_experience_surfaces=public-website,web-workspace,desktop-app,mobile-companion\nlegacy_design_authorities=0\n"
-        },
-        {
-          "check": "verify_lumenis_single_product.py",
-          "exit_code": 1,
-          "output": "LUMENIS Only-One/multi-surface architecture guard: FAIL\n- missing canonical app foundation: app/lib/main.dart\n- missing canonical app foundation: app/lib/product/lumenis_app.dart\n- missing canonical app foundation: app/lib/features/launch/launch_surface.dart\n"
-        },
-        {
-          "check": "verify_experience_anti_template.py",
-          "exit_code": 2,
-          "output": "{\n  \"ok\": false,\n  \"mode\": \"strict\",\n  \"canonical_experience\": \"public-website + app/web-desktop-mobile\",\n  \"experience_authority\": \"00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md\",\n  \"dart_file_count\": 171,\n  \"legacy_web_authority\": false,\n  \"errors\": [\n    \"required multi-surface authority file missing: app\\\\lib\\\\features\\\\launch\\\\launch_surface.dart\",\n    \"required multi-surface authority file missing: app\\\\lib\\\\main.dart\",\n    \"required multi-surface authority file missing: app\\\\lib\\\\product\\\\lumenis_app.dart\"\n  ]\n}\n"
-        },
-        {
-          "check": "verify_experience_screen_blueprints.py",
-          "exit_code": 0,
-          "output": "Experience blueprint/source contract: PASS screens=44 bindings=54 sha256=verified ids=verified\n"
-        }
-      ],
-      "frontend_build": "BLOCKED_MISSING_REJECTED_ENTRYPOINT",
-      "product_release": "NOT_ACCEPTED"
-    }
+      "recorded_at": "2026-10-28T09:46:41.669804+00:00",
+      "scope": "Approved source retirement, retained nonvisual source and repository documentation; no running-product acceptance",
+      "retired_paths": 79,
+      "local_retired_paths_kept_absent": 16,
+      "dart_analyze_lib": "PASS, pinned Flutter 3.47.5 / Dart 3.13.4, no issues",
+      "retained_flutter_contracts": {
+        "status": "PASS",
+        "count": 177,
+        "ui_acceptance": false
+      },
+      "source_guards": "Current configuration, AI-native constitution, Experience authority/anti-template, screen bindings and takeover governance passed at the recorded working-tree snapshot",
+      "python_governance": "Focused governance and source-retirement regressions passed; subsequent publication-marker negative case validated separately",
+      "static_quality": "Changed Python compiles; no new Ruff findings relative to unchanged file baselines",
+      "review": "Independent source review found and corrected unbound deletion scope, stale screen availability and publication wording",
+      "product_release": "BLOCKED; complete replacement frontend and same-version product acceptance not available",
+      "production_data_mutated": false,
+      "services_changed": false
+    },
+    "source_only_approval": "00-GOVERNANCE/evidence/approvals/PO-20261028-SOURCE-RETIREMENT.json"
   }
 }

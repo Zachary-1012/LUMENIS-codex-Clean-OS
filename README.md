@@ -1,17 +1,19 @@
 # 寰意 · OEVIRA
 
-**An Open Space for Thought and Creation.**
+Repository / 唯一仓库：[Zachary-1012/LUMENIS-codex-Clean-OS](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS)。
 
-品牌域名：oevira.com。此源码更名不代表域名已部署或各端已安装新版本。
+Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
+
+**An Open Space for Thought and Creation.**
 
 围绕商业运营、品牌市场与原创创作，完成从真实问题到可用成果的工作。
 A workspace for commerce operations, brand and market work, and original creation—from real questions to usable results.
 
-[产品蓝图 / Product blueprint](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) · [完整产品规划 / Full product plan](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md) · [全产品草图 / Full-product sketches](00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md) · [体验规范 / Experience](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md) · [开发规则 / Contributing rules](AGENTS.md)
+[产品蓝图 / Product blueprint](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) · [完整产品规划 / Full product plan](00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md) · [全产品草图 / Full-product sketches](00-GOVERNANCE/LOOP-PLAN-20261014/sketches/FULL-PRODUCT-SKETCH.md) · [体验规范 / Experience](00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md) · [开发入口 / Contribution entry](CONTRIBUTING.md)
 
 ## 产品定位 / Product purpose
 
-从使用者出发：为品牌方、商业运营者和代理机构连接可靠资料、判断、可修改成果与实际复盘；也希望服务普通人对品牌、商业空间和公司的个人关注。大众体验是发展愿景，不冒称已上线能力。任务内研究、一份文稿、一段影像或一期播客都可从想法开始，不以先完成商业分析为前提。完整品牌陈述见[现行定位](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)。
+从使用者出发：为品牌方、商业运营者和代理机构连接可靠资料、判断、可修改成果与实际复盘；也支持个人研究关注的品牌、商业空间和公司。任务内研究、一份文稿、一段影像或一期播客都可从想法开始，不以先完成商业分析为前提。完整品牌陈述见[现行定位](00-GOVERNANCE/PRODUCT-POSITIONING-CURRENT.md)。
 
 寰意将真实资料、分析、业务判断和可编辑成果连接起来。研究、文档和报告服务当前任务；原创创作、视频及播客后期可以直接开始，无需先建立业务任务。SYSTEM提供共同的采集、浏览器、权限、数据和恢复基础。
 
@@ -79,18 +81,20 @@ The pixel-cyber, botanical-ecology and retro-futurist visual language uses a Gyp
 
 ## 工程结构 / Repository structure
 
-| 路径 / Path | 职责 / Responsibility |
+| 路径 / Path | 用途与唯一入口 / Purpose and entry |
 | --- | --- |
-| [`app/`](app/) | Flutter Web、Windows/macOS 与 iOS 客户端。 / Flutter Web, Windows/macOS, and iOS clients. |
-| [`website/`](website/) | Astro 官网。 / Astro public website. |
-| [`lumenis/`](lumenis/) | 业务、共享能力和 SYSTEM 实现。 / Business, Shared, and SYSTEM implementation. |
-| [`contracts/`](contracts/) | 接口、体验与能力合同。 / Interface, experience, and capability contracts. |
-| [`scripts/`](scripts/) | 运行、维护、构建和验证工具。 / Runtime, maintenance, build, and verification tools. |
-| [`tests/`](tests/) | 工程回归与历史验证记录。 / Engineering regressions and retained verification records. |
-| [`config/`](config/) | 运行配置、配额与种子。 / Runtime configuration, quotas, and seeds. |
-| `data/` | 本地运行数据；唯一业务库 `data/monitor.db`，不提交到 Git。 / Local runtime data; the single business database `data/monitor.db` is never committed. |
-| [`intelligence_library/`](intelligence_library/) | 研究与学习资料（出处材料，不作执行规则）。 / Research and learning materials (provenance, not execution rules). |
-| [`00-GOVERNANCE/`](00-GOVERNANCE/) | 产品蓝图、Owner、体验、安全和验收要求。 / Product blueprint, ownership, experience, security, and acceptance requirements. |
+| [`AGENTS.md`](AGENTS.md)、[`00-GOVERNANCE/`](00-GOVERNANCE/) | AGENTS 是仓库开发路由；当前产品与工程权威按其中的读取路径查找。 / AGENTS is the repository development router; follow its reading route for current product and engineering authorities. |
+| [`lumenis/`](lumenis/) 与既有根级 Python 模块/包 | 后端 Owner 源码与既有调用接口；具体文件位置以[源码 Owner Index §3](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#3-fixed-source-lookup-map)为准，不为统一目录外观整体迁移。 / Backend owner source and existing caller interfaces; use [Source Owner Index §3](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#3-fixed-source-lookup-map) for exact paths, without wholesale moves for a uniform layout. |
+| [`app/`](app/) | Flutter 应用及平台工程；开发说明见 [`app/README.md`](app/README.md)。 / Flutter application and platform projects; see [`app/README.md`](app/README.md). |
+| [`website/`](website/) | Astro Public Website 工程；开发说明见 [`website/README.md`](website/README.md)。 / Astro Public Website project; see [`website/README.md`](website/README.md). |
+| [`contracts/`](contracts/) | 产品接口、数据与 Experience 合同；能力源路径仍以 Owner Index §3 为准。 / Product interface, data, and Experience contracts; the Owner Index §3 remains the source for implementation paths. |
+| [`scripts/`](scripts/) | 现有工程与运行工具；说明见 [`scripts/README.md`](scripts/README.md)。 / Existing engineering and runtime tools; see [`scripts/README.md`](scripts/README.md). |
+| [`tests/`](tests/) 与 `app/test/` | Python 与 Flutter 工程回归；测试分类见 [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md)。 / Python and Flutter engineering regressions; see [`tests/CI_TEST_TIERS.md`](tests/CI_TEST_TIERS.md) for test tiers. |
+| [`docs/`](docs/)、[`research/`](research/)、[`intelligence_library/`](intelligence_library/) | 技术参考、研究原件与采用证据；活动规则和产品权威以 AGENTS 指向的现行文档为准。 / Technical references, research originals, and adoption evidence; active rules and product authorities are the current documents routed by AGENTS. |
+| [`config/`](config/)、[`alembic/`](alembic/)、[`migrations/`](migrations/)、[`deployment/`](deployment/)、[`docker/`](docker/) | 配置、数据库迁移与运行包装；数据和权限 Owner 不随目录改变。 / Configuration, database migrations, and runtime packaging; directories do not change data or permission ownership. |
+| `data/`, `work/`, `output/`, `tmp/` | 本地运行数据、受保护工作区与临时输出；按忽略与数据边界保管，不作为源码入口。 / Local runtime data, protected workspace, and temporary output; preserve their ignore and data boundaries, and do not treat them as source entry points. |
+| [`vendor/`](vendor/) | 保留第三方代码及其许可/NOTICE；边界见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)。 / Vendored third-party code and its licenses/notices; see [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). |
+| [`.codex/`](.codex/) | 仓库受控的工程工具实现与工具接口说明，见 [`.codex/README.md`](.codex/README.md)；不替代 AGENTS 路由。 / Repository-controlled engineering tools and their interface guide; see [`.codex/README.md`](.codex/README.md). It does not replace the AGENTS router. |
 
 CTH/BMP 负责各自业务规则；Shared 提供独立和复用能力；SYSTEM 提供共同运行边界。前端消费真实合同，不另建业务、数据或权限系统。
 
@@ -98,69 +102,17 @@ CTH/BMP own their business rules, Shared provides independent and reusable capab
 
 ## 本地开发 / Local development
 
-开发阅读顺序 / Contributor reading order:
+开发规则的唯一入口是 [`AGENTS.md`](AGENTS.md)，并沿该路由读取 [`LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)、[`AI-NATIVE-PRODUCT-CONSTITUTION.md`](00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md) 和 [`LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)。本 README 只提供这些现行权威的稳定导航，不复写规则正文、任务分派或开发流程；准确源码归属见[源码 Owner Index §3](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#3-fixed-source-lookup-map)。
 
-```text
-AGENTS.md
-→ 00-GOVERNANCE/LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json
-→ 00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md
-→ 00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md
-→ 00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md
-→ 00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md
-→ 00-GOVERNANCE/LUMENIS-MULTI-SURFACE-DECISION-CURRENT.md
-→ 00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md
-→ 00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md
-→ 00-GOVERNANCE/LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md
-→ 00-GOVERNANCE/SECURITY-BOUNDARY-CURRENT.md
-→ 对应能力合同与源码 / Relevant capability contracts and source
-```
+[`AGENTS.md`](AGENTS.md) is the sole development instruction entry; follow its route to [`LUMENIS-CODEX-TAKEOVER-CURRENT.md`](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md), [`AI-NATIVE-PRODUCT-CONSTITUTION.md`](00-GOVERNANCE/AI-NATIVE-PRODUCT-CONSTITUTION.md), and [`LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md`](00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md). This README links to those current authorities without copying their rules, task routing, or development procedure. Use [Source Owner Index §3](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#3-fixed-source-lookup-map) for exact source ownership.
 
-`LUMENIS-CODEX-TAKEOVER-CURRENT.md` 是所有开发者唯一的闭环接续入口。流程为：规则 → CURRENT → 有界工作分支 → 适用验证 → PR → 必需检查全绿 → 合并 → 核对 `origin/main`。`main` 是唯一集成主线；为保护已有未提交成果或进行精确隔离验证，可使用临时 worktree。隔离工作区不构成第二套长期实现；不得 reset、clean、批量覆盖或丢弃他人的未提交成果。
+仓库工程工具的稳定用法见 [`.codex/README.md`](.codex/README.md)；它只说明现有工具接口，不另设产品或任务规则。
 
-`LUMENIS-CODEX-TAKEOVER-CURRENT.md` is the single closed-loop entry for every contributor: rules → CURRENT → scoped branch → applicable verification → PR → all required checks green → merge → verify `origin/main`. `main` is the sole integration line. A temporary worktree may be used to protect existing uncommitted work or perform exact isolated validation; it is not a second long-term implementation. Never reset, clean, broadly overwrite, or discard another contributor's uncommitted work.
+For repository engineering tools, see [`.codex/README.md`](.codex/README.md). It documents existing tool interfaces without creating separate product or task rules.
 
-开发工具与接续机制见 [开发工具说明](.codex/README.md)。Hooks 的本机注册与信任需按该说明单独完成；拉取或合并仓库代码不会自动完成这些步骤。
+包级开发命令与依赖清单统一从 GitHub 贡献入口 [`CONTRIBUTING.md`](CONTRIBUTING.md) 进入。
 
-See the [engineering tools guide](.codex/README.md) for development tooling and continuity. Workstation hook registration and trust must be completed separately as documented; pulling or merging repository code does not perform these steps automatically.
-
-首先阅读 [`AGENTS.md`](AGENTS.md)、对应源码 Owner 和能力合同；核对已有实现与调用关系，复用正确能力、修复冲突，只为确认的缺口补实现。所需 Python 依赖以仓库的 `requirements*.txt` 为准；Flutter/Dart 版本以 [`app/toolchain.json`](app/toolchain.json) 为准；官网使用 [`website/package.json`](website/package.json) 与锁文件。不要为阅读本说明而自动安装、升级或启动服务。
-
-Read [`AGENTS.md`](AGENTS.md), the relevant source owner, and capability contracts. Inspect existing implementations and callers, reuse correct behavior, resolve conflicts, and add implementation only for verified gaps. Use the repository's `requirements*.txt` for Python dependencies, [`app/toolchain.json`](app/toolchain.json) for Flutter/Dart, and [`website/package.json`](website/package.json) with its lockfile for the website. Reading this guide does not trigger installation, upgrades, or service startup.
-
-在仓库根目录核对本地修改和版本： / Inspect revisions and local changes from the repository root:
-
-```powershell
-git rev-parse --show-toplevel
-git remote -v
-git branch --show-current
-git rev-parse HEAD
-git status --short
-```
-
-获准启动本机 Core 时使用既有入口；不要重复启动已在运行的实例： / When local Core startup is authorized, use the existing entry point without duplicating a running instance:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/start_production.ps1
-```
-
-该入口幂等启动本机 Core（端口 8201）及其后台采集与浏览器常驻进程。Core 默认地址为 `http://127.0.0.1:8201`，健康检查路径为 `/healthz`，工作区路径为 `/workspace`。客户端与官网的构建配置见各自目录说明。采集、训练、部署及生产数据操作各自需要适用授权。
-
-The entry point idempotently starts the local Core on port 8201 together with its background collector and browser residents. Core listens on `http://127.0.0.1:8201` and exposes `/healthz` for health checks and `/workspace` for the workspace. Refer to each package's guide for client and website build configuration. Collection, training, deployment, and production-data operations require their applicable authorization.
-
-## 贡献与验证 / Contributing and verification
-
-Coding Agent 必须首先读取 [`AGENTS.md`](AGENTS.md)。
-Coding agents must read the repository execution rules before making changes.
-
-源仓库 / Source repository: [`Zachary-1012/LUMENIS-codex-Clean-OS`](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS).
-
-使用有界工作分支与 PR 合入 `main`，必需检查全部通过即可正常合并，不绕过检查。保留其他人的未提交修改，逐项暂存本次文件；不要强推、批量覆盖或删除历史证据。依变更范围进行适用的编译、静态、安全和隔离回归验证，并通过真实用户操作验证成果与恢复。
-
-Use scoped branches and pull requests into `main`; merge normally once all required checks pass, without bypassing them. Preserve unrelated uncommitted work, stage exact paths, and avoid force pushes, broad overwrites, or deletion of historical evidence. Run applicable build, static, security, and isolated regression checks, and verify results and recovery through actual user operations.
-
-产品定义、实现和验收是不同记录。动态进度、提交与运行取证统一见 [CURRENT 接续记录](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) 和 [真实交付要求](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md)；不把快照复制到 README。
-
-Product definition, implementation, and acceptance are separate records. Dated progress, revision, and runtime observations belong in the [CURRENT handoff](00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) and [real delivery requirements](00-GOVERNANCE/LUMENIS-REAL-DELIVERY-OVERLAY-CURRENT.md), rather than being copied into this README.
+The GitHub contribution entry, [`CONTRIBUTING.md`](CONTRIBUTING.md), is the single navigation point for package-specific commands and dependency manifests.
 
 ## 安全与许可 / Security and license
 

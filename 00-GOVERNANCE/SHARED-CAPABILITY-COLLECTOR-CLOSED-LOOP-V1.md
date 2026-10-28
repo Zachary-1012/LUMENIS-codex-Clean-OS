@@ -644,7 +644,13 @@ Until canonical DB override convergence is complete, isolated test / staging exe
 
 ## 15. Acceptance Dataset
 
-The first full production acceptance dataset is the 60-episode `凉子访谈录` study:
+The 60-episode `凉子访谈录` study is the concrete input dataset for this full
+production learning and performance-collection acceptance chain below. Supply
+it through existing user input and Source/Evidence/Canonical when that specific
+acceptance is run; it is not bundled or preloaded into a fresh business database
+and is not required for application startup or unrelated normal work. If it is
+unavailable, this acceptance remains `NOT_RUN`/open; do not fabricate records or
+treat an empty database as a pass.
 
 ```text
 20 breakout

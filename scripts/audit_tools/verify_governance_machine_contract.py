@@ -302,6 +302,14 @@ def validate_contract() -> dict:
     if set(gates) != {"change_gate", "owner_closure_gate", "release_gate"}:
         fail("governance requires exactly Change/Owner Closure/Release gate semantics")
     policy = c.get("verification_policy", {})
+    try:
+        from .experience_gate_mode import frontend_state
+    except ImportError:
+        from experience_gate_mode import frontend_state
+    try:
+        frontend_state(ROOT)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        fail(f"invalid frontend source retirement: {exc}")
     for key in ("unit_integration_required", "mock_fixture_http_success_is_acceptance",
                 "gate_pass_is_product_closure"):
         if policy.get(key) is not False:

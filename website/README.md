@@ -1,130 +1,50 @@
-# OEVIRA Public Website｜寰意官网
+# Public Website source package｜官网源码包
 
-Current display identity (2026-10-18): **寰意 / OEVIRA**. The existing [canonical naming authority](../00-GOVERNANCE/CANONICAL-NAMING-AND-TWIN-SYNC.md) governs this rename. Technical identifiers, package names, environment variables, commands and source paths retain their compatibility spelling; dated records below preserve their original names and evidence.
-The approved brand domain is `oevira.com`; the positioning line is “An Open Space for Thought and Creation.” This documentation does not configure DNS, a public origin or deployment, or establish that the destination is live. Existing verified-origin and unavailable-link rules below still apply.
+`website/` is the Astro source package for the OEVIRA Public Website. Its public role is product information, prepared demonstrations and cases, help, and real product/download links. The website has no embedded product trial, uploads, generation, or business workflow execution; those operations belong in the product workspace.
 
-This package contains the public, static Astro website for introducing OEVIRA
-and its product boundaries through prepared demonstrations and public materials. Visitors can play videos, browse chapters and follow real product/download links; the site offers no embedded trial, upload, analysis or generation. It is separate from the Product Core-backed Web Workspace
-in [`../app/`](../app/README.md).
+`website/` 是 OEVIRA Public Website 的 Astro 源码包。官网用于产品信息、制作好的演示与案例、帮助内容，以及真实产品/下载链接；不提供内嵌试用、上传、生成或业务工作流执行，这些操作属于产品工作区。
 
-本目录是寰意面向公众的静态 Astro 官网，用于产品/场景展示、制作好的演示、帮助及真实产品/下载链接，不提供在线试用、功能体验、资料上传、分析或生成。视频播放、章节切换和展示动效保留；它与
-[`../app/`](../app/README.md) 中的 Web Workspace 相互独立。
+Routes live under `src/pages/`; shared host/localization helpers stay in `src/`. See [CURRENT](../00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md) for source availability and release acceptance. A package build alone does not establish a complete or published website.
 
-## Local development｜本地开发
+路由放在 `src/pages/`，源站与本地化辅助代码放在 `src/`。源码可用范围与发布验收见 [CURRENT](../00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)；包构建不等于完整官网或已发布官网。
 
-From the repository root, run the existing package commands in `website/`:
+## Source map｜源码目录
+
+| Path / 路径 | Contents / 内容 |
+| --- | --- |
+| `src/pages/` | Existing Astro route sources / 现有 Astro 路由源码 |
+| `src/` | Public-host validation, localization, and shared content data / 公开源站校验、本地化与共享内容数据 |
+| `public/` | Static public assets / 静态公开资源 |
+| `tests/` | Node.js package checks / Node.js 包检查 |
+| `astro.config.mjs` | Static output, locales, and public-origin input / 静态输出、语言与公开源站参数 |
+| `package.json`, `package-lock.json` | Package scripts and pinned dependency resolution / 包脚本与锁定的依赖解析 |
+
+## Package commands｜包命令
+
+Run from the repository root:
 
 ```powershell
 Set-Location website
-npm install
+npm ci
+npm run dev
 npm run build
 npm test
+npm run preview
 ```
 
-从仓库根目录进入 `website/`，运行现有工程命令：
+`npm test` runs the package build followed by `node --test tests/*.test.mjs`. `npm run dev`, `npm run build`, and `npm run preview` act on the routes currently present; they do not create missing content pages or perform product operations.
 
-```powershell
-Set-Location website
-npm install
-npm run build
-npm test
-```
+`npm test` 会先执行包构建，再运行 `node --test tests/*.test.mjs`。`npm run dev`、`npm run build` 与 `npm run preview` 仅作用于当前存在的路由，不会生成缺失的内容页，也不执行产品业务操作。
 
-## Routes and localization｜路由与本地化
+`LUMENIS_PUBLIC_SITE_ORIGIN` is the Astro configuration input for the public site origin. Configure it only with the verified public HTTPS origin appropriate to the build; package build output alone is not publication or destination availability.
 
-The static site provides these locale routes:
+`LUMENIS_PUBLIC_SITE_ORIGIN` 是 Astro 配置使用的官网源站参数。仅在对应构建已核验的公开 HTTPS 源站时配置；包构建产物本身不代表发布完成或目标可访问。
 
-- `/` — 简体中文
-- `/en/` — English
-- `/ko/` — 한국어
+## Product and experience references｜产品与体验权威
 
-静态官网提供以下语言路由：
+- [Repository instructions](../AGENTS.md)
+- [Current source and acceptance](../00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md)
+- [Product Architecture](../00-GOVERNANCE/LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md)
+- [Experience Constitution](../00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md)
 
-- `/` — 简体中文
-- `/en/` — English
-- `/ko/` — 한국어
-
-Keep each language's content aligned in meaning and product facts. A locale
-route must not imply an unsupported feature, service, permission or availability.
-
-Each locale also has addressable `products/`, `solutions/`, `outcomes/`, `help/`,
-`trust/`, `updates/`, `download/`, `contact/`, `terms/`, `privacy/` and `license/`
-pages. Language switching retains the current family. The help library covers
-starting work, sources, research, writing, video, podcast, commerce, brand,
-recovery and preferences; its content remains readable without JavaScript.
-Search filters the displayed guide text locally and provides a clear reset.
-
-每种语言还提供产品、使用场景、成果与操作、帮助、信任、更新、下载、联系及法律
-文本状态等独立页面。切换语言保留当前家族；帮助可在无脚本时完整阅读，搜索仅在
-当前页面筛选指南。真实操作视频、客户案例、正式法律文本与发行包未提供时，页面
-明确说明状态，不以虚构演示、占位下载或模拟提交代替。
-
-保持各语言内容在产品含义与事实上的一致。语言路由不得暗示尚未支持的功能、服务、
-权限或可用状态。
-
-## Build and public-origin contract｜构建与公开源站合同
-
-When no public origin is configured, `npm run build` creates a preview build:
-it includes `noindex,nofollow`, blocks robots and omits canonical URLs and
-`hreflang` links. Preview output is not a production SEO build.
-
-未配置公开源站时，`npm run build` 生成预览构建：输出包含 `noindex,nofollow`、
-屏蔽 robots，并省略 canonical URL 与 `hreflang` 链接。预览产物不是生产 SEO 构建。
-
-For a public deployment, set `LUMENIS_PUBLIC_SITE_ORIGIN` to the verified public
-HTTPS origin before building. Optional destination URLs are:
-
-- `LUMENIS_PUBLIC_TRIAL_URL`
-- `LUMENIS_PUBLIC_CONTACT_URL`
-- `LUMENIS_PUBLIC_HELP_URL`
-- `LUMENIS_PUBLIC_WORKSPACE_URL`
-
-Public URLs must resolve to reachable HTTPS destinations. Reserved example
-hosts (`example.invalid`, `example.com`, `.test`) and localhost are rejected
-when supplied as public URLs. Do not use an unverified or private host as the
-canonical origin.
-
-公开部署前，将 `LUMENIS_PUBLIC_SITE_ORIGIN` 设置为已核验的公开 HTTPS 源站。
-以下目标链接为可选配置：
-
-- `LUMENIS_PUBLIC_TRIAL_URL`
-- `LUMENIS_PUBLIC_CONTACT_URL`
-- `LUMENIS_PUBLIC_HELP_URL`
-- `LUMENIS_PUBLIC_WORKSPACE_URL`
-
-公开 URL 必须指向可访问的 HTTPS 目标。配置公开 URL 时，保留示例域名
-（`example.invalid`、`example.com`、`.test`）和 localhost 会被拒绝。不得将未核验
-或私有主机设为 canonical 源站。
-
-Unset external destinations render an explicit disabled state. The generated
-local help page is available independently of an external help channel.
-Configured workspace links use only the existing product routes and creation
-entry values; earlier task queries and fragments are not carried into new work.
-The website must not
-pretend to submit a form, store user credentials, handle provider secrets or
-execute Product Core workflows. Product data, Evidence, Permission and business
-actions remain with their existing owners.
-
-未设置的目标链接应呈现明确的禁用状态。官网不得伪装表单已提交、存储用户凭据、
-处理 Provider 密钥或执行 Product Core 工作流。产品数据、Evidence、Permission
-和业务操作仍归既有 Owner 管理。
-
-## Content and design ownership｜内容与设计归属
-
-`DEVELOPMENT-BRIEF.md` records website-scoped implementation context and
-reference research. It is supporting material, not a competing product or
-design authority. The repository's Product Architecture and sole Experience
-Constitution define the product and experience boundaries.
-
-`DEVELOPMENT-BRIEF.md` 记录官网范围内的实现背景与参考研究。它是辅助材料，不是
-第二套产品或设计权威。产品范围由仓库的 Product Architecture 定义，体验边界由
-唯一的 Experience Constitution 定义。
-
-The website introduces OEVIRA; it does not own Product Truth, accounts,
-workflow execution, Evidence, Permission, data collection or provider keys.
-Do not imply that a link, static page or successful build proves the linked
-workspace or service is available.
-
-官网负责介绍寰意，不拥有 Product Truth、账户、工作流执行、Evidence、Permission、
-数据采集或 Provider 密钥。不得暗示链接、静态页面或构建成功能够证明目标工作区或
-服务当前可用。
+官网角色与产品/体验边界以以上唯一权威及其导航为准；本 README 只说明 Astro 源码包。

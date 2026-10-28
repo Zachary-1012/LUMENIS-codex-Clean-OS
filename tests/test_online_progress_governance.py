@@ -246,6 +246,11 @@ class GovernanceHistoryRegressionTests(unittest.TestCase):
         import json
         import re
         root = Path(__file__).resolve().parents[1]
+        from scripts.audit_tools.experience_gate_mode import frontend_state
+        if frontend_state(root) == 'REMOVED_PENDING_REBUILD':
+            self.assertFalse((root / 'app/lib/main.dart').exists())
+            self.assertFalse((root / 'app/lib/shell/lumenis_workspace_shell.dart').exists())
+            return
         shell = (root / "app/lib/shell/lumenis_workspace_shell.dart").read_text("utf8")
         rows = json.loads((root / "contracts/experience/BACKEND_GAP.json").read_text("utf8"))["gaps"]
         for row in rows:
@@ -719,8 +724,8 @@ def test_governance_production_cli_smoke():
     import sys
     from scripts.audit_tools import verify_codex_takeover_governance as gate
     result = subprocess.run(
-        [sys.executable, str(Path(gate.__file__))], cwd=gate.ROOT,
-        capture_output=True, text=True, check=False,
+        [sys.executable, "-X", "utf8", str(Path(gate.__file__))], cwd=gate.ROOT,
+        capture_output=True, text=True, encoding="utf-8", check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert 'CODEX TAKEOVER GOVERNANCE OK' in result.stdout
@@ -931,3 +936,20 @@ def test_clearance_followup_finite_inventory_and_negative_paths(tmp_path, monkey
         monkeypatch.setattr(gate, 'CLEARANCE_FOLLOWUP_MANIFEST_SHA256', hashlib.sha256(manifest_path.read_bytes()).hexdigest())
         with pytest.raises(AssertionError, match=reason):
             gate._assert_clearance_evidence_integrity()
+
+
+def test_retirement_publication_requires_source_and_cannot_claim_runtime():
+    import pytest
+
+    from scripts.audit_tools.verify_codex_takeover_governance import _assert_current_publication_truth
+
+    current = """## 1. Online reader's current-state snapshot
+Implementation publication state: `SOURCE_RETIREMENT_ONLY`
+Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
+"""
+    paths = {"00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md", "app/lib/main.dart"}
+    _assert_current_publication_truth(current, changed_paths=paths)
+    with pytest.raises(AssertionError, match="loaded product"):
+        _assert_current_publication_truth(current.replace("NOT_LOADED_OR_NOT_VERIFIED", "LOADED_AND_VERIFIED"), changed_paths=paths)
+    with pytest.raises(AssertionError, match="co-publication"):
+        _assert_current_publication_truth(current, changed_paths={"app/lib/main.dart"})

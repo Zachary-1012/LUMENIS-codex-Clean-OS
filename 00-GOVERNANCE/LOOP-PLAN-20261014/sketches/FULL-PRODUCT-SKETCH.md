@@ -11,7 +11,7 @@
 
 **持续演进基线。** 2026-10-16直接PO明确，本稿及配套完整规划会持续更新；“唯一”表示集中维护，不冻结UI/前端、不限制总控当前或未来升级。后续获准能力/布局改进、真实运行与评估结果在现有Owner和合同内原位修订，保留来源与版本。2026-10-16的规划发布与REA顺序是历史任务安排；当前按最新直接PO指令执行，不增加设计审批前置。REA使用前须认真研究其官方GitHub适用版本的文档、实际源码/测试、许可及版本差异；完整要求见[规划开篇](../product-plan-full.md)。
 
-**全产品范围与本轮状态。** 本稿与完整前后端规划共同覆盖完整寰意 / OEVIRA及Public Website、Web Workspace、Windows/macOS Desktop、iOS Companion四表面；SH-02只是资料工作之一，不限定本稿或产品范围。原195项G、44屏覆盖锚点及CTH/BMP/独立Shared/SYSTEM/AI与Math、媒体、采集、资料研究、账户/权限、保存恢复和全部UI/UX/AIGC/动效/资产要求继续有效，44屏号不是页面或能力上限。最新直接PO明确当前整体前端不合格、尚未接受（NOT_ACCEPTED）。2026-10-16该窗口只统一现有文档的收尾属于历史事实；2026-10-18已批准完整开发，按最新直接 PO 指令及[CURRENT §1](../../LUMENIS-CODEX-TAKEOVER-CURRENT.md#1-online-readers-current-state-snapshot)的有日期记录继续同一完整产品闭环并逐端验收，历史云端/本地分工不自动派工，文档与局部结果均不升级整体状态。
+**全产品范围与本轮状态。** 本稿与完整前后端规划共同覆盖完整寰意 / OEVIRA及Public Website、Web Workspace、Windows/macOS Desktop、iOS Companion四表面；SH-02只是资料工作之一，不限定本稿或产品范围。原195项G、44屏覆盖锚点及CTH/BMP/独立Shared/SYSTEM/AI与Math、媒体、采集、资料研究、账户/权限、保存恢复和全部UI/UX/AIGC/动效/资产要求继续有效，44屏号不是页面或能力上限。最新直接PO明确当前整体前端不合格、尚未接受（NOT_ACCEPTED）。产品源码与验收事实见[CURRENT §1](../../LUMENIS-CODEX-TAKEOVER-CURRENT.md#1-online-readers-current-state-snapshot)。本稿不记录开发者开工、暂停或派工；文档与局部结果均不升级整体接受状态。
 
 REA参考采用同时覆盖采集/查询分页与详情、平台原生字段、获准session/rate-limit/恢复、资料结构、交互、媒体及办公能力，不限截图/Pixi校准；这些方法经原Collector/Importer/Shared/Agent及媒体Owner进入真实工作，逐source/caller与权利/Permission核实，最终用有用成果、保存修订重开/恢复验收。V2的31条Importer未就绪及SourceUse缺入口仍是待修/待接线职责，不能以缺实现永久DEFER；受真实宿主、权利、身份/自动化限制的路径各自保持BLOCKED。完整采用及实际验收未完成；2026-10-16文档批次未运行REA或产品，当前获准接续仍按原方法、能力与逐来源处置推进，见[完整规划§20–21](../product-plan-full.md)。
 

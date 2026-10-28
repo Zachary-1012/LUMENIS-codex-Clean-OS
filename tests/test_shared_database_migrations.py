@@ -381,3 +381,32 @@ def test_canonical_root_init_v0_path_still_migrates(tmp_path, monkeypatch):
 
     assert version == migrations.CURRENT_VERSION
     assert {"publish_datetime", "captured_at", "rule_version"} <= note_columns
+
+
+def test_fresh_empty_business_registry_accepts_first_explicit_user_input(tmp_path, monkeypatch):
+    import database
+    from lumenis.shared.database import migrations
+
+    db_path = tmp_path / "empty-business-workspace.sqlite3"
+    _bind_migration_db(monkeypatch, migrations, db_path, tmp_path / "backups")
+    monkeypatch.setattr(database, "DB_PATH", str(db_path))
+
+    database.init_db()
+    assert migrations.migrate() is True
+
+    import subject_registry
+
+    assert subject_registry.list_subjects() == []
+
+    supplied_input = {
+        "domain_id": "CTH",
+        "subject_type": "company",
+        "name_en": "North Star Operations",
+        "name_zh": "北辰运营",
+        "industry": "零售服务",
+    }
+    subject, created = subject_registry.add_subject(supplied_input)
+
+    assert created is True
+    assert subject["name_en"] == supplied_input["name_en"]
+    assert subject_registry.list_subjects("CTH") == [subject]
