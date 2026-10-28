@@ -1,7 +1,18 @@
 """Synthetic HTTP acquisition, real original owners and ordinary purpose consent."""
 import json
+import pytest
 
-from tests.test_collector_public_original import collector_case, test_manual_public_response_has_reopenable_exact_original as _seed_public_original
+from tests.test_collector_transaction_truth import admit_registered_subject_for_isolated_collector
+from tests.test_collector_public_original import (
+    collector_case,
+    test_manual_public_response_has_reopenable_exact_original as _seed_public_original,
+)
+
+
+@pytest.fixture(autouse=True)
+def _admit_registered_subject_for_public_research(request):
+    case = request.getfixturevalue("collector_case")
+    admit_registered_subject_for_isolated_collector(case)
 
 
 def test_public_source_purpose_consent_research_citations_versions_and_revocation(collector_case,monkeypatch,tmp_path):

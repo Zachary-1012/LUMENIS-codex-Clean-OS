@@ -6,13 +6,18 @@ from pathlib import Path
 
 import pytest
 
-from tests.test_collector_transaction_truth import collector_case, REGISTERED_NAME
+from tests.test_collector_transaction_truth import (
+    admit_registered_subject_for_isolated_collector,
+    collector_case,
+    REGISTERED_NAME,
+)
 
 
 @pytest.fixture
 def comments_case(collector_case, monkeypatch):
     from lumenis.system.collector.adapters.base import CollectionResult, CollectionStatus
     case = collector_case
+    admit_registered_subject_for_isolated_collector(case)
     entry = case['surface']
     monkeypatch.setenv('ZBC_ARTIFACT_DIR', str(Path(case['db_path']).parent / 'comment-artifacts'))
     import shared_artifacts

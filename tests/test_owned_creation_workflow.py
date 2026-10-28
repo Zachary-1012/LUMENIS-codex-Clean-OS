@@ -12,6 +12,7 @@ import json
 import zipfile
 from dataclasses import replace
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from docx import Document
@@ -86,7 +87,8 @@ def response(request, *, actor, output=None):
     after = creation.validate_creation_source_use(request, actor=actor)
     value = {key:hashlib.sha256(('fixture:'+key).encode()).hexdigest() for key in business_brief._OWNED_HASH_FIELDS}
     value.update({key:'fixture-'+key for key in business_brief._OWNED_TEXT_FIELDS})
-    value.update(ok=True,status='COMPLETED',provider='owned',operation=request.operation,domain_id=request.domain_id,scope=request.scope,
+    value.update(ok=True,status='COMPLETED',code='OWNED_INFERENCE_COMPLETED',provider='owned',
+        attempt_id='attempt_'+uuid4().hex,operation=request.operation,domain_id=request.domain_id,scope=request.scope,
         request_id=request.request_id,request_digest=owned_service.owned_service_request_digest(request),
         input_revision_sha256=request.input_revision_sha256,source_binding_sha256=request.source_binding_sha256,
         source_use_policy_version=request.source_use_policy_version,source_use_policy_sha256=request.source_use_policy_sha256,

@@ -188,7 +188,8 @@ def test_saved_work_owner_exports_pptx_with_rechecks_and_content_digest(monkeypa
     assert result["media_type"] == "application/vnd.openxmlformats-officedocument.presentationml.presentation"
     assert result["sha256"] == hashlib.sha256(result["content"]).hexdigest()
     assert result["return_ref"] == item["return_ref"]
-    assert len(reads) == 2
+    # Export preparation, pre-conversion read, and post-conversion recheck.
+    assert len(reads) == 3
     assert all(read == (artifact_id, actor, scope) for read in reads)
     assert len(effects) == 2
     assert all(effect[:3] == (actor, scope, permission.OperationType.DATA_EXPORT) for effect in effects)
@@ -311,9 +312,9 @@ def test_delivery_purpose_is_part_of_effect_identity_and_rechecked(monkeypatch):
     delivered = saved_work.export_work(**common, purpose="delivery")
     assert delivered["content"] == item["document"]["markdown"].encode()
     saved_work.export_work(**common, purpose="audit_snapshot")
-    assert len(reads) == 4
+    assert len(reads) == 6
     assert resources[0] == resources[1] and resources[2] == resources[3]
     assert resources[0] != resources[2]
     with pytest.raises(saved_work.SavedWorkError, match="WORK_EXPORT_PURPOSE_INVALID"):
         saved_work.export_work(**common, purpose="ignore_permission")
-    assert len(reads) == 4
+    assert len(reads) == 6

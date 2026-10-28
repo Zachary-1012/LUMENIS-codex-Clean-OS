@@ -62,8 +62,9 @@ def test_surface_preserves_dispatch_set_with_complete_planned_visibility(monkeyp
         cap["canonical_id"] for cap in PLATFORM_CAPABILITIES.values() if cap["collection_surface_visible"]]
     assert set(surface.SECONDARY_COLLECTION_PLATFORMS) == {
         "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss", "public_http",
-        "web_atom", "sitemap", "zhihu", "instagram", "wechat", "facebook", "xiaohongshu"}
-    assert not set(surface.SECONDARY_COLLECTION_PLATFORMS) & {"youtube","tiktok","reddit","linkedin","channels","google","tieba","github"}
+        "web_atom", "sitemap", "zhihu", "instagram", "wechat", "facebook", "xiaohongshu",
+        "channels", "github", "google", "reddit", "tieba", "tiktok", "youtube",
+        "linkedin", "daum", "naver"}
     assert result["manual_only"] is True
     assert result["read_only"] is True
     assert result["external_write"] is False
@@ -107,8 +108,11 @@ def test_primary_xhs_status_is_a_separate_read_only_projection(monkeypatch):
     assert primary["last_run"]["fetched"] == 4
     assert primary["last_run"]["accepted"] is None
     assert primary["form_selectable"] is True
+    assert set(primary['capabilities']) == {
+        'search', 'detail', 'comments', 'author', 'author_posts',
+    }
     assert primary['capabilities']['detail'] == 'IMPLEMENTED'
-    assert primary['capabilities']['native_comment_pagination'] == 'NOT_VERIFIED'
+    assert primary['capabilities']['comments'] == 'IMPLEMENTED'
     assert primary["parallel_collector_added"] is False
     assert not any(secret in str(primary).lower() for secret in ("cookie", "token", "password"))
 
@@ -215,6 +219,21 @@ def test_surface_status_preserves_last_run_failure(monkeypatch):
     by_platform = {item["platform"]: item for item in result["platforms"]}
     assert by_platform["instagram"]["status"] == "SESSION_EXPIRED"
     assert by_platform["instagram"]["health"]["status"] == "SUCCESS"
+    assert by_platform["instagram"]["last_run"]["state"] == "SESSION_EXPIRED"
+
+    monkeypatch.setattr(surface, "_last_run", lambda platform: {
+        "platform": platform,
+        "state": "SUCCESS",
+        "fetched": 3,
+        "accepted": 3,
+        "rejected": 0,
+        "error_recorded": False,
+    } if platform == "instagram" else None)
+    recovered = surface.get_collection_surface()
+    recovered_by_platform = {item["platform"]: item for item in recovered["platforms"]}
+    assert recovered_by_platform["instagram"]["status"] == "READY"
+    assert recovered_by_platform["instagram"]["health"]["status"] == "SUCCESS"
+    assert recovered_by_platform["instagram"]["last_run"]["state"] == "SUCCESS"
 
 
 def test_weibo_is_in_scope_and_mainland_xhs_remains_paused():
@@ -874,7 +893,7 @@ def test_douyin_requires_explicit_remote_browser_worker(monkeypatch):
         _configured_browser_worker_url()
 
 
-def test_requested_adapters_expose_uniform_capability_contract():
+def test_requested_adapters_expose_uniform_capability_contract(monkeypatch):
     from lumenis.system.collector.adapters import get_adapter, list_adapters
 
     required_platforms = {"xhs", "bilibili", "weibo", "douyin", "x", "kuaishou", "web_rss"}
@@ -886,7 +905,11 @@ def test_requested_adapters_expose_uniform_capability_contract():
         adapter = get_adapter(platform)
         assert set(adapter.capability_map()) == required_capabilities
 
-    assert get_adapter("kuaishou").search("广州太古汇").status == CollectionStatus.NOT_CONFIGURED
+    from lumenis.adapters import human_browser
+    def no_registered_worker(_platform):
+        raise RuntimeError("isolated fixture has no registered worker")
+    monkeypatch.setattr(human_browser, "readonly_worker_health", no_registered_worker)
+    assert get_adapter("kuaishou").health_check().status == CollectionStatus.NOT_CONFIGURED
     rss = get_adapter("web_rss")
     assert rss.capability_map()["detail"] == "not_supported"
     assert rss.detail("news-1").status == CollectionStatus.NOT_SUPPORTED
@@ -895,6 +918,7 @@ def test_requested_adapters_expose_uniform_capability_contract():
 
 
 def test_planned_visibility_and_provider_failure_do_not_enable_or_block_others(monkeypatch):
+    from lumenis.system.collector.adapters.config import PLATFORM_CAPABILITIES
     class Healthy:
         def health_check(self):
             return CollectionResult(CollectionStatus.SUCCESS, 'wechat', metadata={'healthcheck_scope':'configuration_only'})
@@ -912,8 +936,14 @@ def test_planned_visibility_and_provider_failure_do_not_enable_or_block_others(m
         assert rows['wechat']['status'] == 'CONFIGURED'
         assert rows['facebook']['status'] == 'UNAVAILABLE'
         for platform in ('channels','youtube','tiktok','reddit','linkedin','tieba'):
-            assert rows[platform]['status'] == 'PLANNED'
-            assert rows[platform]['manual_collection_enabled'] is False
+            capability = PLATFORM_CAPABILITIES[platform]
+            expected = ('PLANNED' if capability['implementation_state'] == 'PLANNED'
+                        else 'UNAVAILABLE')
+            assert rows[platform]['status'] == expected
+            assert rows[platform]['manual_collection_enabled'] is capability['manual_collection_enabled']
             assert rows[platform]['scheduled_collection_enabled'] is False
         assert not set(rows) & set(value['out_of_scope_platforms'])
-        assert set(value['auxiliary_sources']) == {'google','github'}
+        assert set(value['auxiliary_sources']) == {
+            capability['canonical_id'] for capability in PLATFORM_CAPABILITIES.values()
+            if not capability['collection_surface_visible']
+        }

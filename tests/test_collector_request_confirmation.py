@@ -4,8 +4,19 @@ import sqlite3
 
 import pytest
 
-from tests.test_collector_transaction_truth import collector_case as collector_case, REQUEST, URL
+from tests.test_collector_transaction_truth import (
+    admit_registered_subject_for_isolated_collector,
+    collector_case as collector_case,
+    REQUEST,
+    URL,
+)
 from tests.test_collector_comment_pages import comments_case as comments_case
+
+
+@pytest.fixture(autouse=True)
+def _admit_registered_subject_for_request_confirmation(request):
+    case = request.getfixturevalue("collector_case")
+    admit_registered_subject_for_isolated_collector(case)
 
 
 def post(case, action, request=None, **extra):
@@ -74,7 +85,9 @@ def test_publication_window_excludes_outside_candidates_from_canonical(collector
     assert result['publication_window']['state'] == 'NO_MATCHING_OBSERVATIONS'
     assert result['publication_window']['outside_window_count'] == 1
     with sqlite3.connect(case['db_path']) as connection:
-        assert connection.execute('SELECT COUNT(*) FROM notes').fetchone()[0] == 0
+        assert connection.execute('SELECT note_id FROM notes').fetchall() == [
+            (case['subject_operation_note_id'],)
+        ]
         assert connection.execute('SELECT COUNT(*) FROM canonical_data').fetchone()[0] == 0
 
 
@@ -100,7 +113,9 @@ def test_unknown_native_publication_time_remains_review_only(collector_case, mon
     assert result['publication_window']['review_required_count'] == 1
     assert result['publication_window']['reviews'][0]['status'] == 'REVIEW_REQUIRED_NATIVE_PUBLICATION_TIME_UNKNOWN'
     with sqlite3.connect(case['db_path']) as connection:
-        assert connection.execute('SELECT COUNT(*) FROM notes').fetchone()[0] == 0
+        assert connection.execute('SELECT note_id FROM notes').fetchall() == [
+            (case['subject_operation_note_id'],)
+        ]
         assert connection.execute('SELECT COUNT(*) FROM canonical_data').fetchone()[0] == 0
 
 
@@ -220,8 +235,14 @@ def test_provider_and_transport_confirmation_cannot_be_reused_for_another_route(
             'max_results':1,'provider_mode':'public','public_transport':'http'}
     case['gate'].grant_permission(case['permission'].PermissionLevel.HUMAN_APPROVAL)
     prepared=post(case,'prepare',source).get_json()
+    assert prepared['status'] == 'CONFIRMATION_REQUIRED'
+    assert prepared['approval_resource']
     changed={**source,'public_transport':'browser'}
-    assert post(case,'prepare',changed).get_json()['approval_resource']!=prepared['approval_resource']
+    changed_prepared=post(case,'prepare',changed)
+    assert changed_prepared.status_code == 200, changed_prepared.get_json()
+    changed_payload=changed_prepared.get_json()
+    assert changed_payload['status'] == 'CONFIRMATION_REQUIRED'
+    assert changed_payload['approval_resource']!=prepared['approval_resource']
     assert post(case,'confirm',changed,confirmed_resource=prepared['approval_resource']).status_code==403
     assert post(case,'confirm',source,confirmed_resource=prepared['approval_resource']).get_json()['approved']
     assert post(case,'run',changed).get_json()['status']=='APPROVAL_REQUIRED'

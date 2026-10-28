@@ -346,8 +346,11 @@ def test_output_and_unsupported_features_fail_before_process(media, render_calls
             rendering.render_timeline(timeline, target)
     with pytest.raises(VideoEditingError, match="OVERLAYS_REQUIRE_VIDEO_OUTPUT"):
         rendering.render_timeline(timeline.add_caption(0, .5, "caption"), tmp_path / "unsupported.wav", output_kind="audio")
+    non_bgm_audio = Timeline.from_assets([media]).add_clip(
+        media.asset_id, source_out=1, audio_role="original", audio_stream_index=0)
     with pytest.raises(VideoEditingError, match="AUDIO_DUCKING_REQUIRES_BACKGROUND_MUSIC"):
-        ducked = timeline.set_audio_mix(timeline.tracks[0].clips[0].clip_id, AudioMix(ducking=True))
+        ducked = non_bgm_audio.set_audio_mix(
+            non_bgm_audio.tracks[0].clips[0].clip_id, AudioMix(ducking=True))
         rendering.render_timeline(ducked, tmp_path / "unsupported.mp4")
     multi = timeline.add_clip(media.asset_id, source_out=1, audio_role="muted")
     rendered = rendering.render_timeline(multi, tmp_path / "multi.mp4")

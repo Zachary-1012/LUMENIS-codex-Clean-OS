@@ -24,7 +24,7 @@ class TestFacebookAdapter:
         assert r.success is False
         assert "关键词为空" in r.error
 
-    @patch("lumenis.adapters.facebook.FacebookAdapter._search_browser")
+    @patch("lumenis.adapters.facebook.FacebookAdapter._native_read")
     def test_search_success(self, mock_search):
         from lumenis.adapters.facebook import FacebookAdapter, CollectedNote
         mock_search.return_value = MagicMock(success=True, notes=[
@@ -65,7 +65,7 @@ class TestXAdapter:
         assert r.success is False
         assert "关键词为空" in r.error
 
-    @patch("lumenis.adapters.x_platform.XAdapter._search_browser")
+    @patch("lumenis.adapters.x_platform.XAdapter._native_read")
     def test_search_success(self, mock_search):
         from lumenis.adapters.x_platform import XAdapter, CollectedNote
         mock_search.return_value = MagicMock(success=True, notes=[
@@ -186,7 +186,7 @@ def test_facebook_comment_body_is_not_truncated_or_assigned_zero_metrics():
         page = browser.return_value.new_page.return_value
         page.query_selector.return_value = None
         page.query_selector_all.return_value = [comment]
-        result = FacebookAdapter(cookie_string="test-only").comments("synthetic-post")
+        result = FacebookAdapter(cookie_string="test-only")._comments_dom_observation("123456789", 20)
 
     assert result.success and len(result.notes) == 1
     note = result.notes[0]
@@ -329,13 +329,14 @@ def test_main_facebook_adapter_constructs_search_and_detail_results():
     class Backend:
         def search(self, keyword, *, max_results):
             assert keyword == "brand update" and max_results == 12
-            return SimpleNamespace(success=True, notes=[note], raw_count=1, error="")
+            return SimpleNamespace(success=True, notes=[note], raw_count=1, error="", metadata={})
 
         def detail(self, content_id):
             assert content_id in {"123456789", "https://www.facebook.com/page/posts/123456789"}
             return SimpleNamespace(success=True, notes=[note], raw_count=1, error="")
 
-        def comments(self, content_id, *, max_comments):
+        def comments(self, content_id, *, max_comments, cursor=None,
+                     include_replies=False, source_url=None):
             return SimpleNamespace(success=True, notes=[], raw_count=0, error="")
 
         def creator(self, creator_id):
@@ -375,7 +376,7 @@ def test_main_facebook_adapter_never_promotes_unverified_detail_preview_to_nativ
                 success=True,
                 notes=[note("Search preview", {"body_kind": "SEARCH_PREVIEW",
                                                 "body_status": "SEARCH_PREVIEW_ONLY"})],
-                raw_count=1, error="",
+                raw_count=1, error="", metadata={},
             )
 
         def detail(self, _content_id):

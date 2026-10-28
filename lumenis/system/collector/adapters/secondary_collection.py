@@ -342,6 +342,11 @@ def get_collection_surface() -> Dict[str, Any]:
         last_run = _last_run(platform)
         metadata = health.get("metadata") or {}
         health_scope = metadata.get("healthcheck_scope")
+        last_run_state = (str(last_run.get("state") or "").upper()
+                          if isinstance(last_run, dict) else "")
+        last_run_failed = bool(last_run_state and last_run_state not in {
+            "SUCCESS", "NO_NEW_DATA", "UNKNOWN",
+        })
         display_status = ("CONFIGURED" if health["status"] == "SUCCESS"
             and (health_scope in {"configuration_only", "public_endpoint_configuration"}
                  or metadata.get("network_attempted") is False
@@ -365,7 +370,8 @@ def get_collection_surface() -> Dict[str, Any]:
             # Local readiness and the last real run are separate facts.  A
             # readable cookie file must not overwrite a verified session
             # failure or collection error in the product surface.
-            "status": "PLANNED" if cap["implementation_state"] == "PLANNED" else display_status,
+            "status": (last_run_state if last_run_failed else
+                       "PLANNED" if cap["implementation_state"] == "PLANNED" else display_status),
             "health": health,
             "last_run": last_run,
             "external_write": False,

@@ -1982,7 +1982,9 @@
       "retained_flutter_clients": "Initial retained-client run:191 pass/2 fail; existing fr locale and valid audio response made two malformed-input fixtures stale. Corrected invalid inputs retain rejection assertions; both affected files rerun:49 passed.",
       "developer_hooks": "Initial193-case tool regression had6 errors in5 pause methods. Corrected optional execution-binding compatibility and pause evidence flow;9 affected/new cases passed. Global workstation hooks were not installed or modified.",
       "signing_and_backup_repair": "Workspace signing and cold-start checks passed; all 37 backup contracts passed including tampered/unowned companion retention. Only isolated synthetic databases used for these checks.",
-      "ci_repair_limits": "Exact current-head CI remains required; prior CI failures and unrun downstream steps do not count as passed."
+      "ci_repair_limits": "Exact current-head CI remains required. Prior candidate-suite failures are preserved; local focused checks do not establish Linux Chromium execution, production loading or product acceptance.",
+      "candidate_contract_reconciliation": "Current synthetic fixtures bind admitted China subjects, exact inference request/attempt receipts and safe workspace projections; Office/media assertions retain conversion rechecks and valid audio semantics. Real public-browser nodes remain actual Chromium tests in the required offline namespace; no fixture substitutes for their execution.",
+      "http_isolation": "HTTP checks use only process-owned ephemeral loopback listeners and schema-initialized disposable databases. Metric fixtures migrate before inserting signed Evidence; production port 8201 is not used."
     },
     "remaining": [
       "New frontend and all original professional user-outcome requirements remain unaccepted.",

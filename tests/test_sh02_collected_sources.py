@@ -77,7 +77,9 @@ def test_global_original_appears_and_reopens_without_focus_promotion_or_queue_wr
     original = queue.get(case["task_id"])
     payload = json.loads(json.dumps(original["payload"]))
     payload["binding"]["identity"] = {"principal_ref": "another-workspace"}
-    queue.enqueue_once("collector_manual_request", payload, "different-owner-same-source")
+    request_key = "different-owner-same-source"
+    payload["request_key"] = request_key
+    queue.enqueue_once("collector_manual_request", payload, request_key)
     queue.close()
     def no_queue_constructor(*args, **kwargs):
         raise AssertionError("library read must not initialize/migrate the task queue")

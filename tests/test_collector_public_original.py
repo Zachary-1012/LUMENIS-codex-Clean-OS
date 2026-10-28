@@ -6,7 +6,18 @@ import sqlite3
 
 import pytest
 
-from tests.test_collector_transaction_truth import collector_case as collector_case, URL, REGISTERED_NAME
+from tests.test_collector_transaction_truth import (
+    admit_registered_subject_for_isolated_collector,
+    collector_case as collector_case,
+    URL,
+    REGISTERED_NAME,
+)
+
+
+@pytest.fixture(autouse=True)
+def _admit_registered_subject_for_public_original(request):
+    case = request.getfixturevalue("collector_case")
+    admit_registered_subject_for_isolated_collector(case)
 
 
 def test_media_only_public_source_empty_text_original_and_processing_prepare(collector_case,monkeypatch,tmp_path):

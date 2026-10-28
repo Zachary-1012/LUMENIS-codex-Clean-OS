@@ -68,10 +68,16 @@ def test_actual_agent_output_schema_failure_is_persistent_and_not_reported_as_co
     response = api.post('/api/ai/tasks/' + identifier + '/run', headers=OWN)
     assert response.status_code == 200, response.get_json()
     task = response.get_json()['task']
-    assert task['status'] == 'failed' and task['result'] is None
+    assert task['status'] == 'failed'
+    assert task['workspace_view']['status'] == 'failed'
+    assert task['workspace_view']['error_code'] == 'TASK_FAILED'
+    assert 'result' not in task and 'error' not in task
     fresh = app.test_client().get('/api/ai/tasks/' + identifier, headers=OWN)
     assert fresh.status_code == 200, fresh.get_json()
-    assert fresh.get_json()['task']['status'] == 'failed'
+    reopened = fresh.get_json()['task']
+    assert reopened['status'] == 'failed'
+    assert reopened['workspace_view'] == task['workspace_view']
+    assert 'result' not in reopened and 'error' not in reopened
     with sqlite3.connect(path) as con:
         row = con.execute('SELECT status,output_json FROM skill_executions').fetchone()
         assert row[0] == 'failed'
@@ -104,8 +110,12 @@ def test_cancel_control_reaches_actual_skill_and_does_not_cancel_another_task(ag
     assert completed.status_code == 200, completed.get_json()
     assert completed.get_json()['task']['status'] == 'succeeded', completed.get_json()
     assert observed == [first, second]
-    assert app.test_client().get('/api/ai/tasks/' + first, headers=OWN).get_json()['task']['status'] == 'cancelled'
-    assert app.test_client().get('/api/ai/tasks/' + second, headers=OWN).get_json()['task']['result'] == completed.get_json()['task']['result']
+    cancelled_readback = app.test_client().get('/api/ai/tasks/' + first, headers=OWN).get_json()['task']
+    completed_readback = app.test_client().get('/api/ai/tasks/' + second, headers=OWN).get_json()['task']
+    assert cancelled_readback['status'] == 'cancelled'
+    assert completed_readback['workspace_view'] == completed.get_json()['task']['workspace_view']
+    for task in (cancelled_readback, completed_readback, completed.get_json()['task']):
+        assert 'result' not in task and 'error' not in task and 'context' not in task
     with sqlite3.connect(path) as con:
         # Opaque server control is never model input, trace, corpus or JSON.
         assert con.execute("SELECT COUNT(*) FROM skill_executions WHERE input_json LIKE '%execution_control%'").fetchone()[0] == 0
@@ -123,8 +133,9 @@ def test_queued_skill_pins_implementation_before_worker_and_preserves_terminal_r
     response = api.post('/api/ai/tasks/' + identifier + '/run', headers=OWN)
     assert response.status_code == 200, response.get_json()
     result = response.get_json()['task']
-    assert result['status'] == 'rejected' and result['error'] == 'BACKGROUND_BINDING_CHANGED'
-    assert result['output_json'] is None and calls == []
+    assert result['status'] == 'rejected'
+    assert result['workspace_view']['error_code'] == 'BACKGROUND_BINDING_CHANGED'
+    assert 'error' not in result and 'output_json' not in result and calls == []
     assert app.test_client().get('/api/ai/tasks/' + identifier, headers=OWN).get_json()['task'] == result
 
 
@@ -147,11 +158,15 @@ def test_queued_skill_cancel_control_is_separate_for_each_existing_job(backgroun
     identifiers.extend([submit_skill(api), submit_skill(api)])
     cancelled = api.post('/api/ai/tasks/' + identifiers[0] + '/run', headers=OWN).get_json()['task']
     completed = api.post('/api/ai/tasks/' + identifiers[1] + '/run', headers=OWN).get_json()['task']
-    assert cancelled['status'] == 'cancelled' and cancelled['output_json'] is None
+    assert cancelled['status'] == 'cancelled'
+    assert cancelled['workspace_view']['status'] == 'cancelled'
+    assert 'output_json' not in cancelled and 'error' not in cancelled
     assert completed['status'] == 'completed'
     assert observed == identifiers
     assert app.test_client().get('/api/ai/tasks/' + identifiers[0], headers=OWN).get_json()['task']['status'] == 'cancelled'
-    assert app.test_client().get('/api/ai/tasks/' + identifiers[1], headers=OWN).get_json()['task']['output_json'] == completed['output_json']
+    completed_readback = app.test_client().get('/api/ai/tasks/' + identifiers[1], headers=OWN).get_json()['task']
+    assert completed_readback == completed
+    assert 'output_json' not in completed_readback and 'error' not in completed_readback
 
 
 @pytest.mark.parametrize('invalid_output', [False, True])
@@ -172,5 +187,10 @@ def test_immediate_builtin_uses_same_contract_without_external_adapter(skill_cli
     assert body['success'] is not invalid_output
     row = app.test_client().get('/api/ai/tasks/' + body['execution_id'], headers=OWN).get_json()['task']
     assert row['status'] == ('failed' if invalid_output else 'completed')
+    assert 'output_json' not in row and 'error' not in row
     if invalid_output:
-        assert json.loads(row['output_json']).get('result') is None
+        with sqlite3.connect(path) as con:
+            stored = con.execute('SELECT status,output_json FROM skill_executions WHERE execution_id=?',
+                                 (body['execution_id'],)).fetchone()
+        assert stored[0] == 'failed'
+        assert json.loads(stored[1]).get('result') is None

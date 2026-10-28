@@ -756,7 +756,9 @@ def test_full_app_real_loopback_http_learning_and_result_restart(agent_client, m
         status, ran = call(root + '/run', {})
         assert status == 200 and ran['task']['status'] == 'succeeded', ran
         reset_task_engine()
-        assert call(root)[1]['task']['result'] == ran['task']['result']
+        reopened = call(root)[1]['task']
+        assert reopened['workspace_view'] == ran['task']['workspace_view']
+        assert 'result' not in reopened and 'result' not in ran['task']
         status, made = call(root + '/learning', {'operation': 'suggest', 'content': {'instruction': 'Preserve provenance'}})
         assert status == 200, made
         item = made['suggestion']

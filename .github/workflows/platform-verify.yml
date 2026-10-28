@@ -97,12 +97,13 @@ jobs:
       - name: Prepare product schema and media tools (BLOCKING)
         shell: bash
         run: |
-          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1 || ! test -f /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc; then
             sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends ffmpeg
+            sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk
           fi
           ffmpeg -version
           ffprobe -version
+          test -f /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
 
       - name: Prepare disposable product schema (BLOCKING)
         shell: bash
@@ -212,6 +213,7 @@ jobs:
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
           PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONUNBUFFERED: "1"
         run: |
           python - <<'PY'
           import os, pathlib, socket, tempfile
@@ -236,8 +238,15 @@ jobs:
           finally:
               connection.close()
           import pytest
+          class FailureLog:
+              def pytest_runtest_logreport(self, report):
+                  if report.failed:
+                      print('\nFAILED ' + report.nodeid[:400] + '\n' + str(report.longrepr)[-6000:], flush=True)
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-candidates.xml'),
+              # These browser nodes run below in the required offline Chromium namespace.
+              '--deselect=tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_installed_runtime_visible_native_read_and_original_custody',
+              '--deselect=tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_denial_and_private_subrequests_stop_without_backend_switch',
               '--basetemp=' + str(root / 'pytest'),
               'tests/test_agent_planner_evaluation.py',
               'tests/test_agent_skill_contract_binding.py',
@@ -315,7 +324,7 @@ jobs:
               'tests/test_audio_timeline_rendering.py',
               'tests/test_media_long_programme_contract.py',
               'tests/test_internal_pitch_shared_av.py::test_pitch_owner_response_preserves_unavailable_and_denied',
-              'tests/test_internal_pitch_shared_av.py::test_pitch_unauthenticated_read_cannot_initialize_account_database']))
+              'tests/test_internal_pitch_shared_av.py::test_pitch_unauthenticated_read_cannot_initialize_account_database'], plugins=[FailureLog()]))
           PY
 
       - name: Test owner HTTP authorization with owned ephemeral listener (BLOCKING)
@@ -381,27 +390,30 @@ jobs:
           os.environ.update(ZBC_DB_PATH=str(root/'seed.sqlite3'), ZBC_DATA_DIR=str(root),
               LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
               XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
-          original_connect = socket.socket.connect
-          original_connect_ex = socket.socket.connect_ex
-          original_bind = socket.socket.bind
-          original_getaddrinfo = socket.getaddrinfo
-          def no_other_network(*args, **kwargs):
-              raise RuntimeError('LOOPBACK_FIXTURE_OTHER_NETWORK_FORBIDDEN')
-          def local_address(host, port, *args, **kwargs):
-              if host != '127.0.0.1' or port != 8201:
-                  return no_other_network()
-              return original_getaddrinfo(host, port, *args, **kwargs)
-          socket.getaddrinfo = local_address
-          socket.gethostbyname = lambda host: '127.0.0.1' if host == '127.0.0.1' else no_other_network()
-          socket.gethostbyaddr = lambda host: ('localhost', [], ['127.0.0.1']) if host == '127.0.0.1' else no_other_network()
-          socket.socket.sendto = no_other_network
-          def checked(original, sock, address):
-              if not isinstance(address, tuple) or address[:2] != ('127.0.0.1', 8201):
-                  raise RuntimeError('LOOPBACK_FIXTURE_OTHER_NETWORK_FORBIDDEN')
-              return original(sock, address)
-          socket.socket.connect = lambda sock, address: checked(original_connect, sock, address)
-          socket.socket.connect_ex = lambda sock, address: checked(original_connect_ex, sock, address)
-          socket.socket.bind = lambda sock, address: checked(original_bind, sock, address)
+          import sqlite3
+          from lumenis.shared.database import apply_business_schema
+          connection = sqlite3.connect(root/'seed.sqlite3')
+          try:
+              apply_business_schema(connection)
+              connection.commit()
+          finally:
+              connection.close()
+          original_bind, original_connect = socket.socket.bind, socket.socket.connect
+          owned_ports = set()
+          def denied(*args, **kwargs):
+              raise RuntimeError('ONLY_OWNED_EPHEMERAL_HTTP_FIXTURE_ALLOWED')
+          def bind(sock, address):
+              if not isinstance(address, tuple) or address[:2] != ('127.0.0.1', 0):
+                  return denied()
+              result = original_bind(sock, address)
+              owned_ports.add(sock.getsockname()[1])
+              return result
+          def connect(sock, address):
+              if not isinstance(address, tuple) or address[0] != '127.0.0.1' or address[1] not in owned_ports:
+                  return denied()
+              return original_connect(sock, address)
+          socket.socket.bind, socket.socket.connect = bind, connect
+          socket.socket.connect_ex = socket.socket.sendto = denied
           import pytest
           raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-http.xml'),
@@ -449,10 +461,20 @@ jobs:
               LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
               LUMENIS_TEST_REAL_BROWSER='1', LUMENIS_TEST_CHROMIUM_EXECUTABLE=executable,
               XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
+          import sqlite3
+          from lumenis.shared.database import apply_business_schema
+          connection = sqlite3.connect(root/'seed.sqlite3')
+          try:
+              apply_business_schema(connection)
+              connection.commit()
+          finally:
+              connection.close()
           import pytest
           raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-browser.xml'),
-              'tests/test_browser_extract.py::test_real_chromium_visible_capture_without_network']))
+              'tests/test_browser_extract.py::test_real_chromium_visible_capture_without_network',
+              'tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_installed_runtime_visible_native_read_and_original_custody',
+              'tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_denial_and_private_subrequests_stop_without_backend_switch']))
           PY
 
       - name: Preserve real fixture XML receipts

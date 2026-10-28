@@ -144,6 +144,9 @@ def collector_case(tmp_path, monkeypatch):
     monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "collector-transaction-test")
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
 
+    import config
+    monkeypatch.setattr(config, "ENV_FILE", str(tmp_path / "isolated-no-env"))
+
     import database
     import experience_runtime
     import subject_registry
@@ -250,6 +253,8 @@ def collector_case(tmp_path, monkeypatch):
 
 def admit_registered_subject_for_isolated_collector(case: dict) -> None:
     """Give focused collector fixtures current, Evidence-backed CN identity."""
+    if case.get("subject_operation_note_id"):
+        return
     from datetime import datetime, timedelta
 
     from lumenis.shared.database.entity_relations import EntityRelationRepository

@@ -235,11 +235,19 @@ def test_typed_gateway_planning_contract_and_unavailable(monkeypatch):
             response_schema_json='{}', max_output_tokens=2000)
     def gateway(request, **kwargs):
         calls.append(request)
+        from lumenis.system.ai_gateway.owned_service import owned_service_request_digest
         return {'ok': True, 'status': 'COMPLETED', 'provider': 'owned', 'operation': 'agent_plan',
-            'request_id': 'fixture-request', 'request_digest': '1'*64, 'run_id': 'fixture-run',
+            'code': 'OWNED_INFERENCE_COMPLETED', 'attempt_id': 'attempt_' + '1'*32,
+            'domain_id': request.domain_id, 'scope': request.scope,
+            'request_id': request.request_id, 'request_digest': owned_service_request_digest(request),
+            'run_id': 'fixture-run',
             'model_id': 'gpt-6-luna', 'model_revision': 'fixture-revision', 'recipe': 'fixture-recipe',
-            'source_use_policy_sha256': 'a'*64, 'source_binding_sha256': 'b'*64,
-            'input_revision_sha256': 'c'*64, 'source_evidence_refs': ['fixture:source'],
+            'runtime_sha256': 'e'*64, 'executor_sha256': 'f'*64,
+            'source_use_policy_version': request.source_use_policy_version,
+            'source_use_policy_sha256': request.source_use_policy_sha256,
+            'source_binding_sha256': request.source_binding_sha256,
+            'input_revision_sha256': request.input_revision_sha256,
+            'source_evidence_refs': list(request.source_evidence_refs),
             'prompt_tokens': 100, 'completion_tokens': 20, 'total_tokens': 120,
             'real_input_bound': True, 'analysis': {'steps': [{
                 'action': 'Read local metadata', 'tool': 'zbc.skill_registry_snapshot',
