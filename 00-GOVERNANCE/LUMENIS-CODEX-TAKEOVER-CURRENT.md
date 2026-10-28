@@ -6,10 +6,10 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `SOURCE_RETIREMENT_ONLY`
+Implementation publication state: `RULES_ONLY_PUBLICATION`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
-以上标识只说明此源码快照属于获批清退，不表示已合并；main 发布必须经 PR 检查、审阅、合并和远端读回。开发分支不等于 main；不以本文件提前宣称合并、运行加载或验收完成。
+PR #148 已在两项必需检查通过后合入 main，合并提交为 `5b27421cf24e951796a462ecd0b29515b5f12aa1`，可由 [PR #148](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/148) 核对。该记录仅证明源码清退发布，不证明进程加载或产品验收。其后源码仍以实际 Git 读回为准。
 
 | 范围 | 当前源码与验收事实 | 对应依据 |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 | 文件职责 | 唯一入口 |
 | --- | --- |
-| 执行约束 | [AGENTS.md](../AGENTS.md) |
+| 执行约束与编码行为 | [AGENTS.md](../AGENTS.md) |
 | 原则层 | [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) |
 | 机器治理、门禁与批准 | [LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json](LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json) |
 | 产品架构与领域边界 | [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) |

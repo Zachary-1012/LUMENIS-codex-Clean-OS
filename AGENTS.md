@@ -31,8 +31,11 @@ developer tooling and SYSTEM runtime remain in scope.
 
 AI enhances SYSTEM, CTH, BMP and Shared, not only chat or round five. Basic
 business works without model/API/GPU; unavailable AI-exclusive actions do not
-block normal tasks. AI output is derived, never Canonical fact, Permission
-or an external-effect grant.
+block normal tasks. AI produces user-facing answers, analyses and creative work
+through these product owners. Factual answers carry verifiable sources; derived
+claims retain method, uncertainty and version. Verified claims may enter the
+existing Evidence/Canonical admission path. Model output alone never grants
+fact status, Permission or an external effect.
 
 Analysis and mathematics belong to existing backend domain/Shared owners. Users
 provide questions, scope, time and resources; they receive analyzed deliverables,
@@ -85,7 +88,7 @@ resume conditions, defaults and configuration cannot establish current execution
 Publication dispatches no window. Owner, Permission, rights, data, cost,
 shared-write reservations and real acceptance remain binding.
 
-基础业务及数据分析不得依赖 AI/API/GPU。AI 不生产 Canonical 事实；先验无 AI 成果，再验增强。
+基础业务及数据分析不得依赖 AI/API/GPU。AI在产品内交付有来源支撑的事实回答和分析；未经既有Evidence/Canonical验证的生成内容不自动成为规范事实。无AI成果与AI增强分别验收。
 数学研究按 Architecture/Math 采用记录落实计算与约束；权限、权益和数据保护不变。
 
 ### 2026-10-10 OpenAI Math v2 — bounded product implementation
@@ -437,7 +440,7 @@ Product Owner's newest explicit instruction.
 1. **直接开发，不重复规划。** 以现有完整产品规划和源码为依据。已经明确的需求直接实现，不反复分析、重新设计、拆解计划或制作替代性交付文档。只在权威、主线、输入或实际风险发生变化时更新相关上下文；压缩续接先读 `.codex/README.md` 与原任务记录，保留完整要求、实际成果、待办和未决效果，不能用摘要缩减原要求。
 2. **以真实能力闭环为开发单位。** 根据原功能要求完成实际需要的输入、处理逻辑、数据连接、前端交互、结果生成及后续操作。需要采集的功能贯通真实采集、数据处理、持久化和业务使用；不依赖采集的功能直接实现自身工作流程。只有用户能实际完成对应任务，才算能力实现，不能用孤立页面、接口或代码片段代替。
 3. **复用开源、二改适配完整规划，不限制必要的代码改造。** 本方式适用于整个产品，包括完整前端、采集与数据、CTH、BMP、任务内研究与创作、媒体、AI及SYSTEM；不是只接采集，也不限于某一个开源项目。先复用已正确的实现，针对原规划中的实际能力缺口选择合适且许可兼容的开源代码，固定来源版本，直接接入现有Owner并完成必要二改；源码、依赖安装或独立脚本存在不算接入。开源代码必须适配寰意的完整能力、业务语义、数据/权限、视觉/交互和验收要求，不能反过来缩减、替换或改变规划。前端沿当前Experience及PO确定的像素赛博＋植物生态＋复古未来主义、满天星Logo和五植物角色适配，不采用上游默认模板或被否定的旧页面骨架。开源缺失的必要能力继续自研补齐；需要跨模块修改、重构或替换时直接完成，不追求最小改动，不创建重复架构。保全有效未提交成果、原始资料和数据；沿原Owner同步实际调用者和消费者，并按§17保留上游许可及归属。
-4. **简化工程，消除无效复杂度。** 上线前完成原规划及正常使用必需的功能、安装/更新、权限与隐私、安全、数据一致性、异常恢复、性能与无障碍；每项工作必须对应原要求或实际用户风险，不以臆想需求、假设性问题或额外管理机制扩张范围。已有许可兼容且适用的开源实现优先复用并适配，普通代码/配置/依赖问题直接解决，不跳过，也不因等待其他无关模块而停工；真实授权、资源或外部限制只阻塞受影响动作，不能伪报通过。 借鉴OpenCode的编码原则：简单逻辑直接实现，复杂逻辑合理拆分；输入在明确边界校验，避免内部重复验证；只在确有复用或复杂度需要时建立抽象；不为未经证实的假设增加代码和机制；不复制已有功能，不增加与实际产品能力无关的实现。减少无效代码与无效工作，而不是减少必要开发量。借鉴原则不恢复已搁置的OpenCode执行路线；实际授权、身份、来源与版本边界不得省略。
+4. **简化工程，消除无效复杂度。** 上线前完成原规划及正常使用必需的功能、安装/更新、权限与隐私、安全、数据一致性、异常恢复、性能与无障碍；只处理原要求和实际用户风险，不用臆想需求扩张范围。优先复用适用且许可兼容的开源；普通代码、配置、依赖问题直接解决，不等无关模块，真实授权或外部限制只阻塞相关动作，不伪报通过。未知输入在所属入口或外部边界一次性校验，向内传递类型化的值并直接使用；不得重复校验已由 schema、构造函数或内部类型保证的值，不反复做 `typeof value === "object"`、属性存在性等防御检查。一次性逻辑写在使用处，不提前提取单次使用的辅助函数；只有确有复用、封装真正复杂的边界，或独立名称能清楚改善调用者时才提取。尽可能避免 `try/catch`：可直接传播的异常直接传播；仅在明确的边界恢复、错误转换或资源清理需要时捕获，不吞错或伪造成功。简单逻辑直接实现，复杂逻辑合理拆分，不为未经证实的假设增加机制或复制功能。减少无效工作，不减少必要能力；借鉴OpenCode原则不恢复其执行路线，授权、身份、来源与版本边界不省略。
 5. **真实功能必须由产品自己完成并真正接通。** 前端调用实际处理能力，后端形成真实业务结果。采集由寰意自身代码在原用户触发/明确选择的调度、来源及权限合同内完成获取、解析、去重、持久化、续采和恢复；研发Agent代搜、代抓后导入不能冒充产品采集能力。其他能力同样不得依赖开发人员在线代执行。不得用模拟数据、空实现、固定回复、虚假保存或装饰性交互冒充完成。新功能必须进入实际可运行的产品，不能只存在于源码或测试环境；保存、修订、重开、恢复和适用的业务消费者按原要求接通。
 6. **必要验证，不让测试取代开发。** 开发过程中执行必要的编译、类型检查、受影响功能测试和安全检查；不因每次局部修改重复运行全仓测试、大规模审计或重做开发计划。完整能力接通后集中进行产品级集成测试、系统回归、问题修复和最终验收。既有必要质量门禁正常保留，复用未变的有效证据；不以检查次数代替开发进展。
 7. **发现问题直接修复，持续完成产品。** 根据实际源码和运行结果定位并修复根本原因，不围绕同一问题反复打补丁。确定的仓库内缺陷直接修复；外部协议、框架或根因不确定时，只查能改变修复的当前官方或上游资料。完成一项能力后继续当前已获授权的原规划未完成能力，不擅自恢复暂停范围。不以单项测试、局部功能、代码提交或报告作为整个产品交付证明。
@@ -608,14 +611,9 @@ Explicit Completion Criteria
 
 ### Complete outcome execution
 
-The engineering conduct rules above govern full-outcome development, context
-continuity, reuse and proportional verification. Existing Owner cards carry all
-original requirements, consumer dependencies, recovery, Evaluation and actual
-acceptance. Reuse unchanged evidence; no per-function handoff, duplicate queue,
-candidate tree or progress-only report replaces a complete authorized outcome.
-Current direct PO scope and pause remain binding. Historical Goals and receipts
-never resume work or alter model selection. M integrates and accepts; owners
-resolve their ordinary defects under existing reservations and authority.
+Apply the engineering conduct rules above and existing complete Owner cards;
+retain their original requirements, consumers, recovery, Evaluation and acceptance.
+Current direct PO scope and pause control execution.
 
 Before a capability change, run
 `python scripts/audit_tools/locate_capability_context.py --capability <existing-family> --query <specific-task-term>`
@@ -1697,15 +1695,11 @@ F binds honest states when dispatched. Rule publication does not dispatch
 any window. Current PO decisions determine scheduling; the ledger records
 verified observations, never an inferred historical wait/resume/model order.
 
-### 2026-10-08 useful progressive delivery and logic review
+### Progressive delivery and logic review
 
-The PO requires a whole-product logic review after synchronization and task-shaped
-progressively useful Intelligent UI. Experience §38 owns component choice, useful
-partial results, factual correction, user-edit preservation and wait-time review;
-Architecture retains full J1-J8/U01-U25. Keep existing owner/source gap records,
-not parallel Task Cards. Research/streaming/rule publication is not UI acceptance.
-Current dispatch/pause and the existing monitoring cadence follow direct PO
-instructions and current observations; without actionable work M waits.
+Review whole-product logic after synchronization. Experience §38 owns task-shaped
+progressive results, correction, preserved user edits and wait-time review;
+Architecture retains J1-J8/U01-U25. Research or publication is not UI acceptance.
 
 ### Product-owned internal browser — revised 2026-10-11
 
