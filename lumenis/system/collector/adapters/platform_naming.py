@@ -14,9 +14,10 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -39,6 +40,11 @@ PLATFORM_ALIASES: Dict[str, str] = {
     "public_http": "public_http", "http": "public_http", "web_http": "public_http",
     "web_atom": "web_atom", "atom": "web_atom",
     "sitemap": "sitemap", "xml_sitemap": "sitemap",
+    # Registered browser discovery is distinct from the anonymous News RSS feed.
+    "google": "google", "google_search": "google", "谷歌": "google", "谷歌搜索": "google",
+    # Blog/Cafe object kinds remain explicit inside these Korean platforms.
+    "naver": "naver", "naver_blog": "naver", "naver_cafe": "naver", "네이버": "naver",
+    "daum": "daum", "daum_cafe": "daum", "tistory": "daum", "다음": "daum", "티스토리": "daum",
     # 微博
     "weibo": "weibo", "wb": "weibo", "微博": "weibo",
     # B 站
@@ -74,6 +80,8 @@ PLATFORM_DISPLAY_NAME: Dict[str, str] = {
     "xiaohongshu": "小红书", "douyin": "抖音", "kuaishou": "快手", "weibo": "微博",
     "web_rss": "Web RSS",
     "public_http": "Public HTTP", "web_atom": "Web Atom", "sitemap": "Sitemap",
+    "google": "Google 搜索",
+    "naver": "Naver", "daum": "Daum / Tistory",
     "bilibili": "B站", "zhihu": "知乎", "tieba": "贴吧",
     "instagram": "Instagram", "facebook": "Facebook", "x": "X",
     "wechat": "微信公众号",
@@ -164,6 +172,21 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         like_field="like_count", comment_field="comment_count", collect_field=None,
         share_field="share_count", url_template="",
         notes="公共 Sitemap URL discovery；lastmod 仅表示页面最后修改，不作为发布时间"),
+    "google": PlatformFieldSpec(
+        content_id="content_id", author_id="author_id", published_at="publish_datetime",
+        like_field="likes", comment_field="comments", collect_field="collects", share_field="shares",
+        type_field="body_kind", url_template="",
+        notes="已注册只读浏览器搜索发现；稳定URL hash是发现项身份，摘要不是目标原文，缺失互动保持NULL"),
+    "naver": PlatformFieldSpec(
+        content_id="native_content_id", author_id="author_id", published_at="publish_datetime",
+        like_field="likes", comment_field="comments", collect_field="collects", share_field="shares",
+        type_field="native_kind", url_template="",
+        notes="Naver Blog/Cafe typed source identity；博客ID不是登录账号，Cafe社区不是作者；索引/RSS不充当原文，指标缺失为NULL"),
+    "daum": PlatformFieldSpec(
+        content_id="native_content_id", author_id="author_id", published_at="publish_datetime",
+        like_field="likes", comment_field="comments", collect_field="collects", share_field="shares",
+        type_field="native_kind", url_template="",
+        notes="Daum Cafe/Tistory typed source identity；cafe/board/article与tistory/blog/post分别保留，未观察互动不填0"),
     "weibo": PlatformFieldSpec(
         content_id="mid", author_id="user_id", id_is_bigint=True,
         published_at="created_at", like_field="attitudes_count", comment_field="comments_count",
@@ -234,11 +257,11 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         notes="TikTok；digg_count=点赞；author_username为@用户名；video_id为BigInt字符串保精度"),
     "reddit": PlatformFieldSpec(
         content_id="post_id", author_id="author_fullname",
-        published_at="created_utc", like_field="score", comment_field="num_comments",
+        published_at="created_utc", like_field="like_count", comment_field="num_comments",
         collect_field=None, share_field="num_crossposts",
         type_field="post_hint",
         url_template="https://www.reddit.com{permalink}",
-        notes="Reddit；score=upvotes-downvotes；created_utc为Unix时间戳(float)；upvote_ratio为点赞比例"),
+        notes="Reddit；score/net_votes保留为原生净票，不能充当likes；created_utc为原生Unix时间，未知赞数保持NULL"),
     "linkedin": PlatformFieldSpec(
         content_id="post_id", author_id="author_id",
         published_at="created_at", like_field="like_count", comment_field="comment_count",
@@ -247,12 +270,12 @@ PLATFORM_NATIVE_FIELDS: Dict[str, PlatformFieldSpec] = {
         url_template="",
         notes="LinkedIn；post_id为URN格式(urn:li:activity:xxx)；impression_count为展示数；需官方API权限"),
     "github": PlatformFieldSpec(
-        content_id="repo_id", author_id="owner_id",
-        published_at="created_at", like_field="stargazers_count", comment_field="open_issues_count",
-        collect_field=None, share_field="forks_count",
+        content_id="native_content_id", author_id="owner_id",
+        published_at="created_at", like_field="reactions", comment_field="comments",
+        collect_field=None, share_field="share_count",
         type_field="object_type",
-        url_template="https://github.com/{full_name}",
-        notes="GitHub REST API v3；按原生对象模型分repositories/issues/pull_requests/releases四表；repo_id为INTEGER"),
+        url_template="",
+        notes="GitHub既有仓库保留repo_id；Issue/PR/release使用原URL及类型绑定的native_content_id，原生数值ID和来源URL分别保留"),
 }
 
 
@@ -471,6 +494,58 @@ def to_canonical_record(raw_record: Dict[str, Any], platform: Optional[str] = No
             out["content_id"] = _exact_nonempty_text(raw_record.get("shortcode"))
         if plat == "bilibili":
             out["published_at"] = _normalize_bilibili_publication(out["published_at"])
+        if plat == 'google':
+            out['published_at'] = _exact_nonempty_text(out['published_at'])
+        if plat in {'naver', 'daum'}:
+            identity = _exact_nonempty_text(raw_record.get('native_content_id'))
+            kinds = ({'blog': r'blog:[A-Za-z0-9_-]{1,64}:[0-9]{1,20}',
+                      'cafe': r'cafe:[A-Za-z0-9_-]{1,64}:[0-9]{1,20}',
+                      'blog_profile': r'profile:blog:[A-Za-z0-9_-]{1,64}'} if plat == 'naver' else
+                     {'tistory': r'tistory:[A-Za-z0-9-]{1,63}:[0-9]{1,20}',
+                      'cafe': r'cafe:[A-Za-z0-9_-]{1,100}:[A-Za-z0-9_-]{1,100}:[0-9]{1,20}',
+                      'tistory_profile': r'profile:tistory:[A-Za-z0-9-]{1,63}'})
+            pattern = kinds.get(raw_record.get('native_kind'))
+            out['content_id'] = identity if pattern and identity and re.fullmatch(pattern, identity) else None
+            out['published_at'] = _exact_nonempty_text(out['published_at'])
+        if (plat == 'channels' and out['content_id'] in (None, '')
+                and raw_record.get('source_identity_kind') == 'PUBLIC_URL_SHA256'
+                and raw_record.get('native_identity_state') == 'PUBLIC_URL_IDENTITY_ONLY'):
+            source_url = _exact_nonempty_text(raw_record.get('url'))
+            source_id = _exact_nonempty_text(raw_record.get('source_content_id'))
+            # A public document can have stable source identity without exposing
+            # the platform object ID. Keep object_id absent and verify this
+            # explicitly typed source hash instead of manufacturing native data.
+            if (source_url is not None and source_id == 'public-url:'
+                    + hashlib.sha256(source_url.encode('utf-8')).hexdigest()):
+                out['content_id'] = source_id
+        if plat == 'zhihu':
+            kind = raw_record.get('object_type')
+            if kind in {'article','question'}:
+                native_id = normalize_content_id('zhihu',raw_record.get(kind+'_id'))
+                out['content_id'] = f'zhihu:{kind}:{native_id}' if native_id else None
+            if out['author_id'] is None:
+                out['author_id'] = _normalize_author_identity(raw_record.get('author_id'))
+            out['content_type'] = kind or out['content_type']
+        if plat == 'github':
+            # Repository IDs and issue/PR/release IDs inhabit distinct native
+            # object namespaces. A discussion ID must never become repo_id.
+            identity = _normalize_author_identity(raw_record.get('native_content_id'))
+            kind = raw_record.get('native_object_kind')
+            if identity is None and kind in (None, 'repository'):
+                identity = _normalize_author_identity(raw_record.get('repo_id'))
+            out['content_id'] = identity
+            out['content_type'] = kind or out['content_type']
+            if out['author_id'] is None:
+                out['author_id'] = _normalize_author_identity(raw_record.get('author_id'))
+            source_url = _exact_nonempty_text(raw_record.get('native_source_url'))
+            if source_url is not None:
+                out['url'] = source_url
+            reactions = raw_record.get('reactions')
+            positive = reactions.get('+1') if isinstance(reactions, dict) else None
+            comments = raw_record.get('comments') if kind in {'issue', 'pull_request'} else None
+            out['like_count'] = positive if type(positive) is int and positive >= 0 else None
+            out['comment_count'] = comments if type(comments) is int and comments >= 0 else None
+            out['collect_count'] = out['share_count'] = None
     return out
 
 
@@ -631,6 +706,27 @@ def get_raw_table(platform: Optional[str], table_type: str = "content") -> Optio
 # 每个平台 Raw 内容表字段 → platform_contents 统一字段的完整映射
 # 仅列需要映射的字段，raw_data 整体保留
 PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
+    "naver": {
+        "platform_content_id": "native_content_id", "content_type": "native_kind",
+        "author_id": "author_id", "author_name": "author_nickname", "title": "title", "content": "content",
+        "published_at": "publish_datetime", "url": "url", "collected_at": "captured_at",
+        "like_count": "likes", "comment_count": "comments", "collect_count": "collects",
+        "share_count": "shares", "view_count": "views", "media_list": "media_list",
+    },
+    "daum": {
+        "platform_content_id": "native_content_id", "content_type": "native_kind",
+        "author_id": "author_id", "author_name": "author_nickname", "title": "title", "content": "content",
+        "published_at": "publish_datetime", "url": "url", "collected_at": "captured_at",
+        "like_count": "likes", "comment_count": "comments", "collect_count": "collects",
+        "share_count": "shares", "view_count": "views", "media_list": "media_list",
+    },
+    "google": {
+        "platform_content_id": "content_id", "author_id": "author_id",
+        "author_name": "author_nickname", "title": "title", "content": "content",
+        "published_at": "publish_datetime", "url": "url", "content_type": "body_kind",
+        "like_count": "likes", "comment_count": "comments", "collect_count": "collects",
+        "share_count": "shares", "collected_at": "captured_at",
+    },
     "xiaohongshu": {
         "platform_content_id": "note_id", "content_type": "type",
         "author_id": "user_id", "author_name": "nickname",
@@ -681,6 +777,7 @@ PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
         "title": "title", "content": "content",
         "published_at": "published_at", "url": "url",
         "collected_at": "captured_at",
+        "media_list": "media_list",
     },
     "web_atom": {
         "platform_content_id": "content_id", "content_type": "content_type",
@@ -730,7 +827,7 @@ PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
         "author_id": "author_fullname", "author_name": "author",
         "title": "title", "content": "selftext",
         "published_at": "created_utc", "url": "permalink",
-        "like_count": "score", "comment_count": "num_comments",
+        "like_count": "like_count", "comment_count": "num_comments",
         "share_count": "num_crossposts",
     },
     "linkedin": {
@@ -742,12 +839,11 @@ PLATFORM_FIELD_MAPPING: Dict[str, Dict[str, str]] = {
         "share_count": "share_count", "view_count": "impression_count",
     },
     "github": {
-        "platform_content_id": "repo_id", "content_type": "object_type",
-        "author_id": "owner_id", "author_name": "owner",
-        "title": "name", "content": "description",
-        "published_at": "created_at", "url": "homepage",
-        "like_count": "stargazers_count", "comment_count": "open_issues_count",
-        "share_count": "forks_count", "view_count": "watchers_count",
+        "platform_content_id": "native_content_id", "content_type": "native_object_kind",
+        "author_id": "author_id", "author_name": "author_nickname",
+        "title": "title", "content": "content",
+        "published_at": "created_at", "url": "native_source_url",
+        "like_count": "reactions", "comment_count": "comments",
     },
     "zhihu": {
         "platform_content_id": "answer_id", "content_type": "answer_type",
@@ -813,6 +909,31 @@ def map_raw_to_normalized(raw_record: Dict[str, Any], platform: Optional[str] = 
         normalized["author_id"] = _normalize_author_identity(normalized["author_id"])
         if plat == "instagram" and normalized["platform_content_id"] in (None, ""):
             normalized["platform_content_id"] = _exact_nonempty_text(raw_record.get("shortcode"))
+        canonical = to_canonical_record(raw_record,plat)
+        if plat == 'zhihu':
+            normalized['platform_content_id'] = normalize_content_id(plat,canonical['content_id'])
+            normalized['content_type'] = canonical['content_type']
+        elif plat == 'github':
+            normalized['platform_content_id'] = normalize_content_id(plat,canonical['content_id'])
+            normalized['content_type'] = canonical['content_type']
+            for count in ('like_count','comment_count','collect_count','share_count'):
+                normalized[count] = canonical[count]
+            normalized['view_count'] = None
+        elif plat == 'google':
+            normalized['published_at'] = canonical['published_at']
+        elif plat in {'naver', 'daum'}:
+            normalized['platform_content_id'] = canonical['content_id']
+            normalized['content_type'] = canonical['content_type']
+            normalized['published_at'] = canonical['published_at']
+        elif plat == 'channels':
+            normalized['platform_content_id'] = normalize_content_id(plat,canonical['content_id'])
+        for key in ('author_id','published_at'):
+            if normalized[key] is None:
+                normalized[key] = canonical[key]
+        for key,source in (('title','title'),('content','content'),('url','url'),
+                           ('author_name','author_nickname'),('collected_at','captured_at')):
+            if normalized[key] is None and source in raw_record:
+                normalized[key] = raw_record[source]
     return normalized
 
 

@@ -1,10 +1,13 @@
 # Platform Adapter Layer
 
-## Current release strategy
+## Product coverage
 
-- **Xiaohongshu (`xhs`)**: primary monitoring platform; deep implementation target.
-- **Douyin (`douyin`)**: secondary monitoring platform; deep implementation target.
-- **Kuaishou / Bilibili / Weibo / Tieba / Zhihu**: event-monitoring extension points only; do not build deep collectors in this release.
+Root `AGENTS.md`, the complete Product Architecture and the Collector closed-loop
+contract define scope. Platform names, provider availability and this directory
+do not narrow it. Approved platforms and public webpages have equal source-category
+weight. Search, independent detail, comments/replies, pagination, authors/history,
+media, refresh and recovery retain their original per-platform requirements.
+All providers feed the existing Source/Evidence/Canonical and task owners.
 
 ## Boundary
 
@@ -21,10 +24,8 @@ Adapters own platform transport concerns only:
 
 Core business remains outside adapters:
 
-- Guangzhou Taikoo Hui subject filtering
-- `SUBJECT_WORDS` / `SUBJECT_EXCLUDE_WORDS`
-- `subject_hit()`
-- `_subject_sql_and_values()`
+- authenticated subject/brand focus and business relevance
+- entity aliases, relationships and query purpose
 - event aggregation
 - risk scoring
 - report-period filtering

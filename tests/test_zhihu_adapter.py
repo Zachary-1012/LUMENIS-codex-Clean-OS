@@ -88,7 +88,8 @@ class TestZhihuAdapterSearch:
         ad = ZhihuAdapter()
         result = ad.search("test", max_results=5)
         assert result.success is True
-        assert result.notes[0].comments == 5
+        assert result.notes[0].comments is None
+        assert result.notes[0].raw_data['source_observation']['answer_count'] == 5
         assert result.notes[0].url == "https://www.zhihu.com/question/q2"
 
     @patch("lumenis.adapters.zhihu.requests.get")

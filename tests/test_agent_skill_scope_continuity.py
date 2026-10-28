@@ -42,6 +42,46 @@ def run(bound_agent):
     return task_id, row
 
 
+def assert_restricted_task_projection(task, task_id, expected_status):
+    assert set(task) == {
+        'task_id', 'task_kind', 'user_input', 'status', 'created_at', 'updated_at',
+        'request_id', 'workspace_view',
+    }
+    assert task['task_id'] == task_id and task['task_kind'] == 'TASK_ENGINE'
+    assert task['user_input'] == 'Read scoped registry metadata'
+    assert task['status'] == expected_status and task['request_id'] is None
+    view = task['workspace_view']
+    assert set(view) == {
+        'title', 'input', 'status', 'created_at', 'updated_at', 'can_cancel', 'can_resume',
+        'output_text', 'work_refs', 'steps', 'error_code', 'result_access_state', 'request_id',
+    }
+    assert view == {
+        'title': 'Read scoped registry metadata',
+        'input': 'Read scoped registry metadata',
+        'status': expected_status,
+        'created_at': task['created_at'],
+        'updated_at': task['updated_at'],
+        'can_cancel': expected_status in {'pending', 'ready', 'running'},
+        'can_resume': False,
+        'output_text': None,
+        'work_refs': [],
+        'steps': [],
+        'error_code': None,
+        'result_access_state': 'RESTRICTED',
+        'request_id': None,
+    }
+    assert not {'context', 'result', 'error', 'evidence', 'skill_executions'} & set(task)
+    assert SKILL not in json.dumps(task, ensure_ascii=False)
+    return task
+
+
+def assert_restricted_task_status(response, task_id, expected_status):
+    assert response.status_code == 200, response.get_json()
+    envelope = response.get_json()
+    assert envelope['ok'] is True
+    return assert_restricted_task_projection(envelope['task'], task_id, expected_status)
+
+
 def test_account_agent_returns_signed_exact_scope_and_task(bound_agent):
     task_id, row = run(bound_agent)
     from lumenis.shared.agents.skills.execution import verified_execution_scope
@@ -55,7 +95,27 @@ def test_account_agent_returns_signed_exact_scope_and_task(bound_agent):
                                          (proof['evidence_id'],)).fetchone()[0])['scope_receipt']
     assert material['agent_task']['task_id'] == task_id
     assert len(material['agent_task']['binding_sha256']) == 64
-    assert bound_agent[0].get('/api/ai/tasks/' + row['execution_id'], headers=OWN).status_code == 200
+    # The signed Agent child remains inside its Skill owner. Read the actual
+    # authorized task through the parent API, and keep direct child IDs private.
+    child = bound_agent[0].get('/api/ai/tasks/' + row['execution_id'], headers=OWN)
+    assert child.status_code == 404
+    parent = bound_agent[0].get('/api/ai/tasks/' + task_id, headers=OWN)
+    assert parent.status_code == 200, parent.get_json()
+    parent_task = parent.get_json()['task']
+    assert parent_task['task_id'] == task_id and parent_task['status'] == 'succeeded'
+    assert not {'context', 'result', 'error'} & set(parent_task)
+    assert parent_task['workspace_view']['status'] == 'succeeded'
+    assert any(step['status'] == 'completed' for step in parent_task['workspace_view']['steps'])
+    from ai_task_engine import get_task_engine
+    stored = get_task_engine().get_task(task_id)
+    child_link = stored['result']['final_step_results'][0]['result']['skill_execution_id']
+    assert child_link == row['execution_id']
+    timeline = bound_agent[0].get('/api/ai/tasks/' + task_id + '/steps', headers=OWN)
+    assert timeline.status_code == 200, timeline.get_json()
+    steps = timeline.get_json()['steps']
+    assert timeline.get_json()['count'] == len(steps) and steps
+    assert all(set(step) == {'label', 'status'} for step in steps)
+    assert any(step['status'] == 'completed' for step in steps)
 
 
 @pytest.mark.parametrize('changed', ['skill_scope', 'missing_skill_scope', 'agent_scope', 'inactive_actor'])
@@ -197,9 +257,15 @@ def test_parent_agent_result_rechecks_child_skill_permission(bound_agent):
     assert before.status_code == 200
     with sqlite3.connect(path) as con:
         con.execute("UPDATE v4_member_authorizations SET data_scope='{}' WHERE module=?", (SKILL,))
-    for method, suffix in [('get', ''), ('get', '/steps'), ('get', '/evidence'), ('post', '/run')]:
+    status = api.get('/api/ai/tasks/' + task_id, headers=OWN)
+    assert_restricted_task_status(status, task_id, 'succeeded')
+    for method, suffix in [('get', '/steps'), ('get', '/evidence'), ('post', '/run')]:
         assert getattr(api, method)('/api/ai/tasks/' + task_id + suffix, headers=OWN).status_code == 403
-    assert not api.get('/api/ai/tasks', headers=OWN).get_json()['tasks']
+    listing = api.get('/api/ai/tasks', headers=OWN)
+    assert listing.status_code == 200, listing.get_json()
+    listed = listing.get_json()['tasks']
+    assert len(listed) == 1
+    assert_restricted_task_projection(listed[0], task_id, 'succeeded')
 
 
 @pytest.mark.parametrize('change', ['output', 'missing_step', 'receipt', 'other_task'])
@@ -216,10 +282,14 @@ def test_parent_agent_result_cannot_substitute_child_evidence(bound_agent, chang
             result['final_step_results'][0]['result']['result']['result'] = {'foreign': 'unverified content'}
         else:
             other_id, other_row = run(bound_agent)
-            result['final_step_results'][0]['result']['result']['skill_execution_id'] = other_row['execution_id']
+            result['final_step_results'][0]['result']['skill_execution_id'] = other_row['execution_id']
         if change != 'receipt':
             con.execute('UPDATE ai_task SET result_json=? WHERE task_id=?', (json.dumps(result), task_id))
-    assert bound_agent[0].get('/api/ai/tasks/' + task_id, headers=OWN).status_code == 403
+    status = bound_agent[0].get('/api/ai/tasks/' + task_id, headers=OWN)
+    assert_restricted_task_status(status, task_id, 'succeeded')
+    for suffix in ('/steps', '/evidence'):
+        assert bound_agent[0].get('/api/ai/tasks/' + task_id + suffix, headers=OWN).status_code == 403
+    assert bound_agent[0].post('/api/ai/tasks/' + task_id + '/run', headers=OWN).status_code == 403
 
 
 @pytest.mark.parametrize('status', ['failed', 'cancelled', 'running'])
@@ -228,7 +298,9 @@ def test_partial_parent_checkpoint_rechecks_completed_skill(bound_agent, status)
     with sqlite3.connect(bound_agent[2]) as con:
         con.execute('UPDATE ai_task SET status=?,result_json=NULL WHERE task_id=?', (status, task_id))
         con.execute("UPDATE v4_member_authorizations SET data_scope='{}' WHERE module=?", (SKILL,))
-    for suffix in ('', '/steps', '/evidence'):
+    status_response = bound_agent[0].get('/api/ai/tasks/' + task_id, headers=OWN)
+    assert_restricted_task_status(status_response, task_id, status)
+    for suffix in ('/steps', '/evidence'):
         assert bound_agent[0].get('/api/ai/tasks/' + task_id + suffix, headers=OWN).status_code == 403
 
 
@@ -258,9 +330,12 @@ def test_revoked_child_does_not_remove_original_task_stop_authority(bound_agent,
     before = execution.query_executions(skill_id=SKILL, strict=True)
     other = {'Authorization': 'Bearer fixture-session-two'}
     assert api.post('/api/ai/tasks/' + task_id + '/cancel', headers=other).status_code == 403
+    assert api.get('/api/ai/tasks/' + task_id, headers=other).status_code == 403
     stopped = api.post('/api/ai/tasks/' + task_id + '/cancel', headers=OWN)
-    assert stopped.status_code == 200, stopped.get_json()
-    assert stopped.get_json()['task'] == {'task_id': task_id, 'status': 'cancelled'}
+    stopped_task = assert_restricted_task_status(stopped, task_id, 'cancelled')
     assert execution.query_executions(skill_id=SKILL, strict=True) == before
-    assert api.get('/api/ai/tasks/' + task_id, headers=OWN).status_code == 403
+    status = api.get('/api/ai/tasks/' + task_id, headers=OWN)
+    status_task = assert_restricted_task_status(status, task_id, 'cancelled')
+    assert status_task['workspace_view'] == stopped_task['workspace_view']
     assert api.get('/api/ai/tasks/' + task_id + '/steps', headers=OWN).status_code == 403
+    assert api.get('/api/ai/tasks/' + task_id + '/evidence', headers=OWN).status_code == 403

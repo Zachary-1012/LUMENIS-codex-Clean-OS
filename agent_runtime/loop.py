@@ -347,6 +347,10 @@ class AgentLoop:
 
     @staticmethod
     def _valid_typed_scope(domain_id: Any, scope: Any) -> bool:
+        if domain_id == 'shared':
+            return (type(scope) is dict and set(scope) == {'scope_kind', 'version'}
+                    and scope.get('scope_kind') == 'shared_workspace'
+                    and type(scope.get('version')) is int and scope['version'] == 1)
         if (not isinstance(domain_id, str) or not isinstance(scope, dict)
                 or set(scope) != {"global_scope", "subject_id", "brand_focus_id"}
                 or type(scope.get("global_scope")) is not bool):
@@ -604,6 +608,10 @@ class AgentLoop:
                     security, exec_result = self._admit_and_execute_step(
                         step, context, task_id, step_index, fresh_authorization=resuming)
                 except FormationError as exc:
+                    if self._is_cancelled():
+                        sm.cancel(reason='external cancellation during tool formation')
+                        result.status = 'cancelled'
+                        return self._finalize(result, sm)
                     result.status = "reconciliation_required"
                     result.error = str(exc)
                     result.metrics["formation_changed_fields"] = list(exc.changed_fields)
@@ -642,16 +650,15 @@ class AgentLoop:
                 self._safe_transition(sm, AgentState.EXECUTING,
                                       reason=f"executing step {step_index}",
                                       metadata={"step": step_index})
+                if self._is_cancelled() or exec_result.get("cancelled"):
+                    sm.cancel(reason="cancelled during tool execution")
+                    result.status = "cancelled"
+                    return self._finalize(result, sm)
                 if exec_result.get("reconciliation_required"):
                     result.status = "reconciliation_required"
                     result.error = exec_result.get("error")
                     sm.fail(result.error)
                     return self._finalize(result, sm)
-                if self._is_cancelled() or exec_result.get("cancelled"):
-                    sm.cancel(reason="cancelled before tool dispatch")
-                    result.status = "cancelled"
-                    return self._finalize(result, sm)
-
                 if exec_result.get("timeout"):
                     sm.fail("TOOL_STEP_TIMEOUT")
                     result.status, result.error = "timeout", "TOOL_STEP_TIMEOUT"
@@ -896,7 +903,20 @@ class AgentLoop:
             gate = self._get_permission_gate()
             if gate is None:
                 raise RuntimeError("canonical SYSTEM Permission unavailable")
-            if fresh_authorization:
+            if context.get('domain_id') == 'shared':
+                from lumenis.system.security.permission import (authorize_shared_workspace,
+                    check_shared_workspace_effect, PermissionResult)
+                _, audit_id = authorize_shared_workspace(context.get('actor'), context.get('scope'),
+                    module='content', action='read' if action.value == 'READ' else 'write', gate=gate, _return_audit=True)
+                # Shared read admission has no CTH/BMP domain. Its real scope
+                # audit supplies Permission to the same firewall and fence.
+                if action.value == 'READ':
+                    perm_result = PermissionResult(True, 'Current Shared content read permission',
+                        resource=target, caller='agent_runtime:shared', operation_type='read', audit_id=audit_id)
+                else:
+                    perm_result = check_shared_workspace_effect(context.get('actor'), context['scope'],
+                        operation, target, module='content', action='write', gate=gate)
+            elif fresh_authorization:
                 from lumenis.system.security.permission import (check_actor_scope_permission,
                     check_local_workspace_scope_permission, _is_server_local_workspace_principal)
                 local_actor = _is_server_local_workspace_principal(context.get("actor"))
@@ -923,14 +943,15 @@ class AgentLoop:
                 "resource": target,
                 "risk_level": risk,
                 "caller": f"agent_runtime:{self._observation_layer.agent_id}",
-                "domain_id": str(context.get("domain_id") or "") or None,
+                "domain_id": None if context.get('domain_id') == 'shared' else str(context.get("domain_id") or "") or None,
             }
             if not fresh_authorization:
                 gate_args.update(
                     operation_id=operation_id,
                     role=str(context.get("role") or "") or None,
                 )
-            perm_result = gate.check(operation, **gate_args)
+            if context.get('domain_id') != 'shared':
+                perm_result = gate.check(operation, **gate_args)
             if not perm_result.allowed:
                 return {
                     "allowed": False,

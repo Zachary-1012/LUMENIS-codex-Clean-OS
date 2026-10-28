@@ -14,6 +14,9 @@ from api_dual_domain import BusinessDecisionWorkflow
 from tests.test_source_brief_job_routes import client as report_client, GLOBAL, URL
 from tests.test_cth_case_routes import case_client
 
+# Pytest discovers these imported owner fixtures by module name.
+__all__ = ["workspace", "job_db", "report_client", "case_client"]
+
 
 @pytest.fixture(params=["CTH", "ZBMP"])
 def work(workspace, request, monkeypatch):
@@ -588,7 +591,7 @@ def test_action_contract_continues_legacy_source_outcome_without_rewriting_histo
     assert executed["action_state"] == "EXECUTED" and executed["business_outcome"] == "NOT_OBSERVED"
     reviewed = step(service, inputs, executed, "outcome_unknown", {"limits": "Draft creation performed; no later effect observation."}, "new-effect-review")
     assert reviewed["evaluation"]["evaluation_id"] != legacy["evaluation"]["evaluation_id"]
-    assert "来源原文" in reviewed["usable_result"]["markdown"] and "业务效果：UNKNOWN" in reviewed["usable_result"]["markdown"]
+    assert "来源原文" in reviewed["usable_result"]["markdown"] and "业务效果：未知。" in reviewed["usable_result"]["markdown"]
     with sqlite3.connect(db) as con:
         assert con.execute("SELECT * FROM app_evidence_records WHERE feature_id=? ORDER BY id LIMIT 3", (service.FEATURE,)).fetchall() == old_rows
         assert con.execute("SELECT * FROM evaluation_records WHERE evaluation_id=?", (legacy["evaluation"]["evaluation_id"],)).fetchone() == old_eval
@@ -805,7 +808,6 @@ def test_evaluation_failure_replay_repairs_exact_outcome(work, monkeypatch):
     selected = choose(service, inputs, service.prepare(**inputs))
     payload = {"source_job_id": inputs["source_job_id"], "source_id": inputs["options"][0]["source_ids"][0],
                "quote": "The source reports zero participants.", "limits": "Not a campaign measurement."}
-    real = recorder.record_evaluation
     with monkeypatch.context() as failure:
         failure.setattr(recorder, "record_evaluation", lambda **k: (_ for _ in ()).throw(OSError("isolated injected failure")))
         with pytest.raises(OSError):
@@ -908,7 +910,8 @@ def test_readable_result_keeps_source_time_rights_and_missing_metrics_visible(wo
     assert "https://example.org/isolated-test" in markdown
     assert "捕获时间：2026-10-02T00:00:00Z" in markdown
     assert "发布时间：未知（不能以捕获时间替代）" in markdown
-    assert "商业使用许可：UNKNOWN" in markdown
+    assert "商业使用许可：未知" in markdown
+    assert all(source["commercial_reuse"] == "UNKNOWN" for source in current["material_review"]["sources"])
     assert "来源互动字段合计：未知（字段未齐）" in markdown
     with sqlite3.connect(db) as con:
         con.execute("UPDATE canonical_data SET engagement_likes=0, engagement_comments=0, "
@@ -1049,11 +1052,11 @@ def test_focus_lens_rechecks_first_scope_after_second_related_read(related_work)
     assert after == before
 
 
-def test_focus_lens_global_aggregate_gap_is_explicit(related_work):
+def test_focus_lens_rejects_global_flag_with_a_retained_focus(related_work):
     service, current, args, _ = related_work
     descriptor = copy.deepcopy(args["related_reports"][0])
     descriptor["original_scope"]["global"] = True
-    with pytest.raises(RuntimeError, match="GLOBAL_REPORT_SOURCE_SCOPE_OWNER_REQUIRED"):
+    with pytest.raises(PermissionError, match="BUSINESS_LENS_CONTEXT_SCOPE_INVALID"):
         service.focus_lens(current["work_id"], **{**args, "related_reports": [descriptor]})
 
 

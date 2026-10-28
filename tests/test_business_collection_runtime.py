@@ -118,6 +118,118 @@ def test_unissued_actor_and_cross_domain_scope_are_rejected():
         entry._business_batch_binding({'id': 101}, {'cth': {'domain_id': 'bmp', 'global_scope': True}}, 'human', None)
 
 
+@pytest.mark.parametrize(
+    ('scope', 'legacy_scope'),
+    [
+        ({'domain_id': 'cth', 'global_scope': False, 'subject_id': 'SUBJ-1',
+          'brand_focus_id': None}, None),
+        ({'domain_id': 'bmp', 'global_scope': False, 'subject_id': 'SUBJ-1',
+          'brand_focus_id': 'BRAND-1'},
+         {'domain_id': 'bmp', 'global_scope': False, 'subject_id': None,
+          'brand_focus_id': 'BRAND-1'}),
+    ],
+)
+def test_subject_removal_cancels_only_same_actor_and_exact_scope_tasks(
+    scope, legacy_scope, tmp_path, monkeypatch,
+):
+    from lumenis.system.collector.guard import task_queue
+
+    monkeypatch.setattr(task_queue, 'DEFAULT_PATH', str(tmp_path / 'directory-cancel.db'))
+    queue = task_queue.TaskQueue()
+
+    def enqueue(identity, task_scope, key):
+        return queue.enqueue_once('collector_manual_request', {
+            'binding': {'identity': identity, 'scope': task_scope},
+            'operation_id': key,
+        }, key)
+
+    actor_identity = {'actor_id': 101}
+    exact_pending = enqueue(actor_identity, scope, 'exact-pending')
+    exact_running = enqueue(actor_identity, legacy_scope or scope, 'exact-running')
+    claimed = queue.dequeue(worker_id='worker-1', lease_owner='worker-1', task_id=exact_running)
+    assert claimed is not None and claimed['status'] == 'running'
+    exact_done = enqueue(actor_identity, scope, 'exact-done')
+    terminal = queue.dequeue(worker_id='worker-2', lease_owner='worker-2', task_id=exact_done)
+    assert terminal is not None and queue.ack(exact_done, run_id=terminal['run_id'],
+        worker_id=terminal['worker_id'], lease_owner=terminal['lease_owner'])
+
+    other_actor = enqueue({'actor_id': 202}, scope, 'other-actor')
+    other_subject = dict(scope, subject_id='SUBJ-OTHER', brand_focus_id='BRAND-OTHER'
+        if scope['domain_id'] == 'bmp' else None)
+    other_scope = enqueue(actor_identity, other_subject, 'other-scope')
+    global_scope = {'domain_id': scope['domain_id'], 'global_scope': True,
+                    'subject_id': None, 'brand_focus_id': None}
+    discovery = enqueue(actor_identity, global_scope, 'global-discovery')
+    actorless = enqueue({'maintenance_plan': 'system-plan'}, scope, 'actorless-plan')
+    queue.close()
+
+    result = entry.cancel_subject_collection_requests(
+        actor={'id': 101}, scope=scope,
+    )
+
+    assert result == {
+        'state': 'CANCELLATION_PENDING', 'matched': 3,
+        'cancelled': 1, 'cancellation_pending': 1,
+        'already_terminal': 1, 'failed': 0, 'network_attempted': False,
+    }
+    queue = task_queue.TaskQueue()
+    assert queue.get(exact_pending)['status'] == 'cancelled'
+    assert queue.get(exact_running)['status'] == 'cancel_requested'
+    assert queue.get(exact_done)['status'] == 'done'
+    for task_id in (other_actor, other_scope, discovery, actorless):
+        assert queue.get(task_id)['status'] == 'pending'
+    queue.close()
+
+
+def test_removed_query_is_deferred_without_blocking_another_entity(monkeypatch):
+    registry_rows = [
+        {'subject_id': 'SUBJ-REMOVED', 'subject_type': 'brand', 'domain_id': 'BMP',
+         'brand_focus_id': 'BRAND-REMOVED', 'registry_id': 'BRAND-REMOVED',
+         'name_en': 'Removed Brand', 'name_zh': '移除品牌', 'status': 'active'},
+        {'subject_id': 'SUBJ-READY', 'subject_type': 'brand', 'domain_id': 'BMP',
+         'brand_focus_id': 'BRAND-READY', 'registry_id': 'BRAND-READY',
+         'name_en': 'Ready Brand', 'name_zh': '在用品牌', 'status': 'active'},
+    ]
+    reqs = [
+        {'domain_id': 'BMP', 'scope_key': row['brand_focus_id'],
+         'aliases': [row['name_en']], 'purpose': '中国新品与消费者反馈',
+         'dimension': 'market_activity', 'platforms': ['x'], 'geography_terms': ['中国'],
+         'topic_terms': ['新品']}
+        for row in registry_rows
+    ]
+    build = planner.build_acquisition_plan
+    monkeypatch.setattr(planner, 'build_acquisition_plan',
+        lambda *args, **kwargs: build(*args, registry_loader=lambda: registry_rows, **kwargs))
+    monkeypatch.setattr(entry, '_subject_directory_decision', lambda actor, scope: (
+        {'allowed': False, 'status': 'SUBJECT_REMOVED_FROM_DIRECTORY'}
+        if scope.get('brand_focus_id') == 'BRAND-REMOVED'
+        else {'allowed': True, 'status': 'IN_WORKING_SET'}
+    ))
+    calls = []
+
+    def collect(platform, keyword, **kwargs):
+        with kwargs['attempt_guard']() as active:
+            assert active is True
+        calls.append((platform, keyword, kwargs['scope']))
+        return {'ok': True, 'status': 'SUCCESS', 'network_attempted': False}
+
+    monkeypatch.setattr(entry, 'collect_search', collect)
+    scope = {'domain_id': 'bmp', 'global_scope': True,
+             'subject_id': None, 'brand_focus_id': None}
+
+    result = entry._execute_business_queries(
+        reqs, actor={'id': 101}, scopes={'bmp': scope},
+    )
+
+    assert result['status'] == 'PARTIAL'
+    assert len(result['runs']) == 2
+    assert len(result['deferred_queries']) == 1
+    assert result['deferred_queries'][0]['reason'] == 'SUBJECT_REMOVED_FROM_DIRECTORY'
+    assert len(calls) == 1
+    assert calls[0][2]['brand_focus_id'] == 'BRAND-READY'
+    assert result['checkpoint']['completed_query_keys']
+
+
 def test_first_response_crash_recovers_same_server_task_without_repeating_completed_queries(monkeypatch, tmp_path):
     from lumenis.system.collector.guard import task_queue
     monkeypatch.setattr(task_queue, 'DEFAULT_PATH', str(tmp_path/'recovery.db'))
@@ -171,3 +283,87 @@ def test_terminal_failed_batch_returns_failure_and_never_reexecutes(monkeypatch,
     assert result['status'] == 'FAILED' and result['attempts'] == 3
     assert result['new_collection_requires_new_request_id'] is True
     assert len(calls) == 3
+
+
+def test_verified_native_partial_resumes_same_task_and_old_receipts_never_refetch(monkeypatch):
+    reqs = prepare(monkeypatch, ('x',))
+    calls = []
+    def collect(platform, keyword, **kwargs):
+        calls.append(kwargs['operation_key'])
+        if len(calls) == 1:
+            return {'ok': False, 'status': 'PARTIAL_COMMITTED',
+                'source_status': 'PARTIAL_ACQUISITION_PENDING', 'native_continuation_verified': True,
+                'new_collection_required': False, 'task_commit_evidence_ref': 'app_evidence_records:1'}
+        return {'ok': True, 'status': 'SUCCESS'}
+    monkeypatch.setattr(entry, 'collect_search', collect)
+    scope = {'bmp': {'domain_id': 'bmp', 'global_scope': True}}
+    first = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope)
+    assert not first['ok'] and first['native_continuation_required'] is True
+    assert first['continuation_required'] and not first['new_collection_requires_new_request_id']
+    repeated = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope)
+    assert repeated['cached'] and len(calls) == 1
+    continued = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope,
+        checkpoint=first['checkpoint'])
+    assert continued['ok'] and continued['checkpoint']['task_id'] == first['checkpoint']['task_id']
+    assert len(calls) == 3 and calls[1] == calls[0] + ':native:1'
+    assert len(set(calls)) == 3
+    old = entry.collect_business_queries(reqs, actor={'id': 101}, scopes=scope,
+        checkpoint=first['checkpoint'])
+    assert old['cached'] and old['refresh_performed'] is False and len(calls) == 3
+
+
+@pytest.mark.parametrize('fault', ['none', 'identity', 'persisted', 'run', 'host', 'terminal', 'complete'])
+def test_native_resume_requires_original_owner_metadata_and_saved_pointer(monkeypatch, tmp_path, fault):
+    from lumenis.system.collector.guard import checkpoint
+    monkeypatch.setattr(checkpoint, 'get_data_dir', lambda: str(tmp_path))
+    fingerprint = 'a' * 64
+    descriptor = {'task_binding': fingerprint, 'keyword': 'allowed isolated query',
+        'source_host': 'www.rednote.com', 'raw_path': str(tmp_path / 'never-opened.json'),
+        'raw_sha256': 'b' * 64, 'identity_fingerprint': 'c' * 64, 'run_id': 'isolated-run',
+        'pending_note_ids': ['d' * 24], 'complete': False, 'terminal_error': False,
+        'pagination_exhausted': False, 'continuation_required': True}
+    metadata = {'continuation_persisted': True, 'checkpoint_identity_verified': True,
+        'continuation': {'identity_verified': True, 'continuation_required': True,
+            'keyword': descriptor['keyword'], 'source_host': descriptor['source_host'],
+            'checkpoint_run_id': descriptor['run_id']}}
+    if fault == 'identity':
+        metadata['checkpoint_identity_verified'] = False
+    elif fault == 'persisted':
+        metadata['continuation_persisted'] = False
+    elif fault == 'run':
+        metadata['continuation']['checkpoint_run_id'] = 'another-run'
+    elif fault == 'host':
+        metadata['continuation']['source_host'] = 'unapproved.example'
+    elif fault == 'terminal':
+        descriptor['terminal_error'] = True
+    elif fault == 'complete':
+        descriptor['complete'] = True
+    assert checkpoint.Checkpoint('xhs').save_operational_resume(descriptor['keyword'], fingerprint, descriptor)
+    assert entry._verified_native_resume('xiaohongshu', descriptor['keyword'], fingerprint, metadata) is (fault == 'none')
+    assert not entry._verified_native_resume('x', descriptor['keyword'], fingerprint, metadata)
+
+
+def test_native_resume_finishes_current_query_page_before_advancing_query_cursor(monkeypatch):
+    reqs = prepare(monkeypatch, ('x',))
+    calls = []
+    def collect(platform, keyword, **kwargs):
+        calls.append((keyword, kwargs['operation_key']))
+        if len(calls) == 1:
+            return {'ok': False, 'status': 'PARTIAL_COMMITTED',
+                'source_status': 'PARTIAL_ACQUISITION_PENDING', 'native_continuation_verified': True,
+                'new_collection_required': False, 'task_commit_evidence_ref': 'app_evidence_records:1'}
+        return {'ok': True, 'status': 'SUCCESS'}
+    monkeypatch.setattr(entry, 'collect_search', collect)
+    args = {'actor': {'id': 101}, 'scopes': {'bmp': {'domain_id': 'bmp', 'global_scope': True}}, 'max_queries': 1}
+    first = entry.collect_business_queries(reqs, **args)
+    assert first['query_plan']['next_cursor'] is not None
+    assert first['native_continuation_required'] and first['next_cursor'] is None
+    second = entry.collect_business_queries(reqs, **args,
+        checkpoint=first['checkpoint'], continuation=first['next_cursor'])
+    assert second['ok'] and not second['native_continuation_required'] and second['next_cursor'] is not None
+    assert calls[0][0] == calls[1][0] and calls[1][1] == calls[0][1] + ':native:1'
+    final = entry.collect_business_queries(reqs, **args,
+        checkpoint=second['checkpoint'], continuation=second['next_cursor'])
+    assert final['ok'] and not final['continuation_required'] and len(calls) == 3
+    assert final['checkpoint']['task_id'] == first['checkpoint']['task_id']
+    assert calls[2][0] != calls[0][0]

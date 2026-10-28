@@ -47,6 +47,22 @@ def _request_type():
     return OwnedModelAdmissionRequest
 
 
+def _pretrained_request_type():
+    """Import the v2 mutually exclusive pretrained request lazily."""
+    from lumenis.system.ai_gateway.owned_service import OwnedPretrainedInferenceAdmissionRequest
+
+    return OwnedPretrainedInferenceAdmissionRequest
+
+
+def _request_schema(request: Any) -> Tuple[int, frozenset[str]]:
+    if type(request) is _request_type():
+        return 1, _REQUEST_FIELDS
+    pretrained_type = _pretrained_request_type()
+    if type(request) is pretrained_type and is_dataclass(request):
+        return 2, frozenset(item.name for item in fields(request))
+    raise ValueError("a canonical owned model admission request is required")
+
+
 def _clean_text(value: Any, *, limit: int = 512) -> bool:
     return (
         type(value) is str
@@ -87,7 +103,7 @@ def _normalized_training_scope_payload(
     context: Mapping[str, Any],
     principal: Optional[Any],
 ) -> Tuple[Dict[str, Any], Dict[str, Any], str]:
-    """Reuse the existing typed CTH/BMP scope normalizer, never its grant."""
+    """Reuse canonical business or independent Shared scope, never a grant."""
     from lumenis.system.ai_gateway.owned_training import TrainingApprovalRequest
 
     request_cls = _request_type()
@@ -148,6 +164,16 @@ def _normalized_training_scope_payload(
     if values["domain_id"] != normalized_domain:
         raise ValueError("request domain does not match the server domain")
 
+    if normalized_domain == 'shared':
+        scope_name = 'shared_workspace:v1'
+        if (values['scopes'] != (scope_name,) or type(context) is not dict
+                or set(context) != {'scope_descriptors'}
+                or type(context['scope_descriptors']) is not dict
+                or set(context['scope_descriptors']) != {scope_name}):
+            raise ValueError('Shared model admission requires its exact independent workspace scope')
+        scope = _permission.validate_shared_workspace_scope(context['scope_descriptors'][scope_name])
+        return identity, {'scope_descriptors': [{'scope': scope_name, **scope}]}, normalized_domain
+
     # This helper is used only to canonicalize scopes and server identity. Its
     # MODEL_TRAIN operation and resource are deliberately discarded below.
     training_request = TrainingApprovalRequest(
@@ -167,6 +193,66 @@ def _normalized_training_scope_payload(
     return identity, scope_payload, normalized_domain
 
 
+def _normalized_pretrained_scope_payload(
+    request: Any,
+    *,
+    actor_id: Optional[int],
+    domain_id: str,
+    context: Mapping[str, Any],
+    principal: Optional[Any],
+) -> Tuple[Dict[str, Any], Dict[str, Any], str]:
+    """Normalize the existing CTH/BMP or independent Shared scopes for v2."""
+    identity = _permission.owned_training_identity(actor_id=actor_id, principal=principal)
+    normalized_domain = domain_id.lower() if type(domain_id) is str else ""
+    if normalized_domain == "zbmp":
+        normalized_domain = "bmp"
+    if (normalized_domain not in {"cth", "bmp", "shared"}
+            or request.domain_id != normalized_domain):
+        raise ValueError("pretrained admission domain does not match the server scope")
+    scope_names = request.scopes
+    if (type(context) is not dict or set(context) != {"scope_descriptors"}
+            or type(context.get("scope_descriptors")) is not dict
+            or set(context["scope_descriptors"]) != set(scope_names)):
+        raise ValueError("each pretrained admission scope needs one canonical descriptor")
+
+    if normalized_domain == "shared":
+        scope_name = "shared_workspace:v1"
+        if scope_names != (scope_name,):
+            raise ValueError("Shared pretrained inference requires its independent workspace scope")
+        scope = _permission.validate_shared_workspace_scope(context["scope_descriptors"][scope_name])
+        return identity, {"scope_descriptors": [{"scope": scope_name, **scope}]}, normalized_domain
+
+    product_id = "CTH" if normalized_domain == "cth" else "ZBMP"
+    descriptor_fields = {"domain_id", "product_id", "global_scope", "subject_id", "brand_focus_id"}
+    descriptors = []
+    for scope_name in scope_names:
+        descriptor = context["scope_descriptors"][scope_name]
+        if (type(descriptor) is not dict or set(descriptor) != descriptor_fields
+                or descriptor.get("domain_id") != normalized_domain
+                or descriptor.get("product_id") != product_id
+                or type(descriptor.get("global_scope")) is not bool):
+            raise ValueError("pretrained inference scope descriptor is invalid")
+        global_scope = descriptor["global_scope"]
+        subject_id = descriptor.get("subject_id")
+        brand_focus_id = descriptor.get("brand_focus_id")
+        if global_scope:
+            if scope_name != "GLOBAL / ALL" or subject_id is not None or brand_focus_id is not None:
+                raise ValueError("global pretrained scope must use the exact global descriptor")
+        elif normalized_domain == "cth":
+            if (not _permission._is_valid_scope_id(subject_id) or brand_focus_id is not None
+                    or scope_name != subject_id):
+                raise ValueError("CTH pretrained scope must name its exact registered Subject")
+        elif (subject_id is not None or not _permission._is_valid_scope_id(brand_focus_id)
+              or scope_name != brand_focus_id):
+            raise ValueError("BMP pretrained scope must name its exact registered BrandFocus")
+        descriptors.append({
+            "scope": scope_name, "domain_id": normalized_domain, "product_id": product_id,
+            "global_scope": global_scope, "subject_id": subject_id,
+            "brand_focus_id": brand_focus_id,
+        })
+    return identity, {"scope_descriptors": descriptors}, normalized_domain
+
+
 def _resource_payload(
     request: Any,
     *,
@@ -175,13 +261,23 @@ def _resource_payload(
     context: Mapping[str, Any],
     principal: Optional[Any],
 ) -> Dict[str, Any]:
-    identity, scope_payload, normalized_domain = _normalized_training_scope_payload(
-        request, actor_id=actor_id, domain_id=domain_id, context=context,
-        principal=principal,
-    )
-    values = {name: getattr(request, name) for name in _REQUEST_FIELDS}
+    schema_version, request_fields = _request_schema(request)
+    if schema_version == 1:
+        identity, scope_payload, normalized_domain = _normalized_training_scope_payload(
+            request, actor_id=actor_id, domain_id=domain_id, context=context,
+            principal=principal,
+        )
+    else:
+        from lumenis.system.ai_gateway.owned_service import validate_pretrained_inference_admission_request
+
+        validate_pretrained_inference_admission_request(request)
+        identity, scope_payload, normalized_domain = _normalized_pretrained_scope_payload(
+            request, actor_id=actor_id, domain_id=domain_id, context=context,
+            principal=principal,
+        )
+    values = {name: getattr(request, name) for name in request_fields}
     payload: Dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "operation": _permission.OperationType.RUNTIME_OPERATION.value,
         "request": values,
         "actor_id": identity["actor_id"],
@@ -213,7 +309,7 @@ def owned_model_admission_resource(
         request, actor_id=actor_id, domain_id=domain_id, context=context,
         principal=principal,
     )
-    return "owned_model_admission:v1:" + _digest(payload)
+    return f"owned_model_admission:v{payload['schema_version']}:" + _digest(payload)
 
 
 @dataclass(frozen=True)
@@ -284,14 +380,20 @@ class OwnedModelAdmissionVerifier:
             context=self._context, principal=principal,
         )
         self._request_sha256 = _digest(self._payload)
-        self._resource = "owned_model_admission:v1:" + self._request_sha256
+        self._schema_version, request_fields = _request_schema(request)
+        self._request_fields = request_fields
+        self._resource = f"owned_model_admission:v{self._schema_version}:" + self._request_sha256
+        recipe = request.recipe if self._schema_version == 1 else (
+            f"{request.runtime_engine}:{request.quantization_format}"
+        )
         self._public_identity_json = json.dumps(
             {
-                "schema_version": 1,
+                "schema_version": self._schema_version,
                 "action": request.action,
+                "artifact_kind": getattr(request, "artifact_kind", "TRAINED_CANDIDATE"),
                 "model_id": request.model_id,
                 "model_revision": request.model_revision,
-                "recipe": request.recipe,
+                "recipe": recipe,
                 "domain_id": self._payload["domain_id"],
                 "scopes": list(request.scopes),
                 "scope_descriptors": self._payload["scope_descriptors"],
@@ -299,7 +401,7 @@ class OwnedModelAdmissionVerifier:
                 "caller": self._identity["caller"],
                 "principal_kind": self._identity["principal_kind"],
                 "principal_ref": self._identity["principal_ref"],
-                "request": {name: getattr(request, name) for name in _REQUEST_FIELDS},
+                "request": {name: getattr(request, name) for name in request_fields},
                 "request_sha256": self._request_sha256,
                 "resource": self._resource,
             },
@@ -408,13 +510,32 @@ class OwnedModelAdmissionVerifier:
             ):
                 return self._decision(False, "RUNTIME_OPERATION_POLICY_CHANGED")
 
-            # Re-normalize using the same SYSTEM scope contract without using
-            # the training verifier or its MODEL_TRAIN approval path.
-            _, normalized_scope_payload, _ = _normalized_training_scope_payload(
+            # Re-normalize through the same Permission scope boundary while
+            # keeping v1 training receipts and v2 pretrained artifacts distinct.
+            scope_normalizer = (_normalized_training_scope_payload
+                                if self._schema_version == 1
+                                else _normalized_pretrained_scope_payload)
+            _, normalized_scope_payload, _ = scope_normalizer(
                 self._request, actor_id=self._actor_id, domain_id=self._domain_id,
                 context=self._context, principal=self._principal,
             )
             for descriptor in normalized_scope_payload["scope_descriptors"]:
+                if self._payload['domain_id'] == 'shared':
+                    actor = self._principal if self._principal is not None else {'id': self._actor_id}
+                    shared_scope = {key: descriptor[key] for key in ('scope_kind', 'version')}
+                    try:
+                        shared_context, shared_audit = permission.authorize_shared_workspace(
+                            actor, shared_scope, module='owned_model_admission', action='write',
+                            gate=self._gate, _return_audit=True)
+                    except Exception:
+                        return self._decision(False, 'ACTOR_SCOPE_DENIED', scope_audit_ids=tuple(scope_audit_ids))
+                    owner = ({'actor_id': self._actor_id} if self._principal is None else {
+                        'principal_kind': self._identity['principal_kind'], 'principal_ref': self._identity['principal_ref']})
+                    if (shared_context != {**shared_scope, **owner}
+                            or type(shared_audit) is not str or not shared_audit):
+                        return self._decision(False, 'ACTOR_SCOPE_DENIED', scope_audit_ids=tuple(scope_audit_ids))
+                    scope_audit_ids.append(shared_audit)
+                    continue
                 if identity["identity_kind"] == "workspace":
                     scope = permission.check_local_workspace_scope_permission(
                         self._principal,
@@ -508,14 +629,21 @@ class OwnedModelAdmissionVerifier:
                     )
 
             operation_id = f"owned-model-admission:{uuid.uuid4().hex}"
-            approval = self._gate.check(
-                permission.OperationType.RUNTIME_OPERATION,
-                resource=self._resource,
-                caller=self._identity["caller"],
-                operation_id=operation_id,
-                domain_id=self._payload["domain_id"],
-                exact_approval_required=True,
-            )
+            if self._payload['domain_id'] == 'shared':
+                actor = self._principal if self._principal is not None else {'id': self._actor_id}
+                approval = permission.check_shared_workspace_effect(
+                    actor, {'scope_kind': 'shared_workspace', 'version': 1},
+                    permission.OperationType.RUNTIME_OPERATION, self._resource,
+                    module='owned_model_admission', action='write', gate=self._gate)
+            else:
+                approval = self._gate.check(
+                    permission.OperationType.RUNTIME_OPERATION,
+                    resource=self._resource,
+                    caller=self._identity["caller"],
+                    operation_id=operation_id,
+                    domain_id=self._payload["domain_id"],
+                    exact_approval_required=True,
+                )
             token = self._gate.get_valid_approval_token(
                 permission.OperationType.RUNTIME_OPERATION.value,
                 self._resource,
@@ -527,8 +655,9 @@ class OwnedModelAdmissionVerifier:
                 and approval.operation_type == permission.OperationType.RUNTIME_OPERATION.value
                 and approval.resource == self._resource
                 and approval.caller == self._identity["caller"]
-                and permission._canonical_business_domain_id(approval.domain_id)
-                == permission._canonical_business_domain_id(self._payload["domain_id"])
+                and (approval.domain_id is None if self._payload['domain_id'] == 'shared' else
+                     permission._canonical_business_domain_id(approval.domain_id)
+                     == permission._canonical_business_domain_id(self._payload["domain_id"]))
                 and approval.risk_level == permission.RiskLevel.HIGH.value
                 and approval.permission_required == permission.PermissionLevel.COMMIT.value
                 and type(approval.audit_id) is str
@@ -579,9 +708,7 @@ def make_owned_model_admission_verifier(
     dependencies = tuple(review_dependency_paths)
     if any(type(path) not in {str} and not hasattr(path, "__fspath__") for path in dependencies):
         raise ValueError("review dependency path is invalid")
-    request_cls = _request_type()
-    if type(request) is not request_cls:
-        raise ValueError("a canonical OwnedModelAdmissionRequest is required")
+    _request_schema(request)
     # Validate the complete typed request and freeze the exact scope snapshot.
     frozen_context = _frozen_scope_context(context)
     _resource_payload(

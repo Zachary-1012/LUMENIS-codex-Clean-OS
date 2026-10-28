@@ -210,6 +210,183 @@ def policy_reason(event: dict) -> str | None:
             return reason
     return None
 
+
+def execution_path(root: Path, value: str) -> str:
+    if not isinstance(value, str) or not value.strip() or "\x00" in value:
+        raise ValueError("Invalid execution path")
+    value = value.replace("\\", "/")
+    if ".." in value.split("/") or any(c in value for c in "*?[]"):
+        raise ValueError("Execution paths must be exact paths or directory prefixes")
+    path = Path(value)
+    if not path.is_absolute():
+        if PureWindowsPath(value).drive:
+            raise ValueError("Foreign drive in execution scope")
+        path = root / path
+    resolved = path.resolve()
+    if not resolved.is_relative_to(root.resolve()):
+        raise ValueError("Execution path escapes the repository")
+    current = path
+    while current != root and current != current.parent:
+        if current.is_symlink() or (hasattr(current, "is_junction") and current.is_junction()):
+            raise ValueError("Linked execution paths require separate review")
+        current = current.parent
+    relative = resolved.relative_to(root.resolve()).as_posix()
+    if relative == ".":
+        raise ValueError("Repository-wide write grants are not allowed")
+    return relative
+
+
+def validate_execution(root: Path, item: dict) -> dict | None:
+    execution = item.get("execution")
+    if execution is None:
+        return None
+    if (not isinstance(execution, dict)
+            or set(execution) != {"schema_version", "status", "role", "po_source",
+                                  "allowed_writes", "approved_calls"}
+            or execution.get("schema_version") != 1
+            or execution.get("status") not in {"RUNNING", "PAUSED"}
+            or execution.get("role") not in {"FRONTEND", "CAPABILITY", "GUARD_MAINTENANCE"}
+            or not isinstance(execution.get("po_source"), str)
+            or not execution["po_source"].strip()):
+        raise ValueError("Invalid execution binding")
+    writes = execution["allowed_writes"]
+    calls = execution["approved_calls"]
+    if not isinstance(writes, list) or not isinstance(calls, list) or len(writes) > 512 or len(calls) > 100:
+        raise ValueError("Invalid execution scope")
+    for value in writes:
+        path = execution_path(root, value)
+        if execution["role"] != "GUARD_MAINTENANCE" and (
+            path.casefold().startswith((".codex/", "00-governance/"))
+            or path.casefold() in {".codex", "00-governance", "agents.md"}
+        ):
+            raise ValueError("Ordinary development cannot grant itself rule-writing authority")
+        if execution["role"] == "FRONTEND" and not path.startswith(("app/", "website/", "contracts/experience/")):
+            raise ValueError("Frontend binding cannot grant backend writes")
+        if execution["role"] == "CAPABILITY" and path.startswith(("app/", "website/")):
+            raise ValueError("Capability binding cannot grant frontend writes")
+    for call in calls:
+        if (not isinstance(call, dict)
+                or set(call) != {"tool", "arguments_sha256", "reason", "input_pins", "repeat"}
+                or not isinstance(call["tool"], str) or not call["tool"]
+                or not isinstance(call["arguments_sha256"], str)
+                or not SHA256_RE.fullmatch(call["arguments_sha256"])
+                or not isinstance(call["reason"], str) or not call["reason"].strip()
+                or not isinstance(call["input_pins"], dict) or not call["input_pins"]
+                or type(call["repeat"]) is not bool):
+            raise ValueError("Opaque tool calls require exact reviewed arguments and input pins")
+        for path, digest in call["input_pins"].items():
+            execution_path(root, path)
+            if not isinstance(digest, str) or not SHA256_RE.fullmatch(digest):
+                raise ValueError("Invalid execution input pin")
+    return execution
+
+
+def execution_digest(value: dict) -> str:
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+                                     separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
+def execution_read_only(event: dict) -> bool:
+    name = str(event.get("tool_name", ""))
+    if name in {"read_file", "list_directory", "view_image", "list_agents", "get_goal"}:
+        return True
+    if name.startswith("mcp__lumenis_engineering__"):
+        return name.rsplit("__", 1)[-1] in {
+            "capabilities", "config_inventory", "repo_truth", "route_task", "source_owner",
+            "source_read", "validation_plan", "verification_plan",
+        }
+    if name in SHELL:
+        value = command(event).strip()
+        return bool(re.fullmatch(
+            r"git(?:\.exe)? (?:status(?: --short(?: --branch)?)?|diff --stat|"
+            r"rev-parse (?:HEAD|origin/main|--show-toplevel)|branch --show-current)", value))
+    return False
+
+
+def execution_binding_call(event: dict) -> bool:
+    if str(event.get("tool_name", "")) not in SHELL:
+        return False
+    match = re.fullmatch(
+        r"&?\s*['\"]?(?:\.[\\/])?\.venv[\\/]Scripts[\\/]python\.exe['\"]? "
+        r"-X utf8 ['\"]?\.codex[\\/]engineering\.py['\"]? continuity --params '([^'\r\n]+)'",
+        command(event).strip(),
+    )
+    if not match:
+        return False
+    try:
+        params = json.loads(match[1])
+        return (isinstance(params, dict) and params.get("mode") in {"save", "read"}
+                and set(params).issubset({"mode", "record", "section"})
+                and (params["mode"] == "read" or set(params) == {"mode", "record", "section"}))
+    except (ValueError, TypeError):
+        return False
+
+
+def execution_reason(root: Path, state: dict, event: dict) -> str | None:
+    if execution_read_only(event):
+        return None
+    if execution_binding_call(event):
+        return None
+    if state.get("execution_paused") or state.get("turn_exit_mode") in {"PO_PAUSED", "APPROVAL_WAIT", "REPORT_ONLY"}:
+        return "PO_PAUSED_OR_READ_ONLY: no writes, builds, delegation or effects are authorized."
+    # continuity_save adds this digest only after validating the optional Owner
+    # execution block. Legacy sessions keep the pre-execution policy behavior.
+    if "execution_digest" not in state:
+        return None
+    admitted_digest = state.get("execution_digest")
+    if not isinstance(admitted_digest, str) or not SHA256_RE.fullmatch(admitted_digest):
+        return "EXECUTION_SCOPE_CHANGED: reconcile the direct PO instruction; no self-expanded scope."
+    bound = state.get("continuity")
+    if not isinstance(bound, dict):
+        return "EXECUTION_UNBOUND: bind the existing Owner record before a mutating or opaque tool call."
+    try:
+        if bound.get("identity") != continuity_identity(event, root):
+            return "EXECUTION_IDENTITY_MISMATCH"
+        item = continuity_record(root, bound["record"], bound["section"], state.get("delivery_guard"), bound.get("pins"))
+        execution = validate_execution(root, item)
+        if not execution or execution_digest(execution) != admitted_digest:
+            return "EXECUTION_SCOPE_CHANGED: reconcile the direct PO instruction; no self-expanded scope."
+        if execution["status"] != "RUNNING":
+            return "EXECUTION_PAUSED"
+        for path in CONTINUITY_RULES:
+            if path in bound.get("pins", {}):
+                current = root / path
+                digest = hashlib.sha256(current.read_bytes()).hexdigest() if current.is_file() else "ABSENT"
+                if digest != bound["pins"][path]:
+                    return "EXECUTION_AUTHORITY_CHANGED: reconcile the changed authority only."
+        if delivery_guard_reasons(state, bound, item):
+            return "EXECUTION_REQUIREMENTS_CHANGED: original outcomes and acceptance must be retained."
+        name = str(event.get("tool_name", ""))
+        if name == "apply_patch":
+            patch = command(event)
+            paths = re.findall(r"^\*\*\* (?:Add File|Update File|Delete File|Move to): (.+)$", patch, re.MULTILINE)
+            if not paths:
+                return "EXECUTION_PATCH_PATHS_UNAVAILABLE"
+            for value in paths:
+                path = execution_path(root, value.strip()).casefold()
+                if not any(path == execution_path(root, grant).casefold()
+                           or (grant.endswith(("/", "\\")) and path.startswith(execution_path(root, grant).casefold() + "/"))
+                           for grant in execution["allowed_writes"]):
+                    return "EXECUTION_WRITE_OUTSIDE_OWNER: " + path
+            return None
+        arguments = event.get("tool_input", {})
+        digest = execution_digest(arguments)
+        for call in execution["approved_calls"]:
+            if call["tool"] != name or call["arguments_sha256"] != digest:
+                continue
+            for path, expected in call["input_pins"].items():
+                source = root / execution_path(root, path)
+                if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+                    return "EXECUTION_CALL_INPUT_CHANGED: " + path
+            key = execution_digest(call)
+            if not call["repeat"] and key in state.get("execution_completed_calls", []):
+                return "EXECUTION_UNCHANGED_REPEAT: this exact check already completed on the same inputs."
+            state.setdefault("execution_pending_calls", {})[str(event.get("tool_use_id", ""))] = key
+            return None
+        return "EXECUTION_CALL_NOT_REVIEWED: shell, MCP and delegation require exact scoped admission."
+    except (OSError, ValueError, TypeError, KeyError):
+        return "EXECUTION_CONTEXT_UNAVAILABLE: restore the existing binding; do not invent a smaller task."
+
 def exit_status(response) -> int | None:
     if isinstance(response, dict):
         for key in ("exit_code", "exitCode", "returncode"):
@@ -858,7 +1035,7 @@ def continuity_record(root: Path, record: str, section: str,
         raise ValueError("Exact top-level section required")
     item = json.loads(path.read_text("utf-8-sig"))[section]
     if (not isinstance(item, dict) or not CONTINUITY_FIELDS.issubset(item)
-            or set(item) - CONTINUITY_FIELDS - {"delivery"}):
+            or set(item) - CONTINUITY_FIELDS - {"delivery", "execution"}):
         raise ValueError("Incomplete or unexpected continuity fields")
     if item["owner"] not in {"M", "F", "C1", "C2", "C3", "C4", "C5", "C6"}:
         raise ValueError("Unknown existing owner")
@@ -867,7 +1044,7 @@ def continuity_record(root: Path, record: str, section: str,
             raise ValueError("Required bounded task context missing")
     for key in ("constraints", "completed", "remaining", "pending_effects", "source_paths", "evidence_paths"):
         values = item[key]
-        maximum = {"source_paths": 30, "evidence_paths": MAX_EVIDENCE_PATHS}.get(key, 20)
+        maximum = {"source_paths": 512, "evidence_paths": MAX_EVIDENCE_PATHS}.get(key, 20)
         if not isinstance(values, list) or len(values) > maximum or any(
             not isinstance(value, str) or not value.strip() or len(value) > 1800 for value in values
         ):
@@ -884,6 +1061,7 @@ def continuity_record(root: Path, record: str, section: str,
         frozen_guard = None
         prior_pins = None
     validate_delivery(root, item, frozen_guard, prior_pins)
+    validate_execution(root, item)
     if isinstance(item.get("delivery"), dict):
         for entry in item["delivery"]["scope_sources"]:
             entry["path"] = continuity_path(root, entry["path"]).relative_to(root.resolve()).as_posix()
@@ -1360,6 +1538,18 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
     identity = continuity_identity(event, root)
     frozen_guard, prior_pins = _frozen_delivery_context(state, record, section, identity)
     item = continuity_record(root, record, section, frozen_guard, prior_pins)
+    execution = validate_execution(root, item)
+    previous_execution = state.get("execution_digest")
+    if previous_execution and execution is None:
+        raise ValueError("An admitted execution constraint cannot be removed")
+    if execution:
+        digest = execution_digest(execution)
+        if (previous_execution and digest != previous_execution
+                and state.get("execution_prompt_binding") == _prompt_binding(state)
+                and execution["status"] != "PAUSED"):
+            raise ValueError("Execution scope cannot change under the same PO instruction")
+        if execution["status"] == "RUNNING" and state.get("execution_paused") and not state.get("execution_resume_authorized"):
+            raise ValueError("A pause requires an explicit new PO resume instruction")
     if (item.get("delivery", {}).get("status") == "PO_DEFERRED"
             and not _po_defer_receipt_matches_current_prompt(root, state, item)):
         raise ValueError("PO_DEFERRED requires an explicit current UserPromptSubmit instruction for every remaining requirement")
@@ -1385,6 +1575,11 @@ def continuity_save(root: Path, state: dict, event: dict, record: str, section: 
         "saved_at": time.time(),
         "missing_authorities": missing,
     }
+    if execution:
+        state["execution_digest"] = execution_digest(execution)
+        state["execution_prompt_binding"] = _prompt_binding(state)
+        state["execution_paused"] = execution["status"] == "PAUSED"
+        state.pop("execution_resume_authorized", None)
     if guard is not None:
         guard["context_paths"] = sorted(set(guard.get("context_paths", [])) | set(pins))
         guard["prompt_hash"] = state.get("last_prompt_hash")
@@ -2262,7 +2457,7 @@ def handle(event: dict, root: Path, state: dict) -> dict:
         state["last_event"] = name
         return {}
     if name == "PreToolUse":
-        reason = policy_reason(event)
+        reason = policy_reason(event) or execution_reason(root, state, event)
         return {"hookSpecificOutput": {"hookEventName": name, "permissionDecision": "deny", "permissionDecisionReason": reason}} if reason else {}
     if name in {"SessionStart", "UserPromptSubmit"}:
         reason = project_primary_model_override_reason(root)
@@ -2309,6 +2504,11 @@ def handle(event: dict, root: Path, state: dict) -> dict:
             state["last_prompt_hash"] = prompt_hash
             state["last_prompt_at"] = time.time()
             state["turn_exit_mode"] = classify_turn_exit(prompt)
+            if state["turn_exit_mode"] in {"PO_PAUSED", "APPROVAL_WAIT"}:
+                state["execution_paused"] = True
+                state.pop("execution_resume_authorized", None)
+            elif re.fullmatch(r"\s*(?:请)?(?:恢复|继续)(?:产品)?(?:开发|执行|工作)(?:吧)?[。！!]?\s*", prompt):
+                state["execution_resume_authorized"] = True
             state["turn_prompt_hash"] = state["last_prompt_hash"]
             state["turn_prompt_reconciliation"] = {
                 "prompt_hash": state["last_prompt_hash"],
@@ -2396,6 +2596,12 @@ def handle(event: dict, root: Path, state: dict) -> dict:
                    + continuity_context(root, state, event))
         return context(name, message[:2400])
     if name == "PostToolUse":
+        admitted = state.get("execution_pending_calls", {}).pop(str(event.get("tool_use_id", "")), None)
+        if admitted and exit_status(event.get("tool_response")) == 0:
+            completed = state.setdefault("execution_completed_calls", [])
+            if admitted not in completed:
+                completed.append(admitted)
+                del completed[:-100]
         state.pop("compile_envelope_probe", None)
         state.pop("compile_event_probe", None)
         now = snapshot(root)

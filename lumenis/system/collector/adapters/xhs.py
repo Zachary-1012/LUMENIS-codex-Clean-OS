@@ -3,11 +3,43 @@ from __future__ import annotations
 import datetime
 import os
 import re
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
-from .config import PLATFORM_CAPABILITIES
 from .registry import register_adapter
+
+
+def validate_xhs_detail_target(value: str) -> str:
+    """Local syntax/host validation; never inspect a profile or credential."""
+    from urllib.parse import urlsplit
+    if not isinstance(value, str):
+        raise ValueError('DETAIL_SOURCE_UNVERIFIED')
+    if re.fullmatch(r'[0-9a-fA-F]{24}', value):
+        return 'https://www.rednote.com/explore/' + value.lower()
+    try:
+        parsed = urlsplit(value)
+        valid = (parsed.scheme == 'https' and parsed.hostname == 'www.rednote.com'
+                 and parsed.port in (None, 443) and not parsed.username and not parsed.password
+                 and not parsed.fragment
+                 and re.fullmatch(r'/(?:explore|search_result|discovery/item)/[0-9a-fA-F]{24}/?', parsed.path)
+                 and not any(ord(c) < 32 for c in value))
+    except ValueError:
+        valid = False
+    if not valid:
+        raise ValueError('DETAIL_SOURCE_UNVERIFIED')
+    return value
+
+
+def xhs_detail_source_reference(value: str) -> str:
+    """Transport locator tokens never become public/source/approval identity."""
+    from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+    parsed = urlsplit(validate_xhs_detail_target(value))
+    secrets = {'key', 'api_key', 'apikey', 'access_key', 'appkey', 'token', 'auth',
+               'authorization', 'cookie', 'session', 'session_id', 'password',
+               'signature', 'sign', 'sig'}
+    query = [(key, item) for key, item in parse_qsl(parsed.query, keep_blank_values=True)
+             if key.lower() not in secrets and not key.lower().endswith('_token')]
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(query), ''))
 
 
 class XiaohongshuAdapter(BasePlatformAdapter):
@@ -106,6 +138,9 @@ class XiaohongshuAdapter(BasePlatformAdapter):
             raise RuntimeError(f"Unable to load existing XHS collector: {exc}") from exc
 
     def search(self, keyword: str, **kwargs: Any) -> CollectionResult:
+        return self._collect(keyword, operation='search', **kwargs)
+
+    def _collect(self, keyword: str, *, operation: str, **kwargs: Any) -> CollectionResult:
         try:
             detail_media_mode = kwargs.get("detail_media_mode", "legacy")
             if not isinstance(detail_media_mode, str) or detail_media_mode not in {"legacy", "cover_only"}:
@@ -113,7 +148,7 @@ class XiaohongshuAdapter(BasePlatformAdapter):
             effective_detail_media_mode = detail_media_mode
             detail_media_mode_reason = "requested"
             backend = self._load_backend()
-            fn = getattr(backend, "search_xiaohongshu")
+            fn = getattr(backend, "search_xiaohongshu" if operation == 'search' else 'detail_xiaohongshu')
             acquisition_fingerprint = kwargs.get("acquisition_fingerprint")
             if (acquisition_fingerprint is not None
                     and (not isinstance(acquisition_fingerprint, str)
@@ -209,6 +244,8 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 "acquisition_fingerprint": acquisition_fingerprint,
                 "detail_media_mode": effective_detail_media_mode,
             }
+            if operation == 'detail':
+                call_kwargs['source_url'] = kwargs.get('detail_source_url', keyword)
             if resume_path:
                 call_kwargs["resume_path"] = resume_path
             if "time_budget" in kwargs:
@@ -222,6 +259,12 @@ class XiaohongshuAdapter(BasePlatformAdapter):
             notes = [item for item in notes if isinstance(item, dict)] if isinstance(notes, list) else []
             error = raw.get("error", "") if isinstance(raw, dict) else ""
             error_code = str(error or "").strip().upper()
+            identity_failures = {
+                'COLLECTOR_IDENTITY_NOT_CONFIGURED', 'COLLECTOR_IDENTITY_NOT_VERIFIED',
+                'COLLECTOR_IDENTITY_UNAVAILABLE', 'COLLECTOR_IDENTITY_MISMATCH',
+            }
+            if error_code.removeprefix('CDP_EXCEPTION: ') in identity_failures:
+                error_code = error_code.removeprefix('CDP_EXCEPTION: ')
             actual_media_mode = raw.get("detail_media_mode")
             if isinstance(actual_media_mode, str) and actual_media_mode in {"legacy", "cover_only"}:
                 if resume_snapshot is not None and actual_media_mode != effective_detail_media_mode:
@@ -293,11 +336,18 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                             continuation_required=bool(continuation_snapshot.get("continuation_required")),
                         )
 
-            if acquisition_fingerprint is not None:
+            if acquisition_fingerprint is not None or operation == 'detail':
                 notes = [item for item in notes
                          if raw.get("identity_verified") is True
                          and item.get("detail_fetched") is True
                          and item.get("detail_identity_verified") is True]
+                if operation == 'detail':
+                    from urllib.parse import urlsplit
+                    expected_id = urlsplit(keyword).path.rstrip('/').rsplit('/', 1)[-1].lower()
+                    if any(str(item.get('note_id', '')).lower() != expected_id for item in notes):
+                        return self._failed_result('DETAIL_IDENTITY_MISMATCH')
+                    if raw.get('notes') and not notes and not error_code:
+                        return self._failed_result('DETAIL_IDENTITY_UNVERIFIED')
 
             summary = raw.get("summary") if isinstance(raw.get("summary"), dict) else {}
             raw_pending = summary.get("pending_note_ids", [])
@@ -328,8 +378,13 @@ class XiaohongshuAdapter(BasePlatformAdapter):
 
             if error_code == "IP_RISK_OR_300012":
                 status = CollectionStatus.RISK_WARNING
-            elif error_code == "SESSION_EXPIRED":
-                status = CollectionStatus.SESSION_EXPIRED
+            elif error_code in {"SESSION_EXPIRED", "COLLECTOR_IDENTITY_NOT_VERIFIED"}:
+                status = (CollectionStatus.NEED_VERIFY if error_code=='COLLECTOR_IDENTITY_NOT_VERIFIED'
+                    and raw.get('identity_failure_stage') in {'NO_EXISTING_APPROVED_ORIGIN_PAGE',
+                        'SELF_NAVIGATION_READ_FAILED','SELF_NAVIGATION_NOT_OBSERVED'}
+                    else CollectionStatus.SESSION_EXPIRED)
+            elif error_code == 'COLLECTOR_IDENTITY_MISMATCH':
+                status = CollectionStatus.BLOCKED
             elif error_code == "NEED_VERIFY":
                 status = CollectionStatus.NEED_VERIFY
             elif error_code in {
@@ -337,6 +392,7 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 "COLLECTOR_ENDPOINT_INVALID",
                 "POLICY_BLOCKED",
                 "LOCAL_COLLECTOR_ENDPOINT_FORBIDDEN",
+                "COLLECTOR_IDENTITY_NOT_CONFIGURED",
             }:
                 status = CollectionStatus.NOT_CONFIGURED
             elif error_code in {
@@ -346,6 +402,7 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                 "CDP_TIMEOUT_PARTIAL",
                 "CDP_TIMEOUT_NO_CHECKPOINT",
                 "COLLECTOR_PROVIDER_FAILURE",
+                "COLLECTOR_IDENTITY_UNAVAILABLE",
             }:
                 status = CollectionStatus.PROVIDER_UNAVAILABLE
             elif error_code:
@@ -382,6 +439,7 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                     "provider": provider,
                     "source": "www.rednote.com",
                     "source_platform": "xhs",
+                    "acquisition_capability": operation,
                     "collected_at": str(collected_at)[:40],
                     "region": raw.get("region", "intl") if isinstance(raw, dict) else "intl",
                     "detail_media_mode": (
@@ -422,9 +480,16 @@ class XiaohongshuAdapter(BasePlatformAdapter):
                         else (raw.get("checkpoint") or {}).get("run_id")
                     ),
                     "captured_at": captured_at,
+                    **({'identity_failure_stage':raw['identity_failure_stage']} if raw.get('identity_failure_stage') in {
+                        'APPROVED_IDENTITY_NOT_CONFIGURED','REGISTERED_CONTEXT_COOKIE_READ_FAILED',
+                        'WEB_SESSION_NOT_PRESENT','COOKIE_USER_ID_MISMATCH','HOLDER_COUNTRY_MISMATCH',
+                        'NO_EXISTING_APPROVED_ORIGIN_PAGE','SELF_NAVIGATION_READ_FAILED',
+                        'SELF_NAVIGATION_ORIGIN_MISMATCH','SELF_NAVIGATION_TARGET_INVALID',
+                        'SELF_NAVIGATION_NOT_OBSERVED','SELF_NAVIGATION_USER_ID_MISMATCH'} else {}),
                     **({"search_diagnostics": search_diagnostics}
                        if search_diagnostics is not None else {}),
-                    **({"error_type": status.value} if status not in {CollectionStatus.SUCCESS, CollectionStatus.NO_NEW_DATA} else {}),
+                    **({"error_type": error_code if error_code in identity_failures else status.value}
+                       if status not in {CollectionStatus.SUCCESS, CollectionStatus.NO_NEW_DATA} else {}),
                 },
             )
         except Exception as exc:
@@ -466,14 +531,103 @@ class XiaohongshuAdapter(BasePlatformAdapter):
         )
 
     def detail(self, content_id: str, **kwargs: Any) -> CollectionResult:
-        return CollectionResult(
-            status=CollectionStatus.NOT_SUPPORTED,
-            platform=self.platform,
-            message=(
-                "现有香港/国际小红书搜索链会在采集时读取详情；独立详情读取接口尚未接入。"
-            ),
-            metadata={"content_id": content_id},
-        )
+        # Validation is local and happens before loading any session/backend.
+        try:
+            content_id = validate_xhs_detail_target(content_id)
+        except (ValueError, TypeError):
+            return self._failed_result('DETAIL_SOURCE_UNVERIFIED')
+        return self._collect(xhs_detail_source_reference(content_id), operation='detail',
+                             detail_source_url=content_id, **kwargs)
+
+    def comments(self, content_id: str, *, include_replies=False, **kwargs: Any) -> CollectionResult:
+        return self._native_page('comments', content_id, include_replies=include_replies, **kwargs)
+
+    def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
+        return self._native_page('author', creator_id, **kwargs)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._native_page('author_posts', author_id, **kwargs)
+
+    def _native_page(self, operation, target, **kwargs):
+        try:
+            if operation == 'comments':
+                target = validate_xhs_detail_target(target)
+            elif not isinstance(target, str) or re.fullmatch(r'[0-9a-fA-F]{24}', target) is None:
+                return self._failed_result('XHS_AUTHOR_ID_INVALID')
+            backend = self._load_backend()
+            method = getattr(backend, 'collect_native_xiaohongshu', None)
+            if not callable(method):
+                return CollectionResult(CollectionStatus.NOT_SUPPORTED, self.platform,
+                    message='已注册小红书提供方尚未接入原生页读取', metadata={'error_type': 'NATIVE_PROVIDER_NOT_IMPLEMENTED'})
+            options = {key: kwargs[key] for key in ('region', 'account', 'time_budget', 'worker_chunk_seconds', 'acquisition_fingerprint') if key in kwargs}
+            raw = method(target, operation=operation, cursor=kwargs.get('cursor'),
+                max_results=kwargs.get('max_comments', 20) if operation == 'comments' else kwargs.get('max_results', 20),
+                include_replies=kwargs.get('include_replies', False), **options)
+            result = raw.get('native_result') if isinstance(raw, dict) else None
+            result = result if isinstance(result, dict) else {}
+            items = result.get('items') if isinstance(result.get('items'), list) else []
+            comments = result.get('comments') if isinstance(result.get('comments'), list) else []
+            error = str(raw.get('error') or '')
+            success = raw.get('ok') is True and raw.get('identity_verified') is True and bool(result)
+            if success:
+                status = CollectionStatus.SUCCESS if items or comments else CollectionStatus.NO_NEW_DATA
+            elif any(code in error for code in ('IDENTITY_MISMATCH', 'ACCESS_BLOCKED', 'POLICY_BLOCKED')):
+                status = CollectionStatus.BLOCKED
+            elif any(code in error for code in ('SESSION_EXPIRED', 'AUTH_REQUIRED', 'WEB_SESSION_NOT_PRESENT')):
+                status = CollectionStatus.SESSION_EXPIRED
+            elif any(code in error for code in ('IDENTITY_NOT_VERIFIED', 'NEED_VERIFY', 'VERIFICATION_REQUIRED')):
+                status = CollectionStatus.NEED_VERIFY
+            elif 'RATE_LIMITED' in error:
+                status = CollectionStatus.COOLING_DOWN
+            elif any(code in error for code in ('NOT_CONFIGURED', 'SCRIPT_UNAVAILABLE')):
+                status = CollectionStatus.NOT_CONFIGURED
+            elif any(code in error for code in ('ENDPOINT_UNAVAILABLE', 'TIMEOUT', 'PROVIDER_UNAVAILABLE')):
+                status = CollectionStatus.PROVIDER_UNAVAILABLE
+            else:
+                status = CollectionStatus.COLLECT_ERROR
+            pagination = result.get('pagination') if isinstance(result.get('pagination'), dict) else {
+                'request_cursor': kwargs.get('cursor'), 'next_cursor': None, 'exhausted': None, 'page_complete': False}
+            summary = raw.get('summary') if isinstance(raw.get('summary'), dict) else {}
+            return CollectionResult(status, self.platform, items=items if success else [], comments=comments if success else [],
+                raw_count=len(items) + len(comments) if success else None, new_count=len(items) + len(comments) if success else 0,
+                message='' if success else '香港/国际采集未完成；请通过原任务恢复入口处理当前平台状态',
+                metadata={'provider': 'authorized_browser_worker', 'source': 'www.rednote.com', 'region': 'intl',
+                    'acquisition_capability': operation, 'pagination': pagination, 'include_replies_requested': kwargs.get('include_replies', False),
+                    'identity_verified': raw.get('identity_verified') is True,
+                    'identity_failure_stage': raw.get('identity_failure_stage'),
+                    'error_type': None if success else re.sub(r'[^A-Z0-9_: ]', '', error)[:120],
+                    'http_status': summary.get('http_status'), 'retry_after_seconds': summary.get('retry_after_seconds')})
+        except (ValueError, TypeError):
+            return self._failed_result('XHS_NATIVE_INPUT_INVALID')
+        except Exception as exc:
+            return CollectionResult(CollectionStatus.PROVIDER_UNAVAILABLE, self.platform,
+                message='香港/国际采集提供方暂不可用', metadata={'provider': 'authorized_browser_worker', 'error_type': type(exc).__name__})
+
+    def _loaded_detail_comments(self, content_id, *, include_replies=False, **kwargs):
+        """Retained observation mapper; native comments owns acquisition."""
+        observed = self.detail(content_id, **kwargs)
+        if not observed.ok:
+            return observed
+        comments = []
+        for note in observed.items:
+            for value in note.get('comment_list', []):
+                if not isinstance(value, dict):
+                    continue
+                native_id = value.get('platform_comment_id', value.get('comment_id'))
+                parent = value.get('parent_comment_id', value.get('parent_id'))
+                from xhs_cdp_collector import parse_count
+                comments.append({**value, 'platform_comment_id': native_id,
+                    'parent_comment_id': parent, 'parent_content_id': note.get('note_id'),
+                    'author_nickname': value.get('author_nickname', value.get('user')),
+                    'publish_datetime': value.get('publish_datetime'),
+                    'likes': value.get('likes') if type(value.get('likes')) is int else parse_count(value.get('likes_raw')),
+                    'raw': value})
+        return CollectionResult(observed.status, self.platform, comments=comments,
+            raw_count=len(comments), new_count=len(comments), metadata={**observed.metadata,
+                'acquisition_capability': 'comments', 'include_replies_requested': include_replies,
+                'pagination': {'request_cursor': None, 'next_cursor': None, 'exhausted': None,
+                    'page_complete': True, 'coverage_scope': 'LOADED_COMMENT_DOM_ONLY',
+                    'partial_reason': 'NATIVE_CURSOR_AND_TOTAL_NOT_OBSERVED'}})
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         try:

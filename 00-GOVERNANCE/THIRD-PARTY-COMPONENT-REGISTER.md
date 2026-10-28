@@ -33,6 +33,26 @@ LUMENIS Contract
 
 Third-party components must not silently become the owner of LUMENIS Canonical Data, Evidence, Metric, Permission, Subject Context or business truth.
 
+### 2026-10-26 Collector media and public-parser source adoption
+
+This adopts mature source through the existing SYSTEM Collector/PublicSource and
+Shared Media/Artifact owners. The complete Global §10/J1/J7 requirements remain;
+supported formats, source access, actual byte coverage and semantic execution are
+separate observations. No installation or isolated test closes the product job.
+
+| Upstream and fixed version | Actual integration and licensing evidence | Execution boundary |
+| --- | --- | --- |
+| [yt-dlp 2026.10.21](https://github.com/yt-dlp/yt-dlp/releases/tag/2026.10.21), [PyPI wheel](https://pypi.org/project/yt-dlp/2026.10.21/) | `requirements.txt` pins `yt-dlp==2026.10.21`; official wheel SHA256 `94a3a3e2c423129d0bbd2f1be000c4171fa1226c29e251c84aff868f2851c247` (3,188,012 bytes), Python >=3.10. Read `YoutubeDL`, networking `Request/Response`, Generic/HTML5 embed parsers, HLS/DASH native downloaders and wheel LICENSE. The wheel is Unlicense; retain [complete original license](../vendor/lumenis-reuse-notices/yt-dlp-2026.10.21-Unlicense.txt). PyInstaller distributions have additional/GPL obligations and are not adopted. | `adapters/public_media.py` embeds the fixed library, with `public_source.py` as the sole HTTP/DNS/TLS/redirect/SSRF boundary. No CLI, external config, browser Cookie, netrc login, plugins, JS runtime/remote components, geo bypass, DRM/decryption, external downloader or automatic provider fallback. Explicit public GET metadata/media only; request/byte/time budgets and task cancellation remain. Native HLS/DASH fragments and manifests retain original content hashes/bytes through the existing Artifact owner. Separate native video/audio tracks may be copy-muxed only with the already owned local FFmpeg; keep both tracks and distinguish the assembled representation. No model/semantic understanding is claimed. |
+| [OpenCLI](https://github.com/jackwener/OpenCLI/tree/aeaff2b796efabb7fd46654112418ab61fcae917), commit `aeaff2b796efabb7fd46654112418ab61fcae917` | Apache-2.0, copyright 2025 jackwener. Full fixed root [LICENSE](../vendor/lumenis-reuse-notices/OpenCLI-aeaff2b7-Apache-2.0.txt) retained; no root NOTICE or additional notice in the selected parser paths. C1 adapts YouTube utils/video/channel/search/feed/comments; Reddit `web-search.js` search-post-unit/telemetry identity and source partial-cursor parsing; LinkedIn post-root/posts-core/profile-read/company parsers; Tieba read/search/utils public DOM/Vue props. Reddit `read.js` was reviewed, but its COOKIE JSON/morechildren/truncate/zero defaults are rejected; existing media helpers are retained, not counted as new source reuse. Modified files retain pin, source and modification notices. | Existing `youtube.py`, `reddit.py`, `linkedin.py`, `tieba.py` and their SYSTEM public/browser helper consume selected parsing rules. Reject COOKIE JSON/morechildren, zero defaults, automatic expansion/editing, signed `page_pc`, Cookie export, auth and publishing. Channels auth/publish is not collection and is not adopted. No OpenCLI runtime, profile, second browser/Collector, API or data store is installed. HTTP/browser choice is explicit before acquisition, never a response to a refusal. |
+| [sipher](https://github.com/stepbyjason-lab/sipher/tree/2c3470f973d47842a13b70c552872a6ceabd7a9b), commit `2c3470f973d47842a13b70c552872a6ceabd7a9b` | MIT, copyright 2026 stepbyjason-lab. Full [LICENSE](../vendor/lumenis-reuse-notices/sipher-2c3470f9-MIT.txt) retained (SHA256 `70a715832e5121e35550059cac4b965e31cfcf4d08201274e8d09ded5da68370`). Exact `adapters/naver_blog/scrape.py` original SHA256 `384d76c1d4dbef97d34ffc1ac68577a779b36e1f27e21c2df6853589321476ec`; C1 adapts only body/iframe parsing in the existing Naver/Daum source owner. | Original fixed research bytes remain in the protected existing delivery work folder; no setup, CLI, AI, OCR, external provider, browser identity or session runtime is run. No unlicensed `naver-post-crawler` source is copied. Production adaptation preserves original source/modified-file attribution and uses the existing Source transport and intake. |
+
+The 2026-10-08 yt-dlp DEFER record remains historical evidence. This bounded
+adoption resolves its explicit identity, transport, resource and library-license
+conditions; it grants no additional SourceUse, commercial media rights, export,
+training, account, deployment or package-distribution acceptance. Rollback removes
+the exact dependency/binding while preserving Source originals, component hashes,
+Artifacts, failed receipts and their versioned lineage.
+
 Every release audit should reconcile this register against dependency manifests and vendored assets.
 
 ## 2. Python direct dependencies observed in `requirements.txt`
@@ -66,6 +86,7 @@ The table records direct manifest entries, not every transitive dependency.
 | python-dotenv | PRODUCTION | Environment configuration loading | Config boundary | VERIFY_BEFORE_RELEASE | Yes |
 | python-dateutil | PRODUCTION | Date/time utilities | Utility boundary | VERIFY_BEFORE_RELEASE | Yes |
 | PyYAML | PRODUCTION | YAML parsing | Config/data adapter | VERIFY_BEFORE_RELEASE | Yes |
+| packaging 26.3 | BUILD TOOLING | Parse dependency requirements, markers and canonical names in `app/tool/build_windows.ps1`; pinned in `requirements.txt` | Existing Windows build/dependency inventory; [PyPA source](https://github.com/pypa/packaging), installed distribution declares Apache-2.0 OR BSD-2-Clause; preserve the selected license and notices when redistributed | VERIFY_BEFORE_RELEASE | Yes |
 | colorama | PRODUCTION/CLI | Terminal output compatibility | CLI only | VERIFY_BEFORE_RELEASE | Yes |
 | tqdm | PRODUCTION/CLI | Progress display | CLI only | VERIFY_BEFORE_RELEASE | Yes |
 | aiohttp | OPTIONAL ENHANCEMENT | Async collector HTTP; manifest notes synchronous fallback | Collector network adapter | VERIFY_BEFORE_RELEASE | Yes |
@@ -86,6 +107,8 @@ The table records direct manifest entries, not every transitive dependency.
 | [arviz](https://pypi.org/project/arviz/0.22.0/) | PRODUCTION | Existing MMM posterior diagnostics | lumenis/shared/reporting/statistics_mmm.py; no false certainty or missing-to-zero conversion | VERIFY_BEFORE_RELEASE | Yes |
 | [pdfplumber](https://pypi.org/project/pdfplumber/0.11.10/) | PRODUCTION | Local PDF text/table parsing and test verification | lumenis/importer/parser.py; runtime dependency, not test-only; no cloud parser | VERIFY_BEFORE_RELEASE | Yes |
 | [ortools](https://pypi.org/project/ortools/9.15.6755/) | PRODUCTION | Shared bounded scheduling optimization | lumenis/shared/reporting/statistics_methods.py; official CP-SAT adapter, no separate task scheduler | VERIFY_BEFORE_RELEASE | Yes |
+
+MarkItDown's 0.1.8 distribution metadata requires `magika~=0.6.1` unconditionally; the current bundled closure selects Magika 0.6.3. Its local `_get_stream_info_guesses` path calls `Magika.identify_stream` for content inspection even when an extension is supplied, so the explicit `.html`/`.pptx` dispatch does not remove this runtime dependency. The [PyPI 0.6.3 release](https://pypi.org/project/magika/0.6.3/) records verified provenance for the Windows wheel (SHA-256 `e57f75674447b20cab4db928ae58ab264d7d8582b55183a0b876711c2b2787f3`) from `google/magika` commit `a04562a9bb5d52c809a4424911ca8d07c0265767`; the pinned [Python project metadata](https://raw.githubusercontent.com/google/magika/a04562a9bb5d52c809a4424911ca8d07c0265767/python/pyproject.toml) declares Apache-2.0 and the commit's root [LICENSE](https://raw.githubusercontent.com/google/magika/a04562a9bb5d52c809a4424911ca8d07c0265767/LICENSE) is retained in the bundle. That release contains `magika/models/standard_v3_3/model.onnx`; the installed distribution RECORD binds the packaged file to SHA-256 `fe2d2eb49c5f88a9e0a6c048e15d6ffdf86235519c2afc535044de433169ec8c` (3,163,737 bytes). The [pinned model documentation](https://raw.githubusercontent.com/google/magika/a04562a9bb5d52c809a4424911ca8d07c0265767/assets/models/standard_v3_3/README.md) identifies its content-type classification outputs. No model-directory LICENSE/NOTICE or root NOTICE exists at this source commit; the model is covered by the Apache-2.0 project/package release. This is a third-party document file-type classifier only, not LUMENIS-owned/domain model weights, business inference, training, or a bundled training dataset. The root source repository does not provide separate licensing evidence for Magika's training data, which is not shipped here.
 
 2026-10-21 manifest reconciliation: the linked upstream PyPI project/release
 pages were read for identity/version provenance. This does not certify the
@@ -455,3 +478,21 @@ PO supplied these repositories for useful adaptation and secondary development. 
 Origin: `Zachary-1012/global-growth-intelligence`, commit `e6cde984480cff3176eb39b038c7c0a66e1e2124` (72 files). No LICENSE or NOTICE was present in that source snapshot. The owner explicitly authorized sanitized owned-source/document publication into LUMENIS. Adapted original owned/authorized work falls within the existing LICENSING.md grant; this is not a fabricated upstream third-party license.
 
 The 7 market, 12 platform, 14 policy and 3 scenario references retain original source URLs/dates and historical claims. Third-party reuse rights are UNKNOWN / NOT_DECLARED_IN_SOURCE, not Apache-2.0 by inference. Acquisition, publication and training permission are separate. Preserve effective/observation/capture dates, jurisdiction, uncertainty and provenance; no current legal/market fact or legal clearance is established. Full source file/rights mappings: `00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json`. Original example configuration, old provider defaults and passwords are not production configuration. No source runtime DB, credentials or standalone dependency stack is imported by this adoption record.
+
+
+## 2026-10-26 Flutter work-surface adaptations
+
+The existing Flutter owner consumes pinned packages through `app/pubspec.yaml` and `app/pubspec.lock`. `lumenis_workspace_frame.dart` uses flutter_animate state-driven reversible feedback with reduced-motion equivalence; `lumenis_botanical.dart` uses pixel_snap physical-pixel quantization for original botanical geometry at fractional display scales. No upstream example layout, artwork, provider, analytics or product data is imported. flutter_shaders is flutter_animate's transitive BSD dependency; no remote shader or new GPU requirement is introduced. Full product capability and user acceptance remain separate from this implementation. Rollback removes these package bindings while retaining route, focus, draft and permission contracts.
+
+| Component | Pinned release archive SHA256 | Notice |
+|---|---|---|
+| flutter_animate 4.5.2 | `7befe2d3252728afb77aecaaea1dec88a89d35b9b1d2eea6d04479e8af9117b5` | [flutter_animate original notice](../vendor/lumenis-reuse-notices/flutter_animate-4.5.2-LICENSE.txt) |
+| pixel_snap 0.1.5 | `677410ea37b07cd37ecb6d5e6c0d8d7615a7cf3bd92ba406fd1ac57e937d1fb0` | [pixel_snap original notice](../vendor/lumenis-reuse-notices/pixel_snap-0.1.5-LICENSE.txt) |
+| flutter_shaders 0.1.5 | `16cd456daf2fd6ed7ac0c5168716c5e2fe18f91d82631b775f1af9100fb3f586` | [flutter_shaders original notice](../vendor/lumenis-reuse-notices/flutter_shaders-0.1.5-LICENSE.txt) |
+
+## 2026-10-26 Memory lexical retrieval code adaptation
+
+
+| Component / fixed source | Existing owner / changes | License / boundary |
+|---|---|---|
+| [rank_bm25](https://github.com/dorianbrown/rank_bm25/tree/47aa3ddf8dc1ebeb7ef4e65f2b4536af44594099) `rank_bm25.py` | C2 Memory `agent_memory/retrieval.py`: term frequencies and document-length normalization adapted into sparse postings, positive IDF and bounded passage selection, preserving authorization/revalidation | Apache-2.0; original license SHA256 `c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4` retained under `vendor/lumenis-reuse-notices/`. No new service, weight download, model permission or neural-search completion claim. Rollback changes ranking implementation without changing original documents or scopes. |

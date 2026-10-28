@@ -28,6 +28,31 @@ permissions:
   contents: read
 
 jobs:
+  verify-windows-packaging:
+    name: Windows packaging contracts
+    runs-on: windows-latest
+    timeout-minutes: 10
+    env:
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: core.longpaths
+      GIT_CONFIG_VALUE_0: "true"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install packaging parsers from product requirements
+        shell: pwsh
+        run: |
+          $parserRequirements = @(Get-Content requirements.txt | Where-Object { $_ -match '^(PyYAML|packaging)[<=>]' })
+          if ($parserRequirements.Count -ne 2) { throw 'Packaging parser requirements are missing or duplicated' }
+          python -m pip install @parserRequirements
+      - name: Verify Windows packaging and build identity (BLOCKING)
+        shell: pwsh
+        env:
+          PYTHONUTF8: "1"
+        run: python -m unittest discover -s app/tool -p test_build_windows.py -v
+
   verify-app:
     name: Flutter application foundation
     runs-on: ubuntu-latest
@@ -133,6 +158,13 @@ jobs:
             test/features/bmp04/bmp04_screen_test.dart \
             test/features/bmp03/bmp03_screen_test.dart \
             test/core/lumenis_core_client_test.dart \
+            test/core/lumenis_theme_test.dart \
+            test/shell/lumenis_workspace_shell_test.dart \
+            test/features/bmp01/bmp01_screen_test.dart \
+            test/features/cth/cth01/cth01_screen_test.dart \
+            test/features/cth/cth10/cth10_repository_test.dart \
+            test/features/cth/cth10/cth10_screen_test.dart \
+            test/core/source_brief_client_test.dart \
             test/core/internal_pitch_client_test.dart \
             test/core/ai_conversation_client_test.dart \
             test/features/ai01/ai01_screen_test.dart \
@@ -142,14 +174,23 @@ jobs:
             test/features/ai01/ai01_workspace_draft_test.dart \
             test/features/cth/cth10/source_brief_view_model_test.dart \
             test/features/cth/cth10/source_brief_panel_test.dart \
+            test/features/cth/cth10/business_work_panel_test.dart \
+            test/features/account/acc02/acc02_registration_test.dart \
+            test/features/system/sys05_subject_directory_test.dart \
+            test/features/cth/cth10/source_brief_domain_import_test.dart \
+            test/features/shared/sh02/sh02_office_controller_test.dart \
+            test/features/shared/sh02/sh02_office_screen_test.dart \
+            test/features/shared/sh02/sh02_screen_test.dart \
             test/navigation/lumenis_router_test.dart \
             test/features/shared/sh01/manuscript_controller_test.dart \
             test/features/shared/sh01/manuscript_draft_files_test.dart \
             test/features/shared/sh01/manuscript_editor_test.dart \
             test/features/shared/sh01/media_project_controller_test.dart \
+            test/features/shared/sh01/media_project_snapshot_test.dart \
             test/features/shared/sh01/media_project_workbench_test.dart \
             test/features/shared/sh01/native_media_cache_test.dart \
             test/features/shared/sh01/native_media_preview_controller_test.dart \
+            test/features/shared/read_aloud_service_test.dart \
             test/features/shared/pr83_observation_presentation_test.dart \
             test/features/bmp09/bmp09_artifact_display_test.dart \
             test/features/shared/sh01/sh01_screen_test.dart \

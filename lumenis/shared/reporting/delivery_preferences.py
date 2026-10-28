@@ -17,7 +17,9 @@ from . import saved_work as works
 
 _DEFAULT = {"language": "zh-CN", "export_format": "json", "notifications_enabled": True,
             "quiet_hours": {"enabled": False, "start_hour": 22, "end_hour": 8, "timezone": "Asia/Shanghai"},
-            "acknowledged_artifact_ids": []}
+            "acknowledged_artifact_ids": [],
+            "subject_directory": {"mode": "EVIDENCED_CN", "subject_ids": [],
+                                  "removed_subject_ids": []}}
 
 
 def _identity(actor, scope):
@@ -26,6 +28,12 @@ def _identity(actor, scope):
 
 
 def _validate(value):
+    legacy_keys = set(_DEFAULT) - {"subject_directory"}
+    if isinstance(value, dict) and set(value) == legacy_keys:
+        # Existing immutable preference artifacts predate the directory
+        # working-set field. Keep their notification/export values intact and
+        # project the new preference with its default semantics on read.
+        value = {**deepcopy(_DEFAULT), **value}
     if (not isinstance(value, dict) or set(value) != set(_DEFAULT)
             or value["language"] not in {"zh-CN", "en", "ko"}
             or value["export_format"] not in {"json", "md", "txt", "docx", "pdf", "xlsx"}
@@ -46,6 +54,35 @@ def _validate(value):
             or any(not isinstance(x, str) or not works._ID.fullmatch(x) for x in acknowledged)
             or len(set(acknowledged)) != len(acknowledged)):
         raise works.SavedWorkError("DELIVERY_ACKNOWLEDGEMENT_INVALID")
+    directory = value["subject_directory"]
+    if (isinstance(directory, dict) and directory.get("mode") in {"DEFAULT_ALL", "CUSTOM"}
+            and set(directory) == {"mode", "subject_ids", "removed_subject_ids"}):
+        # Older pre-release working-set drafts could include every registered
+        # subject. Preserve explicit removals, but never promote that old
+        # global default or unverified selections into the current CN directory.
+        directory = {"mode": "EVIDENCED_CN", "subject_ids": [],
+                     "removed_subject_ids": directory["removed_subject_ids"]}
+        value = {**value, "subject_directory": directory}
+    if (not isinstance(directory, dict)
+            or set(directory) != {"mode", "subject_ids", "removed_subject_ids"}
+            or directory["mode"] != "EVIDENCED_CN"):
+        raise works.SavedWorkError("SUBJECT_DIRECTORY_PREFERENCE_INVALID")
+
+    def valid_subject_ids(values):
+        return (
+            isinstance(values, list) and len(values) <= 10000
+            and all(type(item) is str and item and item == item.strip()
+                    and len(item) <= 256 and not any(ord(char) < 32 for char in item)
+                    for item in values)
+            and len(set(values)) == len(values)
+        )
+
+    selected = directory["subject_ids"]
+    removed = directory["removed_subject_ids"]
+    if (not valid_subject_ids(selected) or not valid_subject_ids(removed)
+            or set(selected).intersection(removed)
+            or selected):
+        raise works.SavedWorkError("SUBJECT_DIRECTORY_PREFERENCE_INVALID")
     return deepcopy(value)
 
 

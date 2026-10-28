@@ -294,14 +294,14 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only skill registry stats snapshot",
             tags=["registry", "readonly"],
-            product="SYSTEM", domain="system", category="开发者工具",
+            product="SYSTEM", domain="system", category="开发者工具", cross_domain_allowed=["CTH", "BMP"],
         ),
         SkillMetadata(
             skill_id="zbc.agent_boundary_audit",
             version="1.0.0",
             owner="core-team",
             permission_level="AUDIT",
-            input_schema={"type": "object", "properties": {"agent_id": {"type": "string"}}, "required": ["agent_id"]},
+            input_schema={"type": "object", "properties": {}, "additionalProperties": False},
             output_schema={"type": "object", "properties": {"identity": {"type": "object"}}},
             risk_level=RiskLevel.LOW,
             execution_policy=ExecutionPolicy.READ_ONLY,
@@ -309,7 +309,7 @@ def _register_builtin_skills(reg: SkillRegistry) -> None:
             evaluation_status=EvaluationStatus.EVALUATED,
             description="read-only agent boundary and permission audit",
             tags=["agent", "audit", "boundary"],
-            product="SYSTEM", domain="system", category="开发者工具",
+            product="SYSTEM", domain="system", category="开发者工具", cross_domain_allowed=["CTH", "BMP"],
         ),
     ]
     # The six user-specified creation/research tools are one shared capability

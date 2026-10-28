@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 
+import '../../shared/sh02/sh02_repository.dart';
+
 enum SourceBriefPhase { idle, loading, ready, failed }
 
 enum SourceBriefSavedWorkState { idle, saving, saved, reopened, failed }
@@ -25,6 +27,27 @@ enum SourceBriefTaskState {
   succeeded,
   failed,
   interrupted,
+}
+
+enum SourceBriefDomainImportState {
+  idle,
+  preparing,
+  prepared,
+  importing,
+  imported,
+  startingBrief,
+  briefUnconfirmed,
+  ready,
+  failed,
+}
+
+enum SourceBriefDomainImportError {
+  accessDenied,
+  contextChanged,
+  invalidInput,
+  rejected,
+  unavailable,
+  unconfirmed,
 }
 
 enum SourceBriefErrorKind {
@@ -193,6 +216,62 @@ final class SourceBriefAnalysisSample {
   final String? coverage;
 }
 
+final class SourceBriefResearchFinding {
+  const SourceBriefResearchFinding({
+    required this.id,
+    required this.sourceId,
+    required this.evidenceRef,
+    required this.content,
+    required this.title,
+    required this.truncated,
+  });
+  final String id, sourceId, evidenceRef, content;
+  final String? title;
+  final bool? truncated;
+}
+
+final class SourceBriefResearchQuestion {
+  SourceBriefResearchQuestion({
+    required this.statement,
+    required this.status,
+    required List<String> findingIds,
+    required List<String> validationNeeded,
+  }) : findingIds = List.unmodifiable(findingIds),
+       validationNeeded = List.unmodifiable(validationNeeded);
+  final String statement, status;
+  final List<String> findingIds, validationNeeded;
+}
+
+final class SourceBriefNumberCheck {
+  SourceBriefNumberCheck({
+    required this.sourceId,
+    required List<String> literals,
+  }) : literals = List.unmodifiable(literals);
+  final String sourceId;
+  final List<String> literals;
+}
+
+/// A projection of the original source-bound analysis, never factual promotion.
+final class SourceBriefResearchAnalysis {
+  SourceBriefResearchAnalysis({
+    required this.status,
+    required this.summary,
+    required List<SourceBriefResearchFinding> findings,
+    required List<SourceBriefResearchQuestion> questions,
+    required List<SourceBriefNumberCheck> numberChecks,
+    required List<String> limitations,
+  }) : findings = List.unmodifiable(findings),
+       questions = List.unmodifiable(questions),
+       numberChecks = List.unmodifiable(numberChecks),
+       limitations = List.unmodifiable(limitations);
+  final String status;
+  final String? summary;
+  final List<SourceBriefResearchFinding> findings;
+  final List<SourceBriefResearchQuestion> questions;
+  final List<SourceBriefNumberCheck> numberChecks;
+  final List<String> limitations;
+}
+
 final class SourceBriefResult {
   SourceBriefResult({
     required this.jobId,
@@ -207,6 +286,8 @@ final class SourceBriefResult {
     required this.reviewStatus,
     this.sourceSample,
     this.analysisSample,
+    this.researchAnalysis,
+    this.markdown,
   }) : records = List.unmodifiable(records);
 
   final String jobId;
@@ -221,6 +302,8 @@ final class SourceBriefResult {
   final String reviewStatus;
   final SourceBriefQuerySample? sourceSample;
   final SourceBriefAnalysisSample? analysisSample;
+  final SourceBriefResearchAnalysis? researchAnalysis;
+  final String? markdown;
 }
 
 final class SourceBriefSavedWork {
@@ -395,6 +478,19 @@ class SourceBriefViewModel extends ChangeNotifier {
       SourceBriefSharedAdoptionState.idle;
   SourceBriefErrorKind? _sharedAdoptionErrorKind;
   SourceBriefSharedSavedWork? _sharedAdoptedWork;
+  SourceBriefDomainImportState _domainImportState =
+      SourceBriefDomainImportState.idle;
+  SourceBriefDomainImportError? _domainImportError;
+  Sh02PickedDocument? _pendingDomainFile;
+  Map<String, dynamic>? _pendingDomainProvenance;
+  String? _domainImportContext;
+  String? _domainImportResource;
+  final List<String> _domainSourceIds = [];
+  String? _domainTaskRequestId;
+  String? _domainTaskQuestion;
+  List<String>? _domainTaskSourceIds;
+  String? _domainTaskId;
+  int _domainImportGeneration = 0;
 
   SourceBriefSavedWorkState get savedWorkState => _savedWorkState;
   SourceBriefErrorKind? get savedWorkErrorKind => _savedWorkErrorKind;
@@ -415,6 +511,21 @@ class SourceBriefViewModel extends ChangeNotifier {
   SourceBriefSharedAdoptionPreview? get sharedAdoptionPreview =>
       _pendingSharedAdoption?.preview;
   SourceBriefSharedSavedWork? get sharedAdoptedWork => _sharedAdoptedWork;
+  SourceBriefDomainImportState get domainImportState => _domainImportState;
+  SourceBriefDomainImportError? get domainImportError => _domainImportError;
+  List<String> get domainSourceIds =>
+      _domainContextMatches ? List.unmodifiable(_domainSourceIds) : const [];
+  bool get domainContextMatches => _domainContextMatches;
+  bool get canConfirmDomainImport =>
+      _domainContextMatches &&
+      _domainImportState == SourceBriefDomainImportState.prepared &&
+      _domainImportResource != null;
+  bool get canContinueDomainBrief =>
+      _domainContextMatches &&
+      _domainSourceIds.isNotEmpty &&
+      (_domainImportState == SourceBriefDomainImportState.briefUnconfirmed ||
+          _domainTaskId != null &&
+              _domainImportState == SourceBriefDomainImportState.imported);
   SourceBriefRevisionDraft? pendingRevisionDraftFor(
     SourceBriefSavedWork parent,
   ) => _pendingRevision?.matches(parent, _pendingRevision!.draft) == true
@@ -1405,11 +1516,16 @@ class SourceBriefViewModel extends ChangeNotifier {
     _clearReportState();
     if (!_contextStillCurrent(fresh, operation)) return;
 
-    if (businessQuestion != null && businessQuestion.trim().isNotEmpty) {
+    final question = businessQuestion?.trim();
+    if (question != null &&
+        question.isNotEmpty &&
+        (question.runes.length < 4 ||
+            question.runes.length > 1500 ||
+            RegExp(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]').hasMatch(question))) {
       _finish(
         operation,
         phase: SourceBriefPhase.failed,
-        errorKind: SourceBriefErrorKind.analysisUnavailable,
+        errorKind: SourceBriefErrorKind.invalidResponse,
       );
       return;
     }
@@ -1418,6 +1534,9 @@ class SourceBriefViewModel extends ChangeNotifier {
       final response = await client.startSourceBriefTask(
         domainId: _domainId,
         limit: 30,
+        businessQuestion: question == null || question.isEmpty
+            ? null
+            : question,
       );
       if (!_isCurrent(operation)) return;
       if (!_contextStillCurrent(fresh, operation)) return;
@@ -1564,6 +1683,339 @@ class SourceBriefViewModel extends ChangeNotifier {
     }
   }
 
+  /// Starts the existing two-step domain-document admission. Preparation is
+  /// retained with the exact picked bytes and provenance so an uncertain
+  /// response can be reconciled without selecting a different file.
+  Future<bool> prepareDomainDocument({
+    required Sh02PickedDocument file,
+    required Map<String, dynamic> provenance,
+  }) async {
+    if (_disposed || _busy) return false;
+    if (!_domainCanImport) {
+      _domainImportError = _selection?.globalScope == true
+          ? SourceBriefDomainImportError.invalidInput
+          : SourceBriefDomainImportError.contextChanged;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    if (!_validDomainProvenance(provenance)) {
+      _domainImportError = SourceBriefDomainImportError.invalidInput;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    final signature = _contextSignature(client.currentContextEnvelope);
+    if (_domainImportContext != null && _domainImportContext != signature) {
+      _domainImportError = SourceBriefDomainImportError.contextChanged;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    if (_pendingDomainFile != null &&
+        !_samePickedDocument(_pendingDomainFile!, file)) {
+      _domainImportError = SourceBriefDomainImportError.unconfirmed;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return false;
+    }
+    _domainImportContext ??= signature;
+    _pendingDomainFile ??= file;
+    _pendingDomainProvenance ??= Map.unmodifiable(provenance);
+    final operation = ++_domainImportGeneration;
+    _domainImportState = SourceBriefDomainImportState.preparing;
+    _domainImportError = null;
+    notifyListeners();
+    try {
+      final response = await client.importDomainDocument(
+        domainId: _domainId,
+        filename: _pendingDomainFile!.filename,
+        bytes: _pendingDomainFile!.bytes,
+        provenance: _pendingDomainProvenance!,
+      );
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (!_domainContextMatches) {
+        throw const LumenisCoreException(
+          'Domain context changed.',
+          statusCode: 409,
+        );
+      }
+      final prepared = _domainImportPayload(response);
+      if (prepared['state'] != 'PREPARED' ||
+          _safeIdentifier(prepared['resource']) == null) {
+        throw const FormatException('Domain document preparation unavailable.');
+      }
+      _domainImportResource = prepared['resource'] as String;
+      _domainImportState = SourceBriefDomainImportState.prepared;
+      notifyListeners();
+      return true;
+    } catch (error) {
+      if (_isDomainImportCurrent(operation)) {
+        _failDomainImport(error, SourceBriefDomainImportState.preparing);
+      }
+      return false;
+    }
+  }
+
+  /// Applies the user-confirmed import using the same prepared resource, then
+  /// starts the source brief with a stable request identity.
+  Future<bool> confirmDomainDocument({String? businessQuestion}) async {
+    final file = _pendingDomainFile;
+    final provenance = _pendingDomainProvenance;
+    final resource = _domainImportResource;
+    if (_disposed ||
+        _busy ||
+        !canConfirmDomainImport ||
+        file == null ||
+        provenance == null ||
+        resource == null) {
+      return false;
+    }
+    final operation = ++_domainImportGeneration;
+    _domainImportState = SourceBriefDomainImportState.importing;
+    _domainImportError = null;
+    notifyListeners();
+    try {
+      final response = await client.importDomainDocument(
+        domainId: _domainId,
+        filename: file.filename,
+        bytes: file.bytes,
+        provenance: provenance,
+        mode: 'import',
+        confirmedResource: resource,
+      );
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (!_domainContextMatches) {
+        throw const LumenisCoreException(
+          'Domain context changed.',
+          statusCode: 409,
+        );
+      }
+      final imported = _domainImportPayload(response);
+      final sourceId = _safeIdentifier(imported['source_id']);
+      if (sourceId == null ||
+          imported['evidence_id'] is! int ||
+          imported['scope_status'] != 'VERIFIED') {
+        throw const FormatException('Domain import receipt unavailable.');
+      }
+      if (!_domainSourceIds.contains(sourceId)) _domainSourceIds.add(sourceId);
+      _pendingDomainFile = null;
+      _pendingDomainProvenance = null;
+      _domainImportResource = null;
+      _domainTaskRequestId = null;
+      _domainTaskQuestion = null;
+      _domainTaskSourceIds = null;
+      _domainTaskId = null;
+      _domainImportState = SourceBriefDomainImportState.imported;
+      notifyListeners();
+      return await _startImportedDomainBrief(
+        businessQuestion: businessQuestion,
+      );
+    } catch (error) {
+      if (_isDomainImportCurrent(operation)) {
+        _failDomainImport(error, SourceBriefDomainImportState.importing);
+      }
+      return false;
+    }
+  }
+
+  /// Continues an imported file's task using its original request id and
+  /// frozen source list; this never re-imports the document.
+  Future<bool> continueDomainBrief({String? businessQuestion}) async {
+    if (_disposed || _busy || !canContinueDomainBrief) return false;
+    if (_domainTaskId case final taskId?) {
+      await openTask(taskId);
+      if (_taskId == taskId && _errorKind == null) {
+        _domainImportState = SourceBriefDomainImportState.ready;
+        _domainImportError = null;
+        notifyListeners();
+        return true;
+      }
+      _domainImportState = SourceBriefDomainImportState.briefUnconfirmed;
+      _domainImportError = SourceBriefDomainImportError.unconfirmed;
+      notifyListeners();
+      return false;
+    }
+    return _startImportedDomainBrief(businessQuestion: businessQuestion);
+  }
+
+  Future<bool> _startImportedDomainBrief({String? businessQuestion}) async {
+    if (!_domainContextMatches || _domainSourceIds.isEmpty) {
+      _domainImportState = SourceBriefDomainImportState.failed;
+      _domainImportError = SourceBriefDomainImportError.contextChanged;
+      notifyListeners();
+      return false;
+    }
+    if (_domainTaskRequestId == null) {
+      _domainTaskRequestId =
+          'domain_materials_${DateTime.now().microsecondsSinceEpoch}';
+      _domainTaskQuestion = businessQuestion?.trim();
+      _domainTaskSourceIds = List.unmodifiable(_domainSourceIds);
+    }
+    final requestId = _domainTaskRequestId!;
+    final question = _domainTaskQuestion;
+    final sourceIds = _domainTaskSourceIds!;
+    final operation = ++_domainImportGeneration;
+    _domainImportState = SourceBriefDomainImportState.startingBrief;
+    _domainImportError = null;
+    notifyListeners();
+    try {
+      final response = await client.startDomainSourceBriefTask(
+        domainId: _domainId,
+        sourceIds: sourceIds,
+        requestId: requestId,
+        businessQuestion: question,
+      );
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (!_domainContextMatches) {
+        throw const LumenisCoreException(
+          'Domain context changed.',
+          statusCode: 409,
+        );
+      }
+      final task = _asMap(response['task']);
+      final taskId = _safeIdentifier(task?['task_id']);
+      if (response['ok'] != true || taskId == null) {
+        throw const FormatException('Source brief task start unconfirmed.');
+      }
+      _domainTaskId = taskId;
+      await openTask(taskId);
+      if (!_isDomainImportCurrent(operation)) return false;
+      if (_taskId != taskId || _errorKind != null) {
+        _domainImportState = SourceBriefDomainImportState.briefUnconfirmed;
+        _domainImportError = SourceBriefDomainImportError.unconfirmed;
+        notifyListeners();
+        return false;
+      }
+      _domainImportState = SourceBriefDomainImportState.ready;
+      _domainImportError = null;
+      _domainTaskRequestId = null;
+      _domainTaskQuestion = null;
+      _domainTaskSourceIds = null;
+      notifyListeners();
+      return true;
+    } catch (error) {
+      if (_isDomainImportCurrent(operation)) {
+        _failDomainImport(error, SourceBriefDomainImportState.startingBrief);
+      }
+      return false;
+    }
+  }
+
+  Map<String, dynamic> _domainImportPayload(Map<String, dynamic> response) {
+    if (response['ok'] != true || response['result'] is! Map) {
+      throw const FormatException('Invalid domain import response.');
+    }
+    return Map<String, dynamic>.from(response['result'] as Map);
+  }
+
+  void _failDomainImport(Object error, SourceBriefDomainImportState stage) {
+    final status = error is LumenisCoreException ? error.statusCode : null;
+    if (status == 401 || status == 403) {
+      _clearDomainImport();
+      _domainImportError = SourceBriefDomainImportError.accessDenied;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return;
+    }
+    if (!_domainContextMatches) {
+      _domainImportError = SourceBriefDomainImportError.contextChanged;
+      _domainImportState = SourceBriefDomainImportState.failed;
+      notifyListeners();
+      return;
+    }
+    final rejected =
+        error is LumenisCoreException &&
+        const {400, 404, 410, 413, 415, 422}.contains(status);
+    if (stage != SourceBriefDomainImportState.startingBrief && rejected) {
+      _pendingDomainFile = null;
+      _pendingDomainProvenance = null;
+      _domainImportResource = null;
+    }
+    _domainImportError = stage == SourceBriefDomainImportState.startingBrief
+        ? rejected
+              ? SourceBriefDomainImportError.rejected
+              : SourceBriefDomainImportError.unconfirmed
+        : rejected
+        ? SourceBriefDomainImportError.rejected
+        : SourceBriefDomainImportError.unavailable;
+    _domainImportState = stage == SourceBriefDomainImportState.startingBrief
+        ? SourceBriefDomainImportState.briefUnconfirmed
+        : SourceBriefDomainImportState.failed;
+    notifyListeners();
+  }
+
+  bool get _domainCanImport =>
+      !_disposed &&
+      !_busy &&
+      _selection != null &&
+      !_selection!.globalScope &&
+      _scopeLabel != null;
+
+  bool get _domainContextMatches =>
+      _domainImportContext != null &&
+      _domainImportContext ==
+          _contextSignature(client.currentContextEnvelope) &&
+      _selection?.globalScope == false &&
+      _scopeLabel != null;
+
+  bool _isDomainImportCurrent(int generation) =>
+      !_disposed && generation == _domainImportGeneration;
+
+  bool _validDomainProvenance(Map<String, dynamic> value) {
+    final title = value['title'];
+    final rights = value['rights'];
+    final statement = value['rights_statement'];
+    final use = value['intended_use'];
+    final published = value['published_at'];
+    final captured = value['captured_at'];
+    final url = value['source_url'];
+    return title is String &&
+        title.trim().isNotEmpty &&
+        const {'public-reference-only', 'owner-approved'}.contains(rights) &&
+        statement is String &&
+        statement.trim().isNotEmpty &&
+        use == 'research_reference' &&
+        (url == null || url is String) &&
+        (published == null ||
+            published is String &&
+                _validDomainDate(published) &&
+                DateTime.tryParse(published) != null) &&
+        captured is String &&
+        _validDomainDate(captured) &&
+        DateTime.tryParse(captured) != null;
+  }
+
+  bool _validDomainDate(String value) =>
+      DateTime.tryParse(value) != null &&
+      RegExp(r'(Z|[+-]\d{2}:\d{2})$').hasMatch(value.trim());
+
+  bool _samePickedDocument(Sh02PickedDocument left, Sh02PickedDocument right) {
+    if (left.filename != right.filename ||
+        left.bytes.length != right.bytes.length) {
+      return false;
+    }
+    for (var index = 0; index < left.bytes.length; index++) {
+      if (left.bytes[index] != right.bytes[index]) return false;
+    }
+    return true;
+  }
+
+  void _clearDomainImport() {
+    _domainImportGeneration += 1;
+    _domainImportState = SourceBriefDomainImportState.idle;
+    _domainImportError = null;
+    _pendingDomainFile = null;
+    _pendingDomainProvenance = null;
+    _domainImportContext = null;
+    _domainImportResource = null;
+    _domainSourceIds.clear();
+    _domainTaskRequestId = null;
+    _domainTaskQuestion = null;
+    _domainTaskSourceIds = null;
+    _domainTaskId = null;
+  }
+
   Future<void> reopenJob(String jobId) async {
     if (_disposed) return;
     final operation = _beginOperation();
@@ -1596,6 +2048,9 @@ class SourceBriefViewModel extends ChangeNotifier {
     _generation += 1;
     _clearReportState();
     _clearSavedResearchHistory();
+    if (_domainImportState != SourceBriefDomainImportState.briefUnconfirmed) {
+      _clearDomainImport();
+    }
     _busy = false;
     _errorKind = null;
     _phase = _selection == null
@@ -1970,6 +2425,7 @@ class SourceBriefViewModel extends ChangeNotifier {
   void _forgetContext() {
     _clearReportState();
     _clearSavedResearchHistory();
+    _clearDomainImport();
     _selection = null;
     _scopeLabel = null;
   }
@@ -2015,6 +2471,7 @@ class SourceBriefViewModel extends ChangeNotifier {
   void dispose() {
     _disposed = true;
     _generation += 1;
+    _clearDomainImport();
     super.dispose();
   }
 }
@@ -2067,7 +2524,7 @@ SourceBriefResult _parseResult(
     }
     if (!scope.globalScope &&
         (record['subject_id'] != scope.subjectId ||
-            record['brand_focus_id'] != null)) {
+            record['brand_focus_id'] != scope.brandFocusId)) {
       throw const _ContextChanged();
     }
     records.add(
@@ -2091,7 +2548,27 @@ SourceBriefResult _parseResult(
   final analysisSample = _parseSourceBriefAnalysisSample(
     rawBusiness?['sample'],
   );
-  final question = _safeText(result['business_question'], maxLength: 1500);
+  final question = _safeText(result['business_question'], maxLength: 3000);
+  if (question != null &&
+      (question.runes.length < 4 || question.runes.length > 1500)) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  final researchAnalysis = _parseResearchAnalysis(
+    result['research_analysis'],
+    scope: scope,
+    records: records,
+    question: question,
+  );
+  final rawMarkdown = sourceBrief['markdown'];
+  final markdown = _safeText(rawMarkdown, maxLength: 200000);
+  if (rawMarkdown != null &&
+      (markdown == null ||
+          _safeText(sourceBrief['content_hash'], maxLength: 64) == null ||
+          !RegExp(
+            r'^[a-f0-9]{64}$',
+          ).hasMatch(sourceBrief['content_hash'] as String))) {
+    throw const _InvalidSourceBriefResponse();
+  }
   SourceBriefBusinessAnalysis? analysis;
   if (businessState == SourceBriefBusinessAnalysisState.draft) {
     final rawAnalysis = _asMap(rawBusiness?['analysis']);
@@ -2118,6 +2595,216 @@ SourceBriefResult _parseResult(
     reviewStatus: reviewStatus,
     sourceSample: sourceSample,
     analysisSample: analysisSample,
+    researchAnalysis: researchAnalysis,
+    markdown: markdown,
+  );
+}
+
+SourceBriefResearchAnalysis? _parseResearchAnalysis(
+  Object? value, {
+  required SourceBriefScope scope,
+  required List<SourceBriefSource> records,
+  required String? question,
+}) {
+  if (value == null) return null;
+  final raw = _asMap(value);
+  if (raw == null) throw const _InvalidSourceBriefResponse();
+  List<String> texts(Object? values, {int max = 100, int length = 5000}) {
+    if (values is! List || values.length > max) {
+      throw const _InvalidSourceBriefResponse();
+    }
+    return values
+        .map(
+          (v) =>
+              _safeText(v, maxLength: length) ??
+              (throw const _InvalidSourceBriefResponse()),
+        )
+        .toList(growable: false);
+  }
+
+  final status = raw['status'];
+  final limitations = texts(raw['limitations']);
+  if (status == 'source_use_unavailable') {
+    if (raw['ranked_findings'] is! List ||
+        (raw['ranked_findings'] as List).isNotEmpty ||
+        raw['fact_verified'] != false) {
+      throw const _InvalidSourceBriefResponse();
+    }
+    return SourceBriefResearchAnalysis(
+      status: status as String,
+      summary: null,
+      findings: const [],
+      questions: const [],
+      numberChecks: const [],
+      limitations: limitations,
+    );
+  }
+  if (raw['schema'] != 'source_bound_research.v1' ||
+      !{'research_draft', 'needs_sources', 'needs_question'}.contains(status) ||
+      raw['permission_granted'] != false ||
+      raw['canonical_promotion'] != false) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  final sourceScope = _parseScope(_asMap(raw['scope']));
+  if (sourceScope == null ||
+      sourceScope.domainId != scope.domainId ||
+      sourceScope.globalScope != scope.globalScope ||
+      sourceScope.subjectId != scope.subjectId ||
+      sourceScope.brandFocusId != scope.brandFocusId ||
+      sourceScope.scopeKey != scope.scopeKey) {
+    throw const _ContextChanged();
+  }
+  if (question != null && raw['goal'] != question) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  final summary = _safeText(raw['summary'], maxLength: 10000);
+  final setHash = _safeText(raw['source_set_sha256'], maxLength: 64);
+  if (summary == null ||
+      setHash == null ||
+      !RegExp(r'^[a-f0-9]{64}$').hasMatch(setHash)) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  bool bound(String id, String ref) =>
+      records.any((r) => r.sourceId == id && r.evidenceRef == ref);
+  final rawFindings = raw['ranked_findings'],
+      rawLineage = raw['evidence_lineage'];
+  if (rawFindings is! List ||
+      rawFindings.length > 100 ||
+      rawLineage is! List ||
+      rawLineage.length > 100) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  final findings = <SourceBriefResearchFinding>[];
+  final findingRefs = <String, String>{};
+  for (final value in rawFindings) {
+    final item = _asMap(value);
+    final id = _safeIdentifier(item?['finding_id']);
+    final sid = _safeIdentifier(item?['source_id']);
+    final content = _safeText(item?['content'], maxLength: 100000);
+    final refs = item?['evidence_refs'];
+    final lineageId = _safeIdentifier(item?['lineage_id']);
+    if (item == null ||
+        id == null ||
+        sid == null ||
+        content == null ||
+        lineageId == null ||
+        refs is! List ||
+        refs.length != 1 ||
+        refs.single is! String ||
+        !bound(sid, refs.single as String) ||
+        item['claim_type'] != 'source_statement' ||
+        item['fact_verified'] != false ||
+        item['validated'] != false ||
+        item['confidence'] != null ||
+        findingRefs.containsKey(id)) {
+      throw const _InvalidSourceBriefResponse();
+    }
+    final matches = rawLineage
+        .map(_asMap)
+        .where((v) => v?['lineage_id'] == lineageId)
+        .toList();
+    final lineage = matches.length == 1 ? matches.single : null;
+    final provenance = _asMap(lineage?['provenance']);
+    if (lineage?['source'] != sid ||
+        lineage?['evidence_id'] != refs.single ||
+        provenance?['fact_verified'] != false) {
+      throw const _InvalidSourceBriefResponse();
+    }
+    findingRefs[id] = refs.single as String;
+    findings.add(
+      SourceBriefResearchFinding(
+        id: id,
+        sourceId: sid,
+        evidenceRef: refs.single as String,
+        content: content,
+        title: _safeText(item['title'], maxLength: 1000),
+        truncated: item['excerpt_truncated'] is bool
+            ? item['excerpt_truncated'] as bool
+            : null,
+      ),
+    );
+  }
+  final rawQuestions = raw['hypotheses'], rawComparisons = raw['comparisons'];
+  if (rawQuestions is! List ||
+      rawQuestions.length > 100 ||
+      rawComparisons is! List ||
+      rawComparisons.length > 100) {
+    throw const _InvalidSourceBriefResponse();
+  }
+  final questions = <SourceBriefResearchQuestion>[];
+  for (final value in rawQuestions) {
+    final item = _asMap(value);
+    final statement = _safeText(item?['statement'], maxLength: 5000);
+    final ids = texts(item?['finding_ids'], max: 100, length: 160);
+    final refs = texts(item?['evidence_refs'], max: 100, length: 160);
+    if (item == null ||
+        statement == null ||
+        item['claim_type'] != 'hypothesis' ||
+        !{
+          'proposed',
+          'challenged',
+          'rejected',
+          'reinstated',
+        }.contains(item['status']) ||
+        item['source_set_sha256'] != setHash ||
+        item['confidence'] != null ||
+        ids.isEmpty ||
+        ids.any((id) => !findingRefs.containsKey(id)) ||
+        refs
+            .toSet()
+            .difference(ids.map((id) => findingRefs[id]!).toSet())
+            .isNotEmpty ||
+        ids
+            .map((id) => findingRefs[id]!)
+            .toSet()
+            .difference(refs.toSet())
+            .isNotEmpty) {
+      throw const _InvalidSourceBriefResponse();
+    }
+    questions.add(
+      SourceBriefResearchQuestion(
+        statement: statement,
+        status: item['status'] as String,
+        findingIds: ids,
+        validationNeeded: texts(item['validation_needed']),
+      ),
+    );
+  }
+  final checks = <SourceBriefNumberCheck>[];
+  for (final value in rawComparisons) {
+    final item = _asMap(value);
+    final sid = _safeIdentifier(item?['source_id']);
+    final refs = item?['evidence_refs'];
+    if (item == null ||
+        sid == null ||
+        refs is! List ||
+        refs.length != 1 ||
+        refs.single is! String ||
+        !bound(sid, refs.single as String) ||
+        item['comparison_status'] !=
+            'NOT_COMPARABLE_WITHOUT_MEASURE_DEFINITIONS' ||
+        [
+          'unit',
+          'currency',
+          'period',
+          'denominator',
+        ].any((k) => item[k] != null)) {
+      throw const _InvalidSourceBriefResponse();
+    }
+    checks.add(
+      SourceBriefNumberCheck(
+        sourceId: sid,
+        literals: texts(item['numeric_literals'], max: 2000),
+      ),
+    );
+  }
+  return SourceBriefResearchAnalysis(
+    status: status as String,
+    summary: summary,
+    findings: findings,
+    questions: questions,
+    numberChecks: checks,
+    limitations: limitations,
   );
 }
 

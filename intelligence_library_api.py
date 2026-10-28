@@ -264,10 +264,94 @@ def bind_legacy_catalog_asset(asset_id, evidence_id, *, actor, scope):
             'binding_evidence_id': receipt, 'fact_verification': 'NOT_VERIFIED'}
 
 
+def _verified_comment_page_evidence(connection, item, *, actor, context, purpose):
+    """One original observation page and its own current purpose grant.
+
+    A parent post's scope is necessary to locate this page. Its rights, catalog
+    membership or SourceUse approval cannot authorize another author's comment.
+    """
+    from lumenis.shared.reporting import saved_work
+    from lumenis.system.security import permission
+    from lumenis.system.collector.adapters.secondary_collection import read_comment_page_original
+    if actor is None:
+        raise saved_work.SavedWorkError('WORK_SOURCE_AUTHORIZATION_REQUIRED')
+    if purpose not in {'research_reference','quote_reference'}:
+        raise PermissionError('COMMENT_SOURCE_USE_PURPOSE_DENIED')
+    try:
+        metadata = json.loads(item['collection_metadata'])
+        source_context = metadata['context']
+        source_scope = {key:source_context[key] for key in saved_work._SCOPE_KEYS}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise saved_work.SavedWorkError('COMMENT_ORIGINAL_REQUIRED') from exc
+    if (saved_work._context_owner(source_context) != saved_work._context_owner(context)
+            or not saved_work._shared_context(context) and (
+                context['domain_id'] != source_context['domain_id']
+                or not context['global_scope'] and context != source_context)):
+        raise saved_work.SavedWorkError('WORK_EVIDENCE_CONTEXT_MISMATCH')
+    if saved_work.authorize(actor, source_scope, action='read', connection=connection) != source_context:
+        raise saved_work.SavedWorkError('WORK_EVIDENCE_CONTEXT_MISMATCH')
+    original = read_comment_page_original('app_evidence_records:'+str(item['id']), actor=actor,
+                                           scope=source_scope, connection=connection)
+    if original['evidence'] != item:
+        raise saved_work.SavedWorkError('COMMENT_ORIGINAL_CHANGED')
+    checker = getattr(permission.get_permission_gate(), 'check_comment_page_use', None)
+    if not callable(checker):
+        raise RuntimeError('COMMENT_SOURCE_USE_UNAVAILABLE')
+    document = original['document']
+    decision = checker(actor, scope=source_scope, source_evidence_ref=original['evidence_ref'],
+        source_fingerprint=original['sha256'], body_sha256=document['body_sha256'],
+        source_version=item['version'], purpose=purpose, connection=connection)
+    if decision.allowed is not True or not decision.audit_id:
+        raise PermissionError('COMMENT_SOURCE_USE_APPROVAL_REQUIRED')
+    provenance = {
+        'context':source_context,'owner':saved_work._context_owner(source_context),
+        'source_artifact_ref':original['source_artifact']['artifact_id'],
+        'source_fingerprint':original['sha256'],'source_url':document['parent']['source_url'] or None,
+        'published_at':None,'captured_at':item.get('captured_at'),'parsed_text':document['body'],
+        'provenance':{'title':'Comment observations · '+original['source_id'], 'rights':'UNKNOWN',
+            'intended_use':'research_reference' if purpose == 'research_reference' else 'report_quote',
+            'source_use_state':'EXACT_COMMENT_PURPOSE_APPROVED','source_use_purpose':purpose,
+            'copyright_license':'NOT_ESTABLISHED_BY_PURPOSE_APPROVAL',
+            'content_origin':{'kind':'publisher-material','claim_type':'source_statement'},
+            'published_at':None,'captured_at':item.get('captured_at')},
+        'comment_page':{'source_id':original['source_id'],'parent_source_id':original['parent_source_id'],
+            'source_version_state':original['source_version_state'], 'body_segments':document['body_segments'],
+            'observations':document['observations'], 'representation':document['representation'],
+            'coverage_state':json.loads(item['outputs_json'])['result']['coverage_state']},
+    }
+    return {**item,'source_identity':original['source_id'],'source_kind':'native_comment_page',
+        'raw_content':document['body'],'content_hash':document['body_sha256'],
+        'source_record_content_hash':item.get('content_hash'),'provenance':provenance,
+        'source_use_audit_id':decision.audit_id,'source_use_resource':decision.resource}
+
+
 def verified_research_source(connection, evidence_id, *, actor, context, facts_only=False):
     """Read from the original source owner and recheck its current catalog."""
     from lumenis.shared.reporting.saved_work import _verified_evidence
-    item = _verified_evidence(connection, evidence_id, context, actor)
+    cursor = connection.execute('SELECT feature_id,version FROM app_evidence_records WHERE id=?', (evidence_id,))
+    kind = cursor.fetchone()
+    if kind is not None and kind[0] == 'COLLECTOR_NATIVE_COMMENTS':
+        if facts_only:
+            raise ValueError('LIBRARY_KNOWLEDGE_NOT_ADMITTED')
+        cursor = connection.execute('SELECT * FROM app_evidence_records WHERE id=?', (evidence_id,))
+        item = _verified_comment_page_evidence(connection,
+            dict(zip((column[0] for column in cursor.description), cursor.fetchone())),
+            actor=actor, context=context, purpose='research_reference')
+        provenance = item['provenance']
+        return {'evidence_id':evidence_id,'source_id':item['source_identity'],'asset_id':item['source_identity'],
+            'parent_source_id':item['asset_id'],'source_kind':'native_comment_page',
+            'content_hash':item['content_hash'],'integrity_digest':item['integrity_digest'],
+            'version':item['version'],'scope':provenance['context'],'rights':'UNKNOWN',
+            'intended_use':'research_reference','source_use_state':'EXACT_COMMENT_PURPOSE_APPROVED',
+            'title':provenance['provenance']['title'],'summary':item['raw_content'],'text':item['raw_content'],
+            'source_artifact_ref':provenance['source_artifact_ref'],'source_fingerprint':provenance['source_fingerprint'],
+            'comment_page':provenance['comment_page'],'sub_library':None,'tags':[],
+            'truth_kind':'source_reference','fact_verification':'NOT_VERIFIED','catalog_bound':False}
+    public_source = kind is not None and kind[0] == 'COLLECTED_SOURCE' and kind[1] == 'collected-public-source:live-v1'
+    if public_source and facts_only:
+        raise ValueError('LIBRARY_KNOWLEDGE_NOT_ADMITTED')
+    item = _verified_evidence(connection, evidence_id, context, actor,
+                             **({'purpose':'research_reference'} if public_source else {}))
     provenance = item['provenance']['provenance']
     if provenance.get('intended_use', 'research_reference') not in {'research_reference', 'report_quote'}:
         raise PermissionError('CONTENT_SOURCE_USE_DENIED')
@@ -362,6 +446,9 @@ def discover_research_sources(connection, *, actor, scope, query='', limit=30, o
     snapshot = (connection.execute('PRAGMA data_version').fetchone()[0], connection.total_changes)
     candidate_ids = {row[0] for row in connection.execute(
         "SELECT id FROM app_evidence_records WHERE feature_id IN ('DOCUMENT_IMPORT','COLLECTED_SOURCE')")}
+    if evidence_ids is not None and not catalog_only:
+        candidate_ids.update(row[0] for row in connection.execute(
+            "SELECT id FROM app_evidence_records WHERE feature_id='COLLECTOR_NATIVE_COMMENTS'"))
     if catalog_only:
         candidate_ids.update(_visible_binding_source_refs(connection, actor=actor, context=context))
     if evidence_ids is not None:
@@ -736,3 +823,409 @@ def _verify_reference_work_binding(connection, item, context):
     if not valid:
         raise ValueError('REFERENCE_BINDING_UNAVAILABLE')
     return receipt['id']
+
+
+_COMMENT_RESEARCH_SCHEMA = 'lumenis.comment-source-research/v1'
+_COMMENT_RESEARCH_CONTRACT = {'id':_COMMENT_RESEARCH_SCHEMA,'version':'1',
+                              'required_payload_paths':['comment_research']}
+
+
+def _comment_research_inputs(question, evidence_ids, reviews):
+    if (type(question) is not str or not 4 <= len(question.strip()) <= 4000
+            or type(evidence_ids) is not list or not 1 <= len(evidence_ids) <= 100
+            or any(type(item) is not int or item <= 0 for item in evidence_ids)
+            or len(set(evidence_ids)) != len(evidence_ids) or type(reviews) is not list or len(reviews) > 64):
+        raise ValueError('COMMENT_RESEARCH_INPUT_INVALID')
+    for item in reviews:
+        if (type(item) is not dict or set(item) != {'evidence_id','comment_index','relationship','rationale'}
+                or type(item['evidence_id']) is not int or item['evidence_id'] not in evidence_ids
+                or type(item['comment_index']) is not int or item['comment_index'] < 0
+                or type(item['relationship']) is not str
+                or item['relationship'] not in {'supports','contradicts','qualifies','context_only'}
+                or type(item['rationale']) is not str or not 1 <= len(item['rationale'].strip()) <= 2000):
+            raise ValueError('COMMENT_RESEARCH_REVIEW_INVALID')
+    identities = [(item['evidence_id'],item['comment_index']) for item in reviews]
+    if len(set(identities)) != len(identities):
+        raise ValueError('COMMENT_RESEARCH_REVIEW_DUPLICATE')
+    return json.loads(_binding_json({'question':question.strip(),'evidence_ids':evidence_ids,'reviews':reviews}))
+
+
+def _comment_research_material(connection, inputs, *, actor, scope, quote_use):
+    """Describe the complete selected observations; never infer sentiment or reach."""
+    from lumenis.shared.reporting import saved_work
+    context = saved_work.authorize_saved_work(actor, scope, action='read', connection=connection)
+    pages, citations, identities, authors, reviews = [], [], {}, set(), []
+    known_likes, missing_likes, invalid_likes = [], 0, 0
+    observed = unidentified = no_parent = replies = empty = missing_authors = 0
+    source_reviews = {(item['evidence_id'],item['comment_index']):item for item in inputs['reviews']}
+    for evidence_id in inputs['evidence_ids']:
+        source = verified_research_source(connection, evidence_id, actor=actor, context=context)
+        if source.get('source_kind') != 'native_comment_page':
+            raise ValueError('COMMENT_RESEARCH_NATIVE_PAGE_REQUIRED')
+        # Source material and quote/export are distinct grants. An analysis-only
+        # preview can calculate counts, but cannot quietly mint a cited report.
+        if quote_use:
+            saved_work._verified_evidence(connection, evidence_id, context, actor, purpose='quote_reference')
+        page = source['comment_page']
+        observations, segments = page['observations'], page['body_segments']
+        binding = {key:source[key] for key in ('evidence_id','source_id','parent_source_id','content_hash',
+                    'integrity_digest','version','scope','source_artifact_ref','source_fingerprint')}
+        pages.append({**binding,'coverage_state':page['coverage_state'],
+                      'observation_count':len(observations),'representation':page['representation']})
+        page_ids = {item['platform_comment_id'] for item in observations if item['platform_comment_id']}
+        unresolved = sum(bool(item['parent_comment_id']) and item['parent_comment_id'] not in page_ids for item in observations)
+        pages[-1]['reply_parent_not_in_page_count'] = unresolved
+        excerpt_added = False
+        for index, observation in enumerate(observations):
+            observed += 1
+            native = observation['platform_comment_id']
+            if native:
+                key = (source['parent_source_id'], observation['platform'], native)
+                identities.setdefault(key, []).append({'source_id':source['source_id'],'comment_index':index,
+                    'content_sha256':hashlib.sha256(observation['content'].encode()).hexdigest()})
+            else:
+                unidentified += 1
+            if observation['parent_comment_id']:
+                replies += 1
+            else:
+                no_parent += 1
+            if observation['author_id']:
+                authors.add((observation['platform'],observation['author_id']))
+            else:
+                missing_authors += 1
+            likes = observation.get('likes')
+            if type(likes) is int and likes >= 0:
+                known_likes.append(likes)
+            elif likes is None:
+                missing_likes += 1
+            else:
+                invalid_likes += 1
+            content = observation['content']
+            if not content.strip():
+                empty += 1
+            review = source_reviews.get((evidence_id,index))
+            if review is not None:
+                segment = segments[index]
+                reviews.append({**review,'source_id':source['source_id'],
+                    'platform_comment_id':native,'source_range':{'start':segment['start'],'end':segment['end']},
+                    'content_sha256':hashlib.sha256(content.encode()).hexdigest(),
+                    'assessment_origin':'human_declared_relationship_not_independently_verified'})
+            if quote_use and content.strip() and (review is not None or not excerpt_added):
+                segment = segments[index]
+                end = min(segment['end'],segment['start']+1000)
+                citations.append({'evidence_id':evidence_id,'start':segment['start'],'end':end,
+                                  'quote':source['text'][segment['start']:end]})
+                excerpt_added = True
+    if len(reviews) != len(inputs['reviews']):
+        raise ValueError('COMMENT_RESEARCH_REVIEW_SOURCE_CHANGED')
+    citations = list({saved_work._digest(item):item for item in citations}.values())
+    if len(citations) > 100:
+        raise ValueError('COMMENT_RESEARCH_CITATION_BUDGET_REQUIRED')
+    conflicts = [{'parent_source_id':key[0],'platform':key[1],'platform_comment_id':key[2],
+                  'observations':values,'state':'MULTIPLE_OBSERVED_CONTENT_VERSIONS'}
+                 for key,values in sorted(identities.items()) if len({value['content_sha256'] for value in values}) > 1]
+    analysis = {'schema':_COMMENT_RESEARCH_SCHEMA,'question':inputs['question'],'source_pages':pages,
+        'statistics':{'observed_page_count':len(pages),'observed_record_count':observed,
+            'distinct_observed_native_comment_ids':len(identities),'unidentified_comment_observations':unidentified,
+            'repeated_native_id_observations':sum(len(values)-1 for values in identities.values()),
+            'reply_identifier_observed_count':replies,'no_parent_identifier_observed_count':no_parent,
+            'distinct_observed_author_ids':len(authors),'author_id_missing_count':missing_authors,
+            'empty_text_observations':empty,'likes':{'known_observation_count':len(known_likes),
+                'missing_observation_count':missing_likes,'invalid_observation_count':invalid_likes,
+                'minimum_known':min(known_likes) if known_likes else None,
+                'maximum_known':max(known_likes) if known_likes else None,
+                'sum_known_observations':sum(known_likes) if known_likes else None,
+                'deduplicated_total':None},'comment_population_total':None,
+            'method':'descriptive_input_observations_not_population_estimation'},
+        'content_version_conflicts':conflicts,'human_reviews':reviews,
+        'review_relationship_counts':{key:sum(item['relationship']==key for item in reviews)
+            for key in ('supports','contradicts','qualifies','context_only')},
+        'source_set_sha256':saved_work._digest(pages),'coverage':'EXACT_SELECTED_PAGES_ONLY',
+        'ai_execution':'NOT_RUN','fact_verification':'NOT_VERIFIED','business_outcome':'NOT_OBSERVED',
+        'training_permission':'NOT_GRANTED','publication':'NOT_PERFORMED',
+        'limitations':['Selected captured pages are observations, not a representative consumer sample.',
+            'Native identity and reply links retain missing values; equal wording does not merge authors.',
+            'Known likes describe observations; repeated pages or changed values do not establish a unique total.',
+            'Human support or contradiction coding is attributed opinion, not automatic fact validation.',
+            'Exact-purpose approval does not establish a copyright licence or permit training/publication.']}
+    return analysis, citations
+
+
+def analyze_comment_research(*, actor, scope, question, evidence_ids, reviews=None):
+    inputs = _comment_research_inputs(question, evidence_ids, reviews or [])
+    with get_repository().connection(read_only=True, wal=False) as con:
+        analysis, _ = _comment_research_material(con, inputs, actor=actor, scope=scope, quote_use=False)
+    return {'inputs':inputs,'analysis':analysis,'state':'analyzed_not_saved','source_use':'research_reference'}
+
+
+def _comment_research_markdown(analysis, citations):
+    from lumenis.shared.reporting.operational_brief import _markdown_text
+    text = lambda value:_markdown_text(str(value))
+    counts = analysis['statistics']
+    lines = ['# 评论资料研究', '', '## 研究问题', text(analysis['question']), '', '## 观察范围',
+        f"核对 {counts['observed_page_count']} 个已选观察页，共 {counts['observed_record_count']} 条观察。",
+        f"可定位原生评论标识 {counts['distinct_observed_native_comment_ids']} 个；无标识观察 {counts['unidentified_comment_observations']} 条。",
+        f"观察到回复标识 {counts['reply_identifier_observed_count']} 条；未观察到父标识 {counts['no_parent_identifier_observed_count']} 条。",
+        '未推断平台总体、消费者比例、情绪、因果或业务效果。', '', '## 待核数据',
+        f"同一原生评论出现不同正文版本：{len(analysis['content_version_conflicts'])} 组。保留各页，不自动选作当前版本。",
+        f"点赞字段已知 {counts['likes']['known_observation_count']} 条，空缺 {counts['likes']['missing_observation_count']} 条。重复观察未去重合成总体。", '',
+        '## 人工证据判断']
+    for review in analysis['human_reviews']:
+        lines.extend([f"- {text(review['source_id'])} / {review['comment_index']}: {review['relationship']}", text(review['rationale'])])
+    if not analysis['human_reviews']:
+        lines.append('尚无人工支持、反证或限定判断；本次不自动生成这些判断。')
+    lines.extend(['', '## 原文定位摘录'])
+    for citation in citations:
+        lines.extend([f"来源 app_evidence_records:{citation['evidence_id']}，原文位置 {citation['start']}–{citation['end']}：",
+                      '> ' + text(citation['quote']).replace('\n','\n> '), ''])
+    lines.extend(['## 下一步', '先核对不同正文版本、缺失标识及回复上下文，再补充可定位的支持或反证。修改研究问题、材料或人工判断后保存新版本，原件与历史结果保留。',
+                  '', '## 限制', *[text(value) for value in analysis['limitations']]])
+    return '\n'.join(lines)
+
+
+def save_comment_research(*, actor, scope, question, evidence_ids, request_id, reviews=None,
+                          work_id=None, previous_artifact_id=None, expected_draft_digest=None):
+    """Analyze all selected pages, save v1/v2 and recover the original receipt."""
+    from lumenis.shared.reporting import saved_work
+    inputs = _comment_research_inputs(question, evidence_ids, reviews or [])
+    with get_repository().connection(read_only=True, wal=False) as con:
+        analysis, citations = _comment_research_material(con, inputs, actor=actor, scope=scope, quote_use=True)
+    payload = {'comment_research':{'inputs':inputs,'analysis':analysis}}
+    markdown = _comment_research_markdown(analysis,citations)
+    if previous_artifact_id is not None and expected_draft_digest is None:
+        raise ValueError('COMMENT_RESEARCH_PARENT_DIGEST_REQUIRED')
+    def before_commit(con, _artifact, document):
+        current, quotes = _comment_research_material(con, inputs, actor=actor, scope=scope, quote_use=True)
+        if (current != analysis or saved_work._validate_citations(con,quotes,document['context'],actor)
+                != document['citations']):
+            raise PermissionError('COMMENT_RESEARCH_SOURCE_CHANGED')
+    return saved_work.save_work(title='评论资料研究 · '+question.strip()[:200], markdown=markdown,kind='research',
+        payload=payload,citations=citations,request_id=request_id,actor=actor,scope=scope,
+        work_id=work_id,previous_artifact_id=previous_artifact_id,expected_draft_digest=expected_draft_digest,
+        contract=_COMMENT_RESEARCH_CONTRACT,before_commit=before_commit)
+
+
+def validate_comment_research_result(work, *, actor, scope, connection=None):
+    from contextlib import nullcontext
+    from lumenis.shared.reporting import saved_work
+    value = work['document']['payload'].get('comment_research')
+    if (type(value) is not dict or set(value) != {'inputs','analysis'}
+            or work['document']['contract'] != _COMMENT_RESEARCH_CONTRACT):
+        raise ValueError('COMMENT_RESEARCH_RESULT_INVALID')
+    inputs = _comment_research_inputs(**value['inputs'])
+    reader = nullcontext(connection) if connection is not None else get_repository().connection(read_only=True,wal=False)
+    with reader as con:
+        analysis, citations = _comment_research_material(con, inputs, actor=actor, scope=scope, quote_use=True)
+        checked = saved_work._validate_citations(con,citations,work['document']['context'],actor)
+    if (analysis != value['analysis'] or work['document']['citations'] != checked
+            or work['document']['markdown'] != _comment_research_markdown(analysis,citations)):
+        raise ValueError('COMMENT_RESEARCH_RESULT_CHANGED')
+
+
+def _comment_source_uses(connection, *, actor, scope, citations, payload):
+    """Recheck persisted native dependencies, including unquoted model inputs."""
+    from lumenis.shared.reporting import saved_work
+    refs = {}
+    for item in citations:
+        refs.setdefault(item['evidence_id'],set()).add('quote_reference')
+    for evidence_id in payload.get('comment_research',{}).get('inputs',{}).get('evidence_ids',[]):
+        refs.setdefault(evidence_id,set()).update({'research_reference','quote_reference'})
+    creation = payload.get('creation')
+    bindings = creation.get('source_bindings',[]) if type(creation) is dict else []
+    for item in bindings if type(bindings) is list else []:
+        if type(item) is dict and type(item.get('evidence_id')) is int:
+            refs.setdefault(item['evidence_id'],set()).update({'research_reference','quote_reference'})
+    context = saved_work.authorize_saved_work(actor,scope,action='read',connection=connection)
+    uses = []
+    for evidence_id,purposes in sorted(refs.items()):
+        cursor = connection.execute('SELECT * FROM app_evidence_records WHERE id=?',(evidence_id,))
+        row = cursor.fetchone()
+        item = dict(zip((column[0] for column in cursor.description),row)) if row else {}
+        public_source = (item.get('feature_id') == 'COLLECTED_SOURCE'
+                         and item.get('version') == 'collected-public-source:live-v1')
+        if item.get('feature_id') != 'COLLECTOR_NATIVE_COMMENTS' and not public_source:
+            continue
+        for purpose in sorted(purposes):
+            source = (saved_work._verified_evidence(connection,evidence_id,context,actor,purpose=purpose)
+                      if public_source else
+                      _verified_comment_page_evidence(connection,item,actor=actor,context=context,purpose=purpose))
+            provenance = source['provenance']
+            uses.append({'scope':{key:provenance['context'][key] for key in saved_work._SCOPE_KEYS},
+                'source_evidence_ref':'app_evidence_records:'+str(evidence_id),
+                'source_fingerprint':provenance['source_fingerprint'],'body_sha256':source['content_hash'],
+                'source_version':source['version'],'purpose':purpose})
+    return uses
+
+
+def comment_source_commit_guard(connection, *, actor, scope, citations, payload):
+    """Fence native-comment grants at the original SavedWork commit, once."""
+    from contextlib import nullcontext
+    from lumenis.system.security import permission
+    uses = _comment_source_uses(connection,actor=actor,scope=scope,citations=citations,payload=payload)
+    if not uses:
+        return nullcontext()
+    mixed = any(item['source_version'] == 'collected-public-source:live-v1' for item in uses)
+    guard = getattr(permission.get_permission_gate(),
+                    'collected_source_uses_commit_lease' if mixed else 'comment_page_uses_commit_lease',None)
+    if not callable(guard):
+        raise RuntimeError('COMMENT_SOURCE_COMMIT_GUARD_UNAVAILABLE')
+    return guard(actor,uses=uses,connection=connection)
+
+
+def _comment_http_actor_scope(*, require_scope=True, action='read'):
+    """Reuse the canonical parsers and actor, without accepting client identity."""
+    from experience_runtime import (_SHARED_WORKSPACE_SCOPE_HEADER, _parse_shared_workspace_scope_header,
+                                    _shared_work_actor_scope)
+    from lumenis.auth.service import get_current_user
+    from lumenis.shared.reporting.saved_work import authorize_saved_work
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    if _SHARED_WORKSPACE_SCOPE_HEADER not in request.headers and require_scope:
+        return _shared_work_actor_scope(action)
+    actor = resolve_local_workspace_principal(module='reports',action=action) or get_current_user(read_only=True)
+    if actor is None:
+        raise PermissionError('AUTH_REQUIRED')
+    scope = (_parse_shared_workspace_scope_header() if _SHARED_WORKSPACE_SCOPE_HEADER in request.headers
+             else None)
+    if require_scope:
+        authorize_saved_work(actor,scope,action=action)
+    return actor,scope
+
+
+def _comment_http_body():
+    if not request.is_json or request.content_length is None or request.content_length > 2*1024*1024:
+        raise ValueError('COMMENT_REQUEST_INVALID')
+    def pairs(values):
+        result = {}
+        for key,value in values:
+            if key in result:
+                raise ValueError('COMMENT_REQUEST_INVALID')
+            result[key] = value
+        return result
+    try:
+        result = json.loads(request.get_data(cache=True),object_pairs_hook=pairs,
+            parse_constant=lambda _value:(_ for _ in ()).throw(ValueError('COMMENT_REQUEST_INVALID')))
+    except (TypeError,ValueError,UnicodeError) as exc:
+        raise ValueError('COMMENT_REQUEST_INVALID') from exc
+    if type(result) is not dict:
+        raise ValueError('COMMENT_REQUEST_INVALID')
+    return result
+
+
+def local_comment_research_access_allowed():
+    """Exact local auth/effect-hook delegation; each endpoint rechecks its owner."""
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    if request.method != 'POST' or request.endpoint not in {
+        'intelligence_library.comment_page_source_use','intelligence_library.comment_research_operation',
+        'intelligence_library.collected_public_source_use'}:
+        return False
+    try:
+        from experience_runtime import _content_source_same_origin
+        if not _content_source_same_origin() or resolve_local_workspace_principal(module='reports',action='read') is None:
+            return False
+        body = _comment_http_body()
+        _comment_http_actor_scope(require_scope=body.get('mode') != 'revoke',
+                                 action='write' if request.endpoint.endswith('comment_research_operation') and body.get('mode') == 'save' else 'read')
+        return True
+    except (ValueError,PermissionError,LookupError,RuntimeError):
+        return False
+
+
+@intelligence_library_bp.post('/comments/<int:evidence_id>/source-use')
+def comment_page_source_use(evidence_id):
+    return _collected_source_use_operation(evidence_id)
+
+
+@intelligence_library_bp.post('/public-sources/<int:evidence_id>/source-use')
+def collected_public_source_use(evidence_id):
+    return _collected_source_use_operation(evidence_id,public_source=True)
+
+
+def _collected_source_use_operation(evidence_id, *, public_source=False):
+    from experience_runtime import _content_source_same_origin, _shared_work_response
+    from lumenis.shared.reporting import saved_work
+    from lumenis.system.security import permission
+    def execute():
+        if not _content_source_same_origin():
+            raise PermissionError('COMMENT_SOURCE_USE_ORIGIN_DENIED')
+        body = _comment_http_body()
+        mode = body.get('mode','prepare')
+        allowed = {'mode','purpose','rights_declaration','confirmed','confirmed_resource',
+                   'source_fingerprint','body_sha256','source_version'}
+        if (set(body)-allowed or type(mode) is not str or mode not in {'prepare','confirm','revoke'}
+                or type(body.get('purpose')) is not str or body['purpose'] not in {'research_reference','quote_reference'}):
+            raise ValueError('COMMENT_SOURCE_USE_REQUEST_INVALID')
+        actor,scope = _comment_http_actor_scope(require_scope=mode != 'revoke')
+        gate = permission.get_permission_gate()
+        with get_repository().connection(read_only=True,wal=False) as con:
+            cursor = con.execute('SELECT * FROM app_evidence_records WHERE id=?',(evidence_id,))
+            row = cursor.fetchone()
+            item = dict(zip((column[0] for column in cursor.description),row)) if row else {}
+            from lumenis.shared.evidence import store
+            expected_feature = 'COLLECTED_SOURCE' if public_source else 'COLLECTOR_NATIVE_COMMENTS'
+            if (not item or not store.verify_evidence_record_integrity(item) or item.get('feature_id') != expected_feature
+                    or public_source and item.get('version') != 'collected-public-source:live-v1'):
+                raise ValueError('COMMENT_PAGE_RECEIPT_UNVERIFIED')
+            metadata = json.loads(item['collection_metadata'])
+            source_scope = {key:metadata['context'][key] for key in saved_work._SCOPE_KEYS}
+            fields = {'scope':source_scope,'source_evidence_ref':'app_evidence_records:'+str(evidence_id),
+                'source_fingerprint':metadata['source_fingerprint'],
+                'body_sha256':metadata['native_source_binding']['body_sha256'] if public_source else metadata['body_sha256'],
+                'source_version':item['version'],'purpose':body['purpose'],'connection':con}
+            gate_suffix = 'collected_public_source_use' if public_source else 'comment_page_use'
+            if mode == 'revoke':
+                if body.get('confirmed') is not True or any(body.get(key) != fields[key] for key in
+                        ('source_fingerprint','body_sha256','source_version')):
+                    raise PermissionError('COMMENT_SOURCE_USE_EXACT_REVOCATION_REQUIRED')
+                result = getattr(gate,'revoke_'+gate_suffix)(actor,**fields)
+                if not result.allowed:
+                    raise PermissionError('COMMENT_SOURCE_USE_REVOCATION_DENIED')
+                return {'state':'REVOKED_NO_READ_GRANTED','purpose':body['purpose'],
+                        'page_ref':fields['source_evidence_ref'],'audit_id':result.audit_id,'source_use_granted':False}
+            context = saved_work.authorize_saved_work(actor,scope,action='read',connection=con)
+            if saved_work._context_owner(context) != saved_work._context_owner(metadata['context']):
+                raise PermissionError('WORK_EVIDENCE_CONTEXT_MISMATCH')
+            declaration = body.get('rights_declaration')
+            prepared = getattr(gate,'prepare_'+gate_suffix)(actor,**fields,rights_declaration=declaration)
+            if (not prepared.resource or not prepared.requires_approval
+                    or prepared.reason != ('PUBLIC_SOURCE_PREPARED_NOT_AUTHORIZED' if public_source else 'COMMENT_PAGE_PREPARED_NOT_AUTHORIZED')):
+                raise PermissionError('COMMENT_SOURCE_USE_PREPARE_DENIED')
+            display = {key:value for key,value in fields.items() if key not in {'connection'}}
+            display.update(rights_declaration=declaration,resource=prepared.resource,
+                           operation_type=prepared.operation_type,source_use_granted=False)
+            if mode == 'prepare':
+                return {**display,'state':'APPROVAL_REQUIRED_NOT_AUTHORIZED'}
+            if (body.get('confirmed') is not True or body.get('confirmed_resource') != prepared.resource
+                    or not gate.has_permission(permission.PermissionLevel.HUMAN_APPROVAL)
+                    or not gate.has_permission(permission.PermissionLevel.COMMIT)):
+                raise PermissionError('COMMENT_SOURCE_USE_EXACT_CONFIRMATION_REQUIRED')
+            token = gate.grant_approval(prepared.operation_type,resource=prepared.resource,duration_minutes=30,
+                granted_by=context.get('principal_ref') or 'actor:'+str(context['actor_id']))
+            decision = getattr(gate,'check_'+gate_suffix)(actor,**fields,rights_declaration=declaration)
+            if not decision.allowed or not decision.audit_id:
+                gate.revoke_approval(token)
+                raise PermissionError('COMMENT_SOURCE_USE_CONFIRMATION_CHANGED')
+            return {**display,'state':'EXACT_PURPOSE_APPROVED','source_use_granted':True,
+                    'audit_id':decision.audit_id,'expires_in_seconds':1800,
+                    'copyright_license':'NOT_ESTABLISHED_BY_PURPOSE_APPROVAL',
+                    'training_permission':'NOT_GRANTED','publication':'NOT_PERFORMED'}
+    return _shared_work_response(execute)
+
+
+@intelligence_library_bp.post('/comment-research')
+def comment_research_operation():
+    from experience_runtime import _content_source_same_origin, _shared_work_response
+    def execute():
+        if not _content_source_same_origin():
+            raise PermissionError('COMMENT_RESEARCH_ORIGIN_DENIED')
+        body = _comment_http_body()
+        mode = body.pop('mode','analyze')
+        required = {'question','evidence_ids'}
+        allowed = required|{'reviews'}
+        if mode == 'save':
+            required.add('request_id')
+            allowed |= {'request_id','work_id','previous_artifact_id','expected_draft_digest'}
+        if mode not in {'analyze','save'} or not required <= set(body) or set(body)-allowed:
+            raise ValueError('COMMENT_RESEARCH_REQUEST_INVALID')
+        actor,scope = _comment_http_actor_scope(action='write' if mode == 'save' else 'read')
+        return (save_comment_research if mode == 'save' else analyze_comment_research)(actor=actor,scope=scope,**body)
+    return _shared_work_response(execute)

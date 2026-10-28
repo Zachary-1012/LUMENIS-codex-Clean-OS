@@ -19,6 +19,106 @@ _TEST_COLLECTION_IDENTITY_FINGERPRINT = hashlib.sha256(
     _TEST_COLLECTION_USER_ID.encode('utf-8')).hexdigest()
 
 
+@pytest.mark.parametrize('target', [
+    'https://www.xiaohongshu.com/explore/' + 'a' * 24,
+    'https://www.rednote.com.evil.test/explore/' + 'a' * 24,
+    'https://user@www.rednote.com/explore/' + 'a' * 24,
+    'https://www.rednote.com:9222/explore/' + 'a' * 24,
+    'https://www.rednote.com/explore/' + 'a' * 24 + '#other',
+    None, 'not-a-note-id',
+])
+def test_independent_detail_rejects_other_identity_hosts_before_backend_load(target, monkeypatch):
+    from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+    adapter = XiaohongshuAdapter()
+    monkeypatch.setattr(adapter, '_load_backend', lambda: pytest.fail('invalid detail loaded backend'))
+    assert adapter.detail(target).metadata['error_type'] == 'DETAIL_SOURCE_UNVERIFIED'
+
+
+@pytest.mark.parametrize('identity', ['verified', 'wrong_note', 'unverified'])
+def test_independent_detail_uses_existing_backend_and_requires_exact_verified_note(identity):
+    from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+    calls = []
+    note_id = 'a' * 24
+    def read_detail(url, **kwargs):
+        calls.append((url, kwargs))
+        return {'notes': [{'note_id': 'b' * 24 if identity == 'wrong_note' else note_id,
+                           'detail_fetched': True, 'detail_identity_verified': identity != 'unverified'}],
+                'total': 1, 'identity_verified': True}
+    adapter = XiaohongshuAdapter(backend=SimpleNamespace(detail_xiaohongshu=read_detail))
+    result = adapter.detail(note_id, detail_media_mode='cover_only')
+    assert len(calls) == 1 and calls[0][0] == 'https://www.rednote.com/explore/' + note_id
+    assert calls[0][1]['region'] == 'intl' and calls[0][1]['account'] is None
+    assert calls[0][1]['detail_media_mode'] == 'cover_only'
+    assert result.ok is (identity == 'verified')
+    if result.ok:
+        assert result.metadata['acquisition_capability'] == 'detail'
+    else:
+        assert not result.items
+
+
+def test_detail_locator_token_reaches_only_existing_private_worker_call():
+    from lumenis.system.collector.adapters.xhs import XiaohongshuAdapter
+    url = 'https://www.rednote.com/explore/' + 'a' * 24
+    calls = []
+    def read(reference, **kwargs):
+        calls.append((reference, kwargs['source_url']))
+        return {'identity_verified': True, 'notes': [{'note_id': 'a' * 24,
+            'detail_fetched': True, 'detail_identity_verified': True}]}
+    result = XiaohongshuAdapter(backend=SimpleNamespace(detail_xiaohongshu=read)).detail(url + '?xsec_token=synthetic-private-locator')
+    assert result.ok and calls == [(url, url + '?xsec_token=synthetic-private-locator')]
+    assert result.metadata['continuation']['keyword'] == url
+    assert 'synthetic-private-locator' not in json.dumps(result.metadata)
+
+
+def test_independent_detail_and_search_share_native_parser_and_only_close_owned_tab(monkeypatch):
+    from playwright import sync_api
+    from contextlib import nullcontext
+    note_id = 'c' * 24
+    url = 'https://www.rednote.com/explore/' + note_id
+    native = {'detail_present': True, 'source_note_ids': [note_id], 'source_page_url': url,
+              'title': 'Permitted fixture detail', 'desc': 'Complete fixture body',
+              'time_raw': '2026-10-01T08:00:00Z', 'time_kind': 'publication',
+              'time_locator': '.author-container .time',
+              'engage': {'like_raw': '0'}, 'comment_list': [{'content': 'Fixture comment'}],
+              'image_list': ['https://source.example/cover.png']}
+    class Page:
+        closed = False
+        def __init__(self):
+            self.url = url
+        def evaluate(self, expression):
+            assert expression == worker._DETAIL_JS
+            return dict(native)
+        def wait_for_selector(self, *args, **kwargs):
+            pass
+        def close(self):
+            self.closed = True
+    page = Page()
+    calls = []
+    monkeypatch.setattr(sync_api, 'sync_playwright', lambda: nullcontext(object()))
+    def approved_context(playwright, endpoint):
+        calls.append(endpoint)
+        return object(), SimpleNamespace(new_page=lambda: page)
+    monkeypatch.setattr(worker, '_connect_verified_collection_context', approved_context)
+    monkeypatch.setattr(worker, 'robust_goto', lambda p, target: calls.append(target))
+    monkeypatch.setattr(worker, '_risk_check', lambda *a: False)
+    monkeypatch.setattr(worker, 'human_reading_profile', lambda: ('fixture', 0.5))
+    monkeypatch.setattr(worker, 'human_consume_detail', lambda *a: {
+        'video_watched': False, 'comments_seen': 1, 'images_swiped': 0, 'dwell_sec': 1})
+    snapshots = []
+    result = worker.collect(url, cdp_url='https://owned-worker.example', detail_url=url,
+                            detail_media_mode='cover_only', progress=lambda value: snapshots.append(json.loads(json.dumps(value))))
+    assert calls == ['https://owned-worker.example', url]
+    assert result['ok'] and result['identity_verified'] and page.closed
+    assert snapshots[0]['summary']['pending_note_ids'] == [note_id]
+    assert snapshots[-1]['summary']['pending_note_ids'] == []
+    note = result['notes'][0]
+    assert note['likes'] == 0 and note['comments'] is None and note['shares'] is None
+    assert note['desc'] == native['desc'] and note['detail_identity_verified']
+    assert note['comment_list'] == native['comment_list']
+    assert note['image_list'] == native['image_list']
+    assert note['publish_time'] == native['time_raw']
+
+
 def collector_functions():
     """Execute the real functions without collector's runtime/DB import effects."""
     tree = ast.parse((ROOT / 'collector.py').read_text('utf-8'))

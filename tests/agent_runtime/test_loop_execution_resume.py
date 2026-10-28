@@ -122,7 +122,18 @@ def _plan(*, interrupted=None, second_action="read report"):
     )
     return Plan(
         plan_id="plan-resume-stable", goal="read confidential forecast", steps=[first, second],
+        model="synthetic-recovery-model",
         token_usage={"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+        # Synthetic protocol data verifies isolated recovery, never model execution.
+        inference_receipt={
+            "provider": "owned", "status": "COMPLETED", "operation": "agent_plan",
+            "request_id": "request-recovery-fixture", "request_digest": "1" * 64,
+            "run_id": "run-recovery-fixture", "model_id": "synthetic-recovery-model",
+            "model_revision": "revision-fixture", "recipe": "recipe-fixture",
+            "source_use_policy_sha256": "2" * 64, "source_binding_sha256": "3" * 64,
+            "input_revision_sha256": "4" * 64, "source_evidence_refs": ["fixture:resume"],
+            "prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150,
+        },
     )
 
 

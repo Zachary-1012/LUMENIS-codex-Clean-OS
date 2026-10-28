@@ -135,6 +135,62 @@ def test_http_memory_explicit_correction_can_restore_current_forgotten_revision(
     assert api.get(url + '?key=restore', headers=own).get_json()['records'][0]['value'] == {'text': 'restored'}
 
 
+def test_same_task_human_correction_is_bound_into_gateway_context_and_forget_invalidates(agent_client):
+    from ai_task_engine import get_task_engine
+    from agent_runtime import task_binding
+    from agent_runtime.planner import Planner, _PLANNER_SYSTEM_PROMPT
+    from agent_capability.formation import FormationError
+    api, app, _path = agent_client
+    task_id = submit(api)
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    url = f'/api/ai/tasks/{task_id}/memory'
+    created = api.post(url, headers=own, json={'layer': 'episodic', 'key': 'writing-style',
+        'value': {'preference': '保留原稿，先给可编辑版本'}, 'expected_revision': 0})
+    assert created.status_code == 200, created.get_json()
+
+    with app.test_request_context('/', headers=own):
+        task = get_task_engine().get_task(task_id)
+        current = task_binding.authorized_context(task, {'id': 1})
+        context = task_binding._planner_context(task, current)
+        memory = context['human_correction_memory']
+        assert memory['state'] == 'AVAILABLE' and memory['record_count'] == 1
+        assert memory['records'][0]['value'] == {'preference': '保留原稿，先给可编辑版本'}
+        assert memory['records'][0]['truth_kind'] == 'user_authored_unverified_correction'
+        prompt = Planner()._build_user_prompt(task['user_input'], context, 8)
+        assert '保留原稿，先给可编辑版本' in prompt
+        request = task_binding._gateway_request(task_id, _PLANNER_SYSTEM_PROMPT, prompt, context)
+        assert request.source_evidence_refs[-1] == (
+            'task-human-corrections:' + task_id + ':' + memory['snapshot_sha256'])
+        assert request.source_use_policy_version == 'agent-planner-current-context-v3'
+        expected_snapshot = memory['snapshot_sha256']
+        skill_id = next(iter(current['agent_runtime']['registry_bindings']))
+        identity = task_binding._bound_identity(task_id, skill_id, None, expected_snapshot)
+        assert identity()['configuration']['human_correction_memory_sha256'] == expected_snapshot
+
+    forgotten = api.delete(url, headers=own, json={'layer': 'episodic', 'key': 'writing-style',
+        'expected_revision': 1})
+    assert forgotten.status_code == 200, forgotten.get_json()
+    with app.test_request_context('/', headers=own):
+        with pytest.raises(FormationError, match='AGENT_TASK_MEMORY_CHANGED'):
+            task_binding._assert_task_human_correction_snapshot(task_id, expected_snapshot)
+        with pytest.raises(FormationError, match='AGENT_TASK_MEMORY_CHANGED'):
+            identity()
+        task = get_task_engine().get_task(task_id)
+        context = task_binding._planner_context(task, task_binding.authorized_context(task, {'id': 1}))
+        assert context['human_correction_memory']['state'] == 'EMPTY'
+        assert context['human_correction_memory']['records'] == []
+
+
+def test_user_memory_correction_rejects_credential_shaped_values(agent_client):
+    api, _app, _path = agent_client
+    task_id = submit(api)
+    response = api.post(f'/api/ai/tasks/{task_id}/memory', headers={
+        'Authorization': 'Bearer fixture-session-one'}, json={'key': 'secret',
+        'value': {'api_key': 'sk-1234567890-example'}, 'expected_revision': 0})
+    assert response.status_code == 400
+    assert response.get_json()['code'] == 'MEMORY_SENSITIVE_CONTENT_REJECTED'
+
+
 def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkeypatch):
     """FIX-058: expired rows must not hide valid bound memory from either caller."""
     from datetime import datetime, timedelta, timezone
@@ -162,7 +218,14 @@ def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkey
     assert [row['key'] for row in api_result.get_json()['records']] == ['valid-older']
 
     captured_contexts = []
+    memory_reads = []
     original_run = AgentLoop.run
+    original_query = EpisodicMemory.query
+
+    def track_memory_read(self, *args, **kwargs):
+        records = original_query(self, *args, **kwargs)
+        memory_reads.append([row.key for row in records])
+        return records
 
     def capture_context(self, goal, context=None, agent_id=None, _resume_state=None,
                         _existing_task_id=None):
@@ -171,11 +234,55 @@ def test_memory_ttl_filter_precedes_limit_for_api_and_agent(agent_client, monkey
                             _resume_state=_resume_state, _existing_task_id=_existing_task_id)
 
     monkeypatch.setattr(AgentLoop, 'run', capture_context)
+    monkeypatch.setattr(EpisodicMemory, 'query', track_memory_read)
     run_result = api.post(f'/api/ai/tasks/{task_id}/run', headers=headers)
     assert run_result.status_code == 200, run_result.get_json()
     assert run_result.get_json()['task']['status'] == 'succeeded'
     assert len(captured_contexts) == 1
-    assert [row['key'] for row in captured_contexts[0]['derived_memory']] == ['valid-older']
+    assert memory_reads and memory_reads[0] == ['valid-older']
+    # The current Agent SourceUse contract is input-only. A successful scoped
+    # memory read must not export arbitrary derived bodies into model context.
+    assert 'derived_memory' not in captured_contexts[0]
+
+
+def test_expired_user_corrections_are_not_reintroduced_into_agent_context():
+    from datetime import datetime, timezone
+    from agent_memory.base import MemoryRecord, active_user_correction_records
+
+    now = datetime(2026, 10, 27, 12, 0, tzinfo=timezone.utc).timestamp()
+    expired = MemoryRecord(layer='episodic', key='expired-style',
+        value={'text': 'temporary preference'}, metadata={'type': 'user_correction'},
+        timestamp=datetime.fromtimestamp(now - 61, timezone.utc).isoformat(), ttl_seconds=60)
+    active = MemoryRecord(layer='episodic', key='active-style',
+        value={'text': 'current preference'}, metadata={'type': 'user_correction'},
+        timestamp=datetime.fromtimestamp(now - 30, timezone.utc).isoformat(), ttl_seconds=60)
+    unrelated = MemoryRecord(layer='episodic', key='derived-case',
+        value={'text': 'not a correction'}, metadata={'type': 'episodic_case'})
+    malformed = MemoryRecord(layer='episodic', key='unknown-time',
+        value={'text': 'must not become permanent'}, metadata={'type': 'user_correction'},
+        timestamp='not-a-timestamp', ttl_seconds=60)
+
+    assert active_user_correction_records([expired, active, unrelated, malformed], now=now) == [active]
+
+
+def test_expiring_memory_uses_utc_for_naive_times_and_respects_epoch_zero():
+    from agent_memory.base import MemoryRecord
+
+    epoch_memory = MemoryRecord(layer='episodic', key='epoch', value={},
+        timestamp='1970-01-01T00:00:00', ttl_seconds=1)
+    assert not epoch_memory.is_expired(now=0)
+    assert epoch_memory.is_expired(now=2)
+    malformed_ttl = MemoryRecord(layer='episodic', key='bad-ttl', value={},
+        timestamp='1970-01-01T00:00:00+00:00', ttl_seconds=-1)
+    assert malformed_ttl.is_expired(now=0)
+
+
+def test_correction_context_orders_latest_absolute_time_first():
+    from agent_memory.base import order_user_correction_context
+
+    earlier = {'layer': 'episodic', 'key': 'tone', 'timestamp': '2026-10-27T09:30:00+00:00'}
+    later = {'layer': 'semantic', 'key': 'tone', 'timestamp': '2026-10-27T18:00:00+08:00'}
+    assert order_user_correction_context([earlier, later]) == [later, earlier]
 
 
 def test_authorized_memory_methods_use_real_signed_sources_and_task_owner(agent_client, monkeypatch):
@@ -240,6 +347,191 @@ def test_authorized_memory_methods_use_real_signed_sources_and_task_owner(agent_
     assert tm.get_task_steps(task_id)
     assert tm.get_task_summary(task_id)['steps']
     assert tm.query_tasks(status='succeeded')
+
+
+def _memory_search_sources(path):
+    from canonical_data import (
+        CanonicalRecord,
+        ensure_canonical_table,
+        persist_canonical,
+    )
+    from lumenis.shared.evidence import store
+    from subject_registry import ensure_schema
+    with sqlite3.connect(path) as con:
+        ensure_schema(con)
+        con.executemany("""INSERT INTO lumenis_subject_registry
+            (subject_id,domain_id,subject_type,name_en,name_zh,name_en_norm,name_zh_norm,created_at,updated_at)
+            VALUES(?,'CTH','company',?,?,?,?,datetime('now'),datetime('now'))""",
+            [(identity, identity, identity, identity.lower(), identity) for identity in ('SEARCH-ONE', 'SEARCH-TWO')])
+        store.ensure_evidence_schema(con)
+        existing = {row[1] for row in con.execute('PRAGMA table_info(app_evidence_records)')}
+        for column, kind, default in store.EVIDENCE_CHAIN_NEW_COLUMNS:
+            if column not in existing:
+                suffix = f' DEFAULT {default}' if default != 'NULL' else ''
+                con.execute(f'ALTER TABLE app_evidence_records ADD COLUMN {column} {kind}{suffix}')
+        ensure_canonical_table(connection=con)
+        evidence_ids = []
+        for identity, subject, text, tags in [
+                ('exact', 'SEARCH-ONE', 'car 品牌营销 한국어', ['brief']),
+                ('substring', 'SEARCH-ONE', 'scar unrelated', ['other']),
+                ('other-scope', 'SEARCH-TWO', 'car private other scope', ['brief'])]:
+            evidence = store.record_evidence(connection=con, source='isolated-search-fixture',
+                project='LUMENIS', product='CTH', feature_id='SCOPED_MEMORY', test_name=identity,
+                result='PASS', status='verified', inputs={'source_ids': [identity]},
+                outputs={'fixture': True}, domain_id='cth', subject_id=subject)
+            evidence_ids.append(evidence)
+            persist_canonical(con, CanonicalRecord(canonical_id=identity, source_id=identity,
+                external_id=identity, product_id='CTH', domain_id='cth', subject_id=subject,
+                source_table='notes', title=text, content=text, tags=json.dumps(tags),
+                scope_status='VERIFIED', scope_evidence_ref=str(evidence)))
+    return evidence_ids
+
+
+def _focused_memory_search_task(api):
+    response = api.post('/api/ai/tasks', headers={'Authorization': 'Bearer fixture-session-one'}, json={
+        'execution_mode': 'agent', 'input': 'Search the original permitted materials', 'domain_id': 'cth',
+        'scope': {'global_scope': False, 'subject_id': 'SEARCH-ONE', 'brand_focus_id': None},
+        'steps': [{'skill_id': 'zbc.skill_registry_snapshot', 'input': {}}]})
+    assert response.status_code == 202, response.get_json()
+    return response.get_json()['task']['task_id']
+
+
+def test_http_memory_search_executes_bm25_with_original_scope_and_reopen(request, monkeypatch):
+    from lumenis.system.ai_gateway import core
+    monkeypatch.setattr(core, 'run_owned_analysis', lambda **_: pytest.fail('search invoked a model'))
+    api, app, path = request.getfixturevalue('agent_client')
+    _memory_search_sources(path)
+    task_id = _focused_memory_search_task(api)
+    url = f'/api/ai/tasks/{task_id}/memory'
+    own = {'Authorization': 'Bearer fixture-session-one'}
+    for query in ('car', '品牌营销', '한국어'):
+        response = app.test_client().get(url, headers=own,
+            query_string={'layer': 'semantic', 'query': query, 'limit': 1, 'tag': 'brief'})
+        assert response.status_code == 200, response.get_json()
+        body = response.get_json()
+        assert [row['canonical_id'] for row in body['records']] == ['exact']
+        assert body['truth_kind'] == 'source_reference' and body['read_state'] == 'ready'
+        assert body['retrieval']['mode'] == 'BM25_ONLY'
+        assert body['retrieval']['authorized_candidates'] == 1
+        assert body['retrieval']['dense'] == 'BLOCKED_MODEL_NOT_ADMITTED'
+        assert not body['retrieval']['neural_retrieval_performed']
+    assert api.get(url, headers=own, query_string={'layer': 'semantic', 'query': 'car',
+        'sub_library': 'not-declared'}).get_json()['records'] == []
+    assert api.get(url, headers={'Authorization': 'Bearer fixture-session-two'},
+        query_string={'layer': 'semantic', 'query': 'car'}).status_code == 403
+    derived = {'layer': 'semantic', 'key': 'draft', 'value': {'text': 'human memory'}, 'expected_revision': 0}
+    assert api.post(url, headers=own, json=derived).status_code == 200
+    old = api.get(url, headers=own, query_string={'layer': 'semantic'}).get_json()
+    assert old['truth_kind'] == 'derived_memory' and old['records'][0]['value'] == derived['value']
+    assert 'retrieval' not in old
+
+
+@pytest.mark.parametrize('params', [
+    {'layer': 'episodic', 'query': 'car'}, {'layer': 'semantic', 'query': ''},
+    {'layer': 'semantic', 'query': 'car', 'key': 'draft'},
+    {'layer': 'semantic', 'query': 'car', 'actor_id': '2'},
+    {'layer': 'semantic', 'query': 'car', 'subject_id': 'SEARCH-TWO'},
+    {'layer': 'semantic', 'query': 'car', 'limit': '0'},
+    {'layer': 'semantic', 'query': 'car', 'limit': '201'},
+    {'layer': 'semantic', 'query': 'car', 'limit': '1.5'},
+    [('layer', 'semantic'), ('query', 'car'), ('query', 'private')],
+])
+def test_http_memory_search_rejects_invalid_or_scope_overriding_fields(request, params):
+    api, _app, _path = request.getfixturevalue('agent_client')
+    task_id = submit(api)
+    response = api.get(f'/api/ai/tasks/{task_id}/memory', query_string=params,
+        headers={'Authorization': 'Bearer fixture-session-one'})
+    assert response.status_code == 400, response.get_json()
+
+
+@pytest.mark.parametrize('withdraw', ['task_permission', 'source_signature'])
+def test_http_memory_search_rechecks_revocation_during_actual_ranking(request, monkeypatch, withdraw):
+    from agent_memory import retrieval
+    api, _app, path = request.getfixturevalue('agent_client')
+    _memory_search_sources(path)
+    task_id = _focused_memory_search_task(api)
+    original = retrieval.lexical_search
+    def rank_then_withdraw(*args, **kwargs):
+        ranked = original(*args, **kwargs)
+        with sqlite3.connect(path) as con:
+            if withdraw == 'task_permission':
+                con.execute("DELETE FROM v4_member_authorizations WHERE module='agent_runtime'")
+            else:
+                con.execute("UPDATE app_evidence_records SET integrity_digest='withdrawn-fixture-signature'")
+        return ranked
+    monkeypatch.setattr(retrieval, 'lexical_search', rank_then_withdraw)
+    response = api.get(f'/api/ai/tasks/{task_id}/memory',
+        query_string={'layer': 'semantic', 'query': 'car'},
+        headers={'Authorization': 'Bearer fixture-session-one'})
+    assert response.status_code == 403, response.get_json()
+    assert 'records' not in response.get_json()
+
+
+@pytest.mark.parametrize('change', ['none', 'delete', 'rewrite', 'unselected_delete'])
+def test_http_memory_search_rechecks_selected_original_file_after_ranking(request, monkeypatch, tmp_path, change):
+    import socket
+
+    import shared_artifacts
+    from agent_memory import retrieval
+    from lumenis.importer import documents
+    from lumenis.system.security import permission
+
+    def no_network(*args, **kwargs):
+        pytest.fail('isolated source search attempted network access')
+    monkeypatch.setattr(socket.socket, 'connect', no_network)
+    monkeypatch.setattr(socket.socket, 'connect_ex', no_network)
+    monkeypatch.setattr(socket, 'create_connection', no_network)
+    api, app, path = request.getfixturevalue('agent_client')
+    _memory_search_sources(path)
+    monkeypatch.setenv('ZBC_ARTIFACT_DIR', str(tmp_path / 'original-artifacts'))
+    shared_artifacts.ensure_artifact_table()
+    with sqlite3.connect(path) as con:
+        con.executemany("INSERT INTO v4_member_authorizations(user_id,product_id,module,action,data_scope) "
+            "VALUES(1,'CTH','reports',?,?)", [(action, json.dumps({'global': True})) for action in ('read', 'write')])
+    gate = permission.get_permission_gate()
+    gate.grant_permission(permission.PermissionLevel.COMMIT)
+    scope = {'domain_id': 'cth', 'subject_id': 'SEARCH-ONE', 'brand_focus_id': None, 'global_scope': False}
+    originals = []
+    with app.test_request_context('/', headers={'Authorization': 'Bearer fixture-session-one'}):
+        for index, text in enumerate(('postrank original material', 'unrelated retained document')):
+            uploaded = tmp_path / f'search-original-{index}.txt'
+            uploaded.write_text(text, encoding='utf-8')
+            args = {'actor': {'id': 1}, 'scope': scope, 'provenance': {
+                'source_url': f'https://example.org/isolated-original-{index}', 'published_at': None,
+                'captured_at': '2026-10-25T00:00:00Z', 'rights': 'public-reference-only',
+                'title': text}}
+            resource = documents.document_import_resource(str(uploaded), **args)
+            gate.grant_approval('data_import', resource=resource, granted_by='isolated-test')
+            imported = documents.import_document(str(uploaded), **args)
+            original = shared_artifacts.artifact_file_path(imported['source_artifact_ref'])
+            assert original is not None and original.read_bytes() == uploaded.read_bytes()
+            originals.append(original)
+    task_id = _focused_memory_search_task(api)
+    rank = retrieval.lexical_search
+    def rank_then_change_original(*args, **kwargs):
+        found = rank(*args, **kwargs)
+        assert len(found[0]) == 1 and found[0][0]['title'] == 'postrank original material'
+        if change == 'delete':
+            originals[0].unlink()
+        elif change == 'rewrite':
+            raw = originals[0].read_bytes()
+            originals[0].write_bytes(b'x' * len(raw))
+        elif change == 'unselected_delete':
+            originals[1].unlink()
+        return found
+    monkeypatch.setattr(retrieval, 'lexical_search', rank_then_change_original)
+    before = path.read_bytes()
+    response = api.get(f'/api/ai/tasks/{task_id}/memory',
+        query_string={'layer': 'semantic', 'query': 'postrank', 'limit': 1},
+        headers={'Authorization': 'Bearer fixture-session-one'})
+    assert path.read_bytes() == before, 'File withdrawal must not require a database mutation'
+    if change in {'delete', 'rewrite'}:
+        assert response.status_code == 403, response.get_json()
+        assert response.get_json()['code'] == 'MEMORY_SOURCE_CHANGED'
+        assert 'records' not in response.get_json()
+    else:
+        assert response.status_code == 200, response.get_json()
+        assert [row['title'] for row in response.get_json()['records']] == ['postrank original material']
 
 
 def test_learning_http_scoped_review_qualification_restart_and_inactive_apply(agent_client):
@@ -464,7 +756,9 @@ def test_full_app_real_loopback_http_learning_and_result_restart(agent_client, m
         status, ran = call(root + '/run', {})
         assert status == 200 and ran['task']['status'] == 'succeeded', ran
         reset_task_engine()
-        assert call(root)[1]['task']['result'] == ran['task']['result']
+        reopened = call(root)[1]['task']
+        assert reopened['workspace_view'] == ran['task']['workspace_view']
+        assert 'result' not in reopened and 'result' not in ran['task']
         status, made = call(root + '/learning', {'operation': 'suggest', 'content': {'instruction': 'Preserve provenance'}})
         assert status == 200, made
         item = made['suggestion']

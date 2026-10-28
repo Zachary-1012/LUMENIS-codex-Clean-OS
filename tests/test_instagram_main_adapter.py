@@ -274,7 +274,7 @@ def test_comments_delegates_to_engine():
     assert cr.comments[0]["author"] == "user1"
     assert cr.comments[0]["content"] == "great post!"
     assert cr.new_count == 2
-    engine.comments.assert_called_once_with("ABC123", max_comments=20)
+    engine.comments.assert_called_once_with("ABC123", max_comments=20, cursor=None, include_replies=False)
 
 
 def test_comments_no_data_maps_to_no_new_data():
@@ -336,7 +336,7 @@ def test_fix_105_original_instagram_adapter_redacts_exception_and_cause(method, 
         except RuntimeError as cause:
             raise ValueError("token=TOP_SECRET session=EXCEPTION_TEXT") from cause
 
-    monkeypatch.setattr(engine, f"_{operation}_browser", fail)
+    monkeypatch.setattr(engine, "_native_read", fail)
     with caplog.at_level("WARNING", logger="lumenis.adapters.instagram"):
         result = getattr(engine, method)("ABC123" if method == "comments" else "testcreator")
 

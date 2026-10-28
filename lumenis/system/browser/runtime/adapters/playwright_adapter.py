@@ -54,6 +54,7 @@ class PlaywrightAdapter(BrowserContract):
                  user_data_dir: Optional[str] = None,
                  storage_state: Optional[str] = None,
                  cdp_url: Optional[str] = None,
+                 channel: Optional[str] = None,
                  **kw):
         """P0-BR-06 Session/Profile 隔离：user_data_dir 提供时用持久化 context，
         否则保持默认 launch()+new_page()。storage_state 可用于恢复登录态。
@@ -66,6 +67,7 @@ class PlaywrightAdapter(BrowserContract):
         self.user_data_dir = user_data_dir
         self.storage_state = storage_state
         self.cdp_url = cdp_url
+        self.channel = channel
         self._cdp_connected = False
         self.beep = BEEPExecutor()
         self._pw = None
@@ -108,7 +110,10 @@ class PlaywrightAdapter(BrowserContract):
                     self._page = self._context.pages[0] if self._context.pages else self._context.new_page()
                 else:
                     # 默认行为：launch + new_page（无 profile 隔离）
-                    self._browser = launcher.launch(headless=self.headless)
+                    launch_options = {"headless": self.headless}
+                    if self.channel is not None:
+                        launch_options["channel"] = self.channel
+                    self._browser = launcher.launch(**launch_options)
                     self._context = self._browser.new_context(storage_state=self.storage_state)
                     self._page = self._context.new_page()
             self._page.set_default_timeout(self.timeout_ms)

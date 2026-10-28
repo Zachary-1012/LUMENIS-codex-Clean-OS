@@ -10,6 +10,7 @@ class Bmp01Snapshot {
     required this.focusContext,
     required this.focusBindingApplied,
     required this.metrics,
+    this.risks = const [],
   });
 
   final bool contractBound;
@@ -22,6 +23,7 @@ class Bmp01Snapshot {
   final Bmp01FocusContext focusContext;
   final bool focusBindingApplied;
   final List<Bmp01Metric> metrics;
+  final List<Bmp01Risk> risks;
 
   bool get isBmpOwner => productId == 'ZBMP' && domainId == 'zbmp';
   bool get isNotCollected => dataState == 'NOT_COLLECTED';
@@ -31,8 +33,8 @@ class Bmp01Snapshot {
       _bmp01MetricDisplayApproved &&
       contractBound &&
       isBmpOwner &&
-      focusContext.isFocus &&
-      focusContext.hasUsableName &&
+      (focusContext.isGlobal ||
+          (focusContext.isFocus && focusContext.hasUsableName)) &&
       isCollectedAndAvailable &&
       focusBindingApplied &&
       metrics.any((metric) => metric.isReady);
@@ -44,7 +46,9 @@ class Bmp01Snapshot {
 
     final truth = _asMap(response['truth']);
     final binding = _asMap(response['binding']);
-    final focus = Bmp01FocusContext.fromJson(response['focus_context']);
+    final focus = Bmp01FocusContext.fromJson(
+      response['focus_context'] ?? response['global_context'],
+    );
     final blocked = _asMapList(
       binding?['blocked'],
     ).map(Bmp01BlockedField.fromJson).toList(growable: false);
@@ -59,17 +63,55 @@ class Bmp01Snapshot {
       blockedFields: blocked,
       generatedAt: _asString(response['generated_at']),
       focusContext: focus,
-      focusBindingApplied: _verifiedBmpFocusBinding(response['focus_binding']),
+      focusBindingApplied: _verifiedBmpReadBinding(
+        response[focus.isGlobal ? 'global_binding' : 'focus_binding'],
+        focus,
+      ),
       metrics: _metrics(response['sections']),
+      risks: _risks(response['sections']),
     );
   }
 }
 
+class Bmp01Risk {
+  const Bmp01Risk({required this.title, required this.description});
+  final String title;
+  final String description;
+}
+
+List<Bmp01Risk> _risks(Object? sections) {
+  final result = <Bmp01Risk>[];
+  for (final section in _asMapList(sections)) {
+    if (section['type'] != 'risks') continue;
+    for (final item in _asMapList(section['items'])) {
+      final proof = _asMap(item['scope_evidence']);
+      final integrity = _asMap(proof?['integrity']);
+      final title = _asString(item['title']);
+      final description = _asString(item['desc']);
+      if (integrity?['verified'] != true ||
+          integrity?['lineage_verified'] != true ||
+          title == null ||
+          description == null) {
+        continue;
+      }
+      result.add(Bmp01Risk(title: title, description: description));
+    }
+  }
+  return List.unmodifiable(result);
+}
+
 class Bmp01FocusContext {
-  const Bmp01FocusContext({required this.mode, required this.displayName});
+  const Bmp01FocusContext({
+    required this.mode,
+    required this.displayName,
+    this.subjectId,
+    this.brandFocusId,
+  });
 
   final String mode;
   final Map<String, String> displayName;
+  final String? subjectId;
+  final String? brandFocusId;
 
   bool get isGlobal => mode == 'GLOBAL_ALL';
   bool get isFocus => mode == 'FOCUS';
@@ -92,8 +134,10 @@ class Bmp01FocusContext {
       }
     }
     return Bmp01FocusContext(
-      mode: _asString(map?['mode'])?.toUpperCase() ?? 'GLOBAL_ALL',
+      mode: _asString(map?['mode'])?.toUpperCase() ?? 'UNKNOWN',
       displayName: displayName,
+      subjectId: _asString(map?['subject_id']),
+      brandFocusId: _asString(map?['brand_focus_id']),
     );
   }
 
@@ -164,28 +208,38 @@ const _bmp01MetricSchema = <String, _Bmp01MetricSpecification>{
   ),
 };
 
-// Focused metrics are displayed only after the backend supplies the exact
-// verified BrandFocus read binding. Incomplete/legacy payloads remain hidden.
 const _bmp01MetricDisplayApproved = true;
 
-bool _verifiedBmpFocusBinding(Object? value) {
+bool _verifiedBmpReadBinding(Object? value, Bmp01FocusContext context) {
   final binding = _asMap(value);
-  if (binding == null) return false;
+  if (binding == null || (!context.isFocus && !context.isGlobal)) return false;
+  if (context.isFocus &&
+      (context.subjectId == null || context.brandFocusId == null)) {
+    return false;
+  }
+  if (!binding.containsKey('subject_id') ||
+      !binding.containsKey('brand_focus_id') ||
+      binding['subject_id'] != (context.isGlobal ? null : context.subjectId) ||
+      binding['brand_focus_id'] !=
+          (context.isGlobal ? null : context.brandFocusId)) {
+    return false;
+  }
   final policy = _asString(binding['policy']);
   final actorScope = _asString(binding['actor_scope']);
   return binding['contract'] == 'lumenis.scope-read-binding.v1' &&
       binding['module'] == 'brand_market_overview' &&
       binding['domain_id'] == 'BMP' &&
       binding['product_id'] == 'ZBMP' &&
-      binding['canonical_scope'] == 'FOCUS' &&
+      binding['canonical_scope'] == context.mode &&
       binding['applied'] == true &&
       binding['read_allowed'] == true &&
       binding['scope_verified'] == true &&
-      binding['global_all_granted'] == false &&
-      _asString(binding['subject_id']) != null &&
-      _asString(binding['brand_focus_id']) != null &&
-      ((policy == 'local-workspace-read-v1' && actorScope == 'anonymous_read') ||
-          (policy == 'actor-exact-scope-v1' && actorScope == 'authenticated'));
+      ((policy == 'local-workspace-read-v1' &&
+              actorScope == 'anonymous_read' &&
+              binding['global_all_granted'] == false) ||
+          (policy == 'actor-exact-scope-v1' &&
+              actorScope == 'authenticated' &&
+              binding['global_all_granted'] == context.isGlobal));
 }
 
 List<Bmp01Metric> _metrics(Object? value) {

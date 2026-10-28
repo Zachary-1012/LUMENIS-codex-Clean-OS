@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 import 'audio_comparison_fixture.dart';
-import 'dart:ui' show Tristate;
+import 'dart:ui' show Tristate, ImageByteFormat;
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -214,6 +216,7 @@ class _Client extends LumenisCoreClient {
   String? reopenedReference;
   String? reopenFailure;
   int reopenCalls = 0;
+  final reopenBundles = <String, Map<String, dynamic>>{};
   String? listingFailure;
   final asset = <String, Object?>{
     'asset_id': 'MEDIA-aaaaaaaaaaaaaaaa',
@@ -459,6 +462,7 @@ class _Client extends LumenisCoreClient {
         errorCode: reopenFailure,
       );
     }
+    if (reopenBundles[artifactId] case final response?) return response;
     final result = savedExport!['result'] as Map;
     return {
       'ok': true,
@@ -496,6 +500,7 @@ Widget _app(
   bool sharedWorkspace = false,
   Locale locale = const Locale('zh', 'CN'),
   double scale = 1,
+  double sidebar = 0,
   EdgeInsets viewInsets = EdgeInsets.zero,
   bool contextAvailable = true,
   String initialOutputKind = 'video',
@@ -516,7 +521,17 @@ Widget _app(
     data: MediaQuery.of(
       context,
     ).copyWith(textScaler: TextScaler.linear(scale), viewInsets: viewInsets),
-    child: child!,
+    child: RepaintBoundary(
+      key: const Key('media-workbench-test-capture'),
+      child: sidebar == 0
+          ? child!
+          : Row(
+              children: [
+                SizedBox(width: sidebar),
+                Expanded(child: child!),
+              ],
+            ),
+    ),
   ),
   home: guard == null
       ? _workbenchHome(
@@ -581,6 +596,37 @@ Future<void> _prepareEditableProject(
   controller.selectClip(controller.timeline!.tracks.single.clips.single.clipId);
 }
 
+Map<String, dynamic> _versionBundle(
+  _Client client, {
+  String? parent,
+  int revision = 1,
+}) {
+  final asset = MediaProjectAsset.fromJson(client.asset);
+  final timeline = MediaProjectSnapshot.empty(
+    inspectedAssets: [asset],
+  ).addClip(asset.assetId, trackId: 'video', sourceOut: 8);
+  return {
+    'ok': true,
+    'project': {
+      'project': {
+        'schema_version': 2,
+        'title': 'Same title and assets',
+        'project_revision': revision,
+        'parent_artifact_id': parent,
+        'output_kind': 'video',
+        'timeline': timeline.toJson(),
+        'source_artifact_refs': ['ART-same-source'],
+        'rights': {'state': 'unknown'},
+      },
+      'render': {
+        'state': 'not_rendered',
+        'output_kind': 'video',
+        'timeline_version': timeline.version,
+      },
+    },
+  };
+}
+
 Future<void> _openActionsForTarget(WidgetTester tester, Finder target) async {
   if (target.evaluate().isNotEmpty) return;
   final opener = find.byKey(const Key('media-open-actions'));
@@ -613,6 +659,40 @@ Future<void> _expandClipOperationsForTarget(
   expect(target, findsOneWidget);
 }
 
+// Optional layout-only render of these explicitly synthetic widget fixtures.
+// It is never a live product/media acceptance screenshot.
+Future<void> _captureWorkbench(WidgetTester tester, String name) async {
+  if (!const bool.fromEnvironment('OEVIRA_LAYOUT_CAPTURE')) return;
+  await tester.runAsync(() async {
+    final boundary = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(const Key('media-workbench-test-capture')),
+    );
+    final image = await boundary.toImage();
+    final bytes = await image.toByteData(format: ImageByteFormat.png);
+    await File(
+      '../work/media-workbench-layout-20261025-widget-$name.png',
+    ).writeAsBytes(bytes!.buffer.asUint8List());
+    image.dispose();
+  });
+}
+
+Future<void> _layoutFonts(WidgetTester tester) async {
+  if (!const bool.fromEnvironment('OEVIRA_LAYOUT_CAPTURE')) return;
+  await tester.runAsync(() async {
+    final icons = FontLoader('MaterialIcons')
+      ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'));
+    await icons.load();
+    for (final font in [
+      ('LumenisSansSC', 'NotoSansSC.ttf'),
+      ('LumenisSansKR', 'NotoSansKR.ttf'),
+    ]) {
+      final loader = FontLoader(font.$1)
+        ..addFont(rootBundle.load('assets/fonts/${font.$2}'));
+      await loader.load();
+    }
+  });
+}
+
 void main() {
   late _Client client;
   late MediaProjectController controller;
@@ -624,6 +704,264 @@ void main() {
     );
   });
   tearDown(() => controller.dispose());
+
+  testWidgets(
+    'narrow source query refreshes its sheet and keeps the existing edit',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 844));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      final original = controller.timeline!.toJson();
+      final selection = controller.selectedClipId;
+      await tester.tap(find.byKey(const Key('media-open-sources')));
+      await tester.pumpAndSettle();
+      final item = find.byKey(
+        ValueKey(
+          'media-bin-item/${controller.timeline!.assets.single.assetId}',
+        ),
+      );
+      expect(item, findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('media-source-search')),
+        'no-match',
+      );
+      await tester.pumpAndSettle();
+      expect(item, findsNothing);
+      expect(find.text('没有匹配的素材。'), findsOneWidget);
+      await tester.tap(find.byTooltip('清除搜索'));
+      await tester.pumpAndSettle();
+      expect(item, findsOneWidget);
+      await tester.tap(find.byKey(const Key('media-close-layer')));
+      await tester.pumpAndSettle();
+      expect(controller.timeline!.toJson(), original);
+      expect(controller.selectedClipId, selection);
+      expect(client.sourcePreviewCalls, 0);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  for (final locale in const [Locale('zh', 'CN'), Locale('en'), Locale('ko')]) {
+    testWidgets(
+      'editing desk at 1280 with shell keeps task tools monitor inspector and full timeline in $locale',
+      (tester) async {
+        await tester.binding.setSurfaceSize(const Size(1280, 800));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await _layoutFonts(tester);
+        await _prepareEditableProject(client, controller);
+        await tester.pumpWidget(
+          _app(client, controller, locale: locale, sidebar: 248),
+        );
+        await tester.pumpAndSettle();
+        final spine = find.byKey(const Key('media-tool-spine'));
+        final source = find.byKey(const Key('media-source-rail'));
+        final monitor = find.byKey(const ValueKey('media-preview-stage'));
+        final properties = find.byKey(const Key('media-property-rail'));
+        final timeline = find.byKey(const Key('media-timeline-region'));
+        expect(spine, findsOneWidget);
+        for (final field in [source, monitor, properties, timeline]) {
+          expect(field, findsOneWidget);
+          expect(tester.getRect(field).bottom, lessThanOrEqualTo(800));
+        }
+        expect(
+          tester.getRect(spine).right,
+          lessThan(tester.getRect(source).left),
+        );
+        expect(
+          tester.getRect(source).right,
+          lessThanOrEqualTo(tester.getRect(monitor).left),
+        );
+        expect(
+          tester.getRect(monitor).right,
+          lessThanOrEqualTo(tester.getRect(properties).left),
+        );
+        expect(
+          tester.getSize(monitor).width,
+          greaterThan(tester.getSize(source).width * 1.8),
+        );
+        expect(
+          tester.getRect(timeline).left,
+          lessThanOrEqualTo(tester.getRect(source).left),
+        );
+        expect(
+          tester.getRect(timeline).right,
+          greaterThanOrEqualTo(tester.getRect(properties).right),
+        );
+        final selection = controller.selectedClipId;
+        final geometry = controller.timeline!.toJson();
+        final query = find.byKey(const Key('media-source-search'));
+        await tester.enterText(query, 'not-present-in-library');
+        await tester.pump();
+        expect(
+          find.byKey(
+            ValueKey(
+              'media-bin-item/${controller.timeline!.assets.single.assetId}',
+            ),
+          ),
+          findsNothing,
+        );
+        expect(find.byKey(ValueKey('media-clip-$selection')), findsOneWidget);
+        expect(controller.timeline!.toJson(), geometry);
+        await tester.enterText(
+          query,
+          controller.timeline!.assets.single.filename,
+        );
+        await tester.pump();
+        expect(
+          find.byKey(
+            ValueKey(
+              'media-bin-item/${controller.timeline!.assets.single.assetId}',
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(controller.selectedClipId, selection);
+        expect(client.sourcePreviewCalls, 0);
+        await tester.tap(find.byKey(const Key('media-open-sources')));
+        await tester.pumpAndSettle();
+        expect(source, findsNothing);
+        expect(tester.getSize(monitor).width, greaterThan(600));
+        await tester.tap(find.byKey(const Key('media-open-sources')));
+        await tester.pumpAndSettle();
+        expect(source, findsOneWidget);
+        expect(controller.timeline!.toJson(), geometry);
+        await tester.enterText(query, '');
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pumpAndSettle();
+        await _captureWorkbench(tester, locale.languageCode);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'version chain excludes unrelated works with identical metadata',
+    (tester) async {
+      client.reopenBundles.addAll({
+        'ART-a1': _versionBundle(client),
+        'ART-b1': _versionBundle(client),
+      });
+      await controller.reopen('ART-a1');
+      await tester.binding.setSurfaceSize(const Size(1440, 1100));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(_app(client, controller));
+      await _openActionsForTarget(
+        tester,
+        find.byKey(const Key('media-reopen-ART-a1')),
+      );
+      await controller.reopen('ART-b1');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-reopen-ART-a1')), findsNothing);
+      final current = find.byKey(const Key('media-reopen-ART-b1'));
+      expect(current, findsOneWidget);
+      await tester.ensureVisible(current);
+      await tester.tap(current);
+      await tester.pumpAndSettle();
+      expect(client.reopenedReference, 'ART-b1');
+      expect(controller.version?.projectRevision, 1);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('version chain retains explicit parents children and siblings', (
+    tester,
+  ) async {
+    client.reopenBundles.addAll({
+      'ART-a1': _versionBundle(client),
+      'ART-a2': _versionBundle(client, parent: 'ART-a1', revision: 2),
+      'ART-a3': _versionBundle(client, parent: 'ART-a1', revision: 2),
+    });
+    await controller.reopen('ART-a1');
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await _openActionsForTarget(
+      tester,
+      find.byKey(const Key('media-reopen-ART-a1')),
+    );
+    await controller.reopen('ART-a2');
+    await tester.pumpAndSettle();
+    expect(controller.version?.parentArtifactId, 'ART-a1');
+    expect(find.byKey(const Key('media-reopen-ART-a1')), findsOneWidget);
+    expect(find.byKey(const Key('media-reopen-ART-a2')), findsOneWidget);
+    await controller.reopen('ART-a3');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-reopen-ART-a2')), findsOneWidget);
+    final parent = find.byKey(const Key('media-reopen-ART-a1'));
+    await tester.ensureVisible(parent);
+    await tester.tap(parent);
+    await tester.pumpAndSettle();
+    expect(client.reopenedReference, 'ART-a1');
+    expect(controller.version?.artifactId, 'ART-a1');
+    expect(find.byKey(const Key('media-reopen-ART-a2')), findsOneWidget);
+    expect(find.byKey(const Key('media-reopen-ART-a3')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('version chain clears on new import and context quarantine', (
+    tester,
+  ) async {
+    client.reopenBundles.addAll({
+      'ART-a1': _versionBundle(client),
+      'ART-a2': _versionBundle(client, parent: 'ART-a1', revision: 2),
+    });
+    await controller.reopen('ART-a1');
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await _openActionsForTarget(
+      tester,
+      find.byKey(const Key('media-reopen-ART-a1')),
+    );
+    await controller.reopen('ART-a2');
+    await tester.pumpAndSettle();
+    await controller.importFile('another.mp4', Uint8List.fromList([1]));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-reopen-ART-a1')), findsNothing);
+    expect(find.byKey(const Key('media-reopen-ART-a2')), findsOneWidget);
+    await tester.pumpWidget(_app(client, controller, contextAvailable: false));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-reopen-ART-a2')), findsNothing);
+    await tester.pumpWidget(_app(client, controller));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-reopen-ART-a2')), findsNothing);
+    expect(controller.sourcesNeedRevalidation, isTrue);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('version chain rebinds a changed controller without old cache', (
+    tester,
+  ) async {
+    client.reopenBundles.addAll({
+      'ART-a1': _versionBundle(client),
+      'ART-b1': _versionBundle(client),
+    });
+    final next = MediaProjectController(
+      repository: CoreMediaProjectRepository(client),
+      domain: 'BMP',
+    );
+    addTearDown(next.dispose);
+    await controller.reopen('ART-a1');
+    await next.reopen('ART-b1');
+    await tester.binding.setSurfaceSize(const Size(1440, 1100));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(_app(client, controller));
+    await _openActionsForTarget(
+      tester,
+      find.byKey(const Key('media-reopen-ART-a1')),
+    );
+    await tester.pumpWidget(_app(client, next));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-reopen-ART-a1')), findsNothing);
+    expect(find.byKey(const Key('media-reopen-ART-b1')), findsOneWidget);
+    // A late update from the detached, caller-owned controller cannot repopulate it.
+    controller.setTitle('Unrelated old edit');
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('media-reopen-ART-a1')), findsNothing);
+    expect(next.title, 'Same title and assets');
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'source preview preserves the edit and returns after narrow layout',
@@ -822,6 +1160,31 @@ void main() {
         'm4a',
         'mp3',
       ]);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'podcast desk keeps the real waveform and voice tools instead of video controls',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _layoutFonts(tester);
+      await prepareAudioProject();
+      await tester.pumpWidget(
+        _app(client, controller, initialOutputKind: 'audio', sidebar: 248),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('media-tool-spine')), findsOneWidget);
+      expect(find.byKey(const Key('media-source-waveform')), findsOneWidget);
+      expect(find.byKey(const Key('media-format-ratio')), findsNothing);
+      await _openPropertiesForField(
+        tester,
+        find.byKey(const Key('media-mastering')),
+      );
+      expect(find.byKey(const Key('media-mastering')), findsOneWidget);
+      expect(find.byKey(const Key('media-timeline-region')), findsOneWidget);
+      await _captureWorkbench(tester, 'podcast');
       expect(tester.takeException(), isNull);
     },
   );
@@ -2960,6 +3323,67 @@ void main() {
         expect(timelineRect.top, greaterThan(previewRect.top));
         expect(tester.takeException(), isNull);
       }
+      final playerElement = tester.element(preview);
+      for (final size in const [Size(390, 844), Size(1440, 900)]) {
+        await tester.binding.setSurfaceSize(size);
+        await tester.pumpAndSettle();
+        expect(tester.element(preview), same(playerElement));
+        expect(controller.version?.artifactId, 'ART-version');
+        expect(client.retrievalCalls, 1);
+        expect(tester.takeException(), isNull);
+      }
+    },
+  );
+
+  testWidgets(
+    'timeline height follows actual rows until the user chooses a size',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await _prepareEditableProject(client, controller);
+      await tester.pumpWidget(_app(client, controller));
+      await tester.pumpAndSettle();
+      final timeline = find.byKey(const Key('media-timeline-region'));
+      final preview = find.byKey(const ValueKey('media-preview-stage'));
+      final singleHeight = tester.getSize(timeline).height;
+      final singlePreviewHeight = tester.getSize(preview).height;
+      expect(singleHeight, 180);
+      final selected = controller.selectedClipId;
+      controller.edit(
+        (s) => s
+            .addAudioTrack('voice', audioRole: 'voiceover')
+            .addAudioTrack('music', audioRole: 'bgm'),
+      );
+      await tester.pumpAndSettle();
+      final multipleHeight = tester.getSize(timeline).height;
+      expect(multipleHeight, greaterThan(singleHeight));
+      expect(tester.getSize(preview).height, lessThan(singlePreviewHeight));
+      expect(
+        find.byKey(const ValueKey('media-track-label/voice')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('media-track-label/music')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('media-timeline-larger')));
+      await tester.pumpAndSettle();
+      final expanded = tester.getSize(timeline).height;
+      expect(expanded, greaterThan(multipleHeight));
+      controller.edit((s) => s.addAudioTrack('effects', audioRole: 'sfx'));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(timeline).height, expanded);
+      expect(
+        find.byKey(const ValueKey('media-track-label/effects')),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('media-timeline-smaller')));
+      await tester.pumpAndSettle();
+      expect(tester.getSize(timeline).height, lessThan(expanded));
+      expect(controller.selectedClipId, selected);
+      expect(controller.timeline!.tracks, hasLength(4));
+      expect(controller.timeline!.tracks.first.clips.single.sourceOut, 8);
+      expect(tester.takeException(), isNull);
     },
   );
 

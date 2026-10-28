@@ -24,7 +24,11 @@ import hashlib
 from datetime import datetime, timezone
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
-from .base import BaseAdapter, AdapterResult, CollectedNote
+from .base import BaseAdapter, AdapterResult, CollectedNote, optional_int
+from .human_browser import (HumanBrowser, NativeReadCapture, configured_readonly_worker_url,
+                            NativePageWindowError, native_json_nodes, native_page_json, native_page_window,
+                            native_read_scroll, validate_native_page_window_cursor)
+from .cookie_vault import inject_into_context
 
 logger = logging.getLogger(__name__)
 
@@ -296,7 +300,7 @@ class FacebookAdapter(BaseAdapter):
             return "PROVIDER_UNAVAILABLE: WORKER_DISCONNECTED"
         return "PROVIDER_UNAVAILABLE: " + (name if re.fullmatch(r"[A-Z0-9_]+", name) else "BROWSER_ERROR")
 
-    def search(self, keyword: str, max_results: int = 20) -> AdapterResult:
+    def search(self, keyword: str, max_results: int = 20, *, cursor=None) -> AdapterResult:
         if not keyword or not keyword.strip():
             return AdapterResult(success=False, error="关键词为空")
         try:
@@ -305,7 +309,7 @@ class FacebookAdapter(BaseAdapter):
             limit = 20
         if limit == 0:
             return AdapterResult(success=True, notes=[], raw_count=0)
-        return self._search_browser(keyword, limit)
+        return self._native_read('search', keyword.strip(), limit, cursor=cursor)
 
     def _search_browser(self, keyword: str, max_results: int) -> AdapterResult:
         """浏览器 CDP 采集 Facebook 搜索结果。"""
@@ -716,8 +720,20 @@ class FacebookAdapter(BaseAdapter):
         note.raw_data = raw
         return note, ""
 
-    def comments(self, post_id: str, max_comments: int = 20) -> AdapterResult:
+    def comments(self, post_id: str, max_comments: int = 20, *, cursor=None, include_replies=False, source_url=None) -> AdapterResult:
         """Facebook 评论采集（浏览器 CDP，滚动加载）。"""
+        identity = self.observed_post_permalink(source_url or post_id)
+        if not identity:
+            return AdapterResult(success=False, error="FACEBOOK_INVALID_POST_PERMALINK")
+        if source_url:
+            original = self.observed_post_permalink(post_id) if isinstance(post_id, str) and post_id.startswith('https://') else None
+            if (original and original['post_id'] != identity['post_id']
+                    or original is None and str(post_id) != identity['post_id']):
+                return AdapterResult(success=False, error='FACEBOOK_COMMENT_PARENT_IDENTITY_MISMATCH')
+        return self._native_read("comments", identity["post_id"], max_comments,
+                                 source_url=identity["url"], cursor=cursor, include_replies=include_replies)
+
+    def _comments_dom_observation(self, post_id, max_comments):
         hb = None
         try:
             from .human_browser import HumanBrowser, configured_readonly_worker_url
@@ -779,6 +795,12 @@ class FacebookAdapter(BaseAdapter):
 
     def creator(self, username: str) -> AdapterResult:
         """Facebook 主页/用户信息采集。"""
+        target = str(username or "").strip()
+        if re.fullmatch(r"[A-Za-z0-9.]{1,100}", target) is None:
+            return AdapterResult(success=False, error="FACEBOOK_AUTHOR_ID_INVALID")
+        return self._native_read("author", target, 1)
+
+    def _creator_dom_observation(self, username):
         hb = None
         try:
             from .human_browser import HumanBrowser, configured_readonly_worker_url
@@ -820,3 +842,279 @@ class FacebookAdapter(BaseAdapter):
         finally:
             if hb is not None:
                 hb.close()
+
+    @classmethod
+    def _native_post_identity(cls, node):
+        for field in ("permalink_url", "url", "story_url"):
+            if isinstance(node.get(field), str):
+                identity = cls.observed_post_permalink(node[field])
+                if identity:
+                    native_id = node.get("post_id") or node.get("legacy_fbid")
+                    if native_id is not None and str(native_id).split("_")[-1] != identity["post_id"]:
+                        return None
+                    return identity
+        native_id = node.get("post_id") or node.get("legacy_fbid")
+        if isinstance(native_id, str) and re.fullmatch(r"[0-9]+_[0-9]+", native_id):
+            return cls.observed_post_permalink("https://www.facebook.com/" + native_id.split("_")[0] + "/posts/" + native_id.split("_")[1])
+        return None
+
+    def _native_post_note(self, node):
+        identity = self._native_post_identity(node)
+        if not identity:
+            return None
+        sections = node.get("comet_sections") or {}
+        story = ((sections.get("content") or {}).get("story") or node)
+        message = story.get("message") or node.get("message") or {}
+        text = message.get("text") if isinstance(message, dict) else None
+        if not isinstance(text, str):
+            return None
+        actors = story.get("actors") or node.get("actors") or []
+        owner = actors[0] if actors and isinstance(actors[0], dict) else node.get("owner") or {}
+        feedback = node.get("feedback") or story.get("feedback") or {}
+        hints = []
+        # Only media under this exact post, never recommendation/sidebar nodes.
+        for attachment in story.get("attachments") or node.get("attachments") or []:
+            for media in native_json_nodes(attachment):
+                native_id = media.get("id")
+                for key in ("playable_url", "playable_url_quality_hd", "browser_native_hd_url", "browser_native_sd_url"):
+                    value = media.get(key)
+                    safe = self._sanitize_media_url(value, identity["url"]) if isinstance(value, str) else ""
+                    if safe: hints.append({"kind": "video", "url": safe, "native_media_id": native_id, "locator": "$.attachments[]." + key, "bytes_state": "NOT_ACQUIRED"})
+                for key in ("image", "photo_image", "thumbnailImage", "preferred_thumbnail"):
+                    image = media.get(key)
+                    value = image.get("uri") if isinstance(image, dict) else None
+                    safe = self._sanitize_media_url(value, identity["url"]) if isinstance(value, str) else ""
+                    if safe: hints.append({"kind": "image", "url": safe, "native_media_id": native_id, "locator": "$.attachments[]." + key + ".uri", "bytes_state": "NOT_ACQUIRED"})
+        created = node.get("creation_time") if node.get("creation_time") is not None else story.get("creation_time")
+        published = ""
+        if type(created) in {int, float}:
+            try: published = datetime.fromtimestamp(created, timezone.utc).isoformat()
+            except (ValueError, OSError, OverflowError): pass
+        return CollectedNote(title=text[:100], content=text, url=identity["url"], author=owner.get("name") or "",
+            author_id=str(owner.get("id") or ""), publish_date=published,
+            likes=optional_int((feedback.get("reactors") or {}).get("count")),
+            comments=optional_int(feedback.get("total_comment_count")), shares=optional_int((feedback.get("share_count") or {}).get("count")),
+            cover=next((hint["url"] for hint in hints if hint["kind"] == "image"), ""), source_platform="facebook",
+            raw_data={"engine": "facebook_native_story", "post_id": identity["post_id"], "native_story_id": node.get("id"),
+                "body_state": "PLATFORM_BODY" if message.get("is_truncated") is False else "COMPLETENESS_NOT_OBSERVED",
+                "body_locator": "$.message.text", "native_time": created, "author": owner, "media_hints": hints,
+                "feedback_id": feedback.get("id"), "source_observation": node})
+
+    def _native_read(self, capability, target, limit, *, source_url=None, cursor=None, include_replies=False):
+        if type(limit) is not int or not 1 <= limit <= 100:
+            return AdapterResult(success=False, error="FACEBOOK_NATIVE_PAGE_SIZE_INVALID")
+        try:
+            validate_native_page_window_cursor(cursor)
+            if isinstance(cursor, dict) and cursor.get('mode') == 'replies':
+                validate_native_page_window_cursor(cursor.get('next_root'))
+        except NativePageWindowError:
+            return AdapterResult(success=False, error='FACEBOOK_NATIVE_CURSOR_WINDOW_INVALID')
+        if cursor is not None and (not isinstance(cursor, dict) or cursor.get("mode") not in {"roots", "replies", "posts", "search"}
+                or not isinstance(cursor.get("after"), str) or len(cursor["after"]) > 4096
+                or not cursor['after'] and cursor.get('mode') != 'replies' and 'item_offset' not in cursor
+                or any(ord(c) < 32 for c in cursor["after"])):
+            return AdapterResult(success=False, error="FACEBOOK_NATIVE_CURSOR_INVALID")
+        if (capability == 'comments' and include_replies and cursor is not None
+                and 'reply_scope_unknown' in cursor and type(cursor['reply_scope_unknown']) is not bool):
+            return AdapterResult(success=False, error="FACEBOOK_NATIVE_CURSOR_INVALID")
+        if cursor is not None and (capability == 'author_posts' and cursor['mode'] != 'posts'
+                or capability == 'search' and cursor['mode'] != 'search'
+                or capability == 'comments' and cursor['mode'] not in {'roots', 'replies'}
+                or capability == 'author'):
+            return AdapterResult(success=False, error='FACEBOOK_NATIVE_CURSOR_INVALID')
+        worker, page = None, None
+        capture = NativeReadCapture(hosts={"www.facebook.com", "web.facebook.com", "m.facebook.com"}, paths=("/api/graphql", "/graphql"),
+            request_keys={"cursor", "after", "id", "nodeID", "feedbackID", "feedback_id", "postID", "post_id", "actorID", "profileID", "count", "query", "search_query", "fb_api_req_friendly_name"})
+        known_posts, authors = set(), {}
+        try:
+            worker = HumanBrowser(cdp_url=configured_readonly_worker_url("facebook"), auto_ensure=False, launch_url="about:blank")
+            worker.connect()
+            inject_into_context(worker._context, "facebook")
+            page = worker.new_page(stealth=False)
+            capture.attach(page)
+            url = source_url or ("https://www.facebook.com/search/posts/?q=" + urlencode({"q": target})[2:] if capability == "search" else "https://www.facebook.com/" + target)
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(1000)
+            def register(objects):
+                for obj in objects:
+                    for node in native_json_nodes(obj):
+                        identity = self._native_post_identity(node)
+                        if identity and identity["post_id"] == target:
+                            for value in (node.get("id"), node.get("post_id"), (node.get("feedback") or {}).get("id")):
+                                if value is not None: known_posts.add(str(value))
+                        if capability in {"author", "author_posts"} and node.get("id"):
+                            profile_url = node.get("url") or node.get("profile_url") or ""
+                            parsed = urlsplit(profile_url) if isinstance(profile_url, str) else None
+                            if str(node["id"]) == target or parsed and parsed.hostname in {"www.facebook.com", "facebook.com"} and parsed.path.strip("/").casefold() == target.casefold():
+                                if any(key in node for key in ("name", "username")):
+                                    authors[str(node["id"])] = node
+            register(native_page_json(page))
+            def select(observation):
+                register(observation["objects"])
+                request = observation["request"]
+                observed_cursor = request.get("cursor") or request.get("after")
+                if str(observed_cursor or "") != str((cursor or {}).get("after") or ""):
+                    return None
+                if capability == "author":
+                    if authors: return {"profile": next(iter(authors.values()))}
+                    return None
+                if capability == "comments":
+                    requested = {str(request[key]) for key in ("id", "nodeID", "feedbackID", "feedback_id", "postID", "post_id") if request.get(key)}
+                    expected = {str((cursor or {}).get("root_id")), str((cursor or {}).get('root_resource_id'))} if (cursor or {}).get("mode") == "replies" else known_posts | {target}
+                    if not requested.intersection(expected): return None
+                elif capability == "author_posts":
+                    requested = {str(request[key]) for key in ("id", "profileID", "actorID") if request.get(key)}
+                    if not requested.intersection(authors): return None
+                elif request.get("query") != target and request.get("search_query") != target and not re.fullmatch(r'CometSearchResults[A-Za-z0-9_]*', str(request.get('fb_api_req_friendly_name') or '')):
+                    return None
+                for obj in observation["objects"]:
+                    for node in native_json_nodes(obj):
+                        for key, connection in node.items():
+                            meaningful = ("comment" in key.lower()) if capability == "comments" else ("timeline" in key.lower() or "feed" in key.lower() or "search" in key.lower())
+                            if meaningful and isinstance(connection, dict) and isinstance(connection.get("edges"), list):
+                                return {"connection": connection, "rows": [edge.get("node") for edge in connection["edges"] if isinstance(edge, dict) and isinstance(edge.get("node"), dict)]}
+                return None
+            def advance(_step):
+                if self._page_failure_state(page): return False
+                if include_replies or (cursor or {}).get("mode") == "replies":
+                    control = page.get_by_text(re.compile(r"^(?:View|See|Show) (?:\d+ |more |previous )?repl(?:y|ies)$|^查看.{0,12}(?:回复|回覆)$", re.I)).first
+                    if control.count() and control.is_visible(): control.click(timeout=3000); return True
+                return native_read_scroll(page, reply_id=(cursor or {}).get("root_id"), reply_attribute="data-comment-id")
+            selected = {"profile": next(iter(authors.values())), "observed_prior_native_responses": 0} if capability == "author" and authors else capture.seek(page, select, advance, max_steps=16)
+            if selected is None:
+                failure = capture.failure() or {}
+                if capability == 'search' and cursor is None and not failure and not self._page_failure_state(page):
+                    notes = [note for card in page.query_selector_all('div[role="article"]')
+                             if (note := self._parse_facebook_card(card, page)) is not None]
+                    if notes:
+                        return AdapterResult(success=True, notes=notes[:limit], raw_count=len(notes), metadata={'pagination': {
+                            'request_cursor': None, 'next_cursor': None, 'exhausted': None, 'page_complete': len(notes) <= limit,
+                            'coverage_scope': 'LOADED_SEARCH_CARDS_ONLY', 'partial_reason': 'NATIVE_CURSOR_NOT_OBSERVED'}})
+                code = failure.get("failure_class") or self._page_failure_state(page) or "NATIVE_PAGE_NOT_OBSERVED"
+                return AdapterResult(success=False, error="FACEBOOK_" + code, metadata={"failure_class": failure.get("failure_class"),
+                    "http_status": failure.get("http_status"), "retry_after_seconds": failure.get("retry_after_seconds"),
+                    "pagination": {"request_cursor": cursor, "next_cursor": None, "exhausted": None, "page_complete": False}})
+            if capability == "author":
+                profile = selected["profile"]
+                return AdapterResult(success=True, notes=[CollectedNote(title=profile.get("name") or "", content=(profile.get("bio") or {}).get("text") or "",
+                    url=url, author=profile.get("name") or "", author_id=str(profile["id"]), source_platform="facebook", raw_data={
+                        "engine": "facebook_native_profile", "username": target, "native_user_id": str(profile["id"]), "source_observation": profile,
+                        "follower_count": optional_int((profile.get("followers") or {}).get("count")),
+                        "native_author_aliases": [{"kind": "requested", "value": target}, {"kind": "id", "value": str(profile["id"])}]})], raw_count=1)
+            connection, rows = selected["connection"], selected["rows"]
+            page_info = connection.get("page_info") or {}
+            more = page_info.get("has_next_page") if type(page_info.get("has_next_page")) is bool else None
+            after = page_info.get("end_cursor")
+            identities = []
+            for row in rows:
+                identity = None
+                if isinstance(row, dict):
+                    identity = row.get('legacy_fbid') or row.get('id')
+                    if capability != 'comments':
+                        for candidate in (row, row.get('story'), row.get('node')):
+                            native = self._native_post_identity(candidate) if isinstance(candidate, dict) else None
+                            if native:
+                                identity = native['post_id']
+                                break
+                identities.append(str(identity) if identity is not None else None)
+            window = native_page_window(rows, limit=limit, cursor=cursor, identities=identities)
+            complete = window['page_complete']
+            base_cursor = {key: value for key, value in (cursor or {}).items() if key not in {'item_offset', 'page_sha256'}}
+            if not base_cursor:
+                base_cursor = {'mode': 'roots' if capability == 'comments' else 'posts' if capability == 'author_posts' else 'search', 'after': ''}
+            native_next = ({**base_cursor, **window['next_window']} if not complete else
+                           {**base_cursor, 'after': after} if more is True and isinstance(after, str)
+                           and after and after != base_cursor['after'] else None)
+            notes, seen, deferred = [], set(), []
+            reply_scope_unknown = (cursor.get('reply_scope_unknown', True)
+                                   if capability == 'comments' and include_replies and cursor is not None else False)
+            flattened = []
+            for row in window['rows']:
+                if not isinstance(row, dict): continue
+                flattened.append((row, (cursor or {}).get('root_id')))
+                if capability == 'comments':
+                    connection_replies = row.get('comment_replies') or row.get('replies') or {}
+                    children = [edge.get('node') for edge in connection_replies.get('edges') or [] if isinstance(edge, dict) and isinstance(edge.get('node'), dict)]
+                    cid = row.get('legacy_fbid') or row.get('id')
+                    flattened.extend((child, cid) for child in children)
+                    reply_count = optional_int(connection_replies.get('count'))
+                    if include_replies and reply_count is None:
+                        reply_scope_unknown = True
+                    if reply_count is not None and reply_count > len(children):
+                        deferred.append({'root_id': str(cid), 'root_resource_id': str((row.get('feedback') or {}).get('id') or row.get('id') or cid)})
+            for row, observed_parent in flattened:
+                if capability == "comments":
+                    cid = row.get("legacy_fbid") or row.get("id")
+                    body = row.get("body") or {}
+                    if not cid or not isinstance(body.get("text"), str): continue
+                    owner = row.get("author") or {}
+                    parent = row.get("parent_comment") or row.get("comment_parent") or {}
+                    parent_id = parent.get("legacy_fbid") or parent.get("id") or observed_parent
+                    if str(cid) in seen: continue
+                    seen.add(str(cid))
+                    created = row.get("created_time")
+                    published = ""
+                    if type(created) in {int, float}:
+                        try: published = datetime.fromtimestamp(created, timezone.utc).isoformat()
+                        except (ValueError, OSError, OverflowError): pass
+                    notes.append(CollectedNote(title="", content=body["text"], url=row.get("url") or source_url or "", author=owner.get("name") or "",
+                        author_id=str(owner.get("id") or ""), publish_date=published, likes=optional_int(((row.get("feedback") or {}).get("reactors") or {}).get("count")),
+                        source_platform="facebook", raw_data={"engine": "facebook_native_comments", "type": "comment", "platform_comment_id": str(cid),
+                            "parent_content_id": target, "parent_comment_id": str(parent_id) if parent_id else None,
+                            "reply_to_comment_id": str(parent_id) if parent_id else None, "source_observation": row}))
+                else:
+                    for candidate in (row, row.get("story"), row.get("node")):
+                        note = self._native_post_note(candidate) if isinstance(candidate, dict) else None
+                        if not note or note.raw_data["post_id"] in seen: continue
+                        if capability == "author_posts" and note.author_id not in authors: continue
+                        seen.add(note.raw_data["post_id"])
+                        if capability == "author_posts": note.raw_data["author_history_binding"] = {"requested_id": target, "native_user_id": note.author_id}
+                        notes.append(note)
+            exhausted = not more if more is not None and complete else None
+            if not complete:
+                exhausted = False
+            if capability == 'comments':
+                if (cursor or {}).get('mode') == 'replies':
+                    if native_next is None and exhausted is True and cursor.get('pending_roots'):
+                        following = cursor['pending_roots'][0]
+                        native_next = {**base_cursor, **following, 'after': '', 'pending_roots': cursor['pending_roots'][1:]}
+                    elif native_next is None and exhausted is True:
+                        native_next, exhausted = cursor.get('next_root'), cursor.get('root_exhausted')
+                elif include_replies and deferred:
+                    native_next = {'mode': 'replies', **deferred[0], 'after': '', 'pending_roots': deferred[1:],
+                                   'next_root': native_next, 'root_exhausted': exhausted}
+                    exhausted = False
+                replies_complete = (False if native_next is not None or exhausted is False else
+                                    None if exhausted is not True or reply_scope_unknown else True) if include_replies else None
+                if include_replies and native_next is not None:
+                    native_next = {**native_next, 'reply_scope_unknown': reply_scope_unknown}
+            else:
+                replies_complete = None
+            if rows and not notes:
+                return AdapterResult(success=False, error='FACEBOOK_NATIVE_RECORD_SHAPE_UNSUPPORTED')
+            return AdapterResult(success=True, notes=notes, raw_count=len(notes), metadata={"pagination": {"request_cursor": cursor,
+                "next_cursor": native_next, "exhausted": exhausted, "page_complete": complete,
+                "replies_complete": replies_complete,
+                "reported_total": optional_int(connection.get("count")), "coverage_scope": "PROVIDER_VISIBLE_NATIVE_PAGE",
+                **{key: window[key] for key in ('window_start', 'window_end', 'observed_native_rows', 'page_sha256', 'page_identity_basis')},
+                "resume_strategy": "OFFICIAL_PAGE_NATIVE_CURSOR_SEEK", "observed_prior_native_responses": selected["observed_prior_native_responses"],
+                "partial_reason": "REQUESTED_LIMIT_REACHED" if not complete else None}})
+        except NativePageWindowError as exc:
+            return AdapterResult(success=False, raw_count=None, error='FACEBOOK_' + str(exc), metadata={
+                'failure_class': str(exc), 'pagination': {'request_cursor': cursor, 'next_cursor': None,
+                    'exhausted': None, 'page_complete': False, 'resume_requires_fresh_page': True}})
+        except Exception as exc:
+            logger.warning("Facebook native read failed error_type=%s", type(exc).__name__)
+            return AdapterResult(success=False, error=self._exception_error(exc))
+        finally:
+            capture.close()
+            if page is not None:
+                try: page.close()
+                except Exception: pass
+            if worker is not None: worker.close()
+
+    def author_posts(self, author_id, *, max_results=20, cursor=None, **kwargs):
+        target = str(author_id or "").strip()
+        if re.fullmatch(r"[A-Za-z0-9.]{1,100}", target) is None:
+            return AdapterResult(success=False, error="FACEBOOK_AUTHOR_ID_INVALID")
+        return self._native_read("author_posts", target, max_results, cursor=cursor)

@@ -94,6 +94,26 @@ def _current_data_dir() -> Path:
     return _resolve_runtime_data_dir()
 
 
+def registered_session_data_dir(*, root=None, environ=None) -> Path:
+    """Reference an existing registered session without moving runtime writes.
+
+    Only server configuration can select this root. Profiles still resolve by
+    their catalog identity and are verified against the live owning process;
+    this path grants no platform access. Cookie intake and business/queue/stats
+    persistence continue using the active runtime data directory.
+    """
+    env = os.environ if environ is None else environ
+    configured = str(env.get('LUMENIS_COLLECTOR_SESSION_DATA_DIR') or '').strip()
+    if not configured:
+        return _resolve_runtime_data_dir(root=root, environ=env)
+    requested = Path(configured)
+    if (not requested.is_absolute() or not requested.is_dir()
+            or any(part.is_symlink() or (hasattr(part, 'is_junction') and part.is_junction())
+                   for part in (requested, *requested.parents))):
+        raise ValueError('REGISTERED_SESSION_ROOT_INVALID')
+    return requested.resolve()
+
+
 def _current_cookie_paths(platform: str) -> list[Path] | None:
     """Build platform paths from the current runtime root.
 

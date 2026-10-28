@@ -1,6 +1,7 @@
 """Synthetic-only regression for the retained safety-boundary backup caller."""
 import ast
 import json
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 import sqlite3
@@ -43,9 +44,9 @@ def backup(engine):
 
 def expire(path):
     info_path = Path(path) / 'backup_info.json'
-    info = json.loads(info_path.read_text())
+    info = json.loads(info_path.read_text(encoding='utf-8'))
     info['created_at'] = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
-    info_path.write_text(json.dumps(info))
+    info_path.write_text(json.dumps(info), encoding='utf-8')
 
 
 def test_wal_nondefault_database_independent_readback(engine, wal_database):
@@ -54,11 +55,19 @@ def test_wal_nondefault_database_independent_readback(engine, wal_database):
     with sqlite3.connect(Path(path) / 'monitor.db') as restored:
         assert restored.execute('SELECT value FROM synthetic_evidence').fetchall() == [('committed',)]
         assert restored.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
-    info = json.loads((Path(path) / 'backup_info.json').read_text())
-    assert info['source_db'].endswith('nondefault/truth.sqlite')
+    info = json.loads((Path(path) / 'backup_info.json').read_text(encoding='utf-8'))
+    assert Path(info['source_db']).parts[-2:] == ('nondefault', 'truth.sqlite')
     assert info['operation_type'] == 'restart'
     assert info['restore_readback'] == 'verified'
     assert len(info['database_sha256']) == 64
+    expected_companions = {
+        name: engine.calculate_file_hash(Path(path) / name)
+        for name in ('monitor.db.signing-manifest.json',
+                     'monitor.db.evidence-signing.dpapi' if os.name == 'nt' else 'monitor.db.evidence-signing.json')
+        if (Path(path) / name).is_file()
+    }
+    assert info['owned_companions'] == expected_companions
+    assert 'monitor.db.signing-manifest.json' in expected_companions
 
 
 def test_backup_destinations_unique(engine, wal_database):
@@ -116,12 +125,13 @@ def test_retention_removes_only_expired_owned_backup(engine, wal_database):
     assert result['removed'] == [Path(old).name]
 
 
-@pytest.mark.parametrize('kind', ['owner', 'path', 'legacy', 'foreign_file', 'hash', 'symlink_file'])
+@pytest.mark.parametrize('kind', ['owner', 'path', 'legacy', 'foreign_file', 'hash', 'symlink_file',
+                                  'signing_companion', 'unrecorded_signing_companion'])
 def test_retention_preserves_unowned_or_changed_material(engine, wal_database, kind):
     path = Path(backup(engine))
     expire(path)
     info_path = path / 'backup_info.json'
-    info = json.loads(info_path.read_text())
+    info = json.loads(info_path.read_text(encoding='utf-8'))
     if kind == 'owner':
         info['owner'] = 'another_owner'
     elif kind == 'path':
@@ -134,7 +144,11 @@ def test_retention_preserves_unowned_or_changed_material(engine, wal_database, k
         (path / 'user-document.txt').write_text('preserve')
     elif kind == 'symlink_file':
         (path / '.env').symlink_to(path / 'monitor.db')
-    info_path.write_text(json.dumps(info))
+    elif kind == 'signing_companion':
+        (path / 'monitor.db.signing-manifest.json').write_text('changed', encoding='utf-8')
+    elif kind == 'unrecorded_signing_companion':
+        info.pop('owned_companions')
+    info_path.write_text(json.dumps(info), encoding='utf-8')
     result = engine._cleanup_old_backups(str(path.parent))
     assert path.exists()
     assert not result['removed']
@@ -203,9 +217,9 @@ def test_existing_confirmation_boundary_unchanged(engine):
 def test_invalid_timestamp_is_reported_not_removed(engine, wal_database):
     path = Path(backup(engine))
     info_path = path / 'backup_info.json'
-    info = json.loads(info_path.read_text())
+    info = json.loads(info_path.read_text(encoding='utf-8'))
     info['created_at'] = 'invalid'
-    info_path.write_text(json.dumps(info))
+    info_path.write_text(json.dumps(info), encoding='utf-8')
     result = engine._cleanup_old_backups(str(path.parent))
     assert result['status'] == 'partial_failure'
     assert path.exists()
@@ -234,7 +248,7 @@ def test_config_copy_preserves_synthetic_contents(engine, wal_database):
     (Path(engine.root_dir) / '.env').write_text(config)
     path = backup(engine)
     assert path
-    assert (Path(path) / '.env').read_text() == config
+    assert (Path(path) / '.env').read_text(encoding='utf-8') == config
 
 
 def test_config_symlink_rejected(engine, wal_database, tmp_path):

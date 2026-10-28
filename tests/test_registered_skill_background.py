@@ -156,13 +156,15 @@ def test_two_workers_claim_one_skill_and_do_not_consume_collector(background, mo
     from lumenis.system.collector.guard.task_queue import TaskQueue
     from lumenis.shared.agents.skills import execution
     api, app, path = background
-    identifier = submit(api)
     count = []
     original = execution._execute_builtin_local
     def counted(ctx, meta):
         count.append(ctx.execution_id)
         return original(ctx, meta)
     monkeypatch.setattr(execution, '_execute_builtin_local', counted)
+    # The server admits the actual callable before submission. Changing it
+    # afterwards is a different execution version and is deliberately rejected.
+    identifier = submit(api)
     queue = TaskQueue()
     collector = queue.enqueue('collect', {'keyword': 'must remain queued'})
     queue.close()
@@ -188,8 +190,10 @@ def test_process_exit_after_claim_then_existing_lease_recovery(background, monke
     row = query_executions(execution_id=identifier, limit=1)[0]
     queue = task_queue.TaskQueue()
     binding = json.loads(row['permission_json'])['background_binding']
+    handler_identity = json.loads(row['permission_json'])['background_handler_identity_sha256']
     queue_id = queue.enqueue_once('registered_skill', {'execution_id': identifier,
-        'actor_id': 1, 'product': 'CTH', 'binding': binding}, identifier)
+        'actor_id': 1, 'product': 'CTH', 'binding': binding,
+        'handler_identity_sha256': handler_identity}, identifier)
     queue.close()
     code = ('import os,sys; from lumenis.system.collector.guard.task_queue import TaskQueue; '
             'q=TaskQueue(sys.argv[1]); assert q.dequeue(worker_id="crashed",task_id=int(sys.argv[2])); os._exit(23)')

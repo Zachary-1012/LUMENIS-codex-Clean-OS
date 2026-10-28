@@ -674,7 +674,8 @@ class InstagramAdapter(BasePlatformAdapter):
             )
         try:
             engine = self._get_engine()
-            result = engine.comments(content_id, max_comments=kwargs.get("max_comments", 20))
+            result = engine.comments(content_id, max_comments=kwargs.get("max_comments", 20),
+                                     cursor=kwargs.get("cursor"), include_replies=include_replies)
             # v4 stores comments in notes[0].raw_data["comments"]
             comments_list: List[Dict[str, Any]] = []
             if result.notes:
@@ -696,6 +697,7 @@ class InstagramAdapter(BasePlatformAdapter):
                 new_count=len(comments_list),
                 message=safe_error,
                 metadata={
+                    **(result.metadata if isinstance(getattr(result, 'metadata', None), dict) else {}),
                     "engine": "v4_instagram",
                     "shortcode": content_id,
                     "include_replies": include_replies,
@@ -748,6 +750,21 @@ class InstagramAdapter(BasePlatformAdapter):
                 message=diagnostic["error_code"],
                 metadata={"failure_diagnostic": diagnostic},
             )
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        try:
+            result = self._get_engine().author_posts(author_id, max_results=kwargs.get("max_results", 20), cursor=kwargs.get("cursor"))
+            items = self._notes_to_items(result.notes)
+            diagnostic = self._failure_diagnostic(result.error, getattr(result, "diagnostics", None)) if result.error else None
+            error = diagnostic["error_code"] if diagnostic else ""
+            return CollectionResult(self._map_status(result.success, result.notes, error), self.platform,
+                items=items, raw_count=result.raw_count, new_count=len(items), message=error,
+                metadata={**(result.metadata or {}), "provider": "authorized_browser_worker", "capability": "author_posts",
+                          **({"failure_diagnostic": diagnostic} if diagnostic else {})})
+        except Exception as exc:
+            diagnostic = self._failure_diagnostic(exc)
+            return CollectionResult(self._map_status(False, [], diagnostic["error_code"]), self.platform,
+                message=diagnostic["error_code"], metadata={"failure_diagnostic": diagnostic})
 
     def health_check(self, **kwargs: Any) -> CollectionResult:
         """Report public-read or registered-worker readiness without reading credentials.

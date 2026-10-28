@@ -26,6 +26,75 @@ def _row_dict(cursor, row) -> dict[str, Any]:
     return dict(zip((column[0] for column in cursor.description), row))
 
 
+def persist_platform_author_records(records, *, platform, evidence_id, scope, connection):
+    """Project signed native author observations into the existing account owner.
+
+    Task source scope does not establish a tenant/brand/venue relationship.
+    Follower and post counts never become post-engagement metrics.
+    """
+    from canonical_data import CanonicalRecord, persist_canonical
+    product, domain, subject, brand = (_unassigned_global_scope_identity(scope)
+        if scope.get('global_scope') is True else _scope_identity(scope))
+    row = connection.execute('SELECT * FROM app_evidence_records WHERE id=?', (evidence_id,)).fetchone()
+    evidence = dict(row) if row else {}
+    inputs = json.loads(evidence.get('inputs_json') or '{}')
+    if (evidence.get('feature_id') != 'COLLECTOR_NATIVE_AUTHORS'
+            or evidence.get('result') != 'PASS' or classify_evidence_integrity(evidence).get('assurance') != 'writer-authenticated'
+            or inputs.get('author_observation_records') != records):
+        raise ValueError('AUTHOR_SOURCE_EVIDENCE_UNVERIFIED')
+    expected = {'product_id':product, 'domain_id':domain, 'global':scope.get('global_scope') is True}
+    if subject:
+        expected['subject_id'] = subject
+    if brand:
+        expected['brand_focus_id'] = brand
+    if inputs.get('_lumenis_scope') != expected:
+        raise ValueError('AUTHOR_SOURCE_SCOPE_MISMATCH')
+    refs = []
+    for item in records:
+        identity = item['platform_author_id']
+        source_id = 'platform-author:' + platform + ':' + identity
+        if source_id not in inputs.get('source_ids', []):
+            raise ValueError('AUTHOR_SOURCE_ID_NOT_COVERED')
+        counts = {key:item.get(key) for key in ('follower_count','following_count','content_count')}
+        if any(value is not None and (type(value) is not int or value < 0) for value in counts.values()):
+            raise ValueError('AUTHOR_METRICS_REQUIRE_EXACT_NONNEGATIVE_INTEGER_OR_NULL')
+        stamp = item['captured_at']
+        raw = json.dumps({'observation':item, 'source_evidence_ref':f'app_evidence_records:{evidence_id}',
+                          'source_scope':dict(scope)}, ensure_ascii=False, sort_keys=True, allow_nan=False)
+        fields = ['username','display_name','avatar_url','bio','verified','verification_type','account_type',
+                  'follower_count','following_count','content_count','location','country','language','website','profile_url']
+        values = [item.get(key) for key in fields]
+        connection.execute('INSERT INTO platform_accounts (platform,platform_account_id,' + ','.join(fields)
+            + ',first_seen_at,last_seen_at,raw_data) VALUES (' + ','.join('?' for _ in range(len(fields)+5)) + ') '
+            'ON CONFLICT(platform,platform_account_id) DO UPDATE SET '
+            + ','.join(key+'=excluded.'+key for key in [*fields,'last_seen_at','raw_data']),
+            (platform,identity,*values,stamp,stamp,raw))
+        scope_key = hashlib.sha256(json.dumps(expected,sort_keys=True,separators=(',',':')).encode()).hexdigest()[:16]
+        canonical_id = 'can_author_' + hashlib.sha256((platform+'\0'+identity+'\0'+scope_key).encode()).hexdigest()
+        canonical = CanonicalRecord(canonical_id=canonical_id, product_id=product, domain_id=domain,
+            subject_id=subject or '', brand_focus_id=brand or '', scope_status='VERIFIED' if subject or brand else 'UNASSIGNED',
+            scope_evidence_ref=str(evidence_id), source_id=source_id, external_id=identity,
+            source_type='platform_account', source_table='platform_accounts', source_platform=platform,
+            title=item.get('display_name') or item.get('username') or '', content=item.get('bio') or '',
+            url=item.get('profile_url') or '', author_id=identity, author_name=item.get('display_name') or '',
+            captured_at=stamp, provenance=json.dumps({'source_evidence_ref':f'app_evidence_records:{evidence_id}',
+                'claim_type':'PLATFORM_REPORTED_PROFILE', 'association_basis':'TASK_SELECTED_REFERENCE_SOURCE',
+                'entity_relationship_established':False}, sort_keys=True))
+        persist_canonical(connection, canonical)
+        metric_key = platform+':'+identity+':'+scope_key
+        prior = connection.execute("SELECT raw_json FROM metric_snapshots WHERE entity_type='platform_account' "
+            'AND entity_key=? ORDER BY id DESC LIMIT 1',(metric_key,)).fetchone()
+        old = json.loads(prior[0]) if prior else {}
+        if not prior or any(old.get(key) != value for key,value in counts.items()):
+            connection.execute('INSERT INTO metric_snapshots (entity_type,entity_key,likes,comments,collects,shares,'
+                'raw_json,source,collector_version,snapshot_at) VALUES (?,?,NULL,NULL,NULL,NULL,?,?,?,?)',
+                ('platform_account',metric_key,json.dumps({**counts,'platform':platform,'platform_author_id':identity,
+                    'source_evidence_ref':f'app_evidence_records:{evidence_id}','source_scope':dict(scope)},
+                    ensure_ascii=False,sort_keys=True,allow_nan=False), platform,'collector-native-author/1',stamp))
+        refs.append({'source_id':source_id,'canonical_ref':canonical_id,'platform_author_id':identity})
+    return refs
+
+
 def _scope_identity(scope: Mapping[str, Any]) -> tuple[str, str, str | None, str | None]:
     domain = str(scope.get("domain_id") or "").strip().lower()
     subject = scope.get("subject_id") or None

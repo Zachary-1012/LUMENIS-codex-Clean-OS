@@ -250,12 +250,29 @@ class BoundaryControlEngine:
             snapshot_hash = self.calculate_file_hash(destination)
             if snapshot_hash is None:
                 raise OSError('backup digest readback failed')
+            signing_companion_names = {
+                'monitor.db.signing-manifest.json',
+                'monitor.db.evidence-signing.dpapi' if os.name == 'nt' else 'monitor.db.evidence-signing.json',
+            }
+            owned_companions = {}
+            for name in signing_companion_names:
+                companion = Path(backup_path) / name
+                if os.path.lexists(companion):
+                    if companion.is_symlink() or not companion.is_file():
+                        raise OSError('backup signing companion is not a regular file')
+                    digest = self.calculate_file_hash(str(companion))
+                    if digest is None:
+                        raise OSError('backup signing companion digest readback failed')
+                    owned_companions[name] = digest
+            if 'monitor.db.signing-manifest.json' not in owned_companions:
+                raise OSError('backup signing manifest missing')
             backup_info = {
                 'owner': 'safety_boundary', 'format_version': 1,
                 'backup_path': backup_path, 'source_db': db_path,
                 'operation_type': operation, 'description': description,
                 'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'database_sha256': snapshot_hash,
+                'owned_companions': owned_companions,
                 'restore_readback': 'verified',
             }
             with open(os.path.join(backup_path, 'backup_info.json'), 'x', encoding='utf-8') as f:
@@ -300,10 +317,24 @@ class BoundaryControlEngine:
                         continue
                     # Do not remove a directory containing foreign files or links.
                     names = set(os.listdir(item_path))
-                    if (not {'monitor.db', 'backup_info.json'} <= names
-                            or names - {'monitor.db', 'backup_info.json', '.env'}
+                    companion_names = {
+                        'monitor.db.signing-manifest.json',
+                        'monitor.db.evidence-signing.dpapi' if os.name == 'nt' else 'monitor.db.evidence-signing.json',
+                    }
+                    owned_companions = info.get('owned_companions', {})
+                    if (not isinstance(owned_companions, dict)
+                            or not set(owned_companions) <= companion_names
+                            or (owned_companions and 'monitor.db.signing-manifest.json' not in owned_companions)
+                            or any(type(digest) is not str or len(digest) != 64
+                                   or any(char not in '0123456789abcdef' for char in digest)
+                                   for digest in owned_companions.values())
+                            or not {'monitor.db', 'backup_info.json'} <= names
+                            or names - {'monitor.db', 'backup_info.json', '.env'} - set(owned_companions)
+                            or not set(owned_companions) <= names
                             or any(not os.path.isfile(os.path.join(item_path, n)) or os.path.islink(os.path.join(item_path, n)) for n in names)
-                            or self.calculate_file_hash(os.path.join(item_path, 'monitor.db')) != info.get('database_sha256')):
+                            or self.calculate_file_hash(os.path.join(item_path, 'monitor.db')) != info.get('database_sha256')
+                            or any(self.calculate_file_hash(os.path.join(item_path, name)) != digest
+                                   for name, digest in owned_companions.items())):
                         result['skipped'].append(item)
                         continue
                     created = datetime.strptime(info['created_at'], '%Y-%m-%d %H:%M:%S')

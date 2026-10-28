@@ -244,6 +244,54 @@ final class MediaProjectAudioMix {
   };
 }
 
+final class MediaVideoPlacement {
+  const MediaVideoPlacement({
+    this.x = 0,
+    this.y = 0,
+    this.width = 1,
+    this.height = 1,
+    this.opacity = 1,
+  });
+  final double x, y, width, height, opacity;
+  factory MediaVideoPlacement.fromJson(Object? value) {
+    final data = _object(value, {
+      'x',
+      'y',
+      'width',
+      'height',
+      'opacity',
+    }, 'video_placement');
+    final result = MediaVideoPlacement(
+      x: _number(data['x'], 'x', maximum: 1),
+      y: _number(data['y'], 'y', maximum: 1),
+      width: _number(data['width'], 'width', minimum: .01, maximum: 1),
+      height: _number(data['height'], 'height', minimum: .01, maximum: 1),
+      opacity: _number(data['opacity'], 'opacity', maximum: 1),
+    );
+    result.validate();
+    return result;
+  }
+  void validate() {
+    _number(x, 'x', maximum: 1);
+    _number(y, 'y', maximum: 1);
+    _number(width, 'width', minimum: .01, maximum: 1);
+    _number(height, 'height', minimum: .01, maximum: 1);
+    _number(opacity, 'opacity', maximum: 1);
+    _require(
+      x + width <= 1 + 1e-9 && y + height <= 1 + 1e-9,
+      'placement outside canvas',
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'x': x,
+    'y': y,
+    'width': width,
+    'height': height,
+    'opacity': opacity,
+  };
+}
+
 final class MediaProjectClip {
   const MediaProjectClip({
     required this.clipId,
@@ -257,6 +305,9 @@ final class MediaProjectClip {
     required this.audioMix,
     required this.evidenceRefs,
     required this.audioStreamIndex,
+    this.videoPlacement,
+    this.frameCrop,
+    this.playbackRate = 1,
   });
 
   final String clipId;
@@ -270,8 +321,12 @@ final class MediaProjectClip {
   final MediaProjectAudioMix audioMix;
   final List<String> evidenceRefs;
   final int? audioStreamIndex;
+  final MediaVideoPlacement? videoPlacement;
+  final Map<String, Object?>? frameCrop;
+  final double playbackRate;
 
-  double get durationSec => sourceOut - sourceIn;
+  double get durationSec =>
+      double.parse(((sourceOut - sourceIn) / playbackRate).toStringAsFixed(6));
 
   factory MediaProjectClip.fromJson(Object? value) {
     final json = _object(value, {
@@ -286,9 +341,19 @@ final class MediaProjectClip {
       'audio_mix',
       'evidence_refs',
       'audio_stream_index',
+      if (value is Map && value.containsKey('video_placement'))
+        'video_placement',
+      if (value is Map && value.containsKey('frame_crop')) 'frame_crop',
+      if (value is Map && value.containsKey('playback_rate')) 'playback_rate',
     }, 'clip');
     final sourceIn = _number(json['source_in'], 'source_in');
     final sourceOut = _number(json['source_out'], 'source_out');
+    final playbackRate = _number(
+      json['playback_rate'] ?? 1,
+      'playback_rate',
+      minimum: 1 / 16,
+      maximum: 16,
+    );
     final audioIndexValue = json['audio_stream_index'];
     if (audioIndexValue != null && audioIndexValue is! int) {
       throw _invalid('audio_stream_index must be an integer or null');
@@ -298,22 +363,37 @@ final class MediaProjectClip {
       mediaAssetId: _string(json['media_asset_id'], 'media_asset_id'),
       sourceIn: sourceIn,
       sourceOut: sourceOut,
+      playbackRate: playbackRate,
       timelineStart: _number(json['timeline_start'], 'timeline_start'),
       trackId: _string(json['track_id'], 'track_id'),
       purpose: _string(json['purpose'], 'purpose', allowEmpty: true),
       audioRole: _string(json['audio_role'], 'audio_role'),
       audioMix: MediaProjectAudioMix.fromJson(
         json['audio_mix'],
-        clipDuration: sourceOut - sourceIn,
+        clipDuration: (sourceOut - sourceIn) / playbackRate,
       ),
       evidenceRefs: _strings(json['evidence_refs'], 'evidence_refs'),
       audioStreamIndex: audioIndexValue as int?,
+      videoPlacement: json.containsKey('video_placement')
+          ? MediaVideoPlacement.fromJson(json['video_placement'])
+          : null,
+      frameCrop: json.containsKey('frame_crop')
+          ? Map<String, Object?>.unmodifiable(
+              _object(json['frame_crop'], {
+                'x',
+                'y',
+                'width',
+                'height',
+              }, 'frame_crop'),
+            )
+          : null,
     );
     clip._validate();
     return clip;
   }
 
   void _validate() {
+    _number(playbackRate, 'playback_rate', minimum: 1 / 16, maximum: 16);
     _require(
       sourceOut > sourceIn,
       'clip source range must have positive duration',
@@ -327,6 +407,15 @@ final class MediaProjectClip {
     }
     _require(evidenceRefs.isEmpty, 'canonical Evidence is not available');
     audioMix.validate(durationSec);
+    videoPlacement?.validate();
+    if (frameCrop != null) {
+      MediaVideoPlacement.fromJson({...frameCrop!, 'opacity': 1});
+      _require(
+        (frameCrop!['width'] as num) >= 0.05 &&
+            (frameCrop!['height'] as num) >= 0.05,
+        'frame crop must retain at least five percent',
+      );
+    }
     _require(
       const {
         'original',
@@ -350,6 +439,8 @@ final class MediaProjectClip {
     String? audioRole,
     MediaProjectAudioMix? audioMix,
     Object? audioStreamIndex = _notProvided,
+    MediaVideoPlacement? videoPlacement,
+    double? playbackRate,
   }) => MediaProjectClip(
     clipId: clipId ?? this.clipId,
     mediaAssetId: mediaAssetId ?? this.mediaAssetId,
@@ -361,6 +452,9 @@ final class MediaProjectClip {
     audioRole: audioRole ?? this.audioRole,
     audioMix: audioMix ?? this.audioMix,
     evidenceRefs: evidenceRefs,
+    videoPlacement: videoPlacement ?? this.videoPlacement,
+    frameCrop: frameCrop,
+    playbackRate: playbackRate ?? this.playbackRate,
     audioStreamIndex: identical(audioStreamIndex, _notProvided)
         ? this.audioStreamIndex
         : audioStreamIndex as int?,
@@ -378,6 +472,9 @@ final class MediaProjectClip {
     'audio_mix': audioMix.toJson(),
     'evidence_refs': evidenceRefs,
     'audio_stream_index': audioStreamIndex,
+    if (videoPlacement != null) 'video_placement': videoPlacement!.toJson(),
+    if (frameCrop != null) 'frame_crop': frameCrop,
+    if (playbackRate != 1) 'playback_rate': playbackRate,
   };
 }
 
@@ -385,18 +482,29 @@ final class MediaProjectTrack {
   MediaProjectTrack({
     required this.trackId,
     required this.kind,
+    this.layout = 'sequence',
     required List<MediaProjectClip> clips,
   }) : clips = List<MediaProjectClip>.unmodifiable(clips);
 
   final String trackId;
   final String kind;
+  final String layout;
+  bool get sequentialVideo => kind == 'video' && layout == 'sequence';
   final List<MediaProjectClip> clips;
 
   factory MediaProjectTrack.fromJson(Object? value) {
-    final json = _object(value, {'track_id', 'kind', 'clips'}, 'track');
+    final json = _object(value, {
+      'track_id',
+      'kind',
+      'clips',
+      if (value is Map && value.containsKey('layout')) 'layout',
+    }, 'track');
+    final layout = json['layout'] ?? 'sequence';
+    _require(layout == 'sequence' || layout == 'free', 'track layout invalid');
     return MediaProjectTrack(
       trackId: _string(json['track_id'], 'track_id'),
       kind: _string(json['kind'], 'kind'),
+      layout: layout as String,
       clips: _array(
         json['clips'],
         'clips',
@@ -407,6 +515,7 @@ final class MediaProjectTrack {
   Map<String, Object?> toJson() => <String, Object?>{
     'track_id': trackId,
     'kind': kind,
+    if (layout != 'sequence') 'layout': layout,
     'clips': clips.map((clip) => clip.toJson()).toList(growable: false),
   };
 }
@@ -833,6 +942,35 @@ final class MediaProjectSnapshot {
     throw StateError('unknown clip');
   }
 
+  MediaProjectSnapshot addVideoTrack(String trackId) {
+    _require(
+      trackId.trim().isNotEmpty &&
+          tracks.every((track) => track.trackId != trackId),
+      'track id must be unique',
+    );
+    return _commit(
+      tracks: [
+        ...tracks,
+        MediaProjectTrack(
+          trackId: trackId,
+          kind: 'video',
+          layout: 'free',
+          clips: const [],
+        ),
+      ],
+    );
+  }
+
+  MediaProjectSnapshot setVideoPlacement(
+    String clipId,
+    MediaVideoPlacement placement,
+  ) {
+    final (track, clip) = _clip(clipId);
+    _require(track.kind == 'video', 'video placement requires video');
+    placement.validate();
+    return _replaceClip(track, clip.copyWith(videoPlacement: placement));
+  }
+
   MediaProjectSnapshot addAudioTrack(
     String trackId, {
     required String audioRole,
@@ -923,7 +1061,7 @@ final class MediaProjectSnapshot {
       mediaAssetId: mediaAssetId,
       sourceIn: sourceIn,
       sourceOut: end,
-      timelineStart: isVideo ? 0 : timelineStart,
+      timelineStart: track.sequentialVideo ? 0 : timelineStart,
       trackId: trackId,
       purpose: purpose,
       audioRole: role,
@@ -936,6 +1074,7 @@ final class MediaProjectSnapshot {
         : MediaProjectTrack(
             trackId: track.trackId,
             kind: track.kind,
+            layout: track.layout,
             clips: [...track.clips, clip],
           );
     return _commit(
@@ -956,7 +1095,7 @@ final class MediaProjectSnapshot {
     final asset = _asset(mediaAssetId);
     final video = track.kind == 'video';
     _number(sourceIn, 'source_in');
-    final sourceOut = sourceIn + clip.durationSec;
+    final sourceOut = sourceIn + clip.durationSec * clip.playbackRate;
     _number(sourceOut, 'source_out');
     _require(
       sourceOut > sourceIn && sourceOut <= asset.durationSec,
@@ -1004,6 +1143,7 @@ final class MediaProjectSnapshot {
           MediaProjectTrack(
             trackId: item.trackId,
             kind: item.kind,
+            layout: item.layout,
             clips: [
               for (final original in item.clips)
                 original.clipId == clipId ? replaced : original,
@@ -1044,10 +1184,10 @@ final class MediaProjectSnapshot {
       'split must be inside clip source range',
     );
     final firstDuration = double.parse(
-      (atSec - clip.sourceIn).toStringAsFixed(6),
+      ((atSec - clip.sourceIn) / clip.playbackRate).toStringAsFixed(6),
     );
     final secondDuration = double.parse(
-      (clip.sourceOut - atSec).toStringAsFixed(6),
+      ((clip.sourceOut - atSec) / clip.playbackRate).toStringAsFixed(6),
     );
     final first = clip.copyWith(
       clipId: '$clipId-a',
@@ -1060,7 +1200,7 @@ final class MediaProjectSnapshot {
     final second = clip.copyWith(
       clipId: '$clipId-b',
       sourceIn: atSec,
-      timelineStart: clip.timelineStart + atSec - clip.sourceIn,
+      timelineStart: clip.timelineStart + firstDuration,
       audioMix: clip.audioMix.copyWith(
         fadeInSec: 0,
         fadeOutSec: clip.audioMix.fadeOutSec
@@ -1083,20 +1223,27 @@ final class MediaProjectSnapshot {
         : MediaProjectTrack(
             trackId: track.trackId,
             kind: track.kind,
+            layout: track.layout,
             clips: split,
           );
     final changedTracks = tracks
         .map((item) => item.trackId == track.trackId ? changed : item)
         .toList();
-    final changedTransitions = track.kind == 'video'
-        ? transitions
-              .where(
-                (transition) =>
-                    transition.fromClip != clipId &&
-                    transition.toClip != clipId,
-              )
-              .toList()
-        : transitions;
+    final changedTransitions = transitions
+        .map(
+          (item) => item.fromClip != clipId && item.toClip != clipId
+              ? item
+              : MediaProjectTransition(
+                  fromClip: item.fromClip == clipId
+                      ? second.clipId
+                      : item.fromClip,
+                  toClip: item.toClip == clipId ? first.clipId : item.toClip,
+                  transitionType: item.transitionType,
+                  durationSec: item.durationSec,
+                  reason: item.reason,
+                ),
+        )
+        .toList();
     if (track.kind == 'video') {
       _validateVideoTransitionEdits(changedTracks, changedTransitions);
     }
@@ -1108,7 +1255,10 @@ final class MediaProjectSnapshot {
     required int newIndex,
   }) {
     final (track, clip) = _clip(clipId);
-    _require(track.kind == 'video', 'only video clips can be reordered');
+    _require(
+      track.sequentialVideo,
+      'only sequential video clips can be reordered',
+    );
     final remaining = track.clips
         .where((item) => item.clipId != clipId)
         .toList();
@@ -1151,6 +1301,7 @@ final class MediaProjectSnapshot {
     final changed = MediaProjectTrack(
       trackId: track.trackId,
       kind: track.kind,
+      layout: track.layout,
       clips: track.clips.where((clip) => clip.clipId != clipId).toList(),
     );
     return _commit(
@@ -1201,7 +1352,7 @@ final class MediaProjectSnapshot {
       clip.copyWith(
         sourceIn: sourceIn,
         sourceOut: sourceOut,
-        timelineStart: track.kind == 'video'
+        timelineStart: track.sequentialVideo
             ? clip.timelineStart
             : timelineStart,
         audioMix: audioMix,
@@ -1368,6 +1519,7 @@ final class MediaProjectSnapshot {
         : MediaProjectTrack(
             trackId: track.trackId,
             kind: track.kind,
+            layout: track.layout,
             clips: clips,
           );
     final changedTracks = tracks
@@ -1383,6 +1535,14 @@ final class MediaProjectSnapshot {
     MediaProjectTrack track,
     List<MediaProjectClip> clips,
   ) {
+    if (!track.sequentialVideo) {
+      return MediaProjectTrack(
+        trackId: track.trackId,
+        kind: track.kind,
+        layout: track.layout,
+        clips: clips,
+      );
+    }
     var cursor = 0.0;
     final positioned = <MediaProjectClip>[];
     for (final clip in clips) {
@@ -1396,15 +1556,11 @@ final class MediaProjectSnapshot {
     return MediaProjectTrack(
       trackId: track.trackId,
       kind: track.kind,
+      layout: track.layout,
       clips: positioned,
     );
   }
 
-  /// Keep video edits aligned with Core's 30fps transition render preflight.
-  /// Split/delete remove transitions that name the changed clip, matching
-  /// Timeline.split/delete. Other edits retain their authored transition data
-  /// and fail atomically if they would break adjacency, duration, or handles.
-  /// Opaque future transition types are retained for Core to report explicitly.
   void _validateVideoTransitionEdits(
     List<MediaProjectTrack> candidateTracks,
     List<MediaProjectTransition> candidateTransitions,
@@ -1417,70 +1573,79 @@ final class MediaProjectSnapshot {
       throw _invalid('TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS');
     }
 
-    // Core's renderer currently plans transitions against the first video
-    // track. A transition outside that sequence cannot be exported safely.
-    final clips = videoTracks.first.clips;
-    final indexes = <String, int>{
-      for (var index = 0; index < clips.length; index++)
-        clips[index].clipId: index,
-    };
-    final assetsById = <String, MediaProjectAsset>{
-      for (final asset in assets) asset.assetId: asset,
-    };
-    final seenBoundaries = <int>{};
-    final windows = <(int, int)>[];
+    for (final videoTrack in videoTracks) {
+      final clips = videoTrack.clips.toList()
+        ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
+      final indexes = <String, int>{
+        for (var index = 0; index < clips.length; index++)
+          clips[index].clipId: index,
+      };
+      final assetsById = <String, MediaProjectAsset>{
+        for (final asset in assets) asset.assetId: asset,
+      };
+      final seenBoundaries = <int>{};
+      final windows = <(int, int)>[];
 
-    for (final transition in candidateTransitions) {
-      final fromIndex = indexes[transition.fromClip];
-      final toIndex = indexes[transition.toClip];
-      if (fromIndex == null || toIndex == null || toIndex != fromIndex + 1) {
-        throw _invalid('TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS');
-      }
-      if (!seenBoundaries.add(toIndex)) {
-        throw _invalid('TRANSITION_BOUNDARY_CONFLICT');
+      for (final transition in candidateTransitions) {
+        if (!indexes.containsKey(transition.fromClip) &&
+            !indexes.containsKey(transition.toClip)) {
+          continue;
+        }
+        final fromIndex = indexes[transition.fromClip];
+        final toIndex = indexes[transition.toClip];
+        if (fromIndex == null || toIndex == null || toIndex != fromIndex + 1) {
+          throw _invalid('TRANSITION_REQUIRES_ADJACENT_VIDEO_CLIPS');
+        }
+        if (!seenBoundaries.add(toIndex)) {
+          throw _invalid('TRANSITION_BOUNDARY_CONFLICT');
+        }
+
+        final from = clips[fromIndex];
+        final to = clips[toIndex];
+        if (transition.durationSec > from.durationSec ||
+            transition.durationSec > to.durationSec) {
+          throw _invalid('TRANSITION_DURATION_EXCEEDS_CLIP');
+        }
+        if (transition.transitionType == 'cut') continue;
+        if (transition.transitionType != 'dissolve') continue;
+        if (transition.durationSec < 1 / 30) {
+          throw _invalid('TRANSITION_SHORTER_THAN_OUTPUT_FRAME');
+        }
+
+        final frameCount = _frameAt(transition.durationSec);
+        final beforeCut = frameCount ~/ 2;
+        final afterCut = frameCount - beforeCut;
+        final cutFrame = _frameAt(to.timelineStart);
+        _require(
+          cutFrame == _frameAt(from.timelineStart + from.durationSec),
+          'TRANSITION_REQUIRES_CONTIGUOUS_VIDEO_CLIPS',
+        );
+        final startFrame = cutFrame - beforeCut;
+        final endFrame = cutFrame + afterCut;
+        if (startFrame < _frameAt(from.timelineStart) ||
+            endFrame > _frameAt(to.timelineStart + to.durationSec)) {
+          throw _invalid('TRANSITION_WINDOW_EXCEEDS_CLIP');
+        }
+
+        final leftFrames = cutFrame - _frameAt(from.timelineStart);
+        final fromAsset = assetsById[from.mediaAssetId];
+        if (fromAsset == null ||
+            from.sourceIn + (leftFrames + afterCut) * from.playbackRate / 30 >
+                fromAsset.durationSec ||
+            to.sourceIn < beforeCut * to.playbackRate / 30) {
+          throw _invalid('TRANSITION_MEDIA_HANDLES_UNAVAILABLE');
+        }
+        windows.add((startFrame, endFrame));
       }
 
-      final from = clips[fromIndex];
-      final to = clips[toIndex];
-      if (transition.durationSec > from.durationSec ||
-          transition.durationSec > to.durationSec) {
-        throw _invalid('TRANSITION_DURATION_EXCEEDS_CLIP');
+      windows.sort((left, right) => left.$1.compareTo(right.$1));
+      var previousEnd = -1;
+      for (final window in windows) {
+        if (window.$1 < previousEnd) {
+          throw _invalid('TRANSITION_WINDOWS_OVERLAP');
+        }
+        previousEnd = window.$2;
       }
-      if (transition.transitionType == 'cut') continue;
-      if (transition.transitionType != 'dissolve') continue;
-      if (transition.durationSec < 1 / 30) {
-        throw _invalid('TRANSITION_SHORTER_THAN_OUTPUT_FRAME');
-      }
-
-      final frameCount = _frameAt(transition.durationSec);
-      final beforeCut = frameCount ~/ 2;
-      final afterCut = frameCount - beforeCut;
-      final cutFrame = _frameAt(to.timelineStart);
-      final startFrame = cutFrame - beforeCut;
-      final endFrame = cutFrame + afterCut;
-      if (startFrame < _frameAt(from.timelineStart) ||
-          endFrame > _frameAt(to.timelineStart + to.durationSec)) {
-        throw _invalid('TRANSITION_WINDOW_EXCEEDS_CLIP');
-      }
-
-      final leftFrames = cutFrame - _frameAt(from.timelineStart);
-      final fromAsset = assetsById[from.mediaAssetId];
-      if (fromAsset == null ||
-          from.sourceIn + (leftFrames + afterCut) / 30 >
-              fromAsset.durationSec ||
-          to.sourceIn < beforeCut / 30) {
-        throw _invalid('TRANSITION_MEDIA_HANDLES_UNAVAILABLE');
-      }
-      windows.add((startFrame, endFrame));
-    }
-
-    windows.sort((left, right) => left.$1.compareTo(right.$1));
-    var previousEnd = -1;
-    for (final window in windows) {
-      if (window.$1 < previousEnd) {
-        throw _invalid('TRANSITION_WINDOWS_OVERLAP');
-      }
-      previousEnd = window.$2;
     }
   }
 

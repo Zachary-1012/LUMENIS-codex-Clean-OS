@@ -122,6 +122,13 @@ def preflight_interchange(timeline: Timeline, *, format: str, frame_rate=None,
             continue
     media_refs = media_refs if isinstance(media_refs, Mapping) else {}
     clips = _clips(timeline)
+    controlled = [clip.clip_id for track in timeline.tracks
+                  if track.locked or track.muted or track.solo or track.hidden for clip in track.clips]
+    if controlled:
+        issue('TRACK_CONTROLS_NOT_PORTABLE','LOSS',controlled)
+    warped = [clip.clip_id for clip in clips if clip.playback_rate != 1]
+    if warped:
+        issue('CLIP_TIMEWARP_NOT_PORTABLE', 'LOSS', warped)
     if not clips or len(clips) > _MAX_CLIPS:
         issue('CLIP_COUNT_OUT_OF_BOUNDS', 'BLOCKED')
     used = {c.media_asset_id for c in clips}

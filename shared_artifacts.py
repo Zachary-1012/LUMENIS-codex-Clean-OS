@@ -48,20 +48,140 @@ _MAX_ASSETS = 8
 _MAX_ASSET_BYTES = 500 * 1024 * 1024
 _MAX_BRIEF_LENGTH = 2000
 _MAX_PROJECT_JSON_BYTES = 8 * 1024 * 1024
-_MAX_CONTENT_PROJECT_MEDIA_BYTES = _MAX_ASSET_BYTES
-_MAX_CONTENT_PROJECT_BYTES = _MAX_CONTENT_PROJECT_MEDIA_BYTES + (2 * _MAX_PROJECT_JSON_BYTES) + 65536
-_MAX_CONTENT_SOURCE_BYTES = 128 * 1024 * 1024
-_MAX_CONTENT_SOURCE_TOTAL_BYTES = _MAX_ASSET_BYTES
 _MAX_CONTENT_SOURCE_METADATA_BYTES = 64 * 1024
 _MAX_CONTENT_SOURCE_DURATION_SEC = 24 * 60 * 60
 _CONTENT_SOURCE_ARTIFACT_ID = re.compile(r"ART-(?:[0-9a-f]{16}|[0-9a-f]{32})\Z")
+CONTENT_PROJECT_EXPORT_TASK_TYPE = "shared_content_project_export"
 _ARTIFACT_TABLE = "lumenis_shared_artifacts"
 _CONTENT_PROJECT_LIST_SCAN_LIMIT = 100
+_CONTENT_PROJECT_LIST_VERIFY_BYTES = 64 * 1024 * 1024
 _CONTENT_PROJECT_LIST_CURSOR_LIMIT = 256
 _CONTENT_PROJECT_LIST_CURSOR_LOCK = threading.Lock()
 _CONTENT_PROJECT_LIST_CURSORS: Dict[str, tuple[str, str, str]] = {}
 _SOURCE_DIGEST_CACHE: OrderedDict[tuple, bool] = OrderedDict()
 _SOURCE_DIGEST_LOCK = threading.Lock()
+_MEDIA_CHUNK_BYTES = 1024 * 1024
+_MEDIA_INLINE_BYTES = 8 * 1024 * 1024
+_MEDIA_RESOURCE_LOCK = threading.RLock()
+_MEDIA_RESOURCE_WORKERS = threading.BoundedSemaphore(2)
+_MEDIA_RESERVED_BYTES = 0
+
+
+def content_media_resource_budget() -> dict[str, int]:
+    """Observe the actual local storage budget; this never changes a user setting."""
+    location = artifact_root()
+    while not location.exists() and location.parent != location:
+        location = location.parent
+    usage = shutil.disk_usage(location)
+    raw_reserve = os.environ.get("LUMENIS_MEDIA_DISK_RESERVE_BYTES", str(256 * 1024 * 1024))
+    try:
+        reserve = int(raw_reserve)
+        if reserve < 0:
+            raise ValueError
+    except (TypeError, ValueError) as exc:
+        raise LocalArtifactError("CONTENT_MEDIA_RESOURCE_CONFIG_INVALID") from exc
+    with _MEDIA_RESOURCE_LOCK:
+        available = max(0, usage.free - reserve - _MEDIA_RESERVED_BYTES)
+    return {"storage_capacity_bytes": usage.total, "available_bytes": available,
+            "disk_reserve_bytes": reserve, "chunk_bytes": _MEDIA_CHUNK_BYTES,
+            "buffer_bytes": _MEDIA_INLINE_BYTES, "concurrent_jobs": 2}
+
+
+@contextmanager
+def _reserve_media_storage(required_bytes: int):
+    """Reserve copy/output space before starting a bounded streaming operation."""
+    global _MEDIA_RESERVED_BYTES
+    if type(required_bytes) is not int or required_bytes < 0:
+        raise LocalArtifactError("CONTENT_MEDIA_RESOURCE_REQUEST_INVALID")
+    if not _MEDIA_RESOURCE_WORKERS.acquire(blocking=False):
+        raise LocalArtifactError("CONTENT_MEDIA_RESOURCE_BUSY")
+    reserved = False
+    try:
+        with _MEDIA_RESOURCE_LOCK:
+            if required_bytes > content_media_resource_budget()["available_bytes"]:
+                raise LocalArtifactError("CONTENT_MEDIA_STORAGE_REQUIRED")
+            _MEDIA_RESERVED_BYTES += required_bytes
+            reserved = True
+        yield
+    finally:
+        if reserved:
+            with _MEDIA_RESOURCE_LOCK:
+                _MEDIA_RESERVED_BYTES -= required_bytes
+        _MEDIA_RESOURCE_WORKERS.release()
+
+
+def _content_original_path(sha256: str) -> Path:
+    if not isinstance(sha256, str) or re.fullmatch(r"[0-9a-f]{64}", sha256) is None:
+        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    root = artifact_root()
+    path = root / "source-originals" / sha256[:2] / sha256 / "original"
+    for parent in (path, *path.parents):
+        if parent == root.parent:
+            break
+        if parent.is_symlink() or getattr(parent, "is_junction", lambda: False)():
+            raise LocalArtifactError("CONTENT_SOURCE_STORAGE_LINK_FORBIDDEN")
+    if not _is_relative_to(path.resolve(), root):
+        raise LocalArtifactError("CONTENT_SOURCE_STORAGE_LINK_FORBIDDEN")
+    return path
+
+
+def _verify_content_original(path: Path, sha256: str, size_bytes: int) -> tuple:
+    if not path.is_file() or type(size_bytes) is not int or size_bytes <= 0:
+        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    identity = _source_file_identity(path)
+    key = ("original", *identity, sha256)
+    with _SOURCE_DIGEST_LOCK:
+        verified = key in _SOURCE_DIGEST_CACHE
+    if identity[3] != size_bytes or not verified and _hash_file(path) != sha256:
+        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    if _source_file_identity(path) != identity:
+        raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+    with _SOURCE_DIGEST_LOCK:
+        _SOURCE_DIGEST_CACHE[key] = True
+        _SOURCE_DIGEST_CACHE.move_to_end(key)
+        while len(_SOURCE_DIGEST_CACHE) > 128:
+            _SOURCE_DIGEST_CACHE.popitem(last=False)
+    return identity
+
+
+def _store_content_original(source, *, sha256: str, size_bytes: int, check_continue=None) -> Path:
+    """Install immutable original bytes once; failed streams never replace an original."""
+    destination = _content_original_path(sha256)
+    if destination.exists():
+        _verify_content_original(destination, sha256, size_bytes)
+        return destination
+    with _reserve_media_storage(size_bytes + _MAX_CONTENT_SOURCE_METADATA_BYTES):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name("import-" + uuid.uuid4().hex + ".partial")
+        digest, copied = hashlib.sha256(), 0
+        try:
+            with temporary.open("xb") as target:
+                while True:
+                    if check_continue is not None:
+                        check_continue()
+                    chunk = source.read(_MEDIA_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    copied += len(chunk)
+                    if copied > size_bytes:
+                        raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_IMPORT")
+                    digest.update(chunk)
+                    target.write(chunk)
+                target.flush()
+                os.fsync(target.fileno())
+            if copied != size_bytes or digest.hexdigest() != sha256:
+                raise LocalArtifactError("CONTENT_SOURCE_CHANGED_DURING_IMPORT")
+            if check_continue is not None:
+                check_continue()
+            # A concurrent same-content import can win. Never overwrite it.
+            try:
+                os.link(temporary, destination)
+            except FileExistsError:
+                _verify_content_original(destination, sha256, size_bytes)
+            _verify_content_original(destination, sha256, size_bytes)
+            return destination
+        finally:
+            temporary.unlink(missing_ok=True)
 
 
 def _source_file_identity(path: Path, stat=None) -> tuple:
@@ -167,7 +287,7 @@ def _is_relative_to(path: Path, root: Path) -> bool:
         return False
 
 
-def validate_local_asset(value: Any) -> Path:
+def validate_local_asset(value: Any, *, resource_budget: bool = False) -> Path:
     """Resolve one explicit local asset without permitting remote input."""
     raw = str(value or "").strip()
     lowered = raw.lower()
@@ -184,7 +304,8 @@ def validate_local_asset(value: Any) -> Path:
         raise LocalArtifactError("LOCAL_ASSET_NOT_FILE")
     if resolved.suffix.lower() not in _ASSET_EXTENSIONS:
         raise LocalArtifactError("LOCAL_ASSET_TYPE_NOT_ALLOWED")
-    if resolved.stat().st_size > _MAX_ASSET_BYTES:
+    limit = content_media_resource_budget()["storage_capacity_bytes"] if resource_budget else _MAX_ASSET_BYTES
+    if resolved.stat().st_size > limit:
         raise LocalArtifactError("LOCAL_ASSET_TOO_LARGE")
     if not any(_is_relative_to(resolved, root) for root in _allowed_asset_roots()):
         raise LocalArtifactError("LOCAL_ASSET_OUTSIDE_ALLOWED_ROOT")
@@ -441,11 +562,14 @@ def _content_project_export_resource_for_context(
     source_refs: list[str], output_kind: str, previous_artifact_id: str | None,
     render_options: dict | None = None, delivery_options: dict | None = None,
     title: str | None = None, render_media: bool = True,
+    source_project_artifact_refs: list[str] | None = None,
 ) -> str:
     return "content-project-export:v1:" + hashlib.sha256(_json_bytes({
         "context": dict(context), "timeline": dict(timeline_data),
         "source_refs": list(source_refs), "output_kind": output_kind,
         "parent_artifact_id": previous_artifact_id,
+        **({"source_project_artifact_refs": list(source_project_artifact_refs)}
+           if source_project_artifact_refs else {}),
         **({"render_options": render_options} if render_options else {}),
         **({"delivery_options": delivery_options} if delivery_options else {}),
         **({"title": title} if title is not None else {}),
@@ -461,6 +585,7 @@ def content_project_export_resource(
     brand_focus_id: str | None = None, global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
     title: str | None = None, render_media: bool = True,
+    source_project_artifact_refs: list[str] | None = None,
 ) -> str:
     """Bind the existing export Permission request to the exact project inputs."""
     from lumenis.shared.content_creation.rendering import validate_render_options
@@ -484,10 +609,27 @@ def content_project_export_resource(
         brand_focus_id=brand_focus_id, global_scope=global_scope,
         shared_workspace_scope=shared_workspace_scope,
     )
+    parent_project = None
+    if previous_artifact_id is not None:
+        if (not isinstance(previous_artifact_id, str)
+                or _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(previous_artifact_id) is None):
+            raise LocalArtifactError("CONTENT_PROJECT_NOT_FOUND")
+        parent_project, _, _, _ = _verified_content_project(
+            previous_artifact_id, actor=actor, domain_id=domain_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+            global_scope=global_scope, shared_workspace_scope=shared_workspace_scope,
+            read_only_registry=True,
+        )
+        if parent_project.get("output_kind") != output_kind:
+            raise LocalArtifactError("CONTENT_PROJECT_TYPE_CHANGE_REQUIRES_NEW_PROJECT")
+    project_refs, _ = _resolve_content_project_source_refs(
+        source_project_artifact_refs, parent_project=parent_project,
+        previous_artifact_id=previous_artifact_id, actor=actor, scope=scope,
+    )
     return _content_project_export_resource_for_context(
         _content_artifact_context(actor, actor_id, scope), timeline_data,
         refs, output_kind, previous_artifact_id, render_options, delivery_options,
-        title, render_media,
+        title, render_media, project_refs,
     )
 
 
@@ -521,6 +663,55 @@ def _artifact_record(artifact_id: str, *, read_only: bool = False) -> Optional[D
     return dict(row) if row else None
 
 
+def _content_project_artifact_for_execution(source_execution_id: str, *, actor,
+                                            domain_id=None, subject_id=None,
+                                            brand_focus_id=None, global_scope=False,
+                                            shared_workspace_scope=None):
+    """Find one same-scope saved project for explicit export recovery.
+
+    The TaskQueue and Artifact registry are separate owners and databases. A
+    process can exit after the Artifact commits but before its queue result
+    reference commits. Recovery therefore searches by the immutable execution
+    binding and then reopens/verifies the package under the current actor.
+    """
+    if not isinstance(source_execution_id, str) or not source_execution_id.strip():
+        raise LocalArtifactError("SOURCE_EXECUTION_ID_REQUIRED")
+    _actor_id, scope = _authorize_content_project(
+        actor, domain_id=domain_id, subject_id=subject_id,
+        brand_focus_id=brand_focus_id, global_scope=global_scope,
+        shared_workspace_scope=shared_workspace_scope, action="read",
+    )
+    product_id, artifact_domain = _content_project_storage_identity(scope)
+    connection = get_repository().connect(timeout=10, read_only=True, wal=False)
+    connection.row_factory = sqlite3.Row
+    try:
+        exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (_ARTIFACT_TABLE,),
+        ).fetchone()
+        if not exists:
+            return None
+        rows = connection.execute(
+            f"SELECT artifact_id FROM {_ARTIFACT_TABLE} "
+            "WHERE kind='content_project' AND product_id=? AND domain_id=? "
+            "AND source_execution_id=? ORDER BY created_at,artifact_id LIMIT 2",
+            (product_id, artifact_domain, source_execution_id),
+        ).fetchall()
+    finally:
+        connection.close()
+    if not rows:
+        return None
+    if len(rows) != 1:
+        raise LocalArtifactError("CONTENT_EXPORT_RECOVERY_CONFLICT")
+    project, render, record, _package_path = _verified_content_project(
+        rows[0]["artifact_id"], actor=actor, domain_id=domain_id,
+        subject_id=subject_id, brand_focus_id=brand_focus_id,
+        global_scope=global_scope, shared_workspace_scope=shared_workspace_scope,
+        read_only_registry=True,
+    )
+    return {"project": project, "render": render, "record": record}
+
+
 def _contains_local_path_field(value: Any) -> bool:
     path_fields = {"path", "local_path", "source_path", "absolute_path", "asset_path"}
     if isinstance(value, Mapping):
@@ -549,6 +740,14 @@ def _json_bytes(value: Mapping[str, Any]) -> bytes:
     return encoded
 
 
+def _delivery_file_size(value) -> int:
+    return value.stat().st_size if isinstance(value, Path) else len(value)
+
+
+def _delivery_file_sha256(value) -> str:
+    return _hash_file(value) if isinstance(value, Path) else hashlib.sha256(value).hexdigest()
+
+
 def _verified_content_project(
     artifact_id: str,
     *,
@@ -559,6 +758,7 @@ def _verified_content_project(
     global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
     read_only_registry: bool = False,
+    verify_source_project_refs: bool = True,
 ) -> tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Path]:
     actor_id, scope = _authorize_content_project(
         actor,
@@ -581,7 +781,7 @@ def _verified_content_project(
     if not _is_relative_to(candidate, root) or not candidate.is_file():
         raise LocalArtifactError("CONTENT_PROJECT_NOT_FOUND")
     size = candidate.stat().st_size
-    if size <= 0 or size > _MAX_CONTENT_PROJECT_BYTES or size != record.get("size_bytes"):
+    if size <= 0 or size > content_media_resource_budget()["storage_capacity_bytes"] or size != record.get("size_bytes"):
         raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
     if _hash_file(candidate) != record.get("sha256"):
         raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
@@ -603,7 +803,7 @@ def _verified_content_project(
                 raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
             for info in infos:
                 limit = (
-                    _MAX_CONTENT_PROJECT_MEDIA_BYTES
+                    content_media_resource_budget()["storage_capacity_bytes"]
                     if info.filename in {"media.mp4", "media.wav"} or _content_delivery_filename(info.filename)
                     else _MAX_PROJECT_JSON_BYTES
                 )
@@ -620,8 +820,12 @@ def _verified_content_project(
             if not isinstance(manifest, dict) or set(manifest) != extra_names:
                 raise LocalArtifactError("CONTENT_DELIVERY_MANIFEST_INVALID")
             for name, info in manifest.items():
-                raw = archive.read(name)
-                if info != {"sha256": hashlib.sha256(raw).hexdigest(), "size_bytes": len(raw)}:
+                with archive.open(name) as member:
+                    digest, count = hashlib.sha256(), 0
+                    for chunk in iter(lambda: member.read(_MEDIA_CHUNK_BYTES), b""):
+                        digest.update(chunk)
+                        count += len(chunk)
+                if info != {"sha256": digest.hexdigest(), "size_bytes": count}:
                     raise LocalArtifactError("CONTENT_DELIVERY_INTEGRITY_FAILED")
     except LocalArtifactError:
         raise
@@ -629,6 +833,8 @@ def _verified_content_project(
         raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID") from exc
 
     source_artifact_refs = project_data.get("source_artifact_refs", []) if isinstance(project_data, dict) else None
+    source_project_artifact_refs = (project_data.get("source_project_artifact_refs", [])
+                                    if isinstance(project_data, dict) else None)
     if (
         not isinstance(project_data, dict)
         or type(project_data.get("schema_version")) is not int
@@ -647,6 +853,12 @@ def _verified_content_project(
         or any(not isinstance(ref, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(ref)
                for ref in source_artifact_refs)
         or len(set(source_artifact_refs)) != len(source_artifact_refs)
+        or not isinstance(source_project_artifact_refs, list)
+        or len(source_project_artifact_refs) > 64
+        or any(not isinstance(ref, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(ref)
+               for ref in source_project_artifact_refs)
+        or len(set(source_project_artifact_refs)) != len(source_project_artifact_refs)
+        or artifact_id in source_project_artifact_refs
         or not isinstance(render_data, dict)
         or render_data.get("output_kind") != project_data.get("output_kind")
         or _contains_local_path_field(render_data)
@@ -659,10 +871,18 @@ def _verified_content_project(
                 or project_data["project_revision"] < 1):
             raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
     if draft:
+        source_annotation_names={name for name in names if name in {
+            'transcription.json','transcript-words.json','transcript-asr.vtt','transcript-asr.srt',
+            'transcript-timeline.json','transcript-timeline.vtt','transcript-timeline.srt'} or re.fullmatch(
+                r'transcription(?:-reviewed)?-MEDIA-[a-f0-9]{16}\.(?:json|vtt|srt)',name)}
+        draft_reports=render_data.get('delivery_reports',{})
         if (project_data["schema_version"] != 2 or not source_artifact_refs or media_infos
-                or set(names) - {"project.json", "render.json", "credits.json", "credits.txt"}
-                or render_data != {"state": "not_rendered", "output_kind": project_data["output_kind"],
-                                   "timeline_version": project_data["timeline"].get("version")}):
+                or set(names) - {"project.json", "render.json", "credits.json", "credits.txt"} - source_annotation_names
+                or not isinstance(draft_reports,dict)
+                or set(draft_reports)-{'transcript_annotations','timeline_transcription'}
+                or {key:value for key,value in render_data.items() if key!='delivery_reports'} != {
+                    "state": "not_rendered", "output_kind": project_data["output_kind"],
+                    "timeline_version": project_data["timeline"].get("version")}):
             raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
     elif (render_data.get("state") != "rendered_verified" or len(media_infos) != 1
           or not isinstance(render_data.get("measurement"), dict)):
@@ -675,6 +895,11 @@ def _verified_content_project(
         global_scope=scope.get("global_scope", False),
         shared_workspace_scope=scope.get("shared_workspace_scope"),
     )
+    if verify_source_project_refs:
+        _validate_content_project_source_refs(
+            source_project_artifact_refs, actor=actor, scope=scope,
+            read_only_registry=read_only_registry,
+        )
     expected_credits = _content_license_credits(verified_sources, project_data["timeline"], project_data.get("render_options"))
     if project_data.get("media_credits") != expected_credits:
         raise LocalArtifactError("CONTENT_MEDIA_CREDITS_MISMATCH")
@@ -683,6 +908,17 @@ def _verified_content_project(
         if ({name for name in names if name in {"credits.json", "credits.txt"}} != set(expected_credit_files)
                 or any(archive.read(name) != data for name, data in expected_credit_files.items())):
             raise LocalArtifactError("CONTENT_MEDIA_CREDITS_MISMATCH")
+        from lumenis.shared.content_creation.speech_transcription import validate_project_transcription_files
+        transcript_names=[name for name in names if name in {'transcription.json','transcript-timeline.json',
+            'transcript-timeline.vtt','transcript-timeline.srt'} or re.fullmatch(
+                r'transcription(?:-reviewed)?-MEDIA-[a-f0-9]{16}\.json',name)]
+        try:
+            validate_project_transcription_files(project_data,render_data,
+                [{'asset':entry['metadata']['asset'],'artifact_ref':entry['record']['artifact_id']}
+                 for entry in verified_sources],{name:archive.read(name) for name in transcript_names})
+        except (KeyError,TypeError,ValueError) as exc:
+            raise LocalArtifactError(str(exc) if re.fullmatch(r'[A-Z][A-Z0-9_]{0,100}',str(exc)) else
+                'CONTENT_TRANSCRIPT_PROJECT_BINDING_CHANGED') from exc
     project_data["source_artifact_refs"] = list(source_artifact_refs)
     expected_media = "media.mp4" if project_data["output_kind"] == "video" else "media.wav"
     claimed_media_hash = render_data.get("media_sha256")
@@ -690,7 +926,7 @@ def _verified_content_project(
     if not draft and (
         media_infos[0].filename != expected_media
         or media_infos[0].file_size <= 0
-        or media_infos[0].file_size > _MAX_CONTENT_PROJECT_MEDIA_BYTES
+        or media_infos[0].file_size > content_media_resource_budget()["storage_capacity_bytes"]
         or type(claimed_media_size) is not int
         or claimed_media_size != media_infos[0].file_size
         or not isinstance(claimed_media_hash, str)
@@ -1000,7 +1236,7 @@ def _verified_content_source(
     if not _is_relative_to(candidate, root) or not candidate.is_file():
         raise LocalArtifactError("CONTENT_SOURCE_NOT_FOUND")
     size = candidate.stat().st_size
-    max_package_size = _MAX_CONTENT_SOURCE_BYTES + _MAX_CONTENT_SOURCE_METADATA_BYTES + 4096
+    max_package_size = content_media_resource_budget()["storage_capacity_bytes"]
     if size <= 0 or size > max_package_size or size != record.get("size_bytes"):
         raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
     file_identity = _source_file_identity(candidate)
@@ -1015,22 +1251,18 @@ def _verified_content_source(
         with zipfile.ZipFile(candidate, "r") as archive:
             infos = archive.infolist()
             names = [info.filename for info in infos]
-            if len(infos) != 2 or len(set(names)) != 2 or "source.json" not in names:
+            if len(infos) not in {1, 2} or len(set(names)) != len(names) or "source.json" not in names:
                 raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
             metadata_info = archive.getinfo("source.json")
             media_infos = [info for info in infos if info.filename != "source.json"]
-            if len(media_infos) != 1:
-                raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
-            media_info = media_infos[0]
-            media_filename = _safe_content_source_filename(media_info.filename)
+            media_info = media_infos[0] if media_infos else None
             if (
                 metadata_info.file_size > _MAX_CONTENT_SOURCE_METADATA_BYTES
                 or metadata_info.compress_type != zipfile.ZIP_STORED
-                or media_info.file_size <= 0
-                or media_info.file_size > _MAX_CONTENT_SOURCE_BYTES
-                or media_info.compress_type != zipfile.ZIP_STORED
                 or metadata_info.flag_bits & 0x1
-                or media_info.flag_bits & 0x1
+                or media_info is not None and (
+                    media_info.file_size <= 0 or media_info.file_size > max_package_size
+                    or media_info.compress_type != zipfile.ZIP_STORED or media_info.flag_bits & 0x1)
             ):
                 raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
             metadata = json.loads(archive.read(metadata_info).decode("utf-8"))
@@ -1039,7 +1271,29 @@ def _verified_content_source(
     except (OSError, zipfile.BadZipFile, RuntimeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID") from exc
 
-    source_context = metadata.get("context") if isinstance(metadata, dict) else None
+    if not isinstance(metadata, dict):
+        raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
+    media_filename = _safe_content_source_filename(metadata.get("media_filename"))
+    reference_storage = metadata.get("schema_version") == 3
+    media_storage = metadata.get("media_storage")
+    if reference_storage:
+        if (media_info is not None or not isinstance(media_storage, dict)
+                or set(media_storage) != {"kind", "sha256", "size_bytes"}
+                or media_storage.get("kind") != "content_addressed_original"
+                or type(media_storage.get("size_bytes")) is not int
+                or not 0 < media_storage["size_bytes"] <= max_package_size
+                or not isinstance(metadata.get("asset"), dict)
+                or media_storage.get("sha256") != metadata["asset"].get("sha256")):
+            raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
+        original = _content_original_path(media_storage["sha256"])
+        _verify_content_original(original, media_storage["sha256"], media_storage["size_bytes"])
+        media_size = media_storage["size_bytes"]
+    elif media_info is None or media_info.filename != media_filename:
+        raise LocalArtifactError("CONTENT_SOURCE_ARCHIVE_INVALID")
+    else:
+        media_size = media_info.file_size
+    has_license = "media_license" in metadata
+    source_context = metadata.get("context")
     if shared_request and isinstance(source_context, dict) and "domain_id" in source_context:
         expected_context = _content_source_original_context(
             source_context, actor=actor, shared_actor_id=actor_id,
@@ -1048,21 +1302,23 @@ def _verified_content_source(
     if (
         not isinstance(metadata, dict)
         or type(metadata.get("schema_version")) is not int
-        or metadata.get("schema_version") not in {1, 2}
+        or metadata.get("schema_version") not in {1, 2, 3}
         or set(metadata) != ({"schema_version", "context", "asset", "media_filename", "rights_state"}
-                            | ({"media_license", "media_license_sha256"} if metadata.get("schema_version") == 2 else set()))
+                            | ({"media_storage"} if reference_storage else set())
+                            | ({"media_license", "media_license_sha256"} if has_license else set()))
+        or (metadata.get("schema_version") == 2) != (has_license and not reference_storage)
         or source_context != expected_context
         or metadata.get("media_filename") != media_filename
         or metadata.get("rights_state") != "unknown"
         or not _source_asset_metadata_is_valid(metadata.get("asset"), media_filename)
-        or media_info.file_size <= 0
+        or media_size <= 0
     ):
         raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
-    if metadata["schema_version"] == 2:
+    if has_license:
         declaration = validate_media_license(metadata["media_license"], asset_sha256=metadata["asset"]["sha256"])
         if declaration is None or _media_license_digest(declaration) != metadata["media_license_sha256"]:
             raise LocalArtifactError("CONTENT_MEDIA_LICENSE_INTEGRITY_FAILED")
-    if not verified_digest:
+    if not verified_digest and not reference_storage:
         digest = hashlib.sha256()
         with zipfile.ZipFile(candidate, "r") as archive, archive.open(media_filename) as media:
             for chunk in iter(lambda: media.read(1024 * 1024), b""):
@@ -1079,7 +1335,7 @@ def _verified_content_source(
         _SOURCE_DIGEST_CACHE.move_to_end(digest_key)
         while len(_SOURCE_DIGEST_CACHE) > 128:
             _SOURCE_DIGEST_CACHE.popitem(last=False)
-    return metadata, {**record, "media_member": media_filename, "media_size_bytes": media_info.file_size}, expected_context, candidate
+    return metadata, {**record, "media_member": media_filename, "media_size_bytes": media_size}, expected_context, candidate
 
 
 def _content_source_original_context(
@@ -1267,11 +1523,64 @@ def _validate_content_source_refs(
             raise LocalArtifactError("CONTENT_SOURCE_ASSET_DUPLICATE")
         asset_ids.add(asset_id)
         total_size += int(record["media_size_bytes"])
-        if total_size > _MAX_CONTENT_SOURCE_TOTAL_BYTES:
+        if total_size > content_media_resource_budget()["storage_capacity_bytes"]:
             raise LocalArtifactError("CONTENT_SOURCE_TOTAL_TOO_LARGE")
         entries.append({"metadata": metadata, "record": record, "package_path": package_path,
                         "source_context": source_context})
     return list(artifact_refs), entries, total_size
+
+
+def _validate_content_project_source_refs(
+    artifact_refs: Any,
+    *,
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
+    scope: Mapping[str, Any],
+    read_only_registry: bool = False,
+) -> list[dict[str, Any]]:
+    """Reopen same-scope project lineage refs without turning them into media inputs."""
+    if (not isinstance(artifact_refs, list) or len(artifact_refs) > 64
+            or any(not isinstance(ref, str) or not _CONTENT_SOURCE_ARTIFACT_ID.fullmatch(ref)
+                   for ref in artifact_refs)):
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REFS_INVALID")
+    if len(set(artifact_refs)) != len(artifact_refs):
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REF_DUPLICATE")
+    verified = []
+    for artifact_id in artifact_refs:
+        project, render, record, package_path = _verified_content_project(
+            artifact_id, actor=actor, read_only_registry=read_only_registry,
+            verify_source_project_refs=False, **dict(scope),
+        )
+        verified.append({"artifact_id": artifact_id, "project": project,
+                         "render": render, "record": record,
+                         "package_path": package_path})
+    return verified
+
+
+def _resolve_content_project_source_refs(
+    artifact_refs: Any,
+    *,
+    parent_project: Mapping[str, Any] | None,
+    previous_artifact_id: str | None,
+    actor: Mapping[str, Any] | LocalWorkspacePrincipal,
+    scope: Mapping[str, Any],
+) -> tuple[list[str], list[dict[str, Any]]]:
+    inherited = (parent_project or {}).get("source_project_artifact_refs", [])
+    if not isinstance(inherited, list):
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REFS_INVALID")
+    if artifact_refs is None:
+        refs = list(inherited)
+    elif isinstance(artifact_refs, list):
+        refs = list(artifact_refs)
+    else:
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REFS_INVALID")
+    if parent_project is not None and refs != inherited:
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_LINEAGE_CHANGED")
+    if previous_artifact_id is not None and previous_artifact_id in refs:
+        raise LocalArtifactError("CONTENT_PROJECT_SOURCE_REF_IS_PARENT")
+    verified = _validate_content_project_source_refs(
+        refs, actor=actor, scope=scope, read_only_registry=True,
+    )
+    return refs, verified
 
 
 def stage_content_source_artifact(
@@ -1299,9 +1608,9 @@ def stage_content_source_artifact(
         action="write",
     )
     safe_filename = _safe_content_source_filename(filename)
-    path = validate_local_asset(asset_path)
+    path = validate_local_asset(asset_path, resource_budget=True)
     source_stat = path.stat()
-    if path.name != safe_filename or source_stat.st_size <= 0 or source_stat.st_size > _MAX_CONTENT_SOURCE_BYTES:
+    if path.name != safe_filename or source_stat.st_size <= 0:
         raise LocalArtifactError("CONTENT_SOURCE_SIZE_INVALID")
     if not isinstance(source_execution_id, str) or not source_execution_id.strip():
         raise LocalArtifactError("SOURCE_EXECUTION_ID_REQUIRED")
@@ -1372,6 +1681,13 @@ def stage_content_source_artifact(
     }
     if media_license is not None:
         source_metadata.update(schema_version=2, media_license=media_license, media_license_sha256=license_digest)
+    # Large originals are stored once and referenced by hash. Small legacy-style
+    # packages remain readable by previously installed clients and recovery tools.
+    reference_storage = source_stat.st_size > _MEDIA_INLINE_BYTES
+    if reference_storage:
+        source_metadata.update(schema_version=3, media_storage={
+            "kind": "content_addressed_original", "sha256": asset.sha256,
+            "size_bytes": source_stat.st_size})
     metadata_bytes = _json_bytes(source_metadata)
     if len(metadata_bytes) > _MAX_CONTENT_SOURCE_METADATA_BYTES:
         raise LocalArtifactError("CONTENT_SOURCE_METADATA_TOO_LARGE")
@@ -1387,6 +1703,17 @@ def stage_content_source_artifact(
     package_created = False
     registered = False
     try:
+        def check_import_permission():
+            current = check_content_source_import_permission(
+                permission_actor, upload, principal=principal, gate=gate)
+            if not current.allowed:
+                raise LocalArtifactError("CONTENT_SOURCE_APPROVAL_REQUIRED")
+
+        if reference_storage:
+            with path.open("rb") as original_source:
+                _store_content_original(original_source, sha256=asset.sha256,
+                                        size_bytes=source_stat.st_size,
+                                        check_continue=check_import_permission)
         try:
             package_handle = package_path.open("xb")
         except FileExistsError as exc:
@@ -1396,18 +1723,18 @@ def stage_content_source_artifact(
             package_handle, mode="w", compression=zipfile.ZIP_STORED,
         ) as archive:
             archive.writestr("source.json", metadata_bytes)
-            archive.write(path, safe_filename)
+            if not reference_storage:
+                archive.write(path, safe_filename)
         archived_digest = hashlib.sha256()
         archived_size = 0
-        with zipfile.ZipFile(package_path, "r") as archive, archive.open(
-            safe_filename, "r",
-        ) as media:
-            while True:
-                chunk = media.read(1024 * 1024)
-                if not chunk:
-                    break
-                archived_size += len(chunk)
-                archived_digest.update(chunk)
+        with zipfile.ZipFile(package_path, "r") as archive:
+            with (path.open("rb") if reference_storage else archive.open(safe_filename, "r")) as media:
+                while True:
+                    chunk = media.read(_MEDIA_CHUNK_BYTES)
+                    if not chunk:
+                        break
+                    archived_size += len(chunk)
+                    archived_digest.update(chunk)
         after_stat = path.stat()
         if (
             archived_size != source_stat.st_size
@@ -1522,10 +1849,13 @@ def read_content_source_artifact(
         )
     }
     speech = None
-    if metadata["media_filename"].lower().endswith(".wav") and record["media_size_bytes"] <= 31 * 1024 * 1024:
+    if metadata["media_filename"].lower().endswith(".wav") and record["media_size_bytes"] <= _MEDIA_INLINE_BYTES:
         from lumenis.shared.content_creation.offline_speech import read_speech_source
-        with zipfile.ZipFile(candidate, "r") as archive:
-            audio = archive.read(metadata["media_filename"])
+        if metadata.get("schema_version") == 3:
+            audio = _content_original_path(metadata["asset"]["sha256"]).read_bytes()
+        else:
+            with zipfile.ZipFile(candidate, "r") as archive:
+                audio = archive.read(metadata["media_filename"])
         if hashlib.sha256(audio).hexdigest() != metadata["asset"]["sha256"]:
             raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
         speech = read_speech_source(audio)
@@ -1547,6 +1877,7 @@ class ContentSourceMedia:
     metadata: dict
     record: dict
     context: dict
+    package_path: Path | None = None
 
     def iter_bytes(self, start: int, stop: int, *, authorize=None) -> Iterator[bytes]:
         if not 0 <= start <= stop <= self.size_bytes:
@@ -1558,12 +1889,18 @@ class ContentSourceMedia:
                 if authorize is not None:
                     authorize()
                 current = _verified_content_source(self.artifact_id, **self.scope)
-                if (current != (self.metadata, self.record, self.context, self.path)
-                        or _source_file_identity(self.path) != self.file_identity
-                        or _source_file_identity(self.path, os.fstat(media.fileno())) != self.file_identity):
+                identity = _source_file_identity(self.path)
+                if identity != self.file_identity and identity[:5] == self.file_identity[:5]:
+                    # Creating/removing a decoder hard link can change the inode
+                    # change-time. Rehash those exact bytes rather than aborting
+                    # another authorized reader of the same immutable original.
+                    _verify_content_original(self.path, self.sha256, self.size_bytes)
+                if (current != (self.metadata, self.record, self.context, self.package_path or self.path)
+                        or identity[:5] != self.file_identity[:5]
+                        or _source_file_identity(self.path, os.fstat(media.fileno())) != identity):
                     raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
                 chunk = media.read(min(remaining, 1024 * 1024))
-                if not chunk or _source_file_identity(self.path, os.fstat(media.fileno())) != self.file_identity:
+                if not chunk or _source_file_identity(self.path, os.fstat(media.fileno())) != identity:
                     raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
                 remaining -= len(chunk)
                 yield chunk
@@ -1573,6 +1910,7 @@ def open_content_source_media(
     artifact_id: str,
     *,
     expected_sha256: str,
+    preview_key: str | None = None,
     actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     domain_id: str | None = None,
     subject_id: str | None = None,
@@ -1588,6 +1926,11 @@ def open_content_source_media(
     metadata, record, context, candidate = _verified_content_source(artifact_id, **scope)
     if metadata["asset"]["sha256"] != expected_sha256:
         raise LocalArtifactError("CONTENT_SOURCE_VERSION_MISMATCH")
+    if preview_key is not None:
+        preview, preview_path = _read_content_preview(preview_key, expected_sha256)
+        identity = _verify_content_original(preview_path, preview['sha256'], preview['size_bytes'])
+        return ContentSourceMedia(preview['filename'], preview['media_type'], preview['sha256'], preview['size_bytes'],
+                                  preview_path, 0, identity, artifact_id, scope, metadata, record, context, candidate)
     filename = metadata["media_filename"]
     media_types = {
         ".mp4": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm",
@@ -1600,6 +1943,11 @@ def open_content_source_media(
     media_type = media_types.get(Path(filename).suffix.lower())
     if media_type is None:
         raise LocalArtifactError("LOCAL_ASSET_TYPE_NOT_ALLOWED")
+    if metadata.get("schema_version") == 3:
+        original = _content_original_path(expected_sha256)
+        identity = _verify_content_original(original, expected_sha256, record["media_size_bytes"])
+        return ContentSourceMedia(filename, media_type, expected_sha256, record["media_size_bytes"],
+                                  original, 0, identity, artifact_id, scope, metadata, record, context, candidate)
     identity = _source_file_identity(candidate)
     with zipfile.ZipFile(candidate, "r") as archive, candidate.open("rb") as media:
         info = archive.getinfo(filename)
@@ -1623,6 +1971,8 @@ def open_content_source_media(
 
 def read_content_source_media(artifact_id: str, **kwargs) -> tuple[bytes, str, str]:
     media = open_content_source_media(artifact_id, **kwargs)
+    if media.size_bytes > _MEDIA_INLINE_BYTES:
+        raise LocalArtifactError("CONTENT_SOURCE_STREAM_REQUIRED")
     return b"".join(media.iter_bytes(0, media.size_bytes)), media.filename, media.media_type
 
 
@@ -1637,7 +1987,7 @@ def resolve_content_source_assets(
     global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
 ) -> Iterator[list[dict[str, Any]]]:
-    """Reauthorize and stream verified source entries to temporary local files."""
+    """Reauthorize originals, then lend temporary same-volume links to media tools."""
     if not isinstance(artifact_refs, list) or not 1 <= len(artifact_refs) <= 64:
         raise LocalArtifactError("CONTENT_SOURCE_REFS_INVALID")
     refs, entries, _ = _validate_content_source_refs(
@@ -1659,22 +2009,15 @@ def resolve_content_source_assets(
             destination_dir = root / f"{index:02d}"
             destination_dir.mkdir()
             destination = destination_dir / member
-            digest = hashlib.sha256()
-            copied = 0
             try:
-                with zipfile.ZipFile(entry["package_path"], "r") as archive:
-                    with archive.open(member, "r") as source, destination.open("xb") as target:
-                        while True:
-                            chunk = source.read(1024 * 1024)
-                            if not chunk:
-                                break
-                            copied += len(chunk)
-                            if copied > _MAX_CONTENT_SOURCE_BYTES:
-                                raise LocalArtifactError("CONTENT_SOURCE_SIZE_INVALID")
-                            digest.update(chunk)
-                            target.write(chunk)
-                if copied != entry["record"]["media_size_bytes"] or digest.hexdigest() != metadata["asset"]["sha256"]:
-                    raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+                original = _content_original_path(metadata["asset"]["sha256"])
+                if metadata.get("schema_version") == 3:
+                    _verify_content_original(original, metadata["asset"]["sha256"], entry["record"]["media_size_bytes"])
+                else:
+                    with zipfile.ZipFile(entry["package_path"], "r") as archive, archive.open(member, "r") as source:
+                        _store_content_original(source, sha256=metadata["asset"]["sha256"],
+                                                size_bytes=entry["record"]["media_size_bytes"])
+                os.link(original, destination)
                 fresh_asset = _fingerprint_content_source(destination)
                 if fresh_asset.to_dict() != metadata["asset"]:
                     raise LocalArtifactError("CONTENT_SOURCE_FINGERPRINT_MISMATCH")
@@ -1700,6 +2043,169 @@ def resolve_content_source_assets(
         yield resolved
 
 
+def _content_preview_path(key: str) -> Path:
+    if not isinstance(key, str) or re.fullmatch(r"[0-9a-f]{64}", key) is None:
+        raise LocalArtifactError("CONTENT_SOURCE_PREVIEW_INVALID")
+    root = artifact_root()
+    path = root / "media-cache" / key[:2] / key
+    for parent in (path, *path.parents):
+        if parent == root.parent:
+            break
+        if parent.is_symlink() or getattr(parent, "is_junction", lambda: False)():
+            raise LocalArtifactError("CONTENT_SOURCE_STORAGE_LINK_FORBIDDEN")
+    return path
+
+
+def _read_content_preview(key: str, source_sha256: str) -> tuple[dict, Path]:
+    directory = _content_preview_path(key)
+    manifest_path = directory / "preview.json"
+    if not manifest_path.is_file() or manifest_path.stat().st_size > 65536:
+        raise LocalArtifactError("CONTENT_SOURCE_PREVIEW_NOT_FOUND")
+    try:
+        manifest = json.loads(manifest_path.read_bytes())
+        recipe = manifest['recipe']
+        if (manifest['schema'] != 'content-source-preview/v1' or recipe['source_sha256'] != source_sha256
+                or hashlib.sha256(_json_bytes(recipe)).hexdigest() != key
+                or manifest['filename'] not in {'proxy.mp4','proxy.m4a','thumbnail.jpg','waveform.json'}):
+            raise LocalArtifactError("CONTENT_SOURCE_PREVIEW_INVALID")
+        path = directory / manifest['filename']
+        if path.is_symlink() or getattr(path, "is_junction", lambda: False)():
+            raise LocalArtifactError("CONTENT_SOURCE_STORAGE_LINK_FORBIDDEN")
+        _verify_content_original(path, manifest['sha256'], manifest['size_bytes'])
+    except (OSError, TypeError, KeyError, ValueError) as exc:
+        if isinstance(exc, LocalArtifactError):
+            raise
+        raise LocalArtifactError("CONTENT_SOURCE_PREVIEW_INVALID") from exc
+    return manifest, path
+
+
+def prepare_content_source_preview(artifact_id: str, *, expected_sha256: str, kind: str,
+                                   actor, audio_stream_index=None, source_asset=None, check_continue=None, **scope) -> dict:
+    """Explicitly prepare a disposable edit proxy, thumbnail or waveform pyramid.
+
+    Cache bytes are derived accelerators. Every read remains bound to the
+    immutable source, current Permission and source-use scope. Rendering keeps
+    using the original source instead of these low-resolution copies.
+    """
+    if kind not in {'proxy','thumbnail','waveform'}:
+        raise LocalArtifactError("CONTENT_SOURCE_PREVIEW_KIND_INVALID")
+    metadata, record, _context, _package = _verified_content_source(artifact_id, actor=actor, **scope)
+    if metadata['asset']['sha256'] != expected_sha256:
+        raise LocalArtifactError("CONTENT_SOURCE_VERSION_MISMATCH")
+    streams = metadata['asset']['audio_stream_count']
+    if audio_stream_index is None and streams == 1:
+        audio_stream_index = 0
+    if (audio_stream_index is not None and (type(audio_stream_index) is not int
+            or not 0 <= audio_stream_index < streams)):
+        raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_STREAM_SELECTION_REQUIRED')
+    if kind != 'thumbnail' and streams > 1 and audio_stream_index is None:
+        raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_STREAM_SELECTION_REQUIRED')
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg:
+        raise LocalArtifactError("MEDIA_RENDER_TOOLS_UNAVAILABLE")
+    recipe = {'version': 'edit-preview/v1', 'source_sha256': expected_sha256,
+              'kind': kind, 'ffmpeg_sha256': _hash_file(Path(ffmpeg)),
+              'video_max_width': 960, 'video_max_height': 540, 'video_fps': 24,
+              'audio_stream_index': audio_stream_index, 'audio_bitrate': '64k',
+              'waveform_window_seconds': 60, 'waveform_levels': [64,256,1024]}
+    key = hashlib.sha256(_json_bytes(recipe)).hexdigest()
+
+    def check():
+        if check_continue is not None:
+            check_continue()
+        current = _verified_content_source(artifact_id, actor=actor, **scope)
+        if current[0] != metadata or current[1] != record:
+            raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
+
+    def result(manifest):
+        return {'state': 'cached', 'source_artifact_id': artifact_id,
+            'source_sha256': expected_sha256, 'kind': kind, 'cache_key': key,
+            'sha256': manifest['sha256'], 'size_bytes': manifest['size_bytes'],
+            'media_type': manifest['media_type'], 'filename': manifest['filename'],
+            'preview_only': True, 'render_source': 'immutable_original',
+            'mapping': 'source_presentation_seconds', 'coverage': manifest['coverage']}
+    try:
+        manifest, _path = _read_content_preview(key, expected_sha256)
+        check()
+        return result(manifest)
+    except LocalArtifactError as exc:
+        if str(exc) != 'CONTENT_SOURCE_PREVIEW_NOT_FOUND':
+            raise
+    if source_asset is None:
+        with resolve_content_source_assets([artifact_id], actor=actor, **scope) as sources:
+            return prepare_content_source_preview(artifact_id, expected_sha256=expected_sha256,
+                kind=kind, actor=actor, source_asset=sources[0]['asset'], audio_stream_index=audio_stream_index,
+                check_continue=check_continue, **scope)
+    if source_asset.to_dict() != metadata['asset']:
+        raise LocalArtifactError("CONTENT_SOURCE_FINGERPRINT_MISMATCH")
+    from lumenis.shared.content_creation.rendering import _run, _programme_timeout, extract_waveform
+    from lumenis.shared.content_creation.video_editing import MEDIA_INPUT_DEMUXERS
+    directory = _content_preview_path(key)
+    cache_root = artifact_root() / 'media-cache'
+    cache_root.mkdir(parents=True, exist_ok=True)
+    estimated = (1024 * 1024 + int(source_asset.duration_sec * (160 * 1024 if source_asset.has_video else 12 * 1024))
+                 if kind == 'proxy' else _MEDIA_INLINE_BYTES)
+    with _reserve_media_storage(estimated + 65536):
+        with tempfile.TemporaryDirectory(prefix='preview-', dir=str(cache_root)) as temporary:
+            work = Path(temporary)
+            command = [ffmpeg, '-v', 'error', '-nostdin', '-n', '-threads', '1',
+                '-protocol_whitelist', 'file', '-format_whitelist', MEDIA_INPUT_DEMUXERS,
+                '-i', source_asset.path]
+            if kind == 'waveform':
+                if audio_stream_index is None:
+                    raise LocalArtifactError('WAVEFORM_AUDIO_STREAM_REQUIRED')
+                end = min(source_asset.duration_sec, 60)
+                levels = [extract_waveform(source_asset, start_sec=0, end_sec=end, bins=bins,
+                           audio_stream_index=audio_stream_index, check_continue=check) for bins in recipe['waveform_levels']]
+                filename, media_type = 'waveform.json', 'application/json'
+                (work / filename).write_bytes(_json_bytes({'schema':'source-waveform-pyramid/v1',
+                    'source_sha256':expected_sha256, 'levels':levels, 'source_duration_sec':source_asset.duration_sec,
+                    'coverage': {'start_sec':0,'end_sec':end,'complete':end == source_asset.duration_sec}}))
+                coverage = {'start_sec': 0, 'end_sec': end, 'complete': end == source_asset.duration_sec}
+            elif kind == 'thumbnail':
+                if not source_asset.has_video:
+                    raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_VIDEO_REQUIRED')
+                filename, media_type = 'thumbnail.jpg', 'image/jpeg'
+                command += ['-map','0:v:0','-frames:v','1','-an','-vf',
+                    'scale=960:540:force_original_aspect_ratio=decrease','-map_metadata','-1',str(work / filename)]
+                _run(command, cwd=work, timeout=60, check_continue=check)
+                coverage = {'at_sec': 0, 'complete': False}
+            else:
+                filename = 'proxy.mp4' if source_asset.has_video else 'proxy.m4a'
+                media_type = 'video/mp4' if source_asset.has_video else 'audio/mp4'
+                if source_asset.has_video:
+                    command += ['-map','0:v:0','-vf','scale=960:540:force_original_aspect_ratio=decrease:force_divisible_by=2,fps=24',
+                        '-c:v','libx264','-preset','veryfast','-crf','28','-pix_fmt','yuv420p','-threads:v','1']
+                if audio_stream_index is not None:
+                    command += ['-map',f'0:a:{audio_stream_index}','-c:a','aac','-b:a','64k','-ar','48000','-ac','2']
+                elif not source_asset.has_video:
+                    raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_AUDIO_REQUIRED')
+                command += ['-map_metadata','-1','-movflags','+faststart',str(work / filename)]
+                _run(command, cwd=work, timeout=_programme_timeout(source_asset.duration_sec), check_continue=check)
+                # Decode the entire proxy before it can be advertised as playable.
+                _run([ffmpeg,'-v','error','-nostdin','-protocol_whitelist','file','-format_whitelist','mov',
+                      '-i',str(work / filename),'-f','null','-'], cwd=work,
+                     timeout=_programme_timeout(source_asset.duration_sec), check_continue=check)
+                coverage = {'start_sec':0,'end_sec':source_asset.duration_sec,'complete':True}
+            output = work / filename
+            size = output.stat().st_size
+            if size <= 0 or size > estimated:
+                raise LocalArtifactError('CONTENT_MEDIA_STORAGE_REQUIRED')
+            manifest = {'schema':'content-source-preview/v1', 'recipe':recipe, 'filename':filename,
+                'sha256':_hash_file(output),'size_bytes':size,'media_type':media_type,'coverage':coverage}
+            check()
+            directory.parent.mkdir(parents=True, exist_ok=True)
+            (work / 'preview.json').write_bytes(_json_bytes(manifest))
+            try:
+                os.rename(work, directory)
+            except FileExistsError:
+                existing, _path = _read_content_preview(key, expected_sha256)
+                check()
+                return result(existing)
+    check()
+    return result(manifest)
+
+
 def stage_timeline_artifact(
     timeline: Any,
     *,
@@ -1714,9 +2220,11 @@ def stage_timeline_artifact(
     output_kind: str = "video",
     previous_artifact_id: Optional[str] = None,
     source_artifact_refs: Optional[List[str]] = None,
+    source_project_artifact_refs: Optional[List[str]] = None,
     render_options: dict | None = None,
     delivery_options: dict | None = None,
     operation_binding: dict | None = None,
+    task_control: dict | None = None,
     title: str | None = None,
     render_media: bool = True,
 ) -> Dict[str, Any]:
@@ -1730,6 +2238,18 @@ def stage_timeline_artifact(
     render_options = validate_render_options(render_options)
     delivery_options = _validate_content_delivery_options(delivery_options)
     _validate_content_project_save(title, render_media, delivery_options)
+    if task_control is not None:
+        from lumenis.system.collector.guard.task_queue import TaskQueue
+        required = {"queue", "task_id", "request_key", "run_id", "worker_id", "lease_owner"}
+        if (type(task_control) is not dict or set(task_control) != required
+                or type(task_control.get("queue")) is not TaskQueue
+                or type(task_control.get("task_id")) is not int or task_control["task_id"] <= 0
+                or not isinstance(task_control.get("request_key"), str)
+                or not isinstance(task_control.get("run_id"), str)
+                or not isinstance(task_control.get("worker_id"), str)
+                or not isinstance(task_control.get("lease_owner"), str)
+                or source_execution_id != str(task_control["task_id"])):
+            raise LocalArtifactError("CONTENT_EXPORT_TASK_BINDING_INVALID")
     if operation_binding and (title is not None or not render_media):
         raise LocalArtifactError("CONTENT_EDL_OPERATION_BINDING_INVALID")
     actor_id, scope = _authorize_content_project(
@@ -1782,11 +2302,13 @@ def stage_timeline_artifact(
         source_assets = [entry["metadata"]["asset"] for entry in source_entries]
         if [asset.to_dict() for asset in timeline.assets] != source_assets:
             raise LocalArtifactError("CONTENT_SOURCE_TIMELINE_MISMATCH")
+    _validate_podcast_plan_timeline(timeline, delivery_options)
 
     expected_context = _content_artifact_context(actor, actor_id, scope)
     parent_project: Optional[Dict[str, Any]] = None
+    parent_package_path = None
     if previous_artifact_id is not None:
-        parent_project, parent_render, _, _ = _verified_content_project(
+        parent_project, parent_render, _, parent_package_path = _verified_content_project(
             previous_artifact_id,
             actor=actor,
             domain_id=domain_id,
@@ -1795,11 +2317,10 @@ def stage_timeline_artifact(
             global_scope=global_scope,
             shared_workspace_scope=shared_workspace_scope,
         )
-        if (
-            parent_project.get("context") != expected_context
-            or parent_project.get("output_kind") != output_kind
-        ):
+        if parent_project.get("context") != expected_context:
             raise LocalArtifactError("CONTENT_PROJECT_PARENT_SCOPE_MISMATCH")
+        if parent_project.get("output_kind") != output_kind:
+            raise LocalArtifactError("CONTENT_PROJECT_TYPE_CHANGE_REQUIRES_NEW_PROJECT")
         parent_timeline = parent_project.get("timeline")
         parent_version = parent_timeline.get("version") if isinstance(parent_timeline, dict) else None
         current_version = getattr(timeline, "version", None)
@@ -1818,6 +2339,11 @@ def stage_timeline_artifact(
         ):
             raise LocalArtifactError("CONTENT_PROJECT_PARENT_REVISION_REQUIRED")
 
+    project_source_refs, project_source_entries = _resolve_content_project_source_refs(
+        source_project_artifact_refs, parent_project=parent_project,
+        previous_artifact_id=previous_artifact_id, actor=actor, scope=scope,
+    )
+
     stored_title = title if title is not None else (parent_project or {}).get("title")
 
     from lumenis.system.security.permission import OperationType, get_permission_gate, is_testing_bypass_enabled
@@ -1826,7 +2352,7 @@ def stage_timeline_artifact(
         raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_UNVERIFIED")
     export_resource = _content_project_export_resource_for_context(
         expected_context, timeline_data, source_refs, output_kind, previous_artifact_id, render_options, delivery_options,
-        title, render_media,
+        title, render_media, project_source_refs,
     )
     gate = get_permission_gate()
     caller = expected_context["principal_ref"] if actor_id is None else f"actor:{actor_id}"
@@ -1845,8 +2371,21 @@ def stage_timeline_artifact(
     if not export_permission.allowed:
         raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_DENIED")
 
-    def check_export_permission() -> None:
+    def check_export_permission(*, check_task: bool = True) -> None:
         # Use the canonical owner throughout encoding, not a copied authorization.
+        if task_control is not None and check_task:
+            from lumenis.system.collector.guard.task_queue import TaskQueue
+            queue = task_control["queue"]
+            current = queue.get(task_control["task_id"])
+            payload = current.get("payload") if isinstance(current, dict) else None
+            if (not isinstance(current, dict) or current.get("task_type") != CONTENT_PROJECT_EXPORT_TASK_TYPE
+                    or current.get("status") != "running"
+                    or not isinstance(payload, dict)
+                    or payload.get("request_key") != task_control["request_key"]
+                    or payload.get("cancel_requested") is True
+                    or not queue.heartbeat(task_control["task_id"], task_control["worker_id"],
+                        run_id=task_control["run_id"], lease_owner=task_control["lease_owner"])):
+                raise InterruptedError("CONTENT_EXPORT_CANCELLED_OR_LEASE_LOST")
         _authorize_content_project(actor, action="write", **scope)
         for entry in source_entries:
             source_context = entry.get("source_context")
@@ -1856,6 +2395,13 @@ def stage_timeline_artifact(
                     record_domain=entry["record"].get("domain_id"),
                     record_product=entry["record"].get("product_id"), action="read",
                 )
+        for entry in project_source_entries:
+            _project, _render, current_record, _path = _verified_content_project(
+                entry["artifact_id"], actor=actor, read_only_registry=True,
+                verify_source_project_refs=False, **scope,
+            )
+            if current_record.get("sha256") != entry["record"].get("sha256"):
+                raise LocalArtifactError("CONTENT_PROJECT_SOURCE_CHANGED")
         if "shared_workspace_scope" in scope:
             current = check_shared_workspace_effect(
                 actor, scope["shared_workspace_scope"], OperationType.DATA_EXPORT,
@@ -1872,6 +2418,71 @@ def stage_timeline_artifact(
                 OperationType.DATA_EXPORT.value, operation_binding["resource"], exact=True):
             raise LocalArtifactError("CONTENT_EDL_EXACT_APPROVAL_REQUIRED")
 
+    if task_control is not None:
+        # A prior attempt may have committed the Artifact but exited before
+        # TaskQueue stored its result reference. Reopen that exact execution
+        # result before any render work; never repeat expensive processing or
+        # create a second project for an uncertain cross-database outcome.
+        check_export_permission()
+        prior = _content_project_artifact_for_execution(
+            source_execution_id.strip(), actor=actor, domain_id=domain_id,
+            subject_id=subject_id, brand_focus_id=brand_focus_id,
+            global_scope=global_scope, shared_workspace_scope=shared_workspace_scope,
+        )
+        if prior is not None:
+            prior_project = prior["project"]
+            expected_revision = (
+                (parent_project or {}).get("project_revision", 0) + 1
+                if stored_title is not None else None
+            )
+            matches = (
+                prior_project.get("context") == expected_context
+                and prior_project.get("timeline") == timeline_data
+                and prior_project.get("source_artifact_refs") == source_refs
+                and prior_project.get("source_project_artifact_refs", []) == project_source_refs
+                and prior_project.get("output_kind") == output_kind
+                and prior_project.get("parent_artifact_id") == previous_artifact_id
+                and prior_project.get("title") == stored_title
+                and prior_project.get("render_options", {}) == render_options
+                and prior_project.get("delivery_options", {}) == delivery_options
+                and prior_project.get("project_revision") == expected_revision
+                and prior["record"].get("source_execution_id") == source_execution_id.strip()
+            )
+            if not matches:
+                raise LocalArtifactError("CONTENT_EXPORT_RECOVERY_INPUT_MISMATCH")
+            check_export_permission(check_task=False)
+            record = prior["record"]
+            result_ref = {
+                "artifact_id": record["artifact_id"],
+                "sha256": record["sha256"],
+                "source_execution_id": record["source_execution_id"],
+                "status": ("rendered_staged" if prior["render"].get("state") == "rendered_verified"
+                           else "project_saved"),
+                "project_revision": prior_project.get("project_revision"),
+                "timeline_version": timeline_data.get("version"),
+            }
+            committed = task_control["queue"].commit_result(
+                task_control["task_id"], lambda: result_ref,
+                task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                request_key=task_control["request_key"],
+                run_id=task_control["run_id"], worker_id=task_control["worker_id"],
+                lease_owner=task_control["lease_owner"],
+            )
+            if not committed:
+                raise InterruptedError("CONTENT_EXPORT_CANCELLED_OR_LEASE_LOST")
+            public_record = {key: record[key] for key in (
+                "artifact_id", "kind", "product_id", "domain_id", "source_execution_id",
+                "filename", "media_type", "size_bytes", "sha256", "status",
+                "approval_required", "approval_status", "created_at", "updated_at",
+            )}
+            return {
+                "status": "rendered_staged" if prior["render"].get("state") == "rendered_verified" else "project_saved",
+                "artifact": public_record, "project": prior_project,
+                "render": prior["render"], "rights_state": "unknown",
+                "approval_required": True, "publish_status": "not_performed",
+                "recovered_existing_artifact": True,
+            }
+
     root = artifact_root()
     root.mkdir(parents=True, exist_ok=True)
     artifact_id = _content_edl_artifact_id(operation_binding["operation_id"]) if operation_binding else _new_artifact_id()
@@ -1881,10 +2492,14 @@ def stage_timeline_artifact(
     product_id, artifact_domain = _content_project_storage_identity(scope)
     render_result: Optional[Mapping[str, Any]] = None
     package_created = False
+    artifact_registered = False
     try:
         with tempfile.TemporaryDirectory(prefix="content-project-", dir=str(root)) as work_dir:
             rendered_path = Path(work_dir) / media_name
             from lumenis.shared.content_creation.rendering import render_timeline, subtitle_documents
+            annotation_files, annotation_reports = _build_transcript_annotations(timeline,
+                delivery_options, parent_project=parent_project, parent_path=parent_package_path,
+                check_continue=check_export_permission)
 
             if render_media:
                 measured = render_timeline(timeline, rendered_path, output_kind=output_kind,
@@ -1902,7 +2517,7 @@ def stage_timeline_artifact(
                 media_hash = _hash_file(rendered_path)
                 if (
                     media_size <= 0
-                    or media_size > _MAX_CONTENT_PROJECT_MEDIA_BYTES
+                    or media_size > content_media_resource_budget()["available_bytes"]
                     or measured.get("size_bytes") != media_size
                     or measured.get("media_sha256") != media_hash
                 ):
@@ -1919,17 +2534,38 @@ def stage_timeline_artifact(
                     render_result["subtitle_export"] = {"state": "unsupported", "reason": str(exc), "files": []}
                 delivery_files, delivery_reports = _build_content_delivery(
                     timeline, rendered_path, output_kind=output_kind, options=delivery_options,
-                    render_options=render_options, check_continue=check_export_permission)
+                    render_options=render_options, check_continue=check_export_permission,
+                    source_annotations=annotation_files)
             else:
                 render_result = {"state": "not_rendered", "output_kind": output_kind,
                                  "timeline_version": timeline.version}
                 subtitle_output, delivery_files, delivery_reports = {}, {}, {}
+            for name,data in annotation_files.items():
+                if name in delivery_files and _delivery_file_sha256(delivery_files[name]) != _delivery_file_sha256(data):
+                    raise LocalArtifactError('CONTENT_TRANSCRIPT_ORIGINAL_CONFLICT')
+                delivery_files[name] = data
+            if annotation_reports:
+                delivery_reports['transcript_annotations'] = annotation_reports
+            from lumenis.shared.content_creation.speech_transcription import (
+                build_project_transcription_files,project_transcription_summary)
+            mapped_transcripts=build_project_transcription_files(timeline,delivery_files,
+                rendered_sha256=render_result.get('media_sha256') if render_media else None,
+                source_artifact_refs={entry['metadata']['asset']['asset_id']:entry['record']['artifact_id']
+                                      for entry in source_entries},check_cancel=check_export_permission)
+            if mapped_transcripts['report'] is not None:
+                # These are fresh derivatives of this exact revision, never
+                # inherited timecodes or a rerun of a recognition model.
+                for name in ('transcript-timeline.json','transcript-timeline.vtt','transcript-timeline.srt'):
+                    delivery_files.pop(name,None)
+                delivery_files.update(mapped_transcripts['files'])
+                delivery_reports['timeline_transcription']=project_transcription_summary(
+                    mapped_transcripts['report'],mapped_transcripts['files']['transcript-timeline.json'])
             credits = _content_license_credits(source_entries, timeline_data, render_options)
             if credits is not None:
                 delivery_files.update(_content_license_credit_files(credits))
-            if len(delivery_files) > 80 or sum(map(len, delivery_files.values())) > 128 * 1024 * 1024:
+            if len(delivery_files) > 80 or sum(map(_delivery_file_size, delivery_files.values())) > content_media_resource_budget()["available_bytes"]:
                 raise LocalArtifactError("CONTENT_DELIVERY_TOO_LARGE")
-            delivery_manifest = {name: {"sha256": hashlib.sha256(data).hexdigest(), "size_bytes": len(data)}
+            delivery_manifest = {name: {"sha256": _delivery_file_sha256(data), "size_bytes": _delivery_file_size(data)}
                                  for name, data in delivery_files.items()}
             if delivery_reports:
                 render_result["delivery_reports"] = delivery_reports
@@ -1943,6 +2579,8 @@ def stage_timeline_artifact(
                 **({"render_options": render_options} if render_options else {}),
                 "timeline": timeline_data,
                 "source_artifact_refs": source_refs,
+                **({"source_project_artifact_refs": project_source_refs}
+                   if project_source_refs else {}),
                 "context": expected_context,
                 "parent_artifact_id": previous_artifact_id,
                 "rights": {
@@ -1969,26 +2607,83 @@ def stage_timeline_artifact(
                     if render_media:
                         archive.write(rendered_path, media_name)
                     for name, data in delivery_files.items():
-                        archive.writestr(name, data)
+                        if isinstance(data, Path):
+                            check_export_permission()
+                            before = _source_file_identity(data)
+                            archive.write(data, name)
+                            if _source_file_identity(data) != before or _hash_file(data) != delivery_manifest[name]["sha256"]:
+                                raise LocalArtifactError("CONTENT_DELIVERY_INTEGRITY_FAILED")
+                        else:
+                            archive.writestr(name, data)
                     for name, text in subtitle_output.items():
                         archive.writestr(name, text.encode("utf-8"))
         package_size = package_path.stat().st_size
-        if package_size > _MAX_CONTENT_PROJECT_BYTES:
+        if package_size > content_media_resource_budget()["storage_capacity_bytes"]:
             raise LocalArtifactError("CONTENT_PROJECT_PACKAGE_TOO_LARGE")
         check_export_permission()
-        record = _register_artifact(
-            artifact_id=artifact_id,
-            kind="content_project",
-            product_id=product_id,
-            domain_id=artifact_domain,
-            source_execution_id=source_execution_id.strip(),
-            evidence_id="",
-            note_id="",
-            path=package_path,
-            media_type="application/zip",
-        )
+
+        def register_artifact() -> dict[str, Any]:
+            # commit_result holds TaskQueue's non-reentrant write reservation.
+            # It already checked cancellation and the active lease before
+            # calling this effect; do not re-enter the queue from this callback.
+            check_export_permission(check_task=task_control is None)
+            return _register_artifact(
+                artifact_id=artifact_id,
+                kind="content_project",
+                product_id=product_id,
+                domain_id=artifact_domain,
+                source_execution_id=source_execution_id.strip(),
+                evidence_id="",
+                note_id="",
+                path=package_path,
+                media_type="application/zip",
+            )
+
+        def register_and_verify() -> dict[str, Any]:
+            nonlocal artifact_registered
+            # The TaskQueue commit fence already holds its write reservation.
+            # Recheck Permission/SourceUse here without reentering that queue.
+            registered = register_artifact()
+            artifact_registered = True
+            verified_project, verified_render, verified_record, _ = _verified_content_project(
+                artifact_id, actor=actor, **scope,
+            )
+            if (verified_record["sha256"] != registered["sha256"]
+                    or verified_project != project or verified_render != render_result):
+                raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
+            return registered
+
+        if task_control is None:
+            record = register_artifact()
+        else:
+            def commit_export_result():
+                registered = register_and_verify()
+                return {
+                    key: registered[key]
+                    for key in ("artifact_id", "sha256", "source_execution_id")
+                } | {
+                    "status": "rendered_staged" if render_media else "project_saved",
+                    "project_revision": project.get("project_revision"),
+                    "timeline_version": timeline_data.get("version"),
+                }
+
+            committed = task_control["queue"].commit_result(
+                task_control["task_id"],
+                commit_export_result,
+                task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                request_key=task_control["request_key"],
+                run_id=task_control["run_id"], worker_id=task_control["worker_id"],
+                lease_owner=task_control["lease_owner"],
+            )
+            if not committed:
+                if artifact_registered:
+                    raise LocalArtifactError("CONTENT_EXPORT_COMMIT_OUTCOME_UNKNOWN")
+                raise InterruptedError("CONTENT_EXPORT_CANCELLED_OR_LEASE_LOST")
+            record = _artifact_record(artifact_id, read_only=True)
+            if not record or record.get("source_execution_id") != source_execution_id.strip():
+                raise LocalArtifactError("CONTENT_EXPORT_COMMIT_READBACK_FAILED")
     except Exception:
-        if package_created:
+        if package_created and not artifact_registered:
             try:
                 package_path.unlink(missing_ok=True)
             except OSError:
@@ -2124,9 +2819,9 @@ def list_content_projects(*, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     for candidate in candidates:
         artifact_id = candidate.get("artifact_id")
         size_bytes = candidate.get("size_bytes")
-        if type(size_bytes) is not int or not 0 < size_bytes <= _MAX_CONTENT_PROJECT_BYTES:
+        if type(size_bytes) is not int or not 0 < size_bytes <= content_media_resource_budget()["storage_capacity_bytes"]:
             return _content_project_list_result("integrity_incomplete", projects, identity, candidate)
-        if verified_bytes and verified_bytes + size_bytes > _MAX_CONTENT_PROJECT_BYTES:
+        if verified_bytes and verified_bytes + size_bytes > _CONTENT_PROJECT_LIST_VERIFY_BYTES:
             return _content_project_list_result("scan_incomplete", projects, identity, last_scanned)
         verified_bytes += size_bytes
         last_scanned = candidate
@@ -2162,6 +2857,7 @@ def list_content_projects(*, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
             "output_kind": project["output_kind"],
             "title": project.get("title"),
             "project_revision": project.get("project_revision"),
+            "source_project_artifact_refs": list(project.get("source_project_artifact_refs", [])),
             "render_state": render["state"],
             "created_at": record["created_at"],
             "updated_at": record["updated_at"],
@@ -2176,6 +2872,78 @@ def list_content_projects(*, actor: Mapping[str, Any] | LocalWorkspacePrincipal,
     return _content_project_list_result("ok" if projects else "empty", projects)
 
 
+@dataclass(frozen=True)
+class ContentProjectMedia:
+    filename: str
+    media_type: str
+    sha256: str
+    size_bytes: int
+    path: Path
+    offset: int
+    file_identity: tuple
+    artifact_id: str
+    actor: Any
+    scope: dict
+    record_sha256: str
+    source_artifact_refs: tuple[str, ...]
+
+    def iter_bytes(self, start: int, stop: int, *, authorize=None) -> Iterator[bytes]:
+        if not 0 <= start <= stop <= self.size_bytes:
+            raise LocalArtifactError("CONTENT_PROJECT_RANGE_INVALID")
+        with self.path.open("rb") as media:
+            media.seek(self.offset + start)
+            remaining = stop - start
+            while remaining:
+                if authorize is not None:
+                    authorize()
+                _authorize_content_project(self.actor, action="read", **self.scope)
+                _validate_content_source_refs(list(self.source_artifact_refs), actor=self.actor, **self.scope)
+                record = _artifact_record(self.artifact_id)
+                if (not record or record.get("sha256") != self.record_sha256
+                        or _source_file_identity(self.path) != self.file_identity
+                        or _source_file_identity(self.path, os.fstat(media.fileno())) != self.file_identity):
+                    raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
+                chunk = media.read(min(remaining, _MEDIA_CHUNK_BYTES))
+                if not chunk or _source_file_identity(self.path, os.fstat(media.fileno())) != self.file_identity:
+                    raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
+                remaining -= len(chunk)
+                yield chunk
+
+
+def open_content_project_media(artifact_id: str, *, actor, **scope) -> ContentProjectMedia:
+    """Open a verified media member without buffering a professional programme."""
+    project, render, record, path = _verified_content_project(artifact_id, actor=actor, **scope)
+    if render["state"] != "rendered_verified":
+        raise LocalArtifactError("CONTENT_PROJECT_NOT_RENDERED")
+    identity = _source_file_identity(path)
+    digest = hashlib.sha256()
+    try:
+        with zipfile.ZipFile(path) as archive, path.open("rb") as package:
+            info = archive.getinfo(record["media_member"])
+            package.seek(info.header_offset)
+            header = package.read(30)
+            if len(header) != 30:
+                raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
+            signature, _, flags, compression, _, _, _, _, _, name_size, extra_size = struct.unpack("<4s5H3I2H", header)
+            name = package.read(name_size).decode("utf-8" if flags & 0x800 else "cp437")
+            offset = info.header_offset + 30 + name_size + extra_size
+            if (signature != b"PK\x03\x04" or compression != zipfile.ZIP_STORED or flags & 1
+                    or name != record["media_member"] or info.compress_size != info.file_size
+                    or offset + info.file_size > identity[3]):
+                raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID")
+            with archive.open(info) as member:
+                for chunk in iter(lambda: member.read(_MEDIA_CHUNK_BYTES), b""):
+                    digest.update(chunk)
+        if digest.hexdigest() != render["media_sha256"] or _source_file_identity(path) != identity:
+            raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
+    except (OSError, zipfile.BadZipFile, KeyError, RuntimeError) as exc:
+        raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID") from exc
+    extension = ".mp4" if project["output_kind"] == "video" else ".wav"
+    return ContentProjectMedia(f"{artifact_id}{extension}", "video/mp4" if extension == ".mp4" else "audio/wav",
+                               render["media_sha256"], info.file_size, path, offset, identity,
+                               artifact_id, actor, scope, record["sha256"], tuple(project.get("source_artifact_refs", [])))
+
+
 def authorized_project_media(
     artifact_id: str,
     *,
@@ -2186,37 +2954,19 @@ def authorized_project_media(
     global_scope: bool = False,
     shared_workspace_scope: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return authorized package media bytes and safe display metadata."""
-    project, render, record, package_path = _verified_content_project(
-        artifact_id,
-        actor=actor,
-        domain_id=domain_id,
-        subject_id=subject_id,
-        brand_focus_id=brand_focus_id,
-        global_scope=global_scope,
-        shared_workspace_scope=shared_workspace_scope,
-    )
-    if render["state"] != "rendered_verified":
-        raise LocalArtifactError("CONTENT_PROJECT_NOT_RENDERED")
-    try:
-        with zipfile.ZipFile(package_path, "r") as archive:
-            info = archive.getinfo(record["media_member"])
-            data = archive.read(info)
-    except (OSError, zipfile.BadZipFile, KeyError, RuntimeError) as exc:
-        raise LocalArtifactError("CONTENT_PROJECT_ARCHIVE_INVALID") from exc
-    extension = ".mp4" if project["output_kind"] == "video" else ".wav"
-    if len(data) != render.get("size_bytes") or hashlib.sha256(data).hexdigest() != render.get("media_sha256"):
-        raise LocalArtifactError("CONTENT_PROJECT_INTEGRITY_FAILED")
-    _authorize_content_project(
-        actor, domain_id=domain_id, subject_id=subject_id,
-        brand_focus_id=brand_focus_id, global_scope=global_scope,
-        shared_workspace_scope=shared_workspace_scope, action="read",
-    )
+    """Bounded compatibility read; long programmes use open_content_project_media."""
+    media = open_content_project_media(artifact_id, actor=actor, domain_id=domain_id, subject_id=subject_id,
+                                       brand_focus_id=brand_focus_id, global_scope=global_scope,
+                                       shared_workspace_scope=shared_workspace_scope)
+    if media.size_bytes > _MEDIA_INLINE_BYTES:
+        raise LocalArtifactError("CONTENT_PROJECT_STREAM_REQUIRED")
+    data = b"".join(media.iter_bytes(0, media.size_bytes))
+    extension = Path(media.filename).suffix
     return {
         "artifact_id": artifact_id,
-        "filename": f"{artifact_id}{extension}",
-        "media_type": "video/mp4" if extension == ".mp4" else "audio/wav",
-        "output_kind": project["output_kind"],
+        "filename": media.filename,
+        "media_type": media.media_type,
+        "output_kind": "video" if extension == ".mp4" else "audio",
         "data": data,
     }
 
@@ -2726,11 +3476,17 @@ def _validate_content_delivery_options(value=None):
     """Bound optional offline deliverables to the same project authorization."""
     if value is None:
         return {}
-    if not isinstance(value, dict) or set(value) - {"audio_formats", "podcast_plan", "publication_urls", "interchange", "cover", "include_ass_subtitles", "audio_visual", "include_source_probe", "reference_analysis", "transcription", "podcast_cover", "podcast_analysis"}:
+    if not isinstance(value, dict) or set(value) - {"audio_formats", "podcast_plan", "publication_urls", "interchange", "cover", "include_ass_subtitles", "audio_visual", "include_source_probe", "reference_analysis", "transcription", "podcast_cover", "podcast_analysis", "manual_transcripts", "transcript_reviews"}:
         raise LocalArtifactError("CONTENT_DELIVERY_OPTIONS_INVALID")
     if len(_json_bytes(value)) > _MAX_PROJECT_JSON_BYTES:
         raise LocalArtifactError("CONTENT_DELIVERY_OPTIONS_TOO_LARGE")
     value = json.loads(_json_bytes(value))
+    for name,fields in [('manual_transcripts',{'asset_id','audio_stream_index','language','segments'}),
+                        ('transcript_reviews',{'asset_id','member','expected_sha256','edits'})]:
+        if name in value and (type(value[name]) is not list or not 1 <= len(value[name]) <= 8
+                or any(type(item) is not dict or set(item) != fields for item in value[name])
+                or len({item['asset_id'] for item in value[name] if isinstance(item.get('asset_id'),str)}) != len(value[name])):
+            raise LocalArtifactError('CONTENT_TRANSCRIPT_ANNOTATION_OPTIONS_INVALID')
     if "include_ass_subtitles" in value and type(value["include_ass_subtitles"]) is not bool:
         raise LocalArtifactError("CONTENT_SUBTITLE_OPTIONS_INVALID")
     if "include_source_probe" in value and type(value["include_source_probe"]) is not bool:
@@ -2776,26 +3532,152 @@ def _validate_content_delivery_options(value=None):
     return value
 
 
+def _validate_podcast_plan_timeline(timeline, options):
+    """Keep the authored transcript and chapter plan bound to audible dialogue.
+
+    A PodcastPlan is rendered into the voiceover lanes. Timeline track controls
+    and per-clip gains are part of the saved edit, so comparing clip identities
+    alone can otherwise publish a transcript for dialogue that the mix muted.
+    Run this before encoding and reuse the same check at delivery construction.
+    """
+    if "podcast_plan" not in options:
+        return
+    from podcast.intelligence.episode_runtime import PodcastPlan
+
+    plan = PodcastPlan.from_dict(options["podcast_plan"])
+    voice_tracks = {track.track_id for track in timeline.tracks
+                    if track.kind == "voiceover" and track.clips}
+    separate = voice_tracks != {"podcast_voice"}
+    expected = plan.build_timeline(tuple(timeline.assets), separate_speakers=separate)
+
+    def spans(value):
+        return sorted((track.track_id, clip.purpose, clip.media_asset_id, clip.source_in,
+                       clip.source_out, clip.timeline_start, clip.audio_stream_index)
+                      for track in value.tracks if track.kind == "voiceover" for clip in track.clips)
+
+    if (spans(expected) != spans(timeline)
+            or any(track.clips and track.kind not in {"voiceover", "bgm", "sfx"}
+                   for track in timeline.tracks)):
+        raise LocalArtifactError("PODCAST_PLAN_TIMELINE_MISMATCH")
+
+    audible_tracks = {track.track_id for track in timeline.audible_tracks()}
+    dialogue = [(track, clip) for track in timeline.tracks if track.kind == "voiceover"
+                for clip in track.clips]
+    if any(track.track_id not in audible_tracks or clip.audio_mix.volume <= 0
+           for track, clip in dialogue):
+        raise LocalArtifactError("PODCAST_PLAN_DIALOGUE_NOT_AUDIBLE")
+
+
 def _content_delivery_filename(name):
     fixed = {"credits.json", "credits.txt", "episode.mp3", "episode.m4a", "podcast-plan.json", "script.txt", "transcript-original.vtt",
              "transcript-corrected.vtt", "chapters.json", "corrections.json", "metadata.json", "show-notes.txt", "feed.xml",
              "timeline.otio", "timeline.fcpxml", "timeline.edl", "interchange.json", "cover.json", "captions.ass", "subtitles.json", "audio-visual.png", "quote-card.png", "audio-visual.mp4", "audio-visual.json", "source-probe.json", "analysis.json", "frame-metrics.csv", "shot-candidates.csv", "transcription.json", "transcript-asr.vtt", "transcript-asr.srt", "transcript-words.json", "transcript-timeline.json", "transcript-timeline.srt", "transcript-timeline.vtt", "podcast-cover.png", "podcast-cover.json", "podcast-analysis.json"}
-    return isinstance(name, str) and (name in fixed or re.fullmatch(r"contact-sheet-(?:0[1-9]|10)\.png", name) is not None or re.fullmatch(r"cover-0[1-9]\.png", name) is not None
+    return isinstance(name, str) and (name in fixed or re.fullmatch(r'transcription(?:-reviewed)?-MEDIA-[a-f0-9]{16}\.(?:json|vtt|srt)',name) is not None
+        or re.fullmatch(r"contact-sheet-(?:0[1-9]|10)\.png", name) is not None or re.fullmatch(r"cover-0[1-9]\.png", name) is not None
         or re.fullmatch(r"source-MEDIA-[a-fA-F0-9]+\.(?:mp4|mov|webm|mkv|avi|wav|mp3|m4a|flac|ogg|aac|aiff)", name) is not None)
 
 
-def _build_content_delivery(timeline, rendered_path, *, output_kind, options, render_options, check_continue):
+def _build_transcript_annotations(timeline, options, *, parent_project, parent_path, check_continue):
+    """Source text annotations survive a project-only save without re-running AI."""
+    from lumenis.shared.content_creation.transcript_editing import (
+        build_manual_transcript_files,review_source_transcript,transcript_annotation_files)
+    files,reports={},[]
+    assets={asset.asset_id:asset for asset in timeline.assets}
+    if parent_project and parent_path:
+        with zipfile.ZipFile(parent_path) as archive:
+            legacy=parent_project.get('delivery_manifest',{}).get('transcription.json')
+            legacy_asset=json.loads(archive.read('transcription.json')).get('source_asset_id') if legacy else None
+            for name,entry in parent_project.get('delivery_manifest',{}).items():
+                if name in {'transcription.json','transcript-words.json','transcript-asr.vtt','transcript-asr.srt'} or re.fullmatch(
+                        r'transcription(?:-reviewed)?-MEDIA-[a-f0-9]{16}\.(?:json|vtt|srt)',name):
+                    identity=re.search(r'MEDIA-[a-f0-9]{16}',name)
+                    if (identity and identity.group() not in assets
+                            or identity is None and legacy_asset is not None and legacy_asset not in assets):
+                        continue  # The immutable parent retains removed assets' annotations.
+                    check_continue();raw=archive.read(name)
+                    if hashlib.sha256(raw).hexdigest() != entry['sha256']:
+                        raise LocalArtifactError('CONTENT_TRANSCRIPT_ORIGINAL_CHANGED')
+                    files[name]=raw
+    for item in options.get('manual_transcripts',[]):
+        check_continue()
+        asset=assets.get(item['asset_id'])
+        if asset is None:
+            raise LocalArtifactError('CONTENT_TRANSCRIPT_SOURCE_MISMATCH')
+        built=build_manual_transcript_files(asset,check_cancel=check_continue,
+            **{key:value for key,value in item.items() if key != 'asset_id'})
+        for name,raw in built['files'].items():
+            if name in files and files[name] != raw:
+                raise LocalArtifactError('CONTENT_TRANSCRIPT_ORIGINAL_CONFLICT')
+            files[name]=raw
+        reports.append({'asset_id':asset.asset_id,'edit_kind':'manual_transcript',
+                        'owned_model_execution':'NOT_RUN','original_audio_modified':False})
+    for item in options.get('transcript_reviews',[]):
+        check_continue()
+        member=item['member']
+        if not isinstance(member,str) or member not in files or not member.endswith('.json'):
+            raise LocalArtifactError('CONTENT_TRANSCRIPT_REVIEW_PARENT_REQUIRED')
+        raw=files[member];report=json.loads(raw)
+        asset=assets.get(item['asset_id'])
+        if (asset is None or report.get('source_asset_id') != asset.asset_id
+                or report.get('original_source_sha256') != asset.sha256):
+            raise LocalArtifactError('CONTENT_TRANSCRIPT_SOURCE_MISMATCH')
+        reviewed=review_source_transcript(report,edits=item['edits'],expected_sha256=item['expected_sha256'],original_bytes=raw)
+        files.update(transcript_annotation_files(reviewed,
+            member='transcription-reviewed-'+asset.asset_id+'.json',reviewed=True))
+        reports.append({'asset_id':asset.asset_id,'edit_kind':'correct_transcript_text',
+            'original_transcript_modified':False,'timeline_subtitles_modified':False,
+            'original_audio_modified':False,'redub_performed':False})
+    check_continue()
+    return files,reports
+
+
+def _build_content_delivery(timeline, rendered_path, *, output_kind, options, render_options,
+                            check_continue, source_annotations=None):
     from lumenis.shared.content_creation.rendering import encode_audio_delivery
     files, reports = {}, {}
     if "transcription" in options:
-        from lumenis.shared.content_creation.speech_transcription import build_transcription_files, build_timeline_transcription_files
+        from lumenis.shared.content_creation.speech_transcription import build_transcription_files
         selected=next((asset for asset in timeline.assets if asset.asset_id==options["transcription"]["asset_id"]),None)
         if selected is None:raise LocalArtifactError("CONTENT_TRANSCRIPTION_SOURCE_SCOPE_MISMATCH")
-        item=build_transcription_files(selected,check_cancel=check_continue,**{key:value for key,value in options["transcription"].items() if key!="asset_id"})
-        if item["report"].get("review_state")=="NO_RECOGNIZED_SPEECH":raise LocalArtifactError("CONTENT_ASR_NO_RECOGNIZED_SPEECH")
-        files.update(item["files"]);reports["transcription"]=item["report"]
-        edited=build_timeline_transcription_files(timeline,item,rendered_sha256=hashlib.sha256(Path(rendered_path).read_bytes()).hexdigest(),check_cancel=check_continue)
-        files.update(edited["files"]);reports["timeline_transcription"]=edited["report"]
+        transcription_options={key:value for key,value in options["transcription"].items() if key!="asset_id"}
+        requested_stream=transcription_options.get('audio_stream_index')
+        if requested_stream is None and selected.audio_stream_count==1:requested_stream=0
+        requested_language=transcription_options.get('language_hint')
+        existing=None
+        for member,raw in (source_annotations or {}).items():
+            if member not in {'transcription.json',f'transcription-{selected.asset_id}.json'}:
+                continue
+            try:
+                report=json.loads(raw)
+            except (TypeError,ValueError,UnicodeError):
+                continue
+            if (not isinstance(report,dict)
+                    or report.get('source_annotation')!='model_estimated_unreviewed_derivative'
+                    or report.get('source_asset_id')!=selected.asset_id
+                    or report.get('original_source_sha256')!=selected.sha256
+                    or report.get('selected_audio_stream_index')!=requested_stream
+                    or report.get('declared_language')!=requested_language):
+                continue
+            existing=(member,raw,report)
+            break
+        if existing is not None:
+            member,raw,report=existing
+            if report.get('review_state')=='NO_RECOGNIZED_SPEECH':
+                raise LocalArtifactError("CONTENT_ASR_NO_RECOGNIZED_SPEECH")
+            reports['transcription']={
+                'state':'reused_existing_source_annotation',
+                'source_asset_id':selected.asset_id,
+                'source_sha256':selected.sha256,
+                'selected_audio_stream_index':requested_stream,
+                'source_transcription_member':member,
+                'source_transcription_sha256':hashlib.sha256(raw).hexdigest(),
+                'new_model_execution':'NOT_RUN',
+                'review_state':report.get('review_state'),
+            }
+        else:
+            item=build_transcription_files(selected,check_cancel=check_continue,**transcription_options)
+            if item["report"].get("review_state")=="NO_RECOGNIZED_SPEECH":raise LocalArtifactError("CONTENT_ASR_NO_RECOGNIZED_SPEECH")
+            files.update(item["files"]);reports["transcription"]=item["report"]
     if "podcast_analysis" in options:
         from podcast.intelligence.episode_analysis import build_episode_analysis_files
         from lumenis.shared.content_creation.video_editing import fingerprint_local_media
@@ -2827,23 +3709,15 @@ def _build_content_delivery(timeline, rendered_path, *, output_kind, options, re
         raise LocalArtifactError("PODCAST_DELIVERY_REQUIRES_AUDIO_PROJECT")
     for format in formats:
         item = encode_audio_delivery(rendered_path, format=format, duration=timeline.duration_sec,
-                                     target_lufs=render_options.get("loudness_target_lufs"), check_continue=check_continue)
+                                     target_lufs=render_options.get("loudness_target_lufs"), check_continue=check_continue,
+                                     stream_files=True)
         files.update(item["files"]); reports[format] = item["report"]
     if "podcast_plan" in options:
         from podcast.intelligence.episode_runtime import PodcastPlan, build_offline_publication_documents
+        _validate_podcast_plan_timeline(timeline, options)
         plan = PodcastPlan.from_dict(options["podcast_plan"])
-        voice_tracks = {t.track_id for t in timeline.tracks if t.kind == "voiceover" and t.clips}
-        separate = voice_tracks != {"podcast_voice"}
-        expected = plan.build_timeline(tuple(timeline.assets), separate_speakers=separate)
-        def spans(value):
-            return sorted((t.track_id, c.purpose, c.media_asset_id, c.source_in, c.source_out,
-                           c.timeline_start, c.audio_stream_index)
-                          for t in value.tracks if t.kind == "voiceover" for c in t.clips)
-        if (spans(expected) != spans(timeline)
-                or any(t.clips and t.kind not in {"voiceover", "bgm", "sfx"} for t in timeline.tracks)):
-            raise LocalArtifactError("PODCAST_PLAN_TIMELINE_MISMATCH")
         name = "episode." + formats[0]
-        item = build_offline_publication_documents(plan,audio_filename=name,audio_size=len(files[name]),
+        item = build_offline_publication_documents(plan,audio_filename=name,audio_size=_delivery_file_size(files[name]),
                                                    urls=options.get("publication_urls"))
         files.update(item["files"]); reports["publication"] = item["report"]
     if "interchange" in options:
@@ -2851,16 +3725,15 @@ def _build_content_delivery(timeline, rendered_path, *, output_kind, options, re
         refs = {}
         for asset in timeline.assets:
             check_continue()
-            path = validate_local_asset(asset.path)
+            path = validate_local_asset(asset.path, resource_budget=True)
             if _hash_file(path) != asset.sha256:
                 raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
             name = "source-" + asset.asset_id + path.suffix.lower()
-            if sum(map(len,files.values())) + path.stat().st_size > 128 * 1024 * 1024:
+            if sum(map(_delivery_file_size, files.values())) + path.stat().st_size > content_media_resource_budget()["available_bytes"]:
                 raise LocalArtifactError("CONTENT_DELIVERY_TOO_LARGE")
-            data = path.read_bytes()
-            if hashlib.sha256(data).hexdigest() != asset.sha256:
+            if _hash_file(path) != asset.sha256:
                 raise LocalArtifactError("CONTENT_SOURCE_INTEGRITY_FAILED")
-            files[name] = data; refs[asset.asset_id] = name
+            files[name] = path; refs[asset.asset_id] = name
         item = build_interchange_files(timeline,media_refs=refs,check_cancel=check_continue,**options["interchange"])
         files.update(item["files"]); reports["interchange"] = item["report"]
     if "audio_visual" in options:
@@ -2881,9 +3754,9 @@ def _build_content_delivery(timeline, rendered_path, *, output_kind, options, re
         item["report"]["source_kind"] = "rendered_output"
         item["files"]["cover.json"] = _json_bytes(item["report"])
         files.update(item["files"]); reports["cover"] = item["report"]
-    if len(files) > 80 or sum(map(len, files.values())) > 128 * 1024 * 1024:
+    if len(files) > 80 or sum(map(_delivery_file_size, files.values())) > content_media_resource_budget()["available_bytes"]:
         raise LocalArtifactError("CONTENT_DELIVERY_TOO_LARGE")
-    if any(not _content_delivery_filename(name) or not isinstance(data, bytes) or not data for name,data in files.items()):
+    if any(not _content_delivery_filename(name) or not isinstance(data, (bytes, Path)) or _delivery_file_size(data) <= 0 for name,data in files.items()):
         raise LocalArtifactError("CONTENT_DELIVERY_FILE_INVALID")
     check_continue()
     return files, reports

@@ -130,7 +130,7 @@
       "max_sequence_length": 4096,
       "gradient_accumulation_steps": 1,
       "quantization": "bitsandbytes_nf4",
-      "status": "APPROVED_COMPATIBILITY_NOT_LIVE_VERIFIED"
+      "status": "WITHDRAWN_BY_PO"
     },
     "unsloth-rtx5090-nf4": {
       "foundation_variant": "unsloth-t4-nf4",
@@ -149,7 +149,7 @@
       "max_sequence_length": 16384,
       "gradient_accumulation_steps": 1,
       "quantization": "bitsandbytes_nf4",
-      "status": "APPROVED_COMPATIBILITY_NOT_LIVE_VERIFIED"
+      "status": "WITHDRAWN_BY_PO"
     }
   },
   "checkpoint_recovery_policies": {

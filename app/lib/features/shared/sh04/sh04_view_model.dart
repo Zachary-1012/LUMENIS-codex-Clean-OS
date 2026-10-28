@@ -194,6 +194,7 @@ class Sh04ViewModel extends ChangeNotifier {
     final fingerprint = jsonEncode([
       parent.internalId,
       parent.sha256,
+      parent.isLegacyVisualReport,
       reason,
       title,
       markdown,
@@ -213,7 +214,10 @@ class Sh04ViewModel extends ChangeNotifier {
       );
       if (revised.version != parent.version + 1 ||
           revised.parentArtifactId != parent.internalId ||
-          revised.workId != parent.workId) {
+          revised.workId != parent.workId ||
+          revised.title != title.trim() ||
+          revised.markdown != markdown ||
+          (parent.isLegacyVisualReport && revised.isLegacyVisualReport)) {
         throw const FormatException(
           'The returned revision does not continue the selected version.',
         );

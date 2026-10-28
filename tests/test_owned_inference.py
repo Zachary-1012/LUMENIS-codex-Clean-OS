@@ -7,6 +7,7 @@ import importlib.metadata
 import json
 import os
 import sys
+import threading
 import types
 from dataclasses import replace
 from pathlib import Path
@@ -15,6 +16,11 @@ import pytest
 
 from lumenis.system.ai_gateway import owned_evaluation as evaluation
 from lumenis.system.ai_gateway import owned_inference as inference
+from lumenis.system.ai_gateway.owned_service import (
+    OwnedPretrainedInferenceAdmissionRequest,
+    OwnedServiceRequest,
+    pretrained_inference_manifest_sha256,
+)
 from lumenis.system.ai_gateway import owned_training as training
 
 
@@ -285,6 +291,160 @@ def test_status_distinguishes_loaded_candidate_from_accepted_service(candidate, 
     assert calls["model"].generated == []
 
 
+def test_pretrained_cpu_manifest_checks_exact_local_files_without_loading_or_network(tmp_path, monkeypatch):
+    contents = {
+        "chat_template.jinja": b"{% for message in messages %}{{ message.content }}{% endfor %}",
+        "config.json": b'{"model_type":"llama"}',
+        "model-00001-of-00001.safetensors": b"fixture-weights-not-a-model",
+        "tokenizer.json": b'{"version":"1.0"}',
+    }
+    file_rows = tuple(
+        (name, len(payload), hashlib.sha256(payload).hexdigest())
+        for name, payload in sorted(contents.items())
+    )
+    row_map = {name: digest for name, _size, digest in file_rows}
+    packages = (
+        ("safetensors", "0.4.5"), ("tokenizers", "0.21.1"),
+        ("torch", "2.5.1+cpu"), ("transformers", "4.49.0"),
+    )
+    package_lock = hashlib.sha256(json.dumps(
+        [list(item) for item in packages], sort_keys=True,
+        separators=(",", ":"), ensure_ascii=False, allow_nan=False,
+    ).encode("utf-8")).hexdigest()
+    request = OwnedPretrainedInferenceAdmissionRequest(
+        schema_version=2, artifact_kind="PRETRAINED_INFERENCE", action="admit",
+        domain_id="cth", scopes=("GLOBAL / ALL",),
+        model_id="sample-org/sample-model", model_revision="a" * 40,
+        source_repository="https://huggingface.co/sample-org/sample-model",
+        license_id="Apache-2.0", license_text_sha256="1" * 64,
+        usage_policy_sha256="2" * 64, model_format="transformers_safetensors",
+        manifest_sha256="0" * 64, artifact_files=file_rows,
+        weight_files=("model-00001-of-00001.safetensors",),
+        tokenizer_file="tokenizer.json", tokenizer_sha256=row_map["tokenizer.json"],
+        chat_template_file="chat_template.jinja", chat_template_sha256=row_map["chat_template.jinja"],
+        quantization_format="none", quantization_parameters_sha256=None,
+        conversion_recipe=None, conversion_sha256=None,
+        runtime_engine="transformers-cpu", runtime_version="4.49.0",
+        runtime_build_sha256="7" * 64, runtime_packages=packages,
+        runtime_package_lock_sha256=package_lock,
+        evaluation_sha256="8" * 64, quality_review_sha256="9" * 64,
+        source_use_sha256="a" * 64, source_use_version="source-use-v1",
+        evaluation_ref="evaluation:unit", quality_review_ref="review:unit",
+        runtime_sha256="b" * 64, executor_sha256="c" * 64,
+        review_validator_sha256="d" * 64, source_validator_sha256="e" * 64,
+        allowed_operations=("inference_generate",), context_window_tokens=4096,
+        output_token_limit=512, cpu_threads=2, memory_limit_bytes=4 * 1024**3,
+        generation_timeout_seconds=120, max_concurrent_requests=1,
+        prior_binding_sha256=None,
+    )
+    request = replace(request, manifest_sha256=pretrained_inference_manifest_sha256(request))
+    root = tmp_path / "local-pretrained-artifact"
+    root.mkdir()
+    for name, payload in contents.items():
+        (root / name).write_bytes(payload)
+
+    monkeypatch.setattr(inference, "_pretrained_cpu_packages", lambda: packages)
+    monkeypatch.setattr(inference, "_pretrained_code_identities", lambda: {
+        "runtime_build_sha256": "7" * 64, "executor_sha256": "c" * 64,
+    })
+    pinned = inference.derive_pretrained_inference_runtime_pins(request, root)
+    inspection = inference.inspect_pretrained_inference_runtime(pinned, root)
+
+    assert pinned.manifest_sha256 == request.manifest_sha256
+    assert pinned.runtime_sha256 != "b" * 64
+    assert inspection["artifact_kind"] == "PRETRAINED_INFERENCE"
+    assert inspection["device_kind"] == "cpu"
+    assert inspection["weights_loaded"] is False
+    assert inspection["generation_performed"] is False
+
+    monkeypatch.setattr(inference, "_load_pretrained_cpu_kernel", lambda *_args: pytest.fail(
+        "an unbound request must stop before any model loader"))
+    with pytest.raises(inference.OwnedInferenceBlocked, match="PRETRAINED_ADMISSION_REQUEST_MISMATCH"):
+        inference.load_owned_pretrained_production_runtime(
+            pinned, root, admission=object(), source_validator=lambda _request: None,
+        )
+
+    verified_root, verified_files, total = inference._pretrained_artifact_root(request, root)
+
+    assert verified_root == root.resolve()
+    assert set(verified_files) == set(contents)
+    assert total == sum(len(payload) for payload in contents.values())
+
+    (root / "config.json").write_bytes(b'{"model_type":"changed"}')
+    with pytest.raises(inference.OwnedInferenceBlocked, match="PRETRAINED_LOCAL_ARTIFACT_HASH_MISMATCH"):
+        inference._pretrained_artifact_root(request, root)
+
+
+def test_closed_pretrained_runtime_rejects_measurement_and_generation_cleanly():
+    runtime = object.__new__(inference.OwnedPretrainedProductionRuntime)
+    runtime._lock = threading.RLock()
+    runtime._closed = True
+    runtime._kernel = None
+    runtime._admission = None
+    runtime._semaphore = threading.BoundedSemaphore(1)
+    request = OwnedServiceRequest(
+        operation="inference_generate", request_id="request-closed",
+        job_id="job-closed", actor_ref="actor-1", domain_id="cth",
+        scope="GLOBAL / ALL", source_use_policy_version="source-use-v1",
+        source_use_policy_sha256="a" * 64, source_binding_sha256="b" * 64,
+        source_evidence_refs=("evidence:1",), input_revision_sha256="c" * 64,
+        system_prompt="Answer from the supplied source.",
+        user_payload="Summarize evidence:1.", response_schema_json="",
+        max_output_tokens=32,
+    )
+
+    with pytest.raises(inference.OwnedInferenceBlocked, match="PRETRAINED_RUNTIME_CLOSED"):
+        runtime.measure_request(request)
+    with pytest.raises(inference.OwnedInferenceBlocked, match="PRETRAINED_RUNTIME_CLOSED"):
+        runtime.generate(request)
+
+
+def test_pretrained_cpu_thread_restore_failure_is_explicit_and_not_swallowed(monkeypatch):
+    class _Tokenizer:
+        eos_token_id = 2
+        pad_token_id = None
+
+        def __call__(self, _prompt, **_kwargs):
+            return {"input_ids": _Tensor([[1]])}
+
+        def decode(self, _tokens, *, skip_special_tokens):
+            assert skip_special_tokens is True
+            return "bounded response"
+
+    class _Model:
+        def generate(self, **_kwargs):
+            return _Tensor([[1, 2]])
+
+    class _Torch:
+        calls = 0
+
+        def get_num_threads(self):
+            return 1
+
+        def set_num_threads(self, _value):
+            self.calls += 1
+            if self.calls == 2:
+                raise RuntimeError("thread count restore failed")
+
+        def inference_mode(self):
+            return contextlib.nullcontext()
+
+    transformers = types.ModuleType("transformers")
+    transformers.StoppingCriteria = type("StoppingCriteria", (), {})
+    transformers.StoppingCriteriaList = list
+    monkeypatch.setitem(sys.modules, "transformers", transformers)
+    monkeypatch.setattr(inference, "_current_process_rss_bytes", lambda: 0)
+    kernel = inference._PretrainedCPUTextKernel(
+        _Model(), _Tokenizer(), _Torch(),
+        types.SimpleNamespace(generation_timeout_seconds=60, context_window_tokens=32,
+                              cpu_threads=2), "/unused-test-path", {},
+    )
+
+    with pytest.raises(inference.OwnedInferenceBlocked,
+                       match="PRETRAINED_CPU_THREAD_RESTORE_FAILED"):
+        kernel.generate("prompt", 8, is_cancelled=lambda: False, memory_limit_bytes=1024**3)
+
+
 def test_t4_loader_and_generation_are_explicitly_offline_and_use_user_input_only(candidate, fake_stack):
     calls, tokenizer = fake_stack
     local = _load(candidate)
@@ -428,9 +588,9 @@ def test_production_inspection_forms_real_pins_without_loading_weights(candidate
         inference._production_runtime_identity(_production_parts(candidate), 4096, 1200)
 
 
-def test_production_loader_requires_canonical_admission_before_loading(candidate, fake_stack):
+def test_retired_cuda_production_loader_is_withdrawn_before_loading(candidate, fake_stack):
     calls, _ = fake_stack
-    with pytest.raises(inference.OwnedInferenceBlocked, match="ADMISSION_VERIFIER_REQUIRED"):
+    with pytest.raises(inference.OwnedInferenceBlocked, match="TRAINED_CUDA_RUNTIME_WITHDRAWN_BY_PO"):
         inference.load_owned_production_runtime(
             candidate["model"], candidate["train"], candidate["heldout"], candidate["output"],
             manifest_path=candidate["manifest"], expected_adapter_sha256=candidate["adapter_sha"],
@@ -604,12 +764,12 @@ def test_production_rejects_placeholder_source_audits(production_unit):
     assert calls["model"].generated == []
 
 
-def test_production_factory_rejects_shadowed_admission_recheck_before_loading(candidate, fake_stack):
+def test_retired_cuda_production_loader_does_not_recheck_or_load(candidate, fake_stack):
     from lumenis.system.security.owned_model_admission import OwnedModelAdmissionVerifier
     verifier = object.__new__(OwnedModelAdmissionVerifier)
     verifier.recheck = lambda: types.SimpleNamespace(allowed=True)
     calls, _ = fake_stack
-    with pytest.raises(inference.OwnedInferenceBlocked, match="VERIFIER_IMPLEMENTATION_CHANGED"):
+    with pytest.raises(inference.OwnedInferenceBlocked, match="TRAINED_CUDA_RUNTIME_WITHDRAWN_BY_PO"):
         inference.load_owned_production_runtime(
             candidate["model"], candidate["train"], candidate["heldout"], candidate["output"],
             manifest_path=candidate["manifest"], expected_adapter_sha256=candidate["adapter_sha"],
@@ -619,22 +779,17 @@ def test_production_factory_rejects_shadowed_admission_recheck_before_loading(ca
     assert calls["base_load"] == calls["adapter_load"] == []
 
 
-def test_production_factory_detects_base_snapshot_changed_during_load(production_unit, candidate, monkeypatch):
-    runtime, _request_value, _state, calls, _tokenizer, admission = production_unit
-    original = inference._load_local_kernel
-    def load_and_change(parts, **kwargs):
-        result = original(parts, **kwargs)
-        (candidate["model"] / "model-00001-of-00004.safetensors").write_bytes(b"changed base weight")
-        return result
-    monkeypatch.setattr(inference, "_load_local_kernel", load_and_change)
-    with pytest.raises((inference.OwnedInferenceBlocked, training.TrainingBlocked), match="HASH|SIZE|MANIFEST|FILE"):
+def test_retired_cuda_production_loader_never_enters_kernel(candidate, fake_stack, monkeypatch):
+    calls, _ = fake_stack
+    monkeypatch.setattr(inference, "_load_local_kernel", lambda *args, **kwargs: pytest.fail("retired CUDA kernel loaded"))
+    with pytest.raises(inference.OwnedInferenceBlocked, match="TRAINED_CUDA_RUNTIME_WITHDRAWN_BY_PO"):
         inference.load_owned_production_runtime(
             candidate["model"], candidate["train"], candidate["heldout"], candidate["output"],
             manifest_path=candidate["manifest"], expected_adapter_sha256=candidate["adapter_sha"],
-            expected_adapter_config_sha256=candidate["config_sha"], admission=admission,
-            source_validator=runtime._source_validator,
+            expected_adapter_config_sha256=candidate["config_sha"], admission=object(),
+            source_validator=lambda _request: True,
         )
-    assert len(calls["base_load"]) == 2
+    assert calls["base_load"] == calls["adapter_load"] == []
 
 
 def test_measure_uses_same_production_formatter_and_loaded_tokenizer_without_generation(production_unit, monkeypatch):

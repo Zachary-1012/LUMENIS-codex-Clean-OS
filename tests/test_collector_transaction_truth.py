@@ -136,6 +136,7 @@ def collector_case(tmp_path, monkeypatch):
     """Bind every persistence owner to a fresh v19 temp DB and real PermissionGate."""
     db_path = tmp_path / "collector-transaction.sqlite3"
     monkeypatch.setenv("ZBC_DB_PATH", str(db_path))
+    monkeypatch.setenv("ZBC_ARTIFACT_DIR", str(tmp_path / "artifacts"))
     monkeypatch.setenv(
         "LUMENIS_EVIDENCE_HMAC_KEY_RING",
         json.dumps({"collector-transaction-test": "isolated-test-signing-key-only"}),
@@ -143,11 +144,16 @@ def collector_case(tmp_path, monkeypatch):
     monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "collector-transaction-test")
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
 
+    import config
+    monkeypatch.setattr(config, "ENV_FILE", str(tmp_path / "isolated-no-env"))
+
     import database
     import experience_runtime
     import subject_registry
     from lumenis.shared.database import migrations
+    from lumenis.shared.database import repository as database_repository
     from lumenis.shared.evidence import store as evidence_store
+    import shared_artifacts
     from lumenis.system import security
     from lumenis.system.collector.adapters import secondary_collection as surface
     from lumenis.system.collector.adapters.public_source import PublicResponse
@@ -158,10 +164,13 @@ def collector_case(tmp_path, monkeypatch):
     monkeypatch.setattr(migrations, "DB_PATH", str(db_path))
     monkeypatch.setattr(migrations, "BACKUP_DIR", str(tmp_path / "backups"))
     monkeypatch.setattr(permission, "_TESTING_BYPASS_ENABLED", False)
+    repository = database_repository.DatabaseRepository(str(db_path))
+    monkeypatch.setattr(database_repository, "_default_repository", repository)
 
     database.init_db()
     assert migrations.migrate(target_version=19) is True
     evidence_store.init_evidence_store(str(db_path))
+    shared_artifacts.ensure_artifact_table()
     with migrations.get_connection() as connection:
         assert migrations.get_current_version(connection) == 19
         assert {name: connection.execute(f"SELECT COUNT(*) FROM {name}").fetchone()[0]
@@ -225,6 +234,9 @@ def collector_case(tmp_path, monkeypatch):
 
     return {
         "db_path": db_path,
+        "repository": repository,
+        "evidence_store": evidence_store,
+        "subject_registry": subject_registry,
         "client": client,
         "gate": gate,
         "surface": surface,
@@ -237,6 +249,84 @@ def collector_case(tmp_path, monkeypatch):
         "run_logs": run_logs,
         "reset_rate_limit": reset_rate_limit,
     }
+
+
+def admit_registered_subject_for_isolated_collector(case: dict) -> None:
+    """Give focused collector fixtures current, Evidence-backed CN identity."""
+    if case.get("subject_operation_note_id"):
+        return
+    from datetime import datetime, timedelta
+
+    from lumenis.shared.database.entity_relations import EntityRelationRepository
+
+    subject_id = case["scope"]["subject_id"]
+    note_id = "fixture-cn-operation-current"
+    source_url = "https://public.example.test/registered-venue-operation-evidence"
+    captured_at = datetime.now().astimezone().isoformat(timespec="seconds")
+    evidence_ref = case["evidence_store"].record_evidence(
+        source="public_http",
+        project="LUMENIS",
+        product="CTH",
+        feature_id="COLLECTOR_SUBJECT_DIRECTORY_FIXTURE",
+        test_name="current_china_operation_source_fixture",
+        result="PASS",
+        status="verified",
+        capture_mode="manual",
+        captured_at=captured_at,
+        inputs={"source_ids": [note_id]},
+        outputs={"source_read": True},
+        metric_name="subject_operation_source",
+        metric_value="PASS",
+        domain_id="cth",
+        subject_id=subject_id,
+        global_scope=False,
+    )
+    with case["repository"].transaction() as connection:
+        connection.execute(
+            "INSERT INTO notes (note_id, title, content, url, product_id, domain_id, "
+            "subject_id, brand_focus_id, scope_status, scope_evidence_ref) "
+            "VALUES (?, ?, ?, ?, 'CTH', 'cth', ?, NULL, 'VERIFIED', ?)",
+            (
+                note_id,
+                "Registered venue operation evidence",
+                "Verified public evidence that the registered venue operates in China.",
+                source_url,
+                subject_id,
+                str(evidence_ref),
+            ),
+        )
+        relation_id = EntityRelationRepository(connection).record_country_relation(
+            domain_id="CTH",
+            subject_id=subject_id,
+            relation_type="OPERATES_IN",
+            country_iso="CN",
+            source_evidence_ref=evidence_ref,
+            source_note_id=note_id,
+            valid_time_kind="INTERVAL",
+            valid_from=(datetime.now().astimezone() - timedelta(days=1)).isoformat(
+                timespec="seconds"
+            ),
+        )
+        connection.execute(
+            "UPDATE lumenis_entity_relation_assertions SET review_status='ACCEPTED' "
+            "WHERE assertion_id=?",
+            (relation_id,),
+        )
+
+    with case["client"].application.test_request_context(
+        "/", headers=case["focus_headers"],
+        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
+    ):
+        actor = case["permission"].resolve_local_workspace_principal(
+            module="collector", action="write",
+        )
+        decision = case["surface"]._subject_directory_decision(actor, case["scope"])
+    assert decision == {
+        "allowed": True,
+        "status": "IN_WORKING_SET",
+        "subject_id": subject_id,
+    }, decision
+    case["subject_operation_note_id"] = note_id
 
 
 def _post(case, *, headers=None):

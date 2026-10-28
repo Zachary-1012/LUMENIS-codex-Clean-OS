@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/ai01/ai01_conversation_panel.dart';
 import 'package:lumenis_app/features/ai01/ai01_conversations.dart';
@@ -18,6 +20,411 @@ void main() {
   });
 
   tearDown(() => model.dispose());
+
+  for (final (error, expected) in <(Object, String)>[
+    (const LumenisCoreException('connection unavailable'), 'offline'),
+    (
+      const FormatException('invalid conversation response'),
+      'invalid_response',
+    ),
+  ]) {
+    test(
+      'reading a conversation reports $expected without an uncertain write',
+      () async {
+        repository.listError = error;
+        await model.refreshList();
+        expect(model.issue, expected);
+        expect(model.outcomeUnknown, isFalse);
+        expect(model.creatingUnknown, isFalse);
+        expect(repository.respondCalls, isEmpty);
+        repository.listError = null;
+        await model.refreshList();
+        expect(model.issue, isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'work details save, reopen and exclude messages without requesting AI',
+    (tester) async {
+      await model.createConversation();
+      await repository.append(
+        conversationId: model.selectedId!,
+        text: 'obsolete budget is 100',
+        idempotencyKey: 'original',
+        expectedRevision: 1,
+      );
+      await model.open(model.selectedId!);
+      final draft = TextEditingController(text: 'unsent composer stays');
+      addTearDown(draft.dispose);
+      await tester.pumpWidget(_conversationApp(model, draft));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-open')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-conversation-context-goal')),
+        'finish the existing manuscript',
+      );
+      await _showContextField(tester, 'draft');
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-conversation-context-draft')),
+        'current human writing',
+      );
+      final exclude = find.byKey(
+        ValueKey(
+          'ai01-conversation-context-exclude-${repository.userTurns.single.id}',
+        ),
+      );
+      await tester.scrollUntilVisible(
+        exclude,
+        160,
+        scrollable: _contextScroll(),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(exclude);
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-save')),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.contextWriteCount, 1);
+      expect(
+        repository.contexts[model.selectedId!]!.value['draft'],
+        'current human writing',
+      );
+      expect(
+        repository.contexts[model.selectedId!]!.value['excluded_turn_ids'],
+        [repository.userTurns.single.id],
+      );
+      expect(repository.respondCalls, isEmpty);
+      expect(draft.text, 'unsent composer stays');
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-close')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-open')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('ai01-conversation-context-goal')),
+            )
+            .controller!
+            .text,
+        'finish the existing manuscript',
+      );
+      await _showContextField(tester, 'draft');
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('ai01-conversation-context-draft')),
+            )
+            .controller!
+            .text,
+        'current human writing',
+      );
+      expect(repository.respondCalls, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'work-detail conflict keeps local writing until an explicit version choice',
+    (tester) async {
+      await model.createConversation();
+      repository.contextConflictOnce = true;
+      final draft = TextEditingController();
+      addTearDown(draft.dispose);
+      await tester.pumpWidget(_conversationApp(model, draft));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-open')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-conversation-context-goal')),
+        'my unchanged goal',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-save')),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.contextWriteCount, 1);
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('ai01-conversation-context-goal')),
+            )
+            .controller!
+            .text,
+        'my unchanged goal',
+      );
+      expect(
+        repository.contexts[model.selectedId!]!.value['goal'],
+        'remote goal',
+      );
+      final keep = find.byKey(
+        const ValueKey('ai01-conversation-context-keep-local'),
+      );
+      await tester.scrollUntilVisible(keep, -160, scrollable: _contextScroll());
+      await tester.tap(keep);
+      await tester.pumpAndSettle();
+      expect(repository.contextWriteCount, 2);
+      expect(
+        repository.contexts[model.selectedId!]!.value['goal'],
+        'my unchanged goal',
+      );
+      expect(repository.respondCalls, isEmpty);
+    },
+  );
+
+  testWidgets(
+    'unknown context save checks persisted bytes before any new write',
+    (tester) async {
+      await model.createConversation();
+      repository.contextThrowsAfterPersist = true;
+      final draft = TextEditingController();
+      addTearDown(draft.dispose);
+      await tester.pumpWidget(_conversationApp(model, draft));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-open')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('ai01-conversation-context-goal')),
+        'save without a model',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-save')),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.contextWriteCount, 1);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('ai01-conversation-context-save')),
+            )
+            .onPressed,
+        isNull,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-check')),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.contextWriteCount, 1);
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const ValueKey('ai01-conversation-context-goal')),
+            )
+            .controller!
+            .text,
+        'save without a model',
+      );
+      expect(repository.respondCalls, isEmpty);
+    },
+  );
+
+  for (final status in [401, 403, 404, 410]) {
+    testWidgets('context read $status clears writing and cached conversation', (
+      tester,
+    ) async {
+      await model.createConversation();
+      final composer = TextEditingController(text: 'unsent independent draft');
+      addTearDown(composer.dispose);
+      await tester.pumpWidget(_conversationApp(model, composer));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-open')),
+      );
+      await tester.pumpAndSettle();
+      final controllers = <TextEditingController>[];
+      for (final name in ['goal', 'constraints', 'draft', 'decisions']) {
+        await _showContextField(tester, name);
+        final field = find.byKey(ValueKey('ai01-conversation-context-$name'));
+        await tester.enterText(field, 'restricted $name');
+        controllers.add(tester.widget<TextField>(field).controller!);
+      }
+      repository.contextReadStatus = status;
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-check')),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        controllers.map((controller) => controller.text),
+        everyElement(isEmpty),
+      );
+      expect(model.detail, isNull);
+      expect(repository.contextWriteCount, 0);
+      expect(composer.text, 'unsent independent draft');
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.byKey(const ValueKey('ai01-conversation-context-save')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(repository.respondCalls, isEmpty);
+    });
+  }
+
+  for (final revokedRead in [false, true]) {
+    testWidgets('context write denial rechecks read, revoked=$revokedRead', (
+      tester,
+    ) async {
+      await model.createConversation();
+      final composer = TextEditingController();
+      addTearDown(composer.dispose);
+      await tester.pumpWidget(_conversationApp(model, composer));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-open')),
+      );
+      await tester.pumpAndSettle();
+      final field = find.byKey(
+        const ValueKey('ai01-conversation-context-goal'),
+      );
+      await tester.enterText(field, 'keep only while readable');
+      await tester.pumpAndSettle();
+      repository.contextWriteStatus = 403;
+      if (revokedRead) repository.contextReadStatus = 403;
+      await tester.tap(
+        find.byKey(const ValueKey('ai01-conversation-context-save')),
+      );
+      await tester.pumpAndSettle();
+      expect(repository.contextReadCount, 2);
+      expect(repository.contextWriteCount, 1);
+      expect(
+        tester.widget<TextField>(field).controller!.text,
+        revokedRead ? '' : 'keep only while readable',
+      );
+      expect(model.detail == null, revokedRead);
+      expect(repository.respondCalls, isEmpty);
+    });
+  }
+
+  for (final writeDenied in [false, true]) {
+    testWidgets(
+      'unknown context read retains local writing, denied write=$writeDenied',
+      (tester) async {
+        await model.createConversation();
+        final composer = TextEditingController();
+        addTearDown(composer.dispose);
+        await tester.pumpWidget(_conversationApp(model, composer));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('ai01-conversation-context-open')),
+        );
+        await tester.pumpAndSettle();
+        final field = find.byKey(
+          const ValueKey('ai01-conversation-context-goal'),
+        );
+        await tester.enterText(
+          field,
+          'local writing survives transport failure',
+        );
+        await tester.pumpAndSettle();
+        repository.contextReadOffline = true;
+        if (writeDenied) repository.contextWriteStatus = 403;
+        await tester.tap(
+          find.byKey(
+            ValueKey(
+              writeDenied
+                  ? 'ai01-conversation-context-save'
+                  : 'ai01-conversation-context-check',
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          tester.widget<TextField>(field).controller!.text,
+          'local writing survives transport failure',
+        );
+        expect(repository.contextWriteCount, writeDenied ? 1 : 0);
+        expect(model.detail, isNotNull);
+        expect(repository.respondCalls, isEmpty);
+      },
+    );
+  }
+
+  testWidgets('server-unknown context save keeps draft and requires readback', (
+    tester,
+  ) async {
+    await model.createConversation();
+    final composer = TextEditingController();
+    addTearDown(composer.dispose);
+    await tester.pumpWidget(_conversationApp(model, composer));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('ai01-conversation-context-open')),
+    );
+    await tester.pumpAndSettle();
+    final field = find.byKey(const ValueKey('ai01-conversation-context-goal'));
+    await tester.enterText(field, 'unknown save must not lose this');
+    await tester.pumpAndSettle();
+    repository.contextWriteStatus = 503;
+    await tester.tap(
+      find.byKey(const ValueKey('ai01-conversation-context-save')),
+    );
+    await tester.pumpAndSettle();
+    expect(repository.contextWriteCount, 1);
+    expect(
+      tester.widget<TextField>(field).controller!.text,
+      'unknown save must not lose this',
+    );
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.byKey(const ValueKey('ai01-conversation-context-save')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(repository.contextReadCount, 1);
+  });
+
+  testWidgets(
+    'keyboard submit waits for IME composition and persists the final text once',
+    (tester) async {
+      final draft = TextEditingController();
+      addTearDown(draft.dispose);
+      await tester.pumpWidget(_conversationApp(model, draft, embedded: true));
+      await tester.pumpAndSettle();
+      final input = find.byKey(const ValueKey('ai01-conversation-input'));
+      await tester.enterText(input, '经营分析');
+      draft.value = const TextEditingValue(
+        text: '经营分析',
+        selection: TextSelection.collapsed(offset: 4),
+        composing: TextRange(start: 0, end: 4),
+      );
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+      expect(repository.conversations, isEmpty);
+      expect(repository.appendedTexts, isEmpty);
+      draft.value = const TextEditingValue(
+        text: '经营分析',
+        selection: TextSelection.collapsed(offset: 4),
+      );
+      await tester.pump();
+      await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+      await tester.pumpAndSettle();
+      expect(repository.appendedTexts, ['经营分析']);
+      expect(repository.respondCalls, hasLength(1));
+      expect(draft.text, isEmpty);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   test(
     'persists the original message, replies once, and reopens saved turns',
@@ -430,7 +837,104 @@ Widget _conversationApp(
 const _conversationId = 'conv_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _secondConversationId = 'conv_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
+Finder _contextScroll() => find
+    .descendant(
+      of: find.byKey(const ValueKey('ai01-conversation-context-editor')),
+      matching: find.byType(Scrollable),
+    )
+    .first;
+
+Future<void> _showContextField(WidgetTester tester, String name) async {
+  await tester.scrollUntilVisible(
+    find.byKey(ValueKey('ai01-conversation-context-$name')),
+    140,
+    scrollable: _contextScroll(),
+  );
+  await tester.pumpAndSettle();
+}
+
 class _ConversationRepository implements Ai01ConversationRepository {
+  Object? listError;
+  final contexts = <String, Ai01ConversationContext>{};
+  int contextWriteCount = 0;
+  bool contextConflictOnce = false;
+  bool contextThrowsAfterPersist = false;
+  int contextReadCount = 0;
+  int? contextReadStatus;
+  int? contextWriteStatus;
+  bool contextReadOffline = false;
+
+  @override
+  Future<Ai01ConversationContext> readContext(String conversationId) async {
+    contextReadCount++;
+    if (contextReadStatus case final int status) {
+      throw LumenisCoreException('context read denied', statusCode: status);
+    }
+    if (contextReadOffline) throw const SocketException('read unavailable');
+    return Ai01ConversationContext(
+      conversationId: conversationId,
+      revision: conversations[conversationId]!.revision,
+      value:
+          contexts[conversationId]?.value ??
+          {
+            'goal': '',
+            'constraints': <String>[],
+            'draft': '',
+            'decisions': <String>[],
+            'excluded_turn_ids': <String>[],
+          },
+      turn: contexts[conversationId]?.turn,
+    );
+  }
+
+  @override
+  Future<Ai01ConversationMutation> updateContext({
+    required String conversationId,
+    required Map<String, dynamic> value,
+    required String idempotencyKey,
+    required int expectedRevision,
+    List<Map<String, dynamic>>? sourceReferences,
+  }) async {
+    contextWriteCount++;
+    if (contextWriteStatus case final int status) {
+      throw LumenisCoreException('context write denied', statusCode: status);
+    }
+    if (contextConflictOnce) {
+      contextConflictOnce = false;
+      _writeContext(conversationId, {...value, 'goal': 'remote goal'});
+    }
+    if (expectedRevision != conversations[conversationId]!.revision) {
+      throw const LumenisCoreException('stale version', statusCode: 409);
+    }
+    final result = _writeContext(conversationId, value);
+    if (contextThrowsAfterPersist) {
+      contextThrowsAfterPersist = false;
+      throw const SocketException('context receipt lost');
+    }
+    return result;
+  }
+
+  Ai01ConversationMutation _writeContext(
+    String conversationId,
+    Map<String, dynamic> value,
+  ) {
+    final turn = _turn(
+      conversationId,
+      role: 'user',
+      originKind: 'system_status',
+      content: {'schema': 'conversation-human-context/v1', 'value': value},
+    );
+    _append(conversationId, turn);
+    final revision = _advance(conversationId);
+    contexts[conversationId] = Ai01ConversationContext(
+      conversationId: conversationId,
+      revision: revision,
+      value: value,
+      turn: turn,
+    );
+    return _mutation(turn, revision);
+  }
+
   final conversations = <String, Ai01ConversationSummary>{};
   final turns = <String, List<Ai01ConversationTurn>>{};
   final appendedTexts = <String>[];
@@ -458,6 +962,7 @@ class _ConversationRepository implements Ai01ConversationRepository {
     required int limit,
     required int offset,
   }) async {
+    if (listError case final Object error) throw error;
     listOffsets.add(offset);
     final items = conversations.values.toList()
       ..sort((left, right) => right.updatedAt.compareTo(left.updatedAt));
@@ -491,6 +996,12 @@ class _ConversationRepository implements Ai01ConversationRepository {
     required int limit,
   }) async {
     readCursors.add(afterSequence);
+    if (contextReadStatus case final int status) {
+      throw LumenisCoreException(
+        'conversation read denied',
+        statusCode: status,
+      );
+    }
     final summary = conversations[conversationId];
     if (summary == null) throw StateError('missing conversation');
     final allTurns = turns[conversationId]!;

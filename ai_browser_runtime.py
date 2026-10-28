@@ -61,6 +61,7 @@ MAX_HUMAN_LINKS = 40
 MAX_HUMAN_LINK_SCAN = 1000
 MAX_HUMAN_LINK_LABEL_LENGTH = 160
 MAX_HUMAN_LINK_URL_LENGTH = 2048
+HUMAN_NAVIGATION_CONFIRMATION_TTL_SECONDS = 90
 
 # Circuit Breaker 配置
 CB_FAILURE_THRESHOLD = 5                 # 连续失败 N 次熔断
@@ -146,6 +147,14 @@ class BrowserFrameStaleError(RuntimeError):
 
 class BrowserLinkError(RuntimeError):
     """A server-resolved page link is unavailable or no longer current."""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.code = code
+
+
+class BrowserNavigationPolicyError(PermissionError):
+    """A requested navigation was denied by the existing URL policy."""
 
     def __init__(self, code: str):
         super().__init__(code)
@@ -258,6 +267,32 @@ def _approved_human_link_destination(value: Any) -> str | None:
     if not isinstance(policy, dict) or policy.get("allowed") is not True:
         return None
     return safe_browser_display_url(value) or None
+
+
+def _main_document_target_key(value: Any) -> str | None:
+    """Canonicalize the network URL for a single-main-document exception.
+
+    Fragments are omitted because they are not sent in the document request;
+    path and query remain bound so a confirmation cannot authorize another URL.
+    """
+    if (not isinstance(value, str) or not value or len(value) > MAX_HUMAN_LINK_URL_LENGTH
+            or any(ord(char) < 0x20 or ord(char) == 0x7f for char in value)):
+        return None
+    try:
+        parsed = urlsplit(value)
+        if (parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname
+                or parsed.username is not None or parsed.password is not None):
+            return None
+        host = parsed.hostname.encode("idna").decode("ascii").lower()
+        port = parsed.port
+        if port == (443 if parsed.scheme.lower() == "https" else 80):
+            port = None
+        if ":" in host:
+            host = f"[{host}]"
+        netloc = f"{host}:{port}" if port is not None else host
+        return urlunsplit((parsed.scheme.lower(), netloc, parsed.path or "/", parsed.query, ""))
+    except (UnicodeError, ValueError):
+        return None
 
 
 class BrowserSessionBindingError(ValueError):
@@ -1459,7 +1494,9 @@ class AIBrowserRuntime:
         self._human_link_choices: dict[str, dict[str, Any]] = {}
         self._human_link_frame_binding: dict[str, Any] | None = None
         self._human_link_lease_digest: str | None = None
-        self._active_human_link_navigation_guard: dict[str, bool] | None = None
+        self._active_navigation_guard: dict[str, Any] | None = None
+        self._navigation_confirmation_lock = threading.Lock()
+        self._pending_navigation_confirmation: dict[str, Any] | None = None
 
         # 组件
         self.verifier = ActionVerifier()
@@ -1615,6 +1652,7 @@ class AIBrowserRuntime:
                 self._human_control_token_digest = None
                 self._human_control_expires_at = 0.0
             self._invalidate_human_links()
+            self._invalidate_navigation_confirmation()
             self._latest_frame_binding = None
             self._latest_frame_image_sha256 = None
             self._latest_frame_document_url = None
@@ -2212,6 +2250,7 @@ class AIBrowserRuntime:
                 self._human_control_expires_at, tz=timezone.utc
             ).isoformat()
         self._invalidate_human_links()
+        self._invalidate_navigation_confirmation()
         return {
             "lease_token": token,
             "lease_ttl_seconds": lease_seconds,
@@ -2235,7 +2274,159 @@ class AIBrowserRuntime:
             self._human_control_token_digest = None
             self._human_control_expires_at = 0.0
         self._invalidate_human_links()
+        self._invalidate_navigation_confirmation()
         return True
+
+    def prepare_human_navigation(
+        self,
+        *,
+        url: str,
+        human_control_token: str | None,
+        frame_binding: Any,
+        confirmation_id: str | None = None,
+        task_id: str | None = None,
+        run_id: str | None = None,
+        step_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Validate a manual navigation and its optional one-use confirmation.
+
+        The confirmation is session-local and binds the exact URL, current
+        document/frame identity, human lease, actor/session owner, and task/run.
+        It never grants agent navigation or changes the global URL policy.
+        """
+        if self._browser_worker and threading.get_ident() != self._browser_thread_id:
+            return self._run_on_browser_thread(lambda: self.prepare_human_navigation(
+                url=url,
+                human_control_token=human_control_token,
+                frame_binding=frame_binding,
+                confirmation_id=confirmation_id,
+                task_id=task_id,
+                run_id=run_id,
+                step_id=step_id,
+            ))
+        if self.status != SessionStatus.RUNNING or self._page is None:
+            raise BrowserHumanControlError("BROWSER_SESSION_NOT_RUNNING")
+        if (not isinstance(url, str) or not url or len(url) > MAX_HUMAN_LINK_URL_LENGTH
+                or any(ord(char) < 0x20 or ord(char) == 0x7f for char in url)):
+            return {"status": "blocked", "error_code": "BROWSER_URL_INVALID"}
+        if step_id is not None and (not isinstance(step_id, str) or len(step_id) > 128):
+            return {"status": "blocked", "error_code": "BROWSER_TASK_STEP_INVALID"}
+        target_key = _main_document_target_key(url)
+        if target_key is None:
+            return {"status": "blocked", "error_code": "BROWSER_URL_CREDENTIALS_OR_FORMAT_NOT_ALLOWED"}
+
+        self._begin_control_action(
+            control_mode="human",
+            human_control_token=human_control_token,
+        )
+        try:
+            self.assert_current_frame_binding(frame_binding)
+            resolved_task_id, resolved_run_id = self._resolve_task_trace(task_id, run_id)
+            try:
+                import browser_surface
+                policy = browser_surface.evaluate_navigation(url)
+            except Exception:
+                logger.exception("AI Browser navigation policy read failed", exc_info=False)
+                return {"status": "blocked", "error_code": "BROWSER_NAVIGATION_POLICY_UNAVAILABLE"}
+
+            if policy.get("status") == "blocked":
+                self._invalidate_navigation_confirmation()
+                return {
+                    "status": "blocked",
+                    "error_code": "BROWSER_NAVIGATION_BLOCKED",
+                    "reason": sanitize_sensitive(str(policy.get("reason") or "URL rejected by browser policy")[:240]),
+                }
+            if policy.get("allowed") is True:
+                if confirmation_id is None:
+                    self._invalidate_navigation_confirmation()
+                    return {"status": "allowed"}
+            elif policy.get("status") != "need_confirmation":
+                self._invalidate_navigation_confirmation()
+                return {"status": "blocked", "error_code": "BROWSER_NAVIGATION_POLICY_UNAVAILABLE"}
+
+            with self._control_lock:
+                self._expire_human_control_locked()
+                lease_digest = self._human_control_token_digest
+            if lease_digest is None:
+                raise BrowserHumanControlError("BROWSER_HUMAN_LEASE_EXPIRED")
+            binding = self._current_frame_binding_copy()
+            frame_identity = {
+                "target_id": binding["target_id"],
+                "page_revision": binding["page_revision"],
+                "viewport": dict(binding["viewport"]),
+            }
+            document_url = self._page.url
+            document_digest = hashlib.sha256(str(document_url).encode("utf-8")).hexdigest()
+            url_digest = hashlib.sha256(url.encode("utf-8")).hexdigest()
+            owner_binding = (
+                self.owner_actor_id,
+                self.owner_account_session_id,
+                self.owner_principal_ref,
+            )
+
+            if confirmation_id is None:
+                if policy.get("status") != "need_confirmation":
+                    return {"status": "allowed"}
+                confirmation_id = f"bnc_{secrets.token_urlsafe(24)}"
+                with self._navigation_confirmation_lock:
+                    self._pending_navigation_confirmation = {
+                        "confirmation_id": confirmation_id,
+                        "url_sha256": url_digest,
+                        "target_key": target_key,
+                        "lease_digest": lease_digest,
+                        "owner_binding": owner_binding,
+                        "frame_identity": frame_identity,
+                        "document_sha256": document_digest,
+                        "task_id": resolved_task_id,
+                        "run_id": resolved_run_id,
+                        "step_id": step_id,
+                        "expires_at": time.monotonic() + HUMAN_NAVIGATION_CONFIRMATION_TTL_SECONDS,
+                    }
+                display_target = safe_browser_display_url(url)
+                if not display_target:
+                    self._invalidate_navigation_confirmation()
+                    return {"status": "blocked", "error_code": "BROWSER_URL_INVALID"}
+                return {
+                    "status": "confirmation_required",
+                    "error_code": "BROWSER_NAVIGATION_CONFIRMATION_REQUIRED",
+                    "confirmation_id": confirmation_id,
+                    "confirmation_target": display_target,
+                    "confirmation_ttl_seconds": HUMAN_NAVIGATION_CONFIRMATION_TTL_SECONDS,
+                }
+
+            if (not isinstance(confirmation_id, str)
+                    or not re.fullmatch(r"bnc_[A-Za-z0-9_-]{24,64}", confirmation_id)):
+                return {"status": "stale", "error_code": "BROWSER_NAVIGATION_CONFIRMATION_STALE"}
+            with self._navigation_confirmation_lock:
+                pending = self._pending_navigation_confirmation
+                if (isinstance(pending, dict)
+                        and hmac.compare_digest(pending.get("confirmation_id", ""), confirmation_id)):
+                    self._pending_navigation_confirmation = None
+                else:
+                    pending = None
+
+            is_valid = (
+                isinstance(pending, dict)
+                and time.monotonic() < pending.get("expires_at", 0.0)
+                and hmac.compare_digest(pending.get("url_sha256", ""), url_digest)
+                and hmac.compare_digest(pending.get("lease_digest", ""), lease_digest)
+                and pending.get("owner_binding") == owner_binding
+                and pending.get("frame_identity") == frame_identity
+                and hmac.compare_digest(pending.get("document_sha256", ""), document_digest)
+                and pending.get("task_id") == resolved_task_id
+                and pending.get("run_id") == resolved_run_id
+                and pending.get("step_id") == step_id
+                and pending.get("target_key") == target_key
+            )
+            if not is_valid:
+                return {"status": "stale", "error_code": "BROWSER_NAVIGATION_CONFIRMATION_STALE"}
+            return {"status": "confirmed"}
+        finally:
+            self._end_control_action()
+
+    def _invalidate_navigation_confirmation(self) -> None:
+        with self._navigation_confirmation_lock:
+            self._pending_navigation_confirmation = None
 
     def bind_task_admission(self, admission, *, actor):
         """Internal original-Task bridge; a metadata seal never grants browser effects.
@@ -2601,15 +2792,20 @@ class AIBrowserRuntime:
                 agent_id="human_direct",
                 risk_level="medium",
                 human_link_navigation_guard=True,
+                human_navigation_confirmation_url=None,
             )
         finally:
             self._end_control_action()
 
-    def _run_with_human_link_navigation_guard(
+    def _run_with_navigation_guard(
         self,
         operation: Callable[[], ActionExecutionResult],
+        *,
+        requested_target_url: str | None = None,
+        confirmed_target_url: str | None = None,
+        link_action: bool = False,
     ) -> ActionExecutionResult:
-        """Check each main-frame document request, including redirect hops, before send."""
+        """Check every main-frame document request, including each redirect hop."""
         if self._context is None or self._page is None:
             raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_UNAVAILABLE")
         try:
@@ -2619,7 +2815,13 @@ class AIBrowserRuntime:
 
         cdp = None
         fetch_enable_attempted = False
-        guard_state = {"blocked": False, "guard_failed": False}
+        requested_target_key = _main_document_target_key(requested_target_url)
+        confirmed_target_key = _main_document_target_key(confirmed_target_url)
+        guard_state = {
+            "blocked": False,
+            "guard_failed": False,
+            "block_code": "BROWSER_NAVIGATION_REDIRECT_BLOCKED",
+        }
 
         def close_owned_context() -> None:
             try:
@@ -2687,6 +2889,14 @@ class AIBrowserRuntime:
                 request_url = request.get("url") if isinstance(request, dict) else None
                 try:
                     approved = _approved_human_link_destination(request_url)
+                    # The confirmation authorizes only the exact requested
+                    # document URL. Redirects must independently pass policy.
+                    if (approved is None and confirmed_target_key is not None
+                            and _main_document_target_key(request_url) == confirmed_target_key):
+                        import browser_surface
+                        current_policy = browser_surface.evaluate_navigation(request_url)
+                        if current_policy.get("status") == "need_confirmation":
+                            approved = safe_browser_display_url(request_url) or None
                 except Exception:
                     logger.exception(
                         "[AIBrowserRuntime] Human link navigation policy failed closed",
@@ -2695,6 +2905,11 @@ class AIBrowserRuntime:
                     approved = None
                 if approved is None:
                     guard_state["blocked"] = True
+                    if link_action:
+                        guard_state["block_code"] = "BROWSER_LINK_DESTINATION_BLOCKED"
+                    elif (requested_target_key is not None
+                            and _main_document_target_key(request_url) == requested_target_key):
+                        guard_state["block_code"] = "BROWSER_NAVIGATION_BLOCKED"
                     respond(request_id, "Fetch.failRequest")
                     return
                 respond(request_id, "Fetch.continueRequest")
@@ -2758,13 +2973,13 @@ class AIBrowserRuntime:
             )
             raise BrowserLinkError("BROWSER_NAVIGATION_GUARD_UNAVAILABLE") from None
 
-        self._active_human_link_navigation_guard = guard_state
+        self._active_navigation_guard = guard_state
         result: ActionExecutionResult | None = None
         cleanup_failed = False
         try:
             result = operation()
         finally:
-            self._active_human_link_navigation_guard = None
+            self._active_navigation_guard = None
             if guard_state["guard_failed"]:
                 close_owned_context()
             else:
@@ -2796,7 +3011,7 @@ class AIBrowserRuntime:
         if guard_state["blocked"] and result is not None and result.success:
             result.success = False
             result.result = ActionResult.FAIL
-            result.error = "BROWSER_LINK_DESTINATION_BLOCKED"
+            result.error = guard_state["block_code"]
             result.human_escalation_required = False
             result.escalation_reason = ""
         if result is None:
@@ -2822,6 +3037,7 @@ class AIBrowserRuntime:
         control_mode: str = "agent",
         human_control_token: Optional[str] = None,
         frame_binding: Optional[Dict[str, Any]] = None,
+        human_navigation_confirmation_url: Optional[str] = None,
     ) -> ActionExecutionResult:
         """Apply control lease, immutable task trace and optional frame binding."""
         if self._browser_worker and threading.get_ident() != self._browser_thread_id:
@@ -2831,7 +3047,15 @@ class AIBrowserRuntime:
                 control_mode=control_mode,
                 human_control_token=human_control_token,
                 frame_binding=frame_binding,
+                human_navigation_confirmation_url=human_navigation_confirmation_url,
             ))
+        if human_navigation_confirmation_url is not None and (
+            control_mode != "human"
+            or action_type != BrowserActionType.NAVIGATE
+            or not isinstance(url, str)
+            or human_navigation_confirmation_url != url
+        ):
+            raise BrowserNavigationPolicyError("BROWSER_NAVIGATION_CONFIRMATION_STALE")
         if control_mode == "human":
             self.assert_current_frame_binding(frame_binding)
         self._check_bound_task_operation(action_type, target=target, selector=selector, text=text, value=value, url=url)
@@ -2855,6 +3079,7 @@ class AIBrowserRuntime:
                 agent_id="human_direct" if control_mode == "human" else agent_id,
                 skill_id=skill_id,
                 risk_level=risk_level,
+                human_navigation_confirmation_url=human_navigation_confirmation_url,
             )
         finally:
             self._end_control_action()
@@ -2875,6 +3100,7 @@ class AIBrowserRuntime:
         skill_id: Optional[str] = None,
         risk_level: str = "medium",
         human_link_navigation_guard: bool = False,
+        human_navigation_confirmation_url: Optional[str] = None,
     ) -> ActionExecutionResult:
         """执行一个 Browser Action，完整闭环：Firewall → Before → Execute → After → Verify → Recovery → Evidence。
 
@@ -2884,7 +3110,9 @@ class AIBrowserRuntime:
             return self._run_on_browser_thread(lambda: self.execute_action(
                 action_type, target, selector, text, value, url, expected,
                 task_id, run_id, step_id, agent_id, skill_id, risk_level,
+                human_navigation_confirmation_url=human_navigation_confirmation_url,
             ))
+        self._invalidate_navigation_confirmation()
         self._page_revision += 1
         self._invalidate_human_links()
         self._latest_frame_binding = None
@@ -2942,11 +3170,15 @@ class AIBrowserRuntime:
                     target=target, selector=selector, text=text, value=value, url=url,
                     before_state=before_state,
                     expected=expected,
+                    human_navigation_confirmation_url=human_navigation_confirmation_url,
                 )
 
-            if human_link_navigation_guard:
-                execution_result = self._run_with_human_link_navigation_guard(
+            if human_link_navigation_guard or action_type == BrowserActionType.NAVIGATE:
+                execution_result = self._run_with_navigation_guard(
                     execute_action,
+                    requested_target_url=url if action_type == BrowserActionType.NAVIGATE else None,
+                    confirmed_target_url=human_navigation_confirmation_url,
+                    link_action=human_link_navigation_guard,
                 )
             else:
                 execution_result = execute_action()
@@ -3008,6 +3240,7 @@ class AIBrowserRuntime:
         url: str,
         before_state: BrowserPageState,
         expected: Optional[ExpectedState],
+        human_navigation_confirmation_url: Optional[str] = None,
     ) -> ActionExecutionResult:
         """执行 Action 并在失败时尝试 Recovery 策略链。"""
         result = ActionExecutionResult(
@@ -3020,7 +3253,8 @@ class AIBrowserRuntime:
         try:
             # 首次执行
             self._do_execute(action_type, target=target, selector=selector,
-                             text=text, value=value, url=url)
+                             text=text, value=value, url=url,
+                             human_navigation_confirmation_url=human_navigation_confirmation_url)
             after_state = self.observe()
             result.after_state = after_state
 
@@ -3040,8 +3274,13 @@ class AIBrowserRuntime:
                 result.result = ActionResult.PASS
                 return result
 
+        except BrowserNavigationPolicyError as e:
+            result.error = e.code
+            result.result = ActionResult.FAIL
+            result.human_escalation_required = False
+            return result
         except Exception as e:
-            link_guard = self._active_human_link_navigation_guard
+            link_guard = self._active_navigation_guard
             if link_guard is not None and (
                 link_guard["blocked"] or link_guard["guard_failed"]
             ):
@@ -3051,7 +3290,7 @@ class AIBrowserRuntime:
                     result.human_escalation_required = True
                     result.escalation_reason = result.error
                 else:
-                    result.error = "BROWSER_LINK_DESTINATION_BLOCKED"
+                    result.error = link_guard["block_code"]
                 return result
 
             result.error = redact_browser_url_queries(sanitize_sensitive(str(e)[:500]))
@@ -3263,6 +3502,7 @@ class AIBrowserRuntime:
         text: str = "",
         value: str = "",
         url: str = "",
+        human_navigation_confirmation_url: Optional[str] = None,
     ):
         """执行原始 Playwright 操作（不含 Verification/Recovery）。"""
         self._check_bound_task_operation(action_type, target=target, selector=selector, text=text, value=value, url=url)
@@ -3273,9 +3513,13 @@ class AIBrowserRuntime:
             # effects cannot be rolled back when authority subsequently changes.
             with admission.guard():
                 self._check_bound_task_owner(admission, attempt_guarded=True)
-        return self._do_execute_impl(action_type, target, selector, text, value, url)
+        return self._do_execute_impl(
+            action_type, target, selector, text, value, url,
+            human_navigation_confirmation_url=human_navigation_confirmation_url,
+        )
 
-    def _do_execute_impl(self, action_type, target="", selector="", text="", value="", url=""):
+    def _do_execute_impl(self, action_type, target="", selector="", text="", value="", url="",
+                         human_navigation_confirmation_url=None):
         if not self._page and action_type not in (BrowserActionType.NAVIGATE, BrowserActionType.TAB_NEW):
             raise RuntimeError("No active page. Call start() first or navigate to create a page.")
 
@@ -3284,9 +3528,22 @@ class AIBrowserRuntime:
                 raise ValueError("navigate requires url parameter")
             import browser_surface
 
-            navigation = browser_surface.evaluate_navigation(url)
+            confirmed = (
+                isinstance(human_navigation_confirmation_url, str)
+                and human_navigation_confirmation_url == url
+            )
+            if human_navigation_confirmation_url is not None and not confirmed:
+                raise BrowserNavigationPolicyError("BROWSER_NAVIGATION_CONFIRMATION_STALE")
+            navigation = browser_surface.evaluate_navigation_for_action(
+                url, confirmed=confirmed,
+            )
             if not navigation.get("allowed"):
-                raise PermissionError("AI Browser navigation is blocked by the existing browser policy")
+                code = (
+                    "BROWSER_NAVIGATION_CONFIRMATION_REQUIRED"
+                    if navigation.get("status") == "need_confirmation"
+                    else "BROWSER_NAVIGATION_BLOCKED"
+                )
+                raise BrowserNavigationPolicyError(code)
             self._page.goto(url, wait_until="domcontentloaded", timeout=DEFAULT_ACTION_TIMEOUT)
 
         elif action_type == BrowserActionType.BACK:
@@ -3332,7 +3589,12 @@ class AIBrowserRuntime:
                 import browser_surface
                 navigation = browser_surface.evaluate_navigation(url)
                 if not navigation.get("allowed"):
-                    raise PermissionError("AI Browser navigation is blocked by the existing browser policy")
+                    code = (
+                        "BROWSER_NAVIGATION_CONFIRMATION_REQUIRED"
+                        if navigation.get("status") == "need_confirmation"
+                        else "BROWSER_NAVIGATION_BLOCKED"
+                    )
+                    raise BrowserNavigationPolicyError(code)
             if self._context:
                 new_page = self._context.new_page()
                 tab_id = f"tab_{uuid.uuid4().hex[:8]}"

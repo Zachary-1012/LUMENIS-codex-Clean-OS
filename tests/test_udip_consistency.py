@@ -10,7 +10,7 @@ import json
 
 import pytest
 
-from lumenis.shared.database import DatabaseRepository, apply_business_schema
+from lumenis.shared.database import DatabaseRepository, apply_business_schema, migrations
 
 
 REPORT_DATE = "2026-10-08"
@@ -38,6 +38,12 @@ def env(monkeypatch, tmp_path):
     repository = DatabaseRepository(str(db_path))
     with repository.transaction() as connection:
         apply_business_schema(connection)
+    # Bring the synthetic workspace to the same canonical schema as normal
+    # startup before recording any signed Evidence. Startup migration backups
+    # must never encounter a fixture-created signature in an unversioned DB.
+    assert migrations.migrate() is True
+    with repository.connection() as connection:
+        assert migrations.get_current_version(connection) == migrations.CURRENT_VERSION
 
     from canonical_data import CanonicalRecord, ensure_canonical_table, persist_canonical
     from lumenis.shared.database.business_schema import ensure_business_scope_storage

@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
+from .base import BasePlatformAdapter, CollectionResult, CollectionStatus, map_v4_comments
 from .registry import register_adapter
 
 logger = logging.getLogger(__name__)
@@ -68,6 +68,13 @@ class FacebookAdapter(BasePlatformAdapter):
                 "raw": raw,
             }))
         return items
+
+    @classmethod
+    def _observed_status(cls, result):
+        return {'AUTH_REQUIRED': CollectionStatus.SESSION_EXPIRED, 'VERIFICATION_REQUIRED': CollectionStatus.NEED_VERIFY,
+                'ACCESS_BLOCKED': CollectionStatus.BLOCKED, 'RATE_LIMITED': CollectionStatus.COOLING_DOWN,
+                'CONTENT_UNAVAILABLE': CollectionStatus.PROVIDER_UNAVAILABLE, 'PROVIDER_UNAVAILABLE': CollectionStatus.PROVIDER_UNAVAILABLE}.get(
+                    (getattr(result, 'metadata', None) or {}).get('failure_class')) or cls._v4_status_to_main(result.success, result.notes, result.error)
 
     @staticmethod
     def _post_identity_from_url(url: Any) -> dict | None:
@@ -233,8 +240,8 @@ class FacebookAdapter(BasePlatformAdapter):
             except (TypeError, ValueError, OverflowError):
                 requested_limit = 20
             max_results = min(20, max(0, requested_limit))
-            result = backend.search(keyword, max_results=max_results)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            result = backend.search(keyword, max_results=max_results, **({'cursor': kwargs['cursor']} if kwargs.get('cursor') is not None else {}))
+            status = self._observed_status(result)
             items = self._v4_notes_to_items((result.notes or [])[:max_results])
             detail_counts = {"attempted": 0, "succeeded": 0, "failed": 0, "pending": 0,
                              "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
@@ -347,7 +354,7 @@ class FacebookAdapter(BasePlatformAdapter):
                 raw_count=result.raw_count,
                 new_count=len(items),
                 message=message,
-                metadata={"engine": "v4_facebook", "provider": "authorized_browser_worker",
+                metadata={**(result.metadata or {}), "engine": "v4_facebook", "provider": "authorized_browser_worker",
                           "detail": detail_metadata},
             )
         except Exception as exc:
@@ -362,19 +369,27 @@ class FacebookAdapter(BasePlatformAdapter):
         return self._delegate_v4("detail", content_id)
 
     def comments(self, content_id: str, **kwargs: Any) -> CollectionResult:
-        return self._delegate_v4("comments", content_id, max_comments=kwargs.get("max_comments", 20))
+        return self._delegate_v4("comments", content_id, max_comments=kwargs.get("max_comments", 20),
+                                 cursor=kwargs.get("cursor"), include_replies=kwargs.get("include_replies", False), source_url=kwargs.get('source_url'))
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("creator", creator_id)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._delegate_v4("author_posts", author_id, max_results=kwargs.get("max_results", 20), cursor=kwargs.get("cursor"))
 
     def _delegate_v4(self, method: str, *args, **kwargs) -> CollectionResult:
         try:
             backend = self._load_backend()
             result = getattr(backend, method)(*args, **kwargs)
-            status = self._v4_status_to_main(result.success, result.notes, result.error)
+            status = self._observed_status(result)
             items = self._v4_notes_to_items(result.notes)
-            return CollectionResult(status=status, platform=self.platform, items=items,
+            comments = map_v4_comments(result.notes) if method == 'comments' else []
+            return CollectionResult(status=status, platform=self.platform, items=[] if method == 'comments' else items,
+                                    comments=comments,
                                     raw_count=result.raw_count,
+                                    metadata={**(getattr(result, 'metadata', None) or {}),
+                                              'provider': 'authorized_browser_worker'},
                                     message=(f"Facebook {method} state: {self._detail_failure_state(result.error)}"
                                              if result.error else ""))
         except Exception as exc:

@@ -45,7 +45,8 @@ def test_reviewed_delegate_byte_change_requires_new_review(tmp_path, monkeypatch
     monkeypatch.setattr(boundary_check, 'PROJECT_ROOT', tmp_path)
     _source(tmp_path, 'lumenis/system/security/permission.py', '# fixture')
     path = _source(tmp_path, 'agent_delegate.py', 'def execute():\n    return owner()\n')
-    monkeypatch.setattr(boundary_check, '_REVIEWED_BOUNDARIES', {'agent_delegate.py': {'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}})
+    source_hash = hashlib.sha256(path.read_bytes().replace(b'\r\n', b'\n')).hexdigest()
+    monkeypatch.setattr(boundary_check, '_REVIEWED_BOUNDARIES', {'agent_delegate.py': {'sha256': source_hash}})
     assert boundary_check.check_permission_gate([path]) == []
     path.write_text('def execute():\n    return unsafe()\n')
     assert boundary_check.check_permission_gate([path])[0].severity == 'HIGH'
@@ -91,9 +92,11 @@ def test_reviewed_source_dependency_change_blocks(tmp_path, monkeypatch):
     monkeypatch.setattr(boundary_check, 'PROJECT_ROOT', tmp_path)
     path = _source(tmp_path, 'agent_reader.py', 'def read(db):\n    return db.execute("SELECT * FROM intelligence_assets").fetchall()\n')
     owner = _source(tmp_path, 'owner.py', 'def admit(): return True\n')
+    source_hash = hashlib.sha256(path.read_bytes().replace(b'\r\n', b'\n')).hexdigest()
+    owner_hash = hashlib.sha256(owner.read_bytes().replace(b'\r\n', b'\n')).hexdigest()
     monkeypatch.setattr(boundary_check, '_REVIEWED_BOUNDARIES', {'agent_reader.py': {
-        'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
-        'dependencies': {'owner.py': hashlib.sha256(owner.read_bytes()).hexdigest()}}})
+        'sha256': source_hash,
+        'dependencies': {'owner.py': owner_hash}}})
     assert boundary_check.check_pending_assets_production_ref([path]) == []
     owner.write_text('def admit(): return False\n')
     assert boundary_check.check_pending_assets_production_ref([path])[0].severity == 'HIGH'

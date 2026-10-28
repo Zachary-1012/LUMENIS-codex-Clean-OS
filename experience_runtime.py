@@ -25,7 +25,6 @@ from flask import Blueprint, jsonify, request, send_file
 # 路径与蓝图
 # ---------------------------------------------------------------------------
 experience_bp = Blueprint("experience_runtime", __name__)
-_CONTENT_SOURCE_IMPORT_MAX_BYTES = 128 * 1024 * 1024
 
 # 已完成真实后端绑定的屏幕（其余屏幕由前端保持原型，服务端明确返回 bound=False）
 BOUND_SCREENS = ("CTH-01", "AI-01")
@@ -428,12 +427,12 @@ def _build_cth01(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
                 "time": (e.get("event_date") or e.get("last_seen") or "")[5:16] or "—",
                 "date": (e.get("first_seen") or "")[:10],
                 "title": e.get("title", "未命名事件"),
-                "desc": (e.get("summary") or "")[:120],
+                "desc": e.get("summary") or "",
                 "level": _LV.get((e.get("risk_level") or "low"), "low"),
                 "tags": [f"提及 {e.get('mention_count', 0)}", f"来源平台 {e.get('source_count', 1)}"],
                 "evidence": f"EV:{e.get('event_id') or e.get('id') or 'UNKNOWN'}",
             })
-    events_sec = section("events", STATE_READY if ev_items else STATE_EMPTY,
+    events_sec = section("events", STATE_OFFLINE if events_err else STATE_READY if ev_items else STATE_EMPTY,
                          title="重点事件", more=True, items=ev_items)
 
     # ---- 证据链：只呈现已通过 scoped event/source 核验的引用 ----
@@ -545,6 +544,7 @@ def _build_cth01(*, binding: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     return {
         "ok": True, "screen": "CTH-01", "source": "runtime", "bound": True,
         "sections": sections, "truth": truth,
+        "global_binding" if mode == "GLOBAL_ALL" else "focus_binding": dict(binding),
         "binding": {"screen": "CTH-01", "bound": True,
                     "unavailable": [b["field"] for b in blocked], "blocked": blocked},
         "generated_at": _dt.datetime.now().isoformat(timespec="seconds"),
@@ -1110,7 +1110,7 @@ def shared_skills_catalog():
 
 @experience_bp.route("/api/experience/cth/platform-collection")
 def cth_platform_collection_surface():
-    """Return the single CTH-owned, human-triggered secondary collection surface.
+    """Return the single SYSTEM-owned manual collection surface.
 
     This endpoint is a local health/readiness read.  It does not start a
     browser, call a platform, or expose credential paths.  BMP consumes the
@@ -1139,8 +1139,11 @@ def cth_platform_collection_search():
     no external write or publish path.
     """
     body = request.get_json(silent=True)
-    allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results",
-                      "business_requests", "max_queries", "continuation", "checkpoint", "request_id"}
+    allowed_fields = {"operator", "confirm_read_only", "platform", "keyword", "max_results", "capability", "content_id",
+                      "business_requests", "max_queries", "continuation", "checkpoint", "request_id",
+                      "source_id", "include_replies", "action", "confirmed_resource", "task_id", "author_id",
+                      "source_evidence_ref", "source_fingerprint","provider_mode","public_transport",
+                      "publication_since", "publication_until"}
     if not isinstance(body, dict) or set(body) - allowed_fields:
         return jsonify({"ok": False, "status": "invalid_request", "code": "INVALID_COLLECTION_REQUEST",
                         "read_only": True, "external_write": False}), 400
@@ -1163,17 +1166,95 @@ def cth_platform_collection_search():
         }), 400
     platform = body.get("platform")
     keyword = body.get("keyword")
+    capability = body.get("capability", "search")
+    if capability not in {"search", "detail", "comments", "author", "author_posts", "media"}:
+        return jsonify({"ok": False, "code": "INVALID_COLLECTION_CAPABILITY"}), 400
+    date_range = {key: body[key] for key in ("publication_since", "publication_until") if key in body}
+    if date_range and (capability != "search" or "business_requests" in body):
+        return jsonify({"ok": False, "code": "INVALID_COLLECTION_TIME_SCOPE"}), 400
     max_results = body.get("max_results", 20)
+    action = body.get("action", "run")
+    selection = {key:body[key] for key in ('provider_mode','public_transport') if key in body}
+    if action not in {"prepare", "confirm", "run", "start", "status", "step", "cancel", "resume","recover"}:
+        return jsonify({"ok": False, "code": "INVALID_COLLECTION_ACTION"}), 400
+    if action != "confirm" and "confirmed_resource" in body:
+        return jsonify({"ok": False, "code": "INVALID_COLLECTION_CONFIRMATION"}), 400
     try:
         from shared_artifacts import LocalArtifactError
-        from lumenis.system.collector.adapters.secondary_collection import collect_search
-        try:
-            actor, scope = _content_project_scope("write", module="collector")
-        except LocalArtifactError as exc:
-            return _content_project_error(exc)
-        if "business_requests" in body:
+        from lumenis.system.collector.adapters.secondary_collection import (
+            collect_comments, collect_detail, collect_search,
+            collect_author, collect_author_posts,
+            prepare_collection_request, confirm_collection_request, operate_collection_request,
+        )
+        if action == "cancel":
+            if set(body) - {"operator", "confirm_read_only", "action", "task_id"}:
+                raise ValueError("An existing collection task uses its saved source request")
+            safe_status_only = False
+            try:
+                actor, scope = _content_project_scope("write", module="collector")
+            except LocalArtifactError as exc:
+                if str(exc) not in {"CONTENT_SCOPE_DENIED", "CONTENT_SCOPE_UNAVAILABLE"}:
+                    raise
+                actor, scope = _content_project_scope("write", module="collector", read_only_auth=True,
+                    permission_required=False)
+                safe_status_only = True
+            result = operate_collection_request("cancel", actor=actor, scope=scope,
+                task_id=body.get("task_id"), safe_status_only=safe_status_only)
+        elif action in {"status", "step", "resume", "recover"}:
+            if set(body) - {"operator", "confirm_read_only", "action", "task_id"}:
+                raise ValueError("An existing collection task uses its saved source request")
+            try:
+                actor, scope = _content_project_scope("write", module="collector")
+            except LocalArtifactError as exc:
+                return _content_project_error(exc)
+            result = operate_collection_request(action, actor=actor, scope=scope, task_id=body.get("task_id"))
+        else:
+            try:
+                actor, scope = _content_project_scope("write", module="collector")
+            except LocalArtifactError as exc:
+                return _content_project_error(exc)
+        if action == "start":
+            if set(body) & {"business_requests", "max_queries", "continuation", "checkpoint", "task_id"}:
+                raise ValueError("Start one exact approved source request")
+            if capability == "detail" and "max_results" in body:
+                raise ValueError("Detail accepts one content_id")
+            result = operate_collection_request(action, actor=actor, scope=scope, request_id=body.get("request_id"),
+                capability=capability, platform=platform, keyword=keyword, content_id=body.get("content_id"),
+                source_id=body.get("source_id"), max_results=max_results, include_replies=body.get("include_replies", False),
+                author_id=body.get('author_id'), source_evidence_ref=body.get('source_evidence_ref'),
+                source_fingerprint=body.get('source_fingerprint'),**selection, **date_range)
+        elif action in {"prepare", "confirm"}:
+            if set(body) & {"business_requests", "max_queries", "continuation", "checkpoint", "request_id", "task_id"}:
+                raise ValueError("Confirm one explicit source request before acquisition")
+            if capability == "detail" and "max_results" in body:
+                raise ValueError("Detail accepts one content_id")
+            source_request = {"capability": capability, "platform": platform, "keyword": keyword,
+                              "content_id": body.get("content_id"), "source_id": body.get("source_id"),
+                              "max_results": max_results, "include_replies": body.get("include_replies", False),
+                              "author_id":body.get('author_id'), "source_evidence_ref":body.get('source_evidence_ref'),
+                              "source_fingerprint":body.get('source_fingerprint'),**selection, **date_range}
+            result = (prepare_collection_request(actor=actor, scope=scope, **source_request)
+                      if action == "prepare" else confirm_collection_request(
+                          actor=actor, scope=scope, confirmed_resource=body.get("confirmed_resource"),
+                          confirmed=body.get("confirm_read_only"), **source_request))
+        elif capability == 'media':
+            raise ValueError('Media acquisition requires a persistent source task')
+        elif capability in {'author','author_posts'}:
+            if set(body) & {'business_requests','keyword','content_id','source_id','max_queries','checkpoint',
+                            'continuation','include_replies','task_id','request_id'}:
+                raise ValueError('Author operations require one explicit profile or saved task')
+            result = (collect_author(platform,body.get('author_id'),actor=actor,scope=scope,**selection) if capability=='author'
+                      else collect_author_posts(platform,body.get('author_id'),actor=actor,scope=scope,max_results=max_results,**selection))
+        elif capability == "comments":
+            if set(body) & {"business_requests", "platform", "keyword", "content_id", "max_queries", "checkpoint", "task_id", "author_id"}:
+                raise ValueError("Comments require an admitted source, not a new platform query")
+            result = collect_comments(body.get("source_id"), actor=actor, scope=scope,
+                request_id=body.get("request_id"), max_results=max_results,
+                include_replies=body.get("include_replies", False), continuation=body.get("continuation"),**selection)
+        elif "business_requests" in body:
             from lumenis.system.collector.adapters.secondary_collection import collect_business_queries
-            if "platform" in body or "keyword" in body:
+            if set(body) & {"platform", "keyword", "content_id", "source_id", "include_replies", "task_id", "author_id",
+                            "provider_mode","public_transport"} or capability != "search":
                 raise ValueError("Choose one explicit source query or a task-selected business batch")
             max_queries = body.get("max_queries", 32)
             if type(max_queries) is not int or not 1 <= max_queries <= 64:
@@ -1183,11 +1264,19 @@ def cth_platform_collection_search():
                 scopes={domain: scope}, operator=operator, max_results=max_results,
                 max_queries=max_queries, continuation=body.get("continuation"),
                 checkpoint=body.get("checkpoint"), request_id=body.get("request_id"))
-        else:
-            if set(body) & {"max_queries", "continuation", "checkpoint", "request_id"}:
+        elif action not in {"status", "step", "resume", "recover", "cancel"}:
+            if set(body) & {"max_queries", "continuation", "checkpoint", "request_id", "source_id", "include_replies", "task_id", "author_id"}:
                 raise ValueError("Business continuation fields require business_requests")
-            result = collect_search(platform, keyword, max_results=max_results, operator=operator,
-                                    actor=actor, scope=scope)
+            if capability == "detail":
+                if "keyword" in body or "max_results" in body:
+                    raise ValueError("Detail accepts a content_id, not search fields")
+                result = collect_detail(platform, body.get("content_id"), operator=operator,
+                                        actor=actor, scope=scope,**selection)
+            else:
+                if "content_id" in body:
+                    raise ValueError("A content_id requires detail capability")
+                result = collect_search(platform, keyword, max_results=max_results, operator=operator,
+                                        actor=actor, scope=scope,**selection, **date_range)
         state = result.get("status")
         http_status = (401 if state == "AUTH_REQUIRED" else
                        403 if state in {"SCOPE_UNAUTHORIZED", "APPROVAL_REQUIRED"} else
@@ -1195,8 +1284,12 @@ def cth_platform_collection_search():
                        409 if state in {"BUSY", "RATE_LIMITED"} else 200)
         return jsonify(result), http_status
     except PermissionError as exc:
-        return jsonify({"ok": False, "status": "denied", "code": "HUMAN_OPERATOR_REQUIRED",
-                        "reason": str(exc), "read_only": True, "external_write": False}), 403
+        code = str(exc) if str(exc).startswith(("COMMENT_", "COLLECTION_", "COLLECTED_MEDIA_", "AUTHOR_")) else "HUMAN_OPERATOR_REQUIRED"
+        return jsonify({"ok": False, "status": "denied", "code": code,
+                        "read_only": True, "external_write": False}), 403
+    except LookupError as exc:
+        code = "COLLECTION_TASK_NOT_FOUND" if str(exc) == "COLLECTION_TASK_NOT_FOUND" else "COMMENT_PARENT_NOT_FOUND"
+        return jsonify({"ok": False, "code": code}), 404
     except ValueError as exc:
         return jsonify({"ok": False, "status": "invalid_request", "error": str(exc)}), 400
     except RuntimeError as exc:
@@ -1205,7 +1298,164 @@ def cth_platform_collection_search():
         return jsonify({"ok": False, "status": "error", "error_type": type(exc).__name__}), 503
 
 
-def _content_project_scope(action: str, *, module="content", include_decision=False, read_only_auth=False, selectors=None):
+@experience_bp.get('/api/experience/cth/platform-collection/tasks')
+def cth_platform_collection_tasks():
+    from shared_artifacts import LocalArtifactError
+    from lumenis.system.collector.adapters.secondary_collection import list_collection_requests
+    if set(request.args) - {'before', 'limit'} or any(len(request.args.getlist(key)) != 1 for key in request.args):
+        return jsonify({'ok': False, 'code': 'COLLECTION_HISTORY_REQUEST_INVALID'}), 400
+    try:
+        actor, scope = _content_project_scope('read', module='collector', read_only_auth=True)
+        result = list_collection_requests(actor=actor, scope=scope,
+            before=int(request.args['before']) if 'before' in request.args else None,
+            limit=int(request.args.get('limit', '20')))
+        return jsonify(result)
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except PermissionError:
+        return jsonify({'ok': False, 'code': 'COLLECTION_HISTORY_ACCESS_DENIED'}), 403
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'code': 'COLLECTION_HISTORY_REQUEST_INVALID'}), 400
+    except Exception:
+        return jsonify({'ok': False, 'code': 'COLLECTION_HISTORY_UNAVAILABLE'}), 503
+
+
+@experience_bp.get('/api/experience/cth/platform-collection/tasks/<int:task_id>')
+def cth_platform_collection_task(task_id):
+    from shared_artifacts import LocalArtifactError
+    from lumenis.system.collector.adapters.secondary_collection import operate_collection_request
+    if set(request.args) - {'before_page'} or any(len(request.args.getlist(key)) != 1 for key in request.args):
+        return jsonify({'ok': False, 'code': 'COLLECTION_RESULT_PAGE_INVALID'}), 400
+    try:
+        safe_status_only = False
+        try:
+            actor, scope = _content_project_scope('read', module='collector', read_only_auth=True)
+        except LocalArtifactError as exc:
+            if str(exc) not in {'CONTENT_SCOPE_DENIED', 'CONTENT_SCOPE_UNAVAILABLE'}:
+                raise
+            actor, scope = _content_project_scope('read', module='collector', read_only_auth=True,
+                permission_required=False)
+            safe_status_only = True
+        return jsonify(operate_collection_request('status', actor=actor, scope=scope, task_id=task_id,
+            page_before=int(request.args['before_page']) if 'before_page' in request.args else None,
+            safe_status_only=safe_status_only))
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except PermissionError:
+        return jsonify({'ok': False, 'code': 'COLLECTION_TASK_ACCESS_DENIED'}), 403
+    except LookupError:
+        return jsonify({'ok': False, 'code': 'COLLECTION_TASK_NOT_FOUND'}), 404
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'code': 'COLLECTION_RESULT_PAGE_INVALID'}), 400
+    except Exception:
+        return jsonify({'ok': False, 'code': 'COLLECTION_TASK_READ_UNAVAILABLE'}), 503
+
+
+@experience_bp.get('/api/experience/cth/platform-collection/results')
+def cth_platform_collection_results():
+    from shared_artifacts import LocalArtifactError
+    from lumenis.system.collector.adapters.secondary_collection import read_collected_items
+    if ('evidence_ref' not in request.args or set(request.args) - {'evidence_ref', 'source_id'}
+            or any(len(request.args.getlist(key)) != 1 for key in request.args)):
+        return jsonify({'ok':False, 'code':'COLLECTION_RESULT_REFERENCE_REQUIRED'}), 400
+    try:
+        actor, scope = _content_project_scope('read', module='collector', read_only_auth=True)
+        return jsonify(read_collected_items(request.args['evidence_ref'], actor=actor, scope=scope,
+                                            source_id=request.args.get('source_id')))
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except PermissionError as exc:
+        return jsonify({'ok':False, 'code':str(exc)}), 403
+    except ValueError as exc:
+        return jsonify({'ok':False, 'code':str(exc)}), 400
+    except Exception:
+        return jsonify({'ok':False, 'code':'COLLECTION_RESULT_READ_UNAVAILABLE'}), 503
+
+
+@experience_bp.route('/api/experience/cth/platform-collection/tasks/<int:task_id>/media/<int:evidence_id>', methods=['GET', 'HEAD'])
+def collected_task_media(task_id, evidence_id):
+    from flask import Response, stream_with_context
+    from shared_artifacts import LocalArtifactError
+    from lumenis.system.collector.adapters.secondary_collection import operate_collection_request
+    from lumenis.shared.reporting.media_brief import read_collected_media, iter_collected_media_original
+    try:
+        selectors = _content_media_selectors()
+        actor, scope = _content_project_scope('read', module='collector', read_only_auth=True, selectors=selectors)
+        task = operate_collection_request('status', actor=actor, scope=scope, task_id=task_id)
+        source = task['request']
+        evidence_ref = f'app_evidence_records:{evidence_id}'
+        if source['capability'] != 'media' or not any(item.get('evidence_ref') == evidence_ref
+                for item in task.get('result', {}).get('media', [])):
+            raise PermissionError('COLLECTED_MEDIA_TASK_MISMATCH')
+        arguments = {key: source[key] for key in ('source_id', 'source_evidence_ref', 'source_fingerprint')}
+        result = read_collected_media(evidence_ref, actor=actor, scope=scope, **arguments)
+        original = result['original']
+        size, digest = original['size_bytes'], original['sha256']
+        if request.args.get('sha256') != digest:
+            raise ValueError('COLLECTED_MEDIA_VERSION_MISMATCH')
+        etag = f'"{digest}"'
+        headers = {'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+            'Cross-Origin-Resource-Policy': 'same-origin', 'Accept-Ranges': 'bytes', 'ETag': etag,
+            'Content-Disposition': f'inline; filename="source-{evidence_id}{original["extension"]}"'}
+        start, stop, status = 0, size, 200
+        if request.method != 'HEAD' and request.headers.get('Range') and request.headers.get('If-Range', etag) == etag:
+            ranges = request.range
+            selected = ranges.range_for_length(size) if ranges is not None and ranges.units == 'bytes' else None
+            if selected is None:
+                return Response(status=416, headers={**headers, 'Content-Range': f'bytes */{size}'})
+            start, stop = selected
+            status = 206
+            headers['Content-Range'] = f'bytes {start}-{stop - 1}/{size}'
+        def authorize():
+            if (actor, scope) != _content_project_scope('read', module='collector', read_only_auth=True, selectors=selectors):
+                raise PermissionError('COLLECTED_MEDIA_CONTEXT_CHANGED')
+        body = () if request.method == 'HEAD' else stream_with_context(iter_collected_media_original(
+            evidence_ref, actor=actor, scope=scope, **arguments, start=start, stop=stop, check_continue=authorize))
+        response = Response(body, status=status, headers=headers, mimetype=original['content_type'], direct_passthrough=True)
+        response.content_length = stop - start
+        return response
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except PermissionError:
+        return jsonify({'ok': False, 'code': 'COLLECTED_MEDIA_ACCESS_DENIED'}), 403
+    except LookupError:
+        return jsonify({'ok': False, 'code': 'COLLECTED_MEDIA_NOT_FOUND'}), 404
+    except (TypeError, ValueError):
+        return jsonify({'ok': False, 'code': 'COLLECTED_MEDIA_REQUEST_INVALID'}), 400
+    except Exception:
+        return jsonify({'ok': False, 'code': 'COLLECTED_MEDIA_UNAVAILABLE'}), 503
+
+
+@experience_bp.route("/api/experience/cth/platform-collection/comments")
+def cth_platform_collection_comments():
+    from shared_artifacts import LocalArtifactError
+    from lumenis.system.collector.adapters.secondary_collection import read_collected_comments
+
+    if set(request.args) - {"source_id", "limit", "before", "page_ref"} or any(
+        len(request.args.getlist(key)) != 1 for key in request.args
+    ):
+        return jsonify({"ok": False, "code": "COMMENT_REQUEST_INVALID"}), 400
+    try:
+        actor, scope = _content_project_scope("read", module="collector", read_only_auth=True)
+        result = read_collected_comments(request.args.get("source_id"), actor=actor, scope=scope,
+            limit=int(request.args.get("limit", "20")), before=request.args.get("before"),
+            page_ref=request.args.get("page_ref"))
+        return jsonify(result)
+    except LocalArtifactError as exc:
+        return _content_project_error(exc)
+    except PermissionError as exc:
+        code = str(exc) if str(exc).startswith("COMMENT_") else "COMMENT_SOURCE_NOT_AUTHORIZED"
+        return jsonify({"ok": False, "code": code}), 403
+    except LookupError:
+        return jsonify({"ok": False, "code": "COMMENT_PARENT_NOT_FOUND"}), 404
+    except (TypeError, ValueError):
+        return jsonify({"ok": False, "code": "COMMENT_REQUEST_INVALID"}), 400
+    except Exception:
+        return jsonify({"ok": False, "code": "COMMENT_READ_UNAVAILABLE"}), 503
+
+
+def _content_project_scope(action: str, *, module="content", include_decision=False, read_only_auth=False,
+                           selectors=None, permission_required=True):
     """Resolve selectors through the canonical registry, then ask Permission."""
     from lumenis.auth.service import get_current_user
     from lumenis.system.security.permission import (
@@ -1216,6 +1466,11 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
     from shared_artifacts import LocalArtifactError
 
     selectors = request.headers if selectors is None else selectors
+    if type(permission_required) is not bool:
+        raise LocalArtifactError("CONTENT_SCOPE_UNAVAILABLE")
+    if not permission_required and (module != "collector" or action not in {"read", "write"}
+            or not read_only_auth or include_decision):
+        raise LocalArtifactError("CONTENT_SCOPE_DENIED")
 
     try:
         local_principal = resolve_local_workspace_principal(module=module, action=action)
@@ -1290,6 +1545,8 @@ def _content_project_scope(action: str, *, module="content", include_decision=Fa
         raise LocalArtifactError("CONTEXT_SCOPE_MISMATCH")
     scope = {"domain_id": domain, "subject_id": subject, "brand_focus_id": brand,
              "global_scope": mode == "GLOBAL_ALL"}
+    if not permission_required:
+        return actor, scope
     checker = (
         check_local_workspace_scope_permission if local_principal is not None
         else check_actor_scope_permission
@@ -1556,61 +1813,25 @@ def _owned_training_phase_material(body):
     return typed, context, identity_args, domain, binding, fingerprints, gate, fresh_approval
 
 
+def _gpu_training_withdrawn_payload():
+    return {
+        "ok": False,
+        "state": "GPU_TRAINING_WITHDRAWN_BY_PO",
+        "code": "GPU_TRAINING_WITHDRAWN_BY_PO",
+        "training_started": False,
+        "execution_available": False,
+        "ai_status_url": "/api/ai/status",
+    }
+
+
+def _gpu_training_withdrawn_response():
+    return jsonify(_gpu_training_withdrawn_payload()), 410
+
+
 @experience_bp.route("/api/experience/owned-training/execution-approvals", methods=["POST"])
 def confirm_owned_training_execution_approval():
-    """Confirm one explicit training resource through the real Permission owner.
-
-    A preview creates no grant. A confirmed request carries the operator's
-    training intent; it neither starts a trainer nor replaces source admission.
-    Approval tokens and signing material remain in the Core.
-    """
-    from lumenis.system.security import permission as p
-    token = None
-    try:
-        body = _owned_training_review_api_body({
-            "training_request", "scope_descriptors", "confirmed_resource", "confirm",
-        })
-        if type(body["confirm"]) is not bool:
-            raise ValueError("OWNED_TRAINING_EXECUTION_CONFIRMATION_INVALID")
-        typed, context, args, domain, binding, fingerprints, gate, fresh = _owned_training_phase_material(body)
-        if (not gate.has_permission(p.PermissionLevel.HUMAN_APPROVAL)
-                or not gate.has_permission(p.PermissionLevel.COMMIT)):
-            raise PermissionError("OWNED_TRAINING_EXECUTION_MANUAL_AUTHORITY_REQUIRED")
-        if body["confirm"] is False:
-            if body["confirmed_resource"] is not None:
-                raise ValueError("OWNED_TRAINING_EXECUTION_PREVIEW_INVALID")
-            return jsonify({"ok": True, "state": "EXECUTION_RESOURCE_PREPARED",
-                            "resource": binding["resource"], "fingerprints": fingerprints,
-                            "identity": binding["identity"], "scope_descriptors": context["scope_descriptors"],
-                            "approval_issued": False, "training_started": False})
-        if (type(body["confirmed_resource"]) is not str
-                or body["confirmed_resource"] != binding["resource"]):
-            raise PermissionError("OWNED_TRAINING_EXECUTION_RESOURCE_CHANGED")
-        _, _, _, current_domain, current_binding, current_fingerprints, current_gate, _ = _owned_training_phase_material(body)
-        if (current_binding != binding or current_fingerprints != fingerprints
-                or current_domain != domain or current_gate is not gate):
-            raise PermissionError("OWNED_TRAINING_EXECUTION_IDENTITY_CHANGED")
-        token = gate.grant_approval(p.OperationType.MODEL_TRAIN.value, resource=binding["resource"],
-                                   duration_minutes=15, granted_by=binding["identity"]["caller"])
-        approval = fresh()
-        reference = gate.owned_training_approval_reference(
-            training_request=typed, context=context, domain_id=domain, approval=approval, **args,
-        )
-        _, _, _, final_domain, final_binding, final_fingerprints, final_gate, _ = _owned_training_phase_material(body)
-        if (final_binding != binding or final_fingerprints != fingerprints
-                or final_domain != domain or final_gate is not gate):
-            raise PermissionError("OWNED_TRAINING_EXECUTION_IDENTITY_CHANGED")
-        return jsonify({"ok": True, "state": "EXACT_EXECUTION_INTENT_GRANTED",
-                        "resource": binding["resource"], "fingerprints": fingerprints,
-                        "identity": binding["identity"], "approval_reference": reference,
-                        "permission_audit_id": approval.audit_id, "duration_minutes": 15,
-                        "approval_issued": True, "training_started": False})
-    except Exception as exc:
-        if token is not None:
-            gate.revoke_approval(token)
-        if str(exc) == "AUTH_REQUIRED":
-            return jsonify({"ok": False, "code": "AUTH_REQUIRED", "training_started": False}), 401
-        return _owned_training_phase_error(exc)
+    """Retained compatibility endpoint for the withdrawn GPU training path."""
+    return _gpu_training_withdrawn_response()
 
 
 def _owned_training_phase_body(*, challenge=False, phase=False):
@@ -1751,37 +1972,8 @@ def _owned_training_historical_receipt_response(record, *, state="HISTORICAL_PHA
 
 @experience_bp.route("/api/experience/owned-training/phase-tasks", methods=["POST"])
 def prepare_owned_training_phase_task():
-    """Prepare a durable phase task only under an existing exact MODEL_TRAIN approval."""
-    from ai_task_engine import get_task_engine
-    from lumenis.shared.database import get_repository
-    from lumenis.system.security import training_receipts as receipts
-
-    try:
-        body = _owned_training_phase_body()
-        typed, context, args, domain, binding, fingerprints, gate, fresh = _owned_training_phase_material(body)
-        fresh()
-        public_key = receipts.get_training_receipt_public_key()
-        engine = get_task_engine()
-        with _owned_training_phase_transaction() as (conn, commit):
-            try:
-                _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
-                state = engine.create_training_receipt_task(
-                    binding=binding, fingerprints=fingerprints, connection=conn,
-                    approval_reference=reference, pinned_public_key=public_key,
-                )
-                if state.get("admission_version") != 2:
-                    raise PermissionError("OWNED_TRAINING_PHASE_SEALED_ADMISSION_REQUIRED")
-                _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
-                                             task_id=state["task_id"], mutation="create", state=state, commit=commit)
-            except Exception:
-                conn.rollback()
-                raise
-        public_state = {key: value for key, value in state.items() if key != "task_id"}
-        return jsonify({"ok": True, "state": "PHASE_TASK_PREPARED", "task_id": state["task_id"],
-                        "public_challenge_context": public_state, "pinned_public_key": public_key,
-                        "training_started": False, "approval_issued": False})
-    except Exception as exc:
-        return _owned_training_phase_error(exc)
+    """Retained compatibility endpoint; withdrawn training tasks are not persisted."""
+    return _gpu_training_withdrawn_response()
 
 
 _OWNED_TRAINING_PARENT_LOCK = threading.RLock()
@@ -1790,389 +1982,45 @@ _OWNED_TRAINING_PARENT_LOCK = threading.RLock()
 _OWNED_TRAINING_PARENT_FENCES = {}
 
 
-def _owned_training_parent_profile(body, domain):
-    from pathlib import Path
-    from lumenis.system.ai_gateway.owned_training import TrainingBlocked
-    from lumenis.system.ai_gateway.owned_training_runtime import training_worker_source_pins
-
-    root = Path(__file__).resolve().parent
-    path = Path(os.environ.get("LUMENIS_TRAINING_PARENT_SPEC_PATH",
-                               str(root / "config/ai-owned-training-runtime.json")))
-    if not path.is_absolute() or not path.is_file() or path.is_symlink():
-        raise TrainingBlocked("TRAINING_PARENT_SPEC_NOT_CONFIGURED")
-    document = json.loads(path.read_bytes())
-    profiles = document.get("profiles")
-    if type(profiles) is not list:
-        raise TrainingBlocked("TRAINING_PARENT_SPEC_INVALID")
-    matches = [profile for profile in profiles if type(profile) is dict
-               and profile.get("domain_id") == domain and profile.get("request_body") == body]
-    if (len(matches) != 1 or document.get("worker_source_pins") != training_worker_source_pins(root)):
-        raise TrainingBlocked("TRAINING_PARENT_INPUT_VERSION_CHANGED")
-    profile = matches[0]
-    if (Path(profile["controller_source_root"]) != root
-            or profile["local_invocation"]["manifest_path"] != str(root / "config/ai-owned-foundation.json")
-            or profile["local_invocation"].get("resume_request") is not None
-            or profile["local_invocation"].get("stop_after_checkpoint_step") != 2):
-        raise TrainingBlocked("TRAINING_PARENT_SPEC_INVALID")
-    return root, document, profile
-
-
-def _owned_training_parent_endpoint(pins, configuration_reference=None):
-    from pathlib import Path
-    from lumenis.system.ai_gateway.owned_training import TrainingBlocked
-    from lumenis.system.ai_gateway.owned_training_ssh import SSHTrainingEndpoint
-
-    # Safe startup intentionally does not import arbitrary .env fields. This
-    # SYSTEM private configuration has an explicit local application default.
-    local_root = os.environ.get("LOCALAPPDATA")
-    if not local_root and os.name == "nt":
-        import ctypes
-        folder = ctypes.create_unicode_buffer(32768)
-        if ctypes.windll.shell32.SHGetFolderPathW(None, 0x001C, None, 0, folder) != 0:
-            raise TrainingBlocked("TRAINING_SSH_ENDPOINT_NOT_CONFIGURED")
-        local_root = folder.value
-    default = (str(Path(local_root) / "LUMENIS/runtime/owned-training-ssh-endpoint.json")
-               if local_root else None)
-    configured = configuration_reference or os.environ.get("LUMENIS_TRAINING_SSH_ENDPOINT_PATH") or default
-    if not configured:
-        raise TrainingBlocked("TRAINING_SSH_ENDPOINT_NOT_CONFIGURED")
-    path = Path(configured)
-    if not path.is_absolute() or not path.is_file() or path.is_symlink():
-        raise TrainingBlocked("TRAINING_SSH_ENDPOINT_NOT_CONFIGURED")
-    value = json.loads(path.read_bytes())
-    fields = {"ssh_executable", "host", "port", "user", "identity_file", "known_hosts",
-              "remote_python", "source_root", "source_pins"}
-    if type(value) is not dict or set(value) != fields or value["source_pins"] != pins:
-        raise TrainingBlocked("TRAINING_SSH_ENDPOINT_INVALID")
-    # Private identity and known-host files remain in the real Core process.
-    for name in ("ssh_executable", "identity_file", "known_hosts"):
-        value[name] = Path(value[name])
-    return SSHTrainingEndpoint(**value)
-
-
 @experience_bp.route("/api/experience/owned-training/execution-configuration", methods=["POST"])
 def read_owned_training_execution_configuration():
-    """Observe this serving process's effective binding without disclosing it."""
-    try:
-        body = _owned_training_phase_body()
-        _, _, _, domain, _, _, _, fresh = _owned_training_phase_material(body)
-        fresh()
-        _, specification, _ = _owned_training_parent_profile(body, domain)
-        _owned_training_parent_endpoint(specification["worker_source_pins"],
-            specification.get("private_endpoint_configuration_reference"))
-        fresh()
-        return jsonify({"ok": True, "state": "PARENT_CONFIGURATION_BOUND", "serving_pid": os.getpid(),
-                        "configuration_revision": "owned-parent-private-config-3",
-                        "endpoint_present": True, "exact_source_pins": True,
-                        "training_started": False})
-    except Exception as exc:
-        response, status = _owned_training_phase_error(exc)
-        value = response.get_json()
-        from pathlib import Path
-        selected_spec = Path(os.environ.get("LUMENIS_TRAINING_PARENT_SPEC_PATH",
-            str(Path(__file__).resolve().parent / "config/ai-owned-training-runtime.json")))
-        observed_spec = json.loads(selected_spec.read_bytes()) if selected_spec.is_file() else {}
-        profile_reference = observed_spec.get("private_endpoint_configuration_reference")
-        environment_reference = os.environ.get("LUMENIS_TRAINING_SSH_ENDPOINT_PATH")
-        selected_reference = profile_reference or environment_reference
-        selected_path = Path(selected_reference) if selected_reference else None
-        def _private_file_probe(candidate):
-            import hashlib
-            result = {"reference_present": bool(candidate), "reference_is_absolute": False,
-                      "reference_is_file": False, "reference_is_symlink": False,
-                      "reference_sha256": hashlib.sha256(str(candidate or "").encode()).hexdigest()}
-            if not candidate:
-                return result
-            probe = Path(candidate)
-            result["reference_is_absolute"] = probe.is_absolute()
-            try:
-                result["reference_is_symlink"] = probe.is_symlink()
-                result["reference_is_file"] = probe.is_file()
-                result["reference_stat_mode"] = probe.stat().st_mode
-                result["reference_bytes_sha256"] = hashlib.sha256(probe.read_bytes()).hexdigest()
-            except Exception as probe_error:
-                result.update(reference_error_class=type(probe_error).__name__,
-                              reference_error_errno=getattr(probe_error, "errno", None),
-                              reference_error_winerror=getattr(probe_error, "winerror", None))
-            return result
-        root_path = Path(__file__).resolve().parent
-        expected_root = Path(r"D:\LUMENIS_REBUILD\序\序境")
-        value.update(serving_pid=os.getpid(), configuration_revision="owned-parent-private-config-4",
-                     environment_reference_present=bool(os.environ.get("LUMENIS_TRAINING_SSH_ENDPOINT_PATH")),
-                     native_appdata_environment_present=bool(os.environ.get("LOCALAPPDATA")),
-                     running_source_root_sha256=__import__("hashlib").sha256(str(root_path).encode()).hexdigest(),
-                     running_source_root_matches_expected=root_path == expected_root,
-                     selected_spec_bytes_sha256=__import__("hashlib").sha256(selected_spec.read_bytes()).hexdigest() if selected_spec.is_file() else None,
-                     selected_spec_is_canonical=selected_spec == root_path / "config/ai-owned-training-runtime.json",
-                     selected_profile_reference_present=bool(profile_reference),
-                     selected_endpoint_is_absolute=selected_path.is_absolute() if selected_path else False,
-                     selected_endpoint_is_file=selected_path.is_file() if selected_path else False,
-                     selected_endpoint_is_symlink=selected_path.is_symlink() if selected_path else False,
-                     selected_endpoint_probe=_private_file_probe(selected_reference))
-        return jsonify(value), status
+    """Report withdrawn status without parsing input or probing local secrets."""
+    return jsonify({
+        "ok": True,
+        "state": "GPU_TRAINING_WITHDRAWN_BY_PO",
+        "code": "GPU_TRAINING_WITHDRAWN_BY_PO",
+        "training_started": False,
+        "execution_available": False,
+        "ai_status_url": "/api/ai/status",
+    })
 
 
 @experience_bp.route("/api/experience/owned-training/execution-preflight", methods=["POST"])
 def preflight_owned_training_execution():
-    """Verify the exact remote source binding without launching training or a model."""
-    try:
-        from lumenis.system.ai_gateway.owned_training_ssh import AuthenticatedSSHTrainingTransport
-
-        body = _owned_training_phase_body()
-        _, _, _, domain, _, _, _, fresh = _owned_training_phase_material(body)
-        fresh()
-        _, specification, _ = _owned_training_parent_profile(body, domain)
-        endpoint = _owned_training_parent_endpoint(
-            specification["worker_source_pins"],
-            specification.get("private_endpoint_configuration_reference"),
-        )
-        observation = AuthenticatedSSHTrainingTransport(endpoint).preflight_source()
-        if observation != {
-            "state": "REMOTE_TRAINING_PREFLIGHT_SOURCE_PINS_VERIFIED",
-            "source_pins_verified": True,
-        }:
-            raise RuntimeError("REMOTE_TRAINING_PREFLIGHT_INVALID")
-        fresh()
-        return jsonify({
-            "ok": True,
-            "state": "REMOTE_TRAINING_PREFLIGHT_BOUND",
-            "configuration_revision": "owned-parent-remote-preflight-1",
-            "endpoint_present": True,
-            "exact_source_pins": True,
-            "remote_source_pins_verified": True,
-            "training_started": False,
-            "model_loaded": False,
-            "optimizer_steps": 0,
-        })
-    except Exception as exc:
-        return _owned_training_phase_error(exc)
-
-
-def _owned_training_parent_checkpoint(client):
-    from lumenis.shared.database import get_repository
-
-    client._fresh()
-    with get_repository().connection(timeout=30) as connection:
-        connection.execute("BEGIN")
-        try:
-            checkpoint = client._engine.training_checkpoint_latest_receipt(
-                client.task_id, **client._args(connection))
-            client._fresh()
-            return checkpoint
-        finally:
-            connection.rollback()
+    """Retained compatibility endpoint for the withdrawn GPU training path."""
+    return _gpu_training_withdrawn_response()
 
 
 @experience_bp.route("/api/experience/owned-training/phase-tasks/<task_id>/execute", methods=["POST"])
 def execute_owned_training_phase_task(task_id):
-    """Run the existing owned trainer, committed checkpoint and physical reload.
-
-    The initiating real HTTP context owns the private parent for the complete
-    call. No synthetic CLI principal, Core listener, queue or signer is created.
-    A lost response leaves the canonical checkpoint receipt available.
-    """
-    import copy
-    import uuid
-    from pathlib import Path, PurePosixPath
-    import requests
-    import shared_artifacts
-    from ai_task_engine import get_task_engine
-    from lumenis.shared.database import get_repository
-    from lumenis.system.security import training_receipts
-    from lumenis.system.ai_gateway.owned_training import TrainingBlocked
-    from lumenis.system.ai_gateway.owned_training_runtime import (
-        OwnedTrainingCheckpointClient, OwnedTrainingPhaseHTTPTransport, TrainingProcessFence,
-    )
-    from lumenis.system.ai_gateway.owned_training_ssh import AuthenticatedSSHTrainingTransport
-
-    worker = None
-    session = None
-    registered = False
-    try:
-        body = _owned_training_phase_body()
-        typed, context, args, domain, binding, _, gate, fresh = _owned_training_phase_material(body)
-        _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
-        pin = training_receipts.get_training_receipt_public_key()
-        engine = get_task_engine()
-        with get_repository().connection(timeout=30) as connection:
-            connection.execute("BEGIN")
-            try:
-                engine.require_training_receipt_admission(task_id, binding, reference, pin, connection)
-                fresh()
-            finally:
-                connection.rollback()
-        root, specification, profile = _owned_training_parent_profile(body, domain)
-        endpoint = _owned_training_parent_endpoint(specification["worker_source_pins"],
-            specification.get("private_endpoint_configuration_reference"))
-        if not re.fullmatch(r"trainrelay_[0-9a-f-]{36}", task_id):
-            raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
-        with _OWNED_TRAINING_PARENT_LOCK:
-            if task_id in _OWNED_TRAINING_PARENT_FENCES:
-                raise TrainingBlocked("CHECKPOINT_OPERATION_CONFLICT")
-            _OWNED_TRAINING_PARENT_FENCES[task_id] = {"binding": binding, "worker": None}
-            registered = True
-        fresh()
-        staging = shared_artifacts.artifact_root() / "training-checkpoints" / task_id
-        staging.mkdir(mode=0o700, parents=True, exist_ok=True)
-        worker = TrainingProcessFence(staging / "worker.lock")
-        with _OWNED_TRAINING_PARENT_LOCK:
-            _OWNED_TRAINING_PARENT_FENCES[task_id]["worker"] = worker
-        transport = AuthenticatedSSHTrainingTransport(endpoint)
-        start = {"python_executable": Path(profile["controller_python"]), "cwd": root,
-                 "log_path": staging / "worker.stderr", "source_pins": specification["worker_source_pins"],
-                 "remote_transport": transport}
-        worker.start_managed_training(**start)
-        client = OwnedTrainingCheckpointClient(typed, context, task_id=task_id, worker=worker,
-            manifest_path=profile["local_invocation"]["manifest_path"], staging_root=staging,
-            max_bytes=profile["max_checkpoint_bytes"],
-            remote_storage_root=PurePosixPath(profile["intended_remote_storage_root"]), **args)
-        client.initialize()
-        session = requests.Session()
-        session.trust_env = False
-        session.verify = True
-        for name in ("Authorization", "Cookie", "Origin", "Referer", "Sec-Fetch-Site",
-                     "X-Domain-Id", "X-Product-Id", "X-Subject-ID", "X-Brand-Focus-ID",
-                     "X-Lumenis-Context-Mode", "X-Lumenis-Action"):
-            if name in request.headers:
-                session.headers[name] = request.headers[name]
-        phase_transport = OwnedTrainingPhaseHTTPTransport(core_origin="http://127.0.0.1:8201",
-            session=session, pinned_public_key=pin)
-        invocation = copy.deepcopy(profile["local_invocation"])
-        call = {"client": client, "phase_transport": phase_transport,
-                "timeout_seconds": profile["timeout_seconds"],
-                "remote_input_paths": profile["intended_remote_input_paths"]}
-        first_result = worker.invoke_owned_training(invocation=invocation, **call)
-        checkpoint = _owned_training_parent_checkpoint(client)
-        if checkpoint is None or checkpoint["completed_step"] != 2:
-            raise TrainingBlocked("CHECKPOINT_NOT_COMMITTED")
-        fresh()
-        worker.start_managed_training(replace=True, **start)
-        # These references originate from the actual committed owner receipt;
-        # no path or dictionary supplied by the caller proves checkpoint bytes.
-        invocation["resume_request"] = {
-            "operation_id": str(uuid.uuid4()), "checkpoint_ref": checkpoint["artifact_ref"],
-            "expected_checkpoint_sha256": checkpoint["artifact_sha256"], "replay_through_step": 2,
-        }
-        invocation["stop_after_checkpoint_step"] = None
-        resumed_result = worker.invoke_owned_training(invocation=invocation, **call)
-        parent_ref = checkpoint["artifact_ref"]
-        checkpoint = _owned_training_parent_checkpoint(client)
-        if (checkpoint is None or checkpoint["completed_step"] <= 2
-                or checkpoint["artifact_ref"] == parent_ref or checkpoint["parent_ref"] != parent_ref):
-            raise TrainingBlocked("CHECKPOINT_TRAINING_CONTINUATION_NOT_OBSERVED")
-        fresh()
-        return jsonify({"ok": True, "state": "OWNED_TRAINING_CALL_RETURNED", "task_id": task_id,
-                        "first_result": first_result, "resumed_result": resumed_result,
-                        "checkpoint": checkpoint, "runtime_promotion": "NOT_PERFORMED"})
-    except Exception as exc:
-        return _owned_training_phase_error(exc)
-    finally:
-        # Stop/reap is owned by the fence and is required even after revocation.
-        # A failed stop must remain an actual error, never a successful return.
-        stopped = worker is None
-        try:
-            if worker is not None:
-                worker.close()
-                stopped = True
-        finally:
-            if session is not None:
-                session.close()
-            if registered and stopped:
-                with _OWNED_TRAINING_PARENT_LOCK:
-                    _OWNED_TRAINING_PARENT_FENCES.pop(task_id, None)
+    """Retained compatibility endpoint; withdrawn training cannot be executed."""
+    return _gpu_training_withdrawn_response()
 
 
 @experience_bp.route(
     "/api/experience/owned-training/phase-tasks/<task_id>/challenges", methods=["POST"],
 )
 def prepare_owned_training_phase_challenge(task_id):
-    """Persist the one legal server-authored challenge; perform no model work."""
-    from ai_task_engine import get_task_engine
-    from lumenis.shared.database import get_repository
-    from lumenis.system.security import training_receipts as receipts
-
-    try:
-        body = _owned_training_phase_body(phase=True)
-        typed, context, args, domain, binding, _, gate, fresh = _owned_training_phase_material(body)
-        fresh()
-        public_key = receipts.get_training_receipt_public_key()
-        engine = get_task_engine()
-        with _owned_training_phase_transaction() as (conn, commit):
-            try:
-                _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
-                engine.require_training_receipt_admission(task_id, binding, reference, public_key, conn)
-                challenge = engine.prepare_training_phase_challenge(
-                    task_id, binding, reference, public_key, body["phase"], conn,
-                )
-                state = engine.get_training_receipt_task(task_id, expected_binding=binding, connection=conn)
-                _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
-                                             task_id=task_id, mutation="challenge", state=state, commit=commit)
-            except Exception:
-                conn.rollback()
-                raise
-        return jsonify({"ok": True, "state": "PHASE_CHALLENGE_PREPARED", "challenge": challenge,
-                        "pinned_public_key": public_key, "model_execution_claimed": False})
-    except Exception as exc:
-        return _owned_training_phase_error(exc)
+    """Retained compatibility endpoint; withdrawn training challenges are not created."""
+    return _gpu_training_withdrawn_response()
 
 
 @experience_bp.route(
     "/api/experience/owned-training/phase-tasks/<task_id>/challenge-decisions", methods=["POST"],
 )
 def issue_owned_training_phase_decision(task_id):
-    """Sign and durably consume one current challenge; never execute a model here."""
-    from ai_task_engine import get_task_engine
-    from lumenis.shared.database import get_repository
-    from lumenis.system.security import training_receipts as receipts
-
-    try:
-        body = _owned_training_phase_body(challenge=True)
-        typed, context, args, domain, binding, fingerprints, gate, fresh = _owned_training_phase_material(body)
-        supplied = body["challenge"]
-        challenge = receipts.validate_training_phase_challenge(
-            supplied, now=supplied.get("issued_at") if type(supplied) is dict else None,
-        )
-        if any(challenge[name] != value for name, value in fingerprints.items()):
-            raise PermissionError("OWNED_TRAINING_PHASE_BINDING_MISMATCH")
-        fresh()
-        public_key = receipts.get_training_receipt_public_key()
-        engine = get_task_engine()
-        with _owned_training_phase_transaction() as (conn, commit):
-            try:
-                _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
-                engine.require_training_receipt_admission(task_id, binding, reference, public_key, conn)
-                prior = engine.get_training_phase_receipt(task_id, binding, reference, challenge["nonce"], conn)
-                if prior is not None:
-                    if prior["challenge"] != challenge:
-                        raise PermissionError("OWNED_TRAINING_PHASE_BINDING_MISMATCH")
-                    _, current = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
-                    if current != reference:
-                        raise PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REPLACED")
-                    conn.rollback()
-                    return jsonify(_owned_training_historical_receipt_response(prior, state="PHASE_RECEIPT_ALREADY_COMMITTED"))
-                challenge = engine.require_pending_training_phase_challenge(
-                    task_id, binding, reference, public_key, challenge, conn,
-                )
-                signed = receipts.sign_training_phase_decision(challenge, "allow")
-                receipts.verify_training_phase_decision(
-                    signed, expected_challenge=challenge, pinned_public_key=public_key,
-                )
-                encoded = json.dumps(signed, ensure_ascii=False, sort_keys=True,
-                                     separators=(",", ":"), allow_nan=False).encode("utf-8")
-                state = engine.consume_training_phase_challenge(
-                    task_id, expected_binding=binding, challenge=challenge,
-                    receipt_sha256=hashlib.sha256(encoded).hexdigest(), decision="allow", connection=conn,
-                    receipt=signed, expected_approval_reference=reference,
-                )
-                _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
-                                             task_id=task_id, mutation="receipt", state=state, commit=commit)
-            except Exception:
-                conn.rollback()
-                raise
-        return jsonify({"ok": True, "state": "PHASE_RECEIPT_COMMITTED", "receipt": signed,
-                        "next_sequence": state["next_sequence"], "model_execution_claimed": False})
-    except Exception as exc:
-        return _owned_training_phase_error(exc)
+    """Retained compatibility endpoint; withdrawn training receipts cannot be issued."""
+    return _gpu_training_withdrawn_response()
 
 
 @experience_bp.route(
@@ -2220,7 +2068,7 @@ def read_owned_training_phase_receipt(task_id, nonce):
         return _owned_training_phase_error(exc)
 
 
-def _change_owned_training_phase_task_state(task_id, *, resume):
+def _interrupt_owned_training_phase_task(task_id):
     from ai_task_engine import get_task_engine
     from lumenis.shared.database import get_repository
     from lumenis.system.security import training_receipts as receipts
@@ -2229,29 +2077,29 @@ def _change_owned_training_phase_task_state(task_id, *, resume):
     typed, context, args, domain, binding, _, gate, fresh = _owned_training_phase_material(body)
     fresh()
     stopped = None
-    if not resume:
-        with _OWNED_TRAINING_PARENT_LOCK:
-            retained = _OWNED_TRAINING_PARENT_FENCES.get(task_id)
-            if retained is not None and retained["binding"] != binding:
-                raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
-            worker = None if retained is None else retained["worker"]
-        if worker is not None:
-            stopped = worker.stop_and_reap()
-            fresh()
+    with _OWNED_TRAINING_PARENT_LOCK:
+        retained = _OWNED_TRAINING_PARENT_FENCES.get(task_id)
+        if retained is not None and retained["binding"] != binding:
+            raise PermissionError("OWNED_TRAINING_PHASE_IDENTITY_CHANGED")
+        worker = None if retained is None else retained["worker"]
+    if worker is not None:
+        stopped = worker.stop_and_reap()
+        fresh()
     public_key = receipts.get_training_receipt_public_key()
     engine = get_task_engine()
     with _owned_training_phase_transaction() as (conn, commit):
         try:
             _, reference = _owned_training_phase_reference(typed, context, args, domain, gate, fresh)
             engine.require_training_receipt_admission(task_id, binding, reference, public_key, conn)
-            change = engine.resume_training_receipt_task if resume else engine.interrupt_training_receipt_task
-            state = change(task_id, expected_binding=binding, connection=conn)
+            state = engine.interrupt_training_receipt_task(
+                task_id, expected_binding=binding, connection=conn,
+            )
             _commit_owned_training_phase(conn, typed, context, args, domain, gate, fresh, reference,
-                                         task_id=task_id, mutation="resume" if resume else "interrupt", state=state, commit=commit)
+                                         task_id=task_id, mutation="interrupt", state=state, commit=commit)
         except Exception:
             conn.rollback()
             raise
-    return jsonify({"ok": True, "state": "PHASE_TASK_RESUMED" if resume else "PHASE_TASK_INTERRUPTED",
+    return jsonify({"ok": True, "state": "PHASE_TASK_INTERRUPTED",
                     "task": state, "model_execution_claimed": False,
                     "trainer_process_stopped": stopped is not None,
                     "trainer_stop_receipt": stopped})
@@ -2260,17 +2108,15 @@ def _change_owned_training_phase_task_state(task_id, *, resume):
 @experience_bp.route("/api/experience/owned-training/phase-tasks/<task_id>/interrupt", methods=["POST"])
 def interrupt_owned_training_phase_task(task_id):
     try:
-        return _change_owned_training_phase_task_state(task_id, resume=False)
+        return _interrupt_owned_training_phase_task(task_id)
     except Exception as exc:
         return _owned_training_phase_error(exc)
 
 
 @experience_bp.route("/api/experience/owned-training/phase-tasks/<task_id>/resume", methods=["POST"])
 def resume_owned_training_phase_task(task_id):
-    try:
-        return _change_owned_training_phase_task_state(task_id, resume=True)
-    except Exception as exc:
-        return _owned_training_phase_error(exc)
+    """Retained compatibility endpoint; withdrawn training cannot be resumed."""
+    return _gpu_training_withdrawn_response()
 
 
 def _owned_training_phase_error(exc):
@@ -2295,7 +2141,7 @@ def _content_project_error_code(exc):
 
 def _content_project_error(exc):
     code = _content_project_error_code(exc)
-    status = 503 if code.endswith("_UNAVAILABLE") else 404 if code.endswith("_NOT_FOUND") else 401 if code == "AUTH_REQUIRED" else 403 if code in {
+    status = 507 if code == "CONTENT_MEDIA_STORAGE_REQUIRED" else 503 if code.endswith("_UNAVAILABLE") or code == "CONTENT_MEDIA_RESOURCE_BUSY" else 404 if code.endswith("_NOT_FOUND") else 401 if code == "AUTH_REQUIRED" else 403 if code in {
         "CONTENT_SCOPE_DENIED", "ACTOR_SCOPE_PERMISSION_DENIED", "DOMAIN_REQUIRED", "CONTEXT_SCOPE_MISMATCH",
         "CONTENT_PROJECT_CONTEXT_MISMATCH", "CONTENT_PROJECT_PARENT_SCOPE_MISMATCH",
         "CONTENT_SOURCE_CONTEXT_MISMATCH", "CONTENT_SOURCE_SCOPE_DENIED",
@@ -2453,18 +2299,25 @@ def _shared_saved_work_route_allowed():
         "experience_runtime.revise_shared_work": (
             "/api/experience/saved-work/<artifact_id>/revise", "POST",
             r"/api/experience/saved-work/ART-[0-9a-f]{16}/revise"),
+        "experience_runtime.read_office_document": (
+            "/api/experience/saved-work/<artifact_id>/office", "GET",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/office"),
+        "experience_runtime.edit_office_document": (
+            "/api/experience/saved-work/<artifact_id>/office/edit", "POST",
+            r"/api/experience/saved-work/ART-[0-9a-f]{16}/office/edit"),
         "experience_runtime.search_shared_work": (
             "/api/experience/saved-work", "GET", r"/api/experience/saved-work"),
         "experience_runtime.read_shared_work": (
             "/api/experience/saved-work/<artifact_id>", "GET",
             r"/api/experience/saved-work/ART-[0-9a-f]{16}"),
         "experience_runtime.export_shared_work": (
-            "/api/experience/saved-work/<artifact_id>/export", "GET",
+            "/api/experience/saved-work/<artifact_id>/export", ("GET", "POST"),
             r"/api/experience/saved-work/ART-[0-9a-f]{16}/export"),
     }
     expected = routes.get(request.endpoint)
     return (expected is not None and request.url_rule is not None
-            and request.url_rule.rule == expected[0] and request.method == expected[1]
+            and request.url_rule.rule == expected[0]
+            and request.method in (expected[1] if isinstance(expected[1], tuple) else (expected[1],))
             and re.fullmatch(expected[2], request.path) is not None)
 
 
@@ -2494,6 +2347,18 @@ def _shared_content_project_route_allowed():
         "experience_runtime.export_content_project": (
             "/api/experience/content-projects/export", "POST",
             r"/api/experience/content-projects/export"),
+        "experience_runtime.submit_content_project_export": (
+            "/api/experience/content-projects/export/tasks", ("GET", "POST"),
+            r"/api/experience/content-projects/export/tasks"),
+        "experience_runtime.content_project_export_task": (
+            "/api/experience/content-projects/export/tasks/<int:task_id>", "GET",
+            r"/api/experience/content-projects/export/tasks/[1-9][0-9]{0,17}"),
+        "experience_runtime.cancel_content_project_export": (
+            "/api/experience/content-projects/export/tasks/<int:task_id>/cancel", "POST",
+            r"/api/experience/content-projects/export/tasks/[1-9][0-9]{0,17}/cancel"),
+        "experience_runtime.resume_content_project_export": (
+            "/api/experience/content-projects/export/tasks/<int:task_id>/resume", "POST",
+            r"/api/experience/content-projects/export/tasks/[1-9][0-9]{0,17}/resume"),
         "experience_runtime.preview_content_speech": (
             "/api/experience/content-sources/tts/preview", "POST",
             r"/api/experience/content-sources/tts/preview"),
@@ -2518,10 +2383,10 @@ def _shared_content_project_route_allowed():
             "/api/experience/content-projects/<artifact_id>", "GET",
             r"/api/experience/content-projects/ART-[0-9a-f]{16}"),
         "experience_runtime.content_project_package": (
-            "/api/experience/content-projects/<artifact_id>/package", "GET",
+            "/api/experience/content-projects/<artifact_id>/package", ("GET", "HEAD"),
             r"/api/experience/content-projects/ART-[0-9a-f]{16}/package"),
         "experience_runtime.content_project_media": (
-            "/api/experience/content-projects/<artifact_id>/media", "GET",
+            "/api/experience/content-projects/<artifact_id>/media", ("GET", "HEAD"),
             r"/api/experience/content-projects/ART-[0-9a-f]{16}/media"),
     }
     expected = routes.get(request.endpoint)
@@ -2668,7 +2533,10 @@ def _shared_work_local_access_allowed():
                  "experience_runtime.save_reporting_preferences": "POST",
                  "experience_runtime.read_reporting_notifications": "GET",
                  "experience_runtime.revise_shared_work": "POST"}
-    if endpoints.get(request.endpoint) != request.method:
+    endpoints.update({"experience_runtime.read_office_document": "GET",
+                      "experience_runtime.edit_office_document": "POST"})
+    methods = ("GET", "POST") if request.endpoint == "experience_runtime.export_shared_work" else (endpoints.get(request.endpoint),)
+    if request.method not in methods:
         return False
     action = "read" if request.method == "GET" or request.endpoint == "experience_runtime.quote_shared_document" else "write"
     if resolve_local_workspace_principal(module="reports", action=action) is None:
@@ -2921,7 +2789,7 @@ def save_shared_work():
     def execute():
         from lumenis.shared.reporting.saved_work import save_work
         from lumenis_app_api import _internal_pitch_body
-        body = _internal_pitch_body()
+        body = _internal_pitch_body(max_bytes=8 * 1024 * 1024)
         if "verify_fact_wall_claims" in body:
             if set(body) != {"verify_fact_wall_claims"}:
                 raise ValueError("WORK_FACT_WALL_REQUEST_INVALID")
@@ -2991,10 +2859,21 @@ def save_shared_work():
             return adopt_domain_report(job_id=job_id, request_id=request_id,
                 mode="save", actor=actor, target_scope=scope, title=title)
         required = {"title", "markdown", "kind", "payload", "citations", "request_id"}
-        allowed = required | {"work_id", "previous_artifact_id", "expected_draft_digest", "contract"}
+        allowed = required | {"work_id", "previous_artifact_id", "expected_draft_digest", "contract",
+                              "mode", "confirm", "confirmed_resource"}
         if not required.issubset(body) or set(body) - allowed:
             raise ValueError("WORK_REQUEST_INVALID")
         actor, scope = _shared_work_actor_scope("write")
+        if set(body) & {'mode', 'confirm', 'confirmed_resource'}:
+            from lumenis.shared.reporting.saved_work import prepare_work_write, confirmed_work_operation
+            mode = body.pop('mode', None)
+            confirm = body.pop('confirm', None)
+            confirmed_resource = body.pop('confirmed_resource', None)
+            prepared = prepare_work_write(actor=actor, scope=scope, **body)
+            outcome = confirmed_work_operation(mode=mode, resource=prepared['resource'], actor=actor, scope=scope,
+                confirm=confirm, confirmed_resource=confirmed_resource, same_origin=_content_source_same_origin(),
+                execute=lambda: save_work(actor=actor, scope=scope, **body))
+            return {**prepared, **outcome} if mode == 'prepare' else outcome
         return save_work(actor=actor, scope=scope, **body)
     return _shared_work_response(execute)
 
@@ -3004,18 +2883,74 @@ def revise_shared_work(artifact_id):
     def execute():
         from lumenis.shared.reporting.saved_work import revise_work
         from lumenis_app_api import _internal_pitch_body
-        body = _internal_pitch_body()
+        body = _internal_pitch_body(max_bytes=8 * 1024 * 1024)
         required = {"request_id", "expected_sha256", "reason", "edits"}
-        if not required.issubset(body) or set(body) - required - {"citations", "source_adoptions"}:
+        if not required.issubset(body) or set(body) - required - {
+                "citations", "source_adoptions", "continue_as_report", "mode", "confirm", "confirmed_resource"}:
             raise ValueError("WORK_REVISION_REQUEST_INVALID")
+        continue_as_report = body.pop('continue_as_report', False)
+        if type(continue_as_report) is not bool:
+            raise ValueError('WORK_VISUAL_CONTINUE_MODE_INVALID')
         actor, scope = _shared_work_actor_scope("write")
         from lumenis.shared.reporting import saved_work, work_dependencies
         parent = saved_work.read_committed_work(artifact_id, actor=actor, scope=scope)
+        confirmation = {key: body.pop(key) for key in ('mode', 'confirm', 'confirmed_resource') if key in body}
         if work_dependencies.KEY in parent["document"]["payload"]:
+            if continue_as_report:
+                raise ValueError('WORK_VISUAL_CONTINUE_NOT_APPLICABLE')
             # The dedicated owner verifies its signed parent receipt. Invalid
             # copied metadata must never fall back to a generic successful save.
+            if confirmation:
+                raise ValueError('WORK_REVISION_OWNER_REQUIRED')
             return work_dependencies.revise_owned_work(artifact_id, actor=actor, scope=scope, **body)
-        return revise_work(artifact_id, actor=actor, scope=scope, **body)
+        if confirmation:
+            item, document = saved_work._prepare_work_revision(artifact_id, actor=actor, scope=scope,
+                continue_as_report=continue_as_report, **body)
+            prepared = saved_work.prepare_work_write(actor=actor, scope=scope,
+                title=document['title'], markdown=document['markdown'], kind=document['kind'],
+                payload=document['payload'], citations=document['citations'], request_id=body['request_id'],
+                work_id=document['work_id'], previous_artifact_id=artifact_id,
+                expected_draft_digest=item['document']['draft_digest'], contract=document['contract'])
+            outcome = saved_work.confirmed_work_operation(mode=confirmation.get('mode'), resource=prepared['resource'],
+                actor=actor, scope=scope, confirm=confirmation.get('confirm'),
+                confirmed_resource=confirmation.get('confirmed_resource'), same_origin=_content_source_same_origin(),
+                execute=lambda: revise_work(artifact_id, actor=actor, scope=scope,
+                    continue_as_report=continue_as_report, **body))
+            return {**prepared, **outcome} if confirmation.get('mode') == 'prepare' else outcome
+        return revise_work(artifact_id, actor=actor, scope=scope,
+            continue_as_report=continue_as_report, **body)
+    return _shared_work_response(execute)
+
+
+@experience_bp.get("/api/experience/saved-work/<artifact_id>/office")
+def read_office_document(artifact_id):
+    def execute():
+        from lumenis.importer.documents import read_office_document as read
+        if (set(request.args) - {"offset", "limit"}
+                or any(len(request.args.getlist(key)) != 1 for key in request.args)):
+            raise ValueError("OFFICE_PAGE_INVALID")
+        values = [request.args.get("offset", "0"), request.args.get("limit", "100")]
+        if any(not value.isascii() or not value.isdecimal() for value in values):
+            raise ValueError("OFFICE_PAGE_INVALID")
+        actor, scope = _shared_work_actor_scope("read")
+        return read(artifact_id, actor=actor, scope=scope, offset=int(values[0]), limit=int(values[1]))
+    return _shared_work_response(execute)
+
+
+@experience_bp.post("/api/experience/saved-work/<artifact_id>/office/edit")
+def edit_office_document(artifact_id):
+    def execute():
+        from lumenis.importer.documents import edit_office_document as edit
+        from lumenis_app_api import _internal_pitch_body
+        if not _content_source_same_origin():
+            raise PermissionError("OFFICE_ORIGIN_DENIED")
+        body = _internal_pitch_body()
+        required = {"request_id", "expected_sha256", "expected_package_sha256", "reason", "commands"}
+        if (not required.issubset(body)
+                or set(body) - required - {"acknowledge_signature_invalidation"}):
+            raise ValueError("OFFICE_EDIT_REQUEST_INVALID")
+        actor, scope = _shared_work_actor_scope("write")
+        return edit(artifact_id, actor=actor, scope=scope, **body)
     return _shared_work_response(execute)
 
 
@@ -3066,18 +3001,36 @@ def read_shared_work(artifact_id):
     return _shared_work_response(execute)
 
 
-@experience_bp.get("/api/experience/saved-work/<artifact_id>/export")
+@experience_bp.route("/api/experience/saved-work/<artifact_id>/export", methods=['GET', 'POST'])
 def export_shared_work(artifact_id):
     def execute():
         import io
         from flask import send_file
-        from lumenis.shared.reporting.saved_work import export_work
-        if ("format" not in request.args or set(request.args) - {"format", "purpose"}
-                or any(len(request.args.getlist(key)) != 1 for key in request.args)):
-            raise ValueError("WORK_EXPORT_FORMAT_INVALID")
+        from lumenis.shared.reporting.saved_work import export_work, prepare_work_export, confirmed_work_operation
+        if request.method == 'POST':
+            from lumenis_app_api import _internal_pitch_body
+            body = _internal_pitch_body()
+            if (request.args or 'format' not in body or 'mode' not in body
+                    or set(body) - {'format', 'purpose', 'mode', 'confirm', 'confirmed_resource'}):
+                raise ValueError('WORK_EXPORT_FORMAT_INVALID')
+        else:
+            if ("format" not in request.args or set(request.args) - {"format", "purpose"}
+                    or any(len(request.args.getlist(key)) != 1 for key in request.args)):
+                raise ValueError("WORK_EXPORT_FORMAT_INVALID")
+            body = dict(request.args)
         actor, scope = _shared_work_actor_scope("read")
-        result = export_work(artifact_id, actor=actor, scope=scope, format=request.args["format"],
-                             purpose=request.args.get("purpose", "audit_snapshot"))
+        export = lambda: export_work(artifact_id, actor=actor, scope=scope, format=body['format'],
+                                     purpose=body.get('purpose', 'audit_snapshot'))
+        if request.method == 'POST':
+            prepared = prepare_work_export(artifact_id, actor=actor, scope=scope,
+                format=body['format'], purpose=body.get('purpose', 'audit_snapshot'))
+            result = confirmed_work_operation(mode=body['mode'], resource=prepared['resource'], actor=actor, scope=scope,
+                confirm=body.get('confirm'), confirmed_resource=body.get('confirmed_resource'),
+                same_origin=_content_source_same_origin(), execute=export)
+            if body['mode'] == 'prepare':
+                return {**prepared, **result}
+        else:
+            result = export()
         response = send_file(io.BytesIO(result["content"]), mimetype=result["media_type"],
                              download_name=result["filename"], as_attachment=True, max_age=0)
         response.headers["Cache-Control"] = "no-store"
@@ -3525,8 +3478,9 @@ def _content_project_assets(payload, actor, scope):
         paths = payload.get("asset_paths")
         if not isinstance(paths, list) or not 1 <= len(paths) <= 64:
             raise LocalArtifactError("LOCAL_ASSETS_REQUIRED")
-        normalized_paths = [validate_local_asset(value) for value in paths]
-        if sum(path.stat().st_size for path in normalized_paths) > 500 * 1024 * 1024:
+        normalized_paths = [validate_local_asset(value, resource_budget=True) for value in paths]
+        from shared_artifacts import content_media_resource_budget
+        if sum(path.stat().st_size for path in normalized_paths) > content_media_resource_budget()["storage_capacity_bytes"]:
             raise LocalArtifactError("CONTENT_SOURCE_TOTAL_TOO_LARGE")
         assets = [fingerprint_local_media(str(path)) for path in normalized_paths]
         asset_ids = [asset.asset_id for asset in assets]
@@ -3546,7 +3500,7 @@ def inspect_content_project_media():
         if not isinstance(body, dict) or body.get("action_type") != "READ":
             raise LocalArtifactError("CONTENT_INSPECT_REQUIRES_READ")
         payload = body.get("input")
-        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcript_edit", "edit_batch", "audio_comparison"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
+        if not isinstance(payload, dict) or (set(payload) - {"asset_paths", "asset_refs", "waveform", "silence_proposal", "timeline", "stream_metadata", "broll", "toolchain", "transcription", "transcripts", "transcript_edit", "edit_batch", "audio_comparison", "source_preview"} or (("asset_paths" in payload) == ("asset_refs" in payload))):
             raise LocalArtifactError("INVALID_CONTENT_INPUT")
         actor, scope = _content_project_scope("read")
         with _content_project_assets(payload, actor, scope) as (_, assets, source_refs):
@@ -3554,6 +3508,19 @@ def inspect_content_project_media():
                 current_actor, current_scope = _content_project_scope("read")
                 if current_actor != actor or current_scope != scope:
                     raise LocalArtifactError("CONTENT_PROJECT_CONTEXT_MISMATCH")
+            source_preview = None
+            if "source_preview" in payload:
+                from shared_artifacts import prepare_content_source_preview
+                options = payload['source_preview']
+                if (not source_refs or type(options) is not dict or not {'asset_id','kind'} <= set(options)
+                        or set(options) - {'asset_id','kind','audio_stream_index'}):
+                    raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_INVALID')
+                index = next((index for index, asset in enumerate(assets) if asset.asset_id == options['asset_id']), None)
+                if index is None:
+                    raise LocalArtifactError('CONTENT_SOURCE_PREVIEW_INVALID')
+                source_preview = prepare_content_source_preview(source_refs[index], actor=actor, **scope,
+                    expected_sha256=assets[index].sha256, source_asset=assets[index], kind=options['kind'],
+                    audio_stream_index=options.get('audio_stream_index'), check_continue=check_read)
             if "audio_comparison" in payload:
                 from lumenis.shared.content_creation.rendering import (
                     preview_audio_processing,
@@ -3598,10 +3565,32 @@ def inspect_content_project_media():
             if "transcript_edit" in payload:
                 from lumenis.shared.content_creation.transcript_editing import project_word_deletion_candidate
                 options=payload["transcript_edit"]
-                if not isinstance(options,dict) or set(options) not in ({"project_id","word_ids"},{"project_id","filler_terms","expected_transcript_sha256"}) or not isinstance(options["project_id"],str):
+                if (not isinstance(options,dict) or "project_id" not in options
+                        or set(options)-{"project_id","word_ids","filler_terms","expected_transcript_sha256","clip_ids","synchronize","transcript_asset_id","source_selections"}
+                        or sum(key in options for key in ("word_ids", "filler_terms", "source_selections")) != 1
+                        or "source_selections" in options and set(options) & {"expected_transcript_sha256", "clip_ids", "transcript_asset_id"}
+                        or "filler_terms" in options and "expected_transcript_sha256" not in options
+                        or not isinstance(options["project_id"],str)):
                     raise LocalArtifactError("WORD_EDIT_OPTIONS_INVALID")
                 transcript_edit=project_word_deletion_candidate(actor=actor,scope=scope,source_artifact_refs=source_refs,**options)
                 check_read()
+            if "transcripts" in payload:
+                from lumenis.shared.content_creation.transcript_editing import project_transcripts_read
+
+                options = payload["transcripts"]
+                if (set(payload) - {"asset_refs", "transcripts"} or not source_refs
+                        or type(options) is not dict or "project_id" not in options
+                        or set(options) - {"project_id", "offset", "limit"}
+                        or type(options["project_id"]) is not str):
+                    raise LocalArtifactError("CONTENT_TRANSCRIPT_READ_OPTIONS_INVALID")
+                transcripts = project_transcripts_read(
+                    actor=actor, scope=scope, source_artifact_refs=source_refs, **options)
+                check_read()
+                response = jsonify({"ok": True, "transcripts": transcripts,
+                                    "source_artifact_refs": source_refs,
+                                    "external_fetch": False})
+                response.headers["Cache-Control"] = "no-store"
+                return response
             transcription = None
             if "transcription" in payload:
                 from lumenis.shared.content_creation.speech_transcription import build_transcription_files
@@ -3665,7 +3654,7 @@ def inspect_content_project_media():
                     raise LocalArtifactError("WAVEFORM_INPUT_INVALID")
                 waveforms = [extract_waveform(asset, **options, check_continue=check_read) for asset in assets]
                 check_read()
-            return jsonify({"ok": True, **({"edit_batch": edit_batch} if edit_batch is not None else {}), **({"transcript_edit":transcript_edit} if transcript_edit is not None else {}), **({"transcription":transcription} if transcription is not None else {}), **({"toolchain":toolchain} if toolchain is not None else {}), **({"broll":broll} if broll is not None else {}), **({"stream_metadata":stream_metadata} if "stream_metadata" in payload else {}), **({"silence_edl":silence_edl} if silence_edl is not None else {}), **({"silence_proposals": silence_proposals} if "silence_proposal" in payload else {}), **({"waveforms": waveforms} if "waveform" in payload else {}), "assets": [asset.to_dict() for asset in assets],
+            return jsonify({"ok": True, **({"source_preview": source_preview} if source_preview is not None else {}), **({"edit_batch": edit_batch} if edit_batch is not None else {}), **({"transcript_edit":transcript_edit} if transcript_edit is not None else {}), **({"transcription":transcription} if transcription is not None else {}), **({"toolchain":toolchain} if toolchain is not None else {}), **({"broll":broll} if broll is not None else {}), **({"stream_metadata":stream_metadata} if "stream_metadata" in payload else {}), **({"silence_edl":silence_edl} if silence_edl is not None else {}), **({"silence_proposals": silence_proposals} if "silence_proposal" in payload else {}), **({"waveforms": waveforms} if "waveform" in payload else {}), "assets": [asset.to_dict() for asset in assets],
                             "source_artifact_refs": source_refs, "rights_state": "unknown",
                             "external_fetch": False})
     except ValueError as exc:
@@ -3852,7 +3841,8 @@ def preview_podcast_editorial():
 def import_content_source():
     """Import one bounded local media body into the scoped Artifact owner."""
     from werkzeug.exceptions import RequestEntityTooLarge
-    from shared_artifacts import LocalArtifactError, artifact_root, stage_content_source_artifact
+    from shared_artifacts import (LocalArtifactError, artifact_root, stage_content_source_artifact,
+                                  content_media_resource_budget)
     from shared_artifacts import _safe_content_source_filename, parse_media_license_header, validate_media_license, _media_license_digest
     from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
     from lumenis.system.security.permission import ContentSourceImport
@@ -3874,8 +3864,18 @@ def import_content_source():
         filename = _safe_content_source_filename(filenames[0])
         media_license = parse_media_license_header(request.headers.get("X-Lumenis-Media-License"))
         declared_length = request.content_length
-        if declared_length is not None and declared_length > _CONTENT_SOURCE_IMPORT_MAX_BYTES:
-            raise RequestEntityTooLarge()
+        budget = content_media_resource_budget()
+        # Keep enough space for the incoming temporary body and immutable original.
+        upload_budget = max(0, (budget["available_bytes"] - 65536) // 2)
+        if declared_length is not None and declared_length > upload_budget:
+            raise LocalArtifactError("CONTENT_MEDIA_STORAGE_REQUIRED")
+        # Flask 3.1 supplies a per-request setter. Keep the application's other
+        # request limits intact while admitting this authenticated streaming body.
+        try:
+            request.max_content_length = upload_budget
+        except AttributeError:
+            if declared_length is None or declared_length > (request.max_content_length or upload_budget):
+                raise LocalArtifactError('CONTENT_SOURCE_STREAM_RUNTIME_UNAVAILABLE')
         # Independently bound observed bytes; the supported Flask >=2 range
         # does not always expose a writable per-request max_content_length.
 
@@ -3897,12 +3897,16 @@ def import_content_source():
             body_digest = hashlib.sha256()
             with open(upload_path, "xb") as output:
                 while True:
-                    chunk = request.stream.read(min(1024 * 1024, _CONTENT_SOURCE_IMPORT_MAX_BYTES - observed + 1))
+                    chunk = request.stream.read(min(budget["chunk_bytes"], upload_budget - observed + 1))
                     if not chunk:
                         break
                     observed += len(chunk)
-                    if observed > _CONTENT_SOURCE_IMPORT_MAX_BYTES:
-                        raise RequestEntityTooLarge()
+                    if observed > upload_budget:
+                        raise LocalArtifactError("CONTENT_MEDIA_STORAGE_REQUIRED")
+                    if (actor, scope) != _content_project_scope("write"):
+                        raise LocalArtifactError("CONTENT_SOURCE_CONTEXT_MISMATCH")
+                    if len(chunk) > content_media_resource_budget()["available_bytes"]:
+                        raise LocalArtifactError("CONTENT_MEDIA_STORAGE_REQUIRED")
                     body_digest.update(chunk)
                     output.write(chunk)
             if observed <= 0:
@@ -4058,13 +4062,13 @@ def content_source_detail(artifact_id: str):
         actor, scope = _content_project_scope("read", selectors=selectors)
         formats = request.args.getlist("format")
         if formats:
-            if (formats != ["media"] or set(request.args) - {"format", "sha256", "context"}
+            if (formats != ["media"] or set(request.args) - {"format", "sha256", "context", "preview_key"}
                     or len(request.args.getlist("sha256")) != 1):
                 raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
             if not _content_source_same_origin():
                 raise ValueError("CONTENT_SOURCE_ORIGIN_DENIED")
             media = open_content_source_media(
-                artifact_id, expected_sha256=request.args["sha256"], actor=actor, **scope)
+                artifact_id, expected_sha256=request.args["sha256"], preview_key=request.args.get('preview_key'), actor=actor, **scope)
             from flask import Response, stream_with_context
 
             etag = f'"{media.sha256}"'
@@ -4104,13 +4108,13 @@ def content_source_detail(artifact_id: str):
                         "publish_status": "not_performed"}), 503
 
 
-def _content_media_selectors():
+def _content_media_selectors(*, expected_format="media"):
     from werkzeug.datastructures import Headers
 
     if "context" not in request.args:
         return request.headers
     values = request.args.getlist("context")
-    if len(values) != 1 or len(values[0].encode("utf-8")) > 2048 or request.args.getlist("format") != ["media"]:
+    if len(values) != 1 or len(values[0].encode("utf-8")) > 2048 or request.args.getlist("format") != [expected_format]:
         raise ValueError("CONTENT_SOURCE_FORMAT_INVALID")
 
     def unique(pairs):
@@ -4141,6 +4145,629 @@ def _content_media_selectors():
     return selectors
 
 
+def _content_export_json_digest(value):
+    encoded = json.dumps(value, ensure_ascii=False, sort_keys=True,
+                         separators=(",", ":"), allow_nan=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest(), encoded
+
+
+def _content_export_actor_ref(actor):
+    from lumenis.system.security.permission import LocalWorkspacePrincipal
+    if type(actor) is LocalWorkspacePrincipal:
+        return f"{actor.principal_kind}:{actor.principal_ref}"
+    if isinstance(actor, dict) and type(actor.get("id")) is int and actor["id"] > 0:
+        return f"actor:{actor['id']}"
+    raise ValueError("AUTH_REQUIRED")
+
+
+def _content_export_task_binding(actor, scope, request_id, payload_digest, parent_digest):
+    actor_ref = _content_export_actor_ref(actor)
+    scope_digest, _ = _content_export_json_digest(scope)
+    request_key = hashlib.sha256(
+        f"{actor_ref}\n{scope_digest}\n{request_id}".encode("utf-8")
+    ).hexdigest()
+    return request_key, {
+        "actor_ref": actor_ref,
+        "scope_sha256": scope_digest,
+        "payload_sha256": payload_digest,
+        "parent_version_sha256": parent_digest,
+    }
+
+
+def _content_export_parent_digest(artifact_id, *, actor, scope):
+    if artifact_id is None:
+        return None
+    from shared_artifacts import _verified_content_project
+    _project, _render, record, _path = _verified_content_project(
+        artifact_id, actor=actor, **scope,
+    )
+    digest = record.get("sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        raise ValueError("CONTENT_PROJECT_INTEGRITY_FAILED")
+    return digest
+
+
+def _prepare_content_export_request(payload, *, actor, scope):
+    from shared_artifacts import (
+        LocalArtifactError, _validate_content_delivery_options,
+        content_project_export_resource,
+    )
+    from lumenis.shared.content_creation.video_editing import Timeline
+    allowed = {"asset_refs", "timeline", "output_kind", "previous_artifact_id",
+               "source_project_artifact_refs", "render_options", "delivery_options", "title", "render_media"}
+    if (not isinstance(payload, dict) or set(payload) - allowed
+            or "asset_refs" not in payload or "timeline" not in payload
+            or type(payload.get("asset_refs")) is not list):
+        raise LocalArtifactError("INVALID_CONTENT_INPUT")
+    with _content_project_assets(payload, actor, scope) as (_, assets, source_refs):
+        timeline = Timeline.from_dict(payload.get("timeline"), assets=assets)
+        from lumenis.shared.content_creation.rendering import validate_render_options
+        render_options = validate_render_options(payload.get("render_options"))
+        delivery_options = _validate_content_delivery_options(payload.get("delivery_options"))
+        output_kind = payload.get("output_kind", "video")
+        if output_kind not in {"video", "audio"}:
+            raise LocalArtifactError("OUTPUT_KIND_NOT_SUPPORTED")
+        title = payload.get("title")
+        render_media = payload.get("render_media", True)
+        from shared_artifacts import _validate_content_project_save
+        _validate_content_project_save(title, render_media, delivery_options)
+        normalized = {
+            "render_options": render_options,
+            "delivery_options": delivery_options,
+            "timeline": timeline.to_dict(),
+            "scope": dict(scope),
+            "source_artifact_refs": source_refs,
+            "output_kind": output_kind,
+            "previous_artifact_id": payload.get("previous_artifact_id"),
+            "title": title,
+            "render_media": render_media,
+        }
+        if "source_project_artifact_refs" in payload:
+            normalized["source_project_artifact_refs"] = payload["source_project_artifact_refs"]
+        normalized["target"] = content_project_export_resource(
+            timeline, actor=actor, source_artifact_refs=source_refs,
+            output_kind=output_kind, title=title, render_media=render_media,
+            previous_artifact_id=normalized["previous_artifact_id"],
+            source_project_artifact_refs=normalized.get("source_project_artifact_refs"),
+            render_options=render_options, delivery_options=delivery_options,
+            **scope,
+        )
+        return normalized
+
+
+def _content_export_queue():
+    from lumenis.system.collector.guard.task_queue import TaskQueue
+    return TaskQueue()
+
+
+def _content_export_queue_worker_alive(worker_id, lease_owner, run_id):
+    match = re.fullmatch(
+        r"shared-content-export:(\d+):([0-9]+(?:\.[0-9]+)?):(\d+):([0-9a-f]{32})",
+        str(worker_id or ""),
+    )
+    if not match or not lease_owner or not run_id:
+        return True  # Unknown worker identity is never evidence of death.
+    pid, started_at, native_id = int(match.group(1)), float(match.group(2)), int(match.group(3))
+    import psutil
+    try:
+        process = psutil.Process(pid)
+        if abs(process.create_time() - started_at) > 0.02:
+            return False
+        return native_id in {thread.id for thread in process.threads()}
+    except psutil.NoSuchProcess:
+        return False
+    except Exception:
+        return True  # Fail closed; a live worker cannot be assumed dead.
+
+
+def _content_export_task_state(row):
+    mapping = {"pending": "pending", "running": "running",
+               "cancel_requested": "canceling", "cancelled": "cancelled",
+               "interrupted": "interrupted", "failed": "failed", "done": "completed"}
+    return mapping.get(row.get("status"), "unavailable")
+
+
+def _content_export_task_row(task_id, *, actor, scope, queue=None):
+    from shared_artifacts import CONTENT_PROJECT_EXPORT_TASK_TYPE
+    queue = queue or _content_export_queue()
+    row = queue.get(task_id)
+    if not isinstance(row, dict) or row.get("task_type") != CONTENT_PROJECT_EXPORT_TASK_TYPE:
+        raise LookupError("CONTENT_EXPORT_TASK_NOT_FOUND")
+    payload = row.get("payload")
+    if not isinstance(payload, dict) or not isinstance(payload.get("request_id"), str):
+        raise LookupError("CONTENT_EXPORT_TASK_NOT_FOUND")
+    payload_digest = payload.get("request_digest")
+    parent_digest = payload.get("parent_version_sha256")
+    if (not isinstance(payload_digest, str) or re.fullmatch(r"[0-9a-f]{64}", payload_digest) is None
+            or parent_digest is not None and (not isinstance(parent_digest, str)
+                or re.fullmatch(r"[0-9a-f]{64}", parent_digest) is None)):
+        raise LookupError("CONTENT_EXPORT_TASK_NOT_FOUND")
+    request_key, expected_binding = _content_export_task_binding(
+        actor, scope, payload["request_id"], payload_digest, parent_digest,
+    )
+    if (payload.get("request_key") != request_key
+            or payload.get("binding") != expected_binding):
+        raise LookupError("CONTENT_EXPORT_TASK_NOT_FOUND")
+    return row, payload, queue
+
+
+def _content_export_task_view(row, payload, *, actor, scope):
+    state = _content_export_task_state(row)
+    created = row.get("created_at")
+    updated = max(float(row.get("last_heartbeat_at") or 0),
+                  float(row.get("last_success_at") or 0), float(created or 0))
+
+    def stamp(value):
+        if type(value) not in (int, float) or value <= 0:
+            return None
+        return _dt.datetime.fromtimestamp(value, _dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+    result = None
+    if state == "completed":
+        reference = payload.get("result")
+        if (not isinstance(reference, dict)
+                or not isinstance(reference.get("artifact_id"), str)
+                or reference.get("source_execution_id") != str(row["id"])):
+            raise ValueError("CONTENT_EXPORT_RESULT_UNAVAILABLE")
+        from shared_artifacts import _artifact_record, read_content_project
+        record = _artifact_record(reference["artifact_id"], read_only=True)
+        if (not record or record.get("kind") != "content_project"
+                or record.get("source_execution_id") != str(row["id"])
+                or record.get("sha256") != reference.get("sha256")):
+            raise ValueError("CONTENT_EXPORT_RESULT_UNAVAILABLE")
+        reopened = read_content_project(reference["artifact_id"], actor=actor, **scope)
+        project = reopened["project"]
+        result_status = reference.get("status")
+        expected_result_status = ("rendered_staged" if reopened["render"].get("state") == "rendered_verified"
+                                  else "project_saved")
+        result_metadata = reference.get("metadata")
+        if result_metadata is not None and type(result_metadata) is not dict:
+            raise ValueError("CONTENT_EXPORT_RESULT_UNAVAILABLE")
+        evidence_recorded = (result_metadata or {}).get("evidence_recorded")
+        if evidence_recorded is not None and type(evidence_recorded) is not bool:
+            raise ValueError("CONTENT_EXPORT_RESULT_UNAVAILABLE")
+        if result_status != expected_result_status:
+            raise ValueError("CONTENT_EXPORT_RESULT_UNAVAILABLE")
+        result = {
+            "status": result_status,
+            "artifact": {key: record[key] for key in (
+                "artifact_id", "kind", "product_id", "domain_id", "source_execution_id",
+                "filename", "media_type", "size_bytes", "sha256", "status",
+                "approval_required", "approval_status", "created_at", "updated_at",
+            )},
+            "project": project,
+            "render": reopened["render"],
+            "package_url": f"/api/experience/content-projects/{reference['artifact_id']}/package",
+            "media_url": f"/api/experience/content-projects/{reference['artifact_id']}/media",
+            "rights_state": "unknown", "publish_status": "not_performed",
+            "evidence_recorded": evidence_recorded,
+        }
+    error_code = None
+    if state == "failed":
+        error_code = _content_project_error_code(row.get("last_error") or "CONTENT_EXPORT_FAILED")
+    return {
+        "task_id": row["id"], "task_kind": "content_project_export", "status": state,
+        "created_at": stamp(created), "updated_at": stamp(updated),
+        "can_cancel": state in {"pending", "running"},
+        "can_resume": state == "interrupted" or state == "pending" and int(row.get("attempts") or 0) == 0,
+        "error_code": error_code, "result": result,
+    }
+
+
+def _content_export_task_cursor(actor, scope, before_id):
+    import base64
+    actor_ref = _content_export_actor_ref(actor)
+    scope_digest, _ = _content_export_json_digest(scope)
+    encoded = json.dumps({"v": 1, "actor_ref": actor_ref,
+                          "scope_sha256": scope_digest, "before_id": before_id},
+                         sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return base64.urlsafe_b64encode(encoded).decode("ascii").rstrip("=")
+
+
+def _content_export_cursor_before(cursor, actor, scope):
+    if cursor is None:
+        return None
+    import base64
+    if not isinstance(cursor, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,512}", cursor):
+        raise ValueError("CONTENT_EXPORT_CURSOR_INVALID")
+    try:
+        decoded = base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4))
+        value = json.loads(decoded)
+    except (ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise ValueError("CONTENT_EXPORT_CURSOR_INVALID") from exc
+    actor_ref = _content_export_actor_ref(actor)
+    scope_digest, _ = _content_export_json_digest(scope)
+    if (type(value) is not dict or set(value) != {"v", "actor_ref", "scope_sha256", "before_id"}
+            or value.get("v") != 1 or value.get("actor_ref") != actor_ref
+            or value.get("scope_sha256") != scope_digest
+            or type(value.get("before_id")) is not int or value["before_id"] <= 0):
+        raise ValueError("CONTENT_EXPORT_CURSOR_INVALID")
+    return value["before_id"]
+
+
+def _content_export_task_list():
+    from shared_artifacts import CONTENT_PROJECT_EXPORT_TASK_TYPE
+    queue = None
+    try:
+        actor, scope = _content_project_scope("read")
+        if set(request.args) - {"limit", "cursor"} or any(
+            len(request.args.getlist(key)) != 1 for key in request.args
+        ):
+            raise ValueError("CONTENT_EXPORT_TASK_LIST_INVALID")
+        limit_text = request.args.get("limit", "20")
+        if not re.fullmatch(r"[1-9][0-9]?", limit_text):
+            raise ValueError("CONTENT_EXPORT_TASK_LIST_INVALID")
+        limit = int(limit_text)
+        if limit > 50:
+            raise ValueError("CONTENT_EXPORT_TASK_LIST_INVALID")
+        before_id = _content_export_cursor_before(request.args.get("cursor"), actor, scope)
+        actor_ref = _content_export_actor_ref(actor)
+        scope_digest, _ = _content_export_json_digest(scope)
+        queue = _content_export_queue()
+        rows, next_before_id = queue.list_by_type(
+            CONTENT_PROJECT_EXPORT_TASK_TYPE, before_id=before_id, limit=limit,
+            actor_ref=actor_ref, scope_sha256=scope_digest,
+        )
+        tasks = []
+        for listed in rows:
+            try:
+                row, payload, queue = _content_export_task_row(
+                    listed["id"], actor=actor, scope=scope, queue=queue,
+                )
+            except LookupError:
+                continue
+            if row.get("status") in {"running", "cancel_requested"}:
+                queue.mark_interrupted_if_dead(
+                    row["id"], task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                    request_key=payload["request_key"], stale_after_seconds=60,
+                    worker_alive_check=_content_export_queue_worker_alive,
+                )
+                row, payload, queue = _content_export_task_row(
+                    listed["id"], actor=actor, scope=scope, queue=queue,
+                )
+            tasks.append(_content_export_task_view(row, payload, actor=actor, scope=scope))
+        response = jsonify({"ok": True, "tasks": tasks, "limit": limit,
+            "next_cursor": _content_export_task_cursor(actor, scope, next_before_id)
+                if next_before_id is not None else None})
+        response.headers["Cache-Control"] = "private, no-store"
+        return response
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_EXPORT_TASK_LIST_UNAVAILABLE"}), 503
+    finally:
+        if queue is not None:
+            queue.close()
+
+
+def _start_content_project_export_worker(task_id, *, actor, scope, app):
+    from flask import copy_current_request_context
+
+    @copy_current_request_context
+    def run():
+        from shared_artifacts import CONTENT_PROJECT_EXPORT_TASK_TYPE, LocalArtifactError, stage_timeline_artifact
+        from lumenis.shared.agents.skills.execution import ActionType, SkillRuntimeInfo, run_execution_chain
+        from lumenis.shared.content_creation.video_editing import Timeline
+        queue = _content_export_queue()
+        process = __import__("psutil").Process(os.getpid())
+        native_id = threading.get_native_id()
+        worker_id = (f"shared-content-export:{os.getpid()}:{process.create_time():.6f}:"
+                     f"{native_id}:{__import__('uuid').uuid4().hex}")
+        lease_owner = __import__("uuid").uuid4().hex
+        try:
+            with app.app_context():
+                job = queue.dequeue(worker_id=worker_id, lease_owner=lease_owner, task_id=task_id)
+                if not isinstance(job, dict):
+                    return
+                task_control = {"queue": queue, "task_id": task_id,
+                    "request_key": job["payload"]["request_key"], "run_id": job["run_id"],
+                    "worker_id": worker_id, "lease_owner": lease_owner}
+                try:
+                    # Reauthorize the captured server actor and exact normalized
+                    # scope at worker start; every render callback repeats it.
+                    from shared_artifacts import _authorize_content_project
+                    _authorize_content_project(actor, action="write", **scope)
+                    payload = job["payload"]
+                    request_body = payload.get("request_payload")
+                    if (not isinstance(request_body, dict) or set(request_body) != {"task", "input"}
+                            or not isinstance(request_body.get("input"), dict)):
+                        raise LocalArtifactError("CONTENT_EXPORT_TASK_BINDING_INVALID")
+                    stored_input = request_body["input"]
+                    required_input = {"render_options", "delivery_options", "timeline",
+                        "scope", "source_artifact_refs", "output_kind", "previous_artifact_id",
+                        "title", "render_media", "target"}
+                    if (not required_input.issubset(stored_input)
+                            or set(stored_input) - required_input - {"source_project_artifact_refs"}):
+                        raise LocalArtifactError("CONTENT_EXPORT_TASK_BINDING_INVALID")
+                    if stored_input.get("scope") != scope:
+                        raise LocalArtifactError("CONTENT_EXPORT_TASK_BINDING_INVALID")
+                    prepared = _prepare_content_export_request({
+                        "asset_refs": stored_input.get("source_artifact_refs"),
+                        "timeline": stored_input.get("timeline"),
+                        "output_kind": stored_input.get("output_kind"),
+                        "previous_artifact_id": stored_input.get("previous_artifact_id"),
+                        **({"source_project_artifact_refs": stored_input["source_project_artifact_refs"]}
+                           if "source_project_artifact_refs" in stored_input else {}),
+                        "render_options": stored_input.get("render_options"),
+                        "delivery_options": stored_input.get("delivery_options"),
+                        "title": stored_input.get("title"),
+                        "render_media": stored_input.get("render_media"),
+                    }, actor=actor, scope=scope)
+                    actual_digest, _ = _content_export_json_digest({
+                        "task": request_body["task"], "input": prepared,
+                        "parent_version_sha256": payload.get("parent_version_sha256"),
+                    })
+                    request_key, binding = _content_export_task_binding(
+                        actor, scope, payload["request_id"], payload["request_digest"],
+                        payload.get("parent_version_sha256"),
+                    )
+                    if (prepared != stored_input or actual_digest != payload["request_digest"]
+                            or payload.get("request_key") != request_key
+                            or payload.get("binding") != binding):
+                        raise LocalArtifactError("CONTENT_EXPORT_TASK_BINDING_INVALID")
+                    source_payload = {"asset_refs": prepared["source_artifact_refs"],
+                        "timeline": prepared["timeline"]}
+                    with _content_project_assets(source_payload, actor, scope) as (_, assets, source_refs):
+                        timeline = Timeline.from_dict(prepared["timeline"], assets=assets)
+                        info = SkillRuntimeInfo(
+                            skill_id="shared.content_project", name="内容工程导出",
+                            description="真实媒体与可回开的编辑版本", product="SHARED",
+                            domain="content", version="1.0.0", enabled=True,
+                            source="shared_artifacts", cross_domain_allowed=["CTH", "BMP"],
+                        )
+                        account_actor = actor if isinstance(actor, dict) else None
+                        local_principal = actor if "shared_workspace_scope" in scope and not account_actor else None
+
+                        def render(_ctx):
+                            try:
+                                staged = stage_timeline_artifact(
+                                    timeline, actor=actor, **scope, source_execution_id=str(task_id),
+                                    output_kind=prepared["output_kind"],
+                                    title=prepared["title"], render_media=prepared["render_media"],
+                                    previous_artifact_id=prepared["previous_artifact_id"],
+                                    source_artifact_refs=source_refs,
+                                    source_project_artifact_refs=prepared.get("source_project_artifact_refs"),
+                                    render_options=prepared["render_options"],
+                                    delivery_options=prepared["delivery_options"],
+                                    task_control=task_control,
+                                )
+                            except Exception as exc:
+                                # The generic Skill boundary intentionally hides
+                                # exception details. Preserve only the existing
+                                # code-shaped Shared error for task readback;
+                                # paths and arbitrary exception text stay local.
+                                code = _content_project_error_code(exc)
+                                return {"success": False, "error": code, "code": code}
+                            return {"success": True, "result": {"artifact": staged["artifact"],
+                                "render_receipt": {key: staged["render"][key] for key in
+                                    ("state", "media_sha256", "size_bytes", "timeline_version")
+                                    if key in staged["render"]}}}
+
+                        context = _content_project_execution_context(scope)
+                        ctx = run_execution_chain(
+                            skill_id="shared.content_project", task=request_body["task"],
+                            input_payload=prepared, action_type=ActionType.EXPORT,
+                            execution_id=f"content_export_{task_id}",
+                            user_id=account_actor["id"] if account_actor else None,
+                            user_role=account_actor.get("role", "user") if account_actor else "user",
+                            product=("SHARED" if "shared_workspace_scope" in scope else
+                                     "CTH" if scope["domain_id"] == "cth" else "ZBMP"),
+                            domain=None if "shared_workspace_scope" in scope else scope["domain_id"],
+                            skill_info=info, handler=render, request_context=context,
+                            workspace_principal=local_principal,
+                        )
+                        latest = queue.get(task_id)
+                        if latest and latest.get("status") == "cancel_requested":
+                            if queue.finish_cancelled(
+                                task_id, task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                                request_key=job["payload"]["request_key"],
+                                reason="user_cancelled", run_id=job["run_id"],
+                                worker_id=worker_id, lease_owner=lease_owner,
+                            ):
+                                return
+                            latest = queue.get(task_id)
+                        if latest and latest.get("status") == "done":
+                            evidence_record = getattr(ctx, "evidence_record", None)
+                            evidence_recorded = (isinstance(evidence_record, dict)
+                                                 and evidence_record.get("ok") is True)
+                            queue.record_result_metadata(
+                                task_id, {"evidence_recorded": evidence_recorded},
+                                task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                                request_key=job["payload"]["request_key"],
+                            )
+                        if (latest and latest.get("status") == "running"
+                                and ctx.status.value != "completed"):
+                            code = _content_project_error_code(ctx.error or "CONTENT_EXPORT_FAILED")
+                            failed = queue.fail(task_id, code, run_id=job["run_id"], worker_id=worker_id,
+                                                lease_owner=lease_owner, retryable=False)
+                            if not failed:
+                                latest = queue.get(task_id)
+                                if latest and latest.get("status") == "cancel_requested":
+                                    queue.finish_cancelled(
+                                        task_id, task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                                        request_key=job["payload"]["request_key"],
+                                        reason="user_cancelled", run_id=job["run_id"],
+                                        worker_id=worker_id, lease_owner=lease_owner,
+                                    )
+                except InterruptedError:
+                    queue.finish_cancelled(
+                        task_id, task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                        request_key=job["payload"]["request_key"], run_id=job["run_id"],
+                        worker_id=worker_id, lease_owner=lease_owner,
+                    )
+                except Exception as exc:
+                    latest = queue.get(task_id)
+                    if latest and latest.get("status") == "cancel_requested":
+                        queue.finish_cancelled(
+                            task_id, task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                            request_key=job["payload"]["request_key"], run_id=job["run_id"],
+                            worker_id=worker_id, lease_owner=lease_owner,
+                        )
+                    elif latest and latest.get("status") == "running":
+                        queue.fail(task_id, _content_project_error_code(exc),
+                            run_id=job["run_id"], worker_id=worker_id,
+                            lease_owner=lease_owner, retryable=False)
+        finally:
+            queue.close()
+
+    thread = threading.Thread(target=run, name=f"content-export-{task_id}", daemon=True)
+    thread.start()
+
+
+def _content_export_http_task(task_id, *, action):
+    from shared_artifacts import CONTENT_PROJECT_EXPORT_TASK_TYPE
+    queue = None
+    try:
+        actor, scope = _content_project_scope("write" if action != "read" else "read")
+        if action != "read" and not _content_source_same_origin():
+            raise ValueError("CONTENT_SOURCE_ORIGIN_DENIED")
+        if action != "read" and request.get_json(silent=True) not in (None, {}):
+            raise ValueError("CONTENT_EXPORT_TASK_ACTION_INVALID")
+        queue = _content_export_queue()
+        row, payload, queue = _content_export_task_row(task_id, actor=actor, scope=scope, queue=queue)
+        if action == "cancel":
+            row = queue.request_cancel(task_id, task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                request_key=payload["request_key"])
+            if row is None:
+                raise LookupError("CONTENT_EXPORT_TASK_NOT_FOUND")
+            payload = row["payload"]
+        elif action == "resume":
+            state = row.get("status")
+            if state == "interrupted":
+                if not queue.resume_interrupted(task_id, task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                                                request_key=payload["request_key"]):
+                    raise ValueError("CONTENT_EXPORT_TASK_RESUME_UNAVAILABLE")
+            elif (state == "pending" and (int(row.get("attempts") or 0) == 0
+                                           or int(payload.get("resume_count") or 0) > 0)):
+                pass
+            elif state not in {"running", "cancel_requested", "done", "failed", "cancelled"}:
+                raise ValueError("CONTENT_EXPORT_TASK_RESUME_UNAVAILABLE")
+            if queue.get(task_id).get("status") == "pending":
+                from flask import current_app
+                _start_content_project_export_worker(
+                    task_id, actor=actor, scope=scope, app=current_app._get_current_object(),
+                )
+                row, payload, queue = _content_export_task_row(task_id, actor=actor, scope=scope, queue=queue)
+        elif action == "read" and row.get("status") in {"running", "cancel_requested"}:
+            queue.mark_interrupted_if_dead(
+                task_id, task_type=CONTENT_PROJECT_EXPORT_TASK_TYPE,
+                request_key=payload["request_key"], stale_after_seconds=60,
+                worker_alive_check=_content_export_queue_worker_alive,
+            )
+            row, payload, queue = _content_export_task_row(task_id, actor=actor, scope=scope, queue=queue)
+        return jsonify({"ok": True, "task": _content_export_task_view(
+            row, payload, actor=actor, scope=scope,
+        )}), 200
+    except LookupError:
+        return jsonify({"ok": False, "code": "CONTENT_EXPORT_TASK_NOT_FOUND"}), 404
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_EXPORT_TASK_UNAVAILABLE"}), 503
+    finally:
+        if queue is not None:
+            queue.close()
+
+
+@experience_bp.route("/api/experience/content-projects/export/tasks", methods=["GET", "POST"])
+def submit_content_project_export():
+    if request.method == "GET":
+        return _content_export_task_list()
+    from flask import current_app
+    from shared_artifacts import CONTENT_PROJECT_EXPORT_TASK_TYPE, LocalArtifactError
+    try:
+        actor, scope = _content_project_scope("write")
+        if not _content_source_same_origin():
+            raise LocalArtifactError("CONTENT_SOURCE_ORIGIN_DENIED")
+        body = request.get_json(silent=True)
+        if (not isinstance(body, dict) or set(body) - {"action_type", "request_id", "task", "input"}
+                or body.get("action_type") != "EXPORT"
+                or not isinstance(body.get("request_id"), str)
+                or re.fullmatch(r"[0-9a-f]{32}", body["request_id"]) is None
+                or "input" not in body):
+            raise LocalArtifactError("CONTENT_EXPORT_TASK_INPUT_INVALID")
+        task = body.get("task", "导出可继续编辑的内容工程")
+        if not isinstance(task, str) or not task.strip() or len(task) > 2000:
+            raise LocalArtifactError("CONTENT_EXPORT_TASK_INPUT_INVALID")
+        raw_input = body["input"]
+        normalized = _prepare_content_export_request(raw_input, actor=actor, scope=scope)
+        from lumenis.system.security.permission import (
+            OperationType, check_shared_workspace_effect, get_permission_gate,
+        )
+        gate = get_permission_gate()
+        if "shared_workspace_scope" in scope:
+            permission = check_shared_workspace_effect(
+                actor, scope["shared_workspace_scope"], OperationType.DATA_EXPORT,
+                normalized["target"], module="content", action="write", gate=gate,
+            )
+        else:
+            caller = (_content_export_actor_ref(actor) if isinstance(actor, dict)
+                      else actor.principal_ref)
+            permission = gate.check(
+                OperationType.DATA_EXPORT, resource=normalized["target"], caller=caller,
+                domain_id="bmp" if scope["domain_id"] == "zbmp" else "cth",
+            )
+        if not permission.allowed:
+            raise LocalArtifactError("CONTENT_EXPORT_PERMISSION_DENIED")
+        parent_digest = _content_export_parent_digest(
+            normalized["previous_artifact_id"], actor=actor, scope=scope,
+        )
+        digest_material = {"task": task[:2000], "input": normalized,
+                           "parent_version_sha256": parent_digest}
+        request_digest, encoded = _content_export_json_digest(digest_material)
+        if len(encoded) > 8 * 1024 * 1024:
+            raise LocalArtifactError("CONTENT_EXPORT_TASK_INPUT_TOO_LARGE")
+        request_key, binding = _content_export_task_binding(
+            actor, scope, body["request_id"], request_digest, parent_digest,
+        )
+        queue_payload = {
+            "request_id": body["request_id"], "request_key": request_key,
+            "request_digest": request_digest, "parent_version_sha256": parent_digest,
+            "binding": binding,
+            "request_payload": {"task": task[:2000], "input": normalized},
+        }
+        queue = _content_export_queue()
+        try:
+            task_id = queue.enqueue_once(CONTENT_PROJECT_EXPORT_TASK_TYPE, queue_payload, request_key)
+            row, payload, queue = _content_export_task_row(task_id, actor=actor, scope=scope, queue=queue)
+            if row.get("status") == "pending" and int(row.get("attempts") or 0) == 0:
+                _start_content_project_export_worker(
+                    task_id, actor=actor, scope=scope,
+                    app=current_app._get_current_object(),
+                )
+                row, payload, queue = _content_export_task_row(task_id, actor=actor, scope=scope, queue=queue)
+            response = jsonify({"ok": True, "task": _content_export_task_view(
+                row, payload, actor=actor, scope=scope,
+            ), "publish_status": "not_performed"})
+            response.status_code = 202
+            return response
+        except ValueError as exc:
+            if str(exc) == "TASK_QUEUE_REQUEST_ID_CONFLICT":
+                return jsonify({"ok": False, "code": "CONTENT_EXPORT_REQUEST_ID_CONFLICT"}), 409
+            raise
+        finally:
+            queue.close()
+    except ValueError as exc:
+        return _content_project_error(exc)
+    except Exception:
+        return jsonify({"ok": False, "code": "CONTENT_EXPORT_TASK_UNAVAILABLE"}), 503
+
+
+@experience_bp.get("/api/experience/content-projects/export/tasks/<int:task_id>")
+def content_project_export_task(task_id):
+    return _content_export_http_task(task_id, action="read")
+
+
+@experience_bp.post("/api/experience/content-projects/export/tasks/<int:task_id>/cancel")
+def cancel_content_project_export(task_id):
+    return _content_export_http_task(task_id, action="cancel")
+
+
+@experience_bp.post("/api/experience/content-projects/export/tasks/<int:task_id>/resume")
+def resume_content_project_export(task_id):
+    return _content_export_http_task(task_id, action="resume")
+
+
 @experience_bp.route("/api/experience/content-projects/export", methods=["POST"])
 def export_content_project():
     from lumenis.shared.content_creation.video_editing import Timeline
@@ -4159,7 +4786,7 @@ def export_content_project():
         if not isinstance(body, dict) or body.get("action_type") != "EXPORT":
             raise LocalArtifactError("CONTENT_EXPORT_REQUIRES_EXPORT")
         payload = body.get("input")
-        allowed = {"asset_paths", "asset_refs", "timeline", "output_kind", "demo_acknowledged", "previous_artifact_id", "render_options", "delivery_options", "title", "render_media"}
+        allowed = {"asset_paths", "asset_refs", "timeline", "output_kind", "demo_acknowledged", "previous_artifact_id", "source_project_artifact_refs", "render_options", "delivery_options", "title", "render_media"}
         if not isinstance(payload, dict) or set(payload) - allowed:
             raise LocalArtifactError("INVALID_CONTENT_INPUT")
         task = str(body.get("task") or "导出可继续编辑的内容工程")[:2000]
@@ -4178,13 +4805,17 @@ def export_content_project():
                           "output_kind": payload.get("output_kind", "video"),
                           "previous_artifact_id": payload.get("previous_artifact_id"),
                           "title": payload.get("title"), "render_media": payload.get("render_media", True)}
+            if "source_project_artifact_refs" in payload:
+                normalized["source_project_artifact_refs"] = payload["source_project_artifact_refs"]
             from shared_artifacts import content_project_export_resource
 
             normalized["target"] = content_project_export_resource(
                 timeline, actor=actor, source_artifact_refs=source_refs,
                 output_kind=normalized["output_kind"],
                 title=normalized["title"], render_media=normalized["render_media"],
-                previous_artifact_id=normalized["previous_artifact_id"], render_options=render_options, delivery_options=delivery_options, **scope,
+                previous_artifact_id=normalized["previous_artifact_id"],
+                source_project_artifact_refs=normalized.get("source_project_artifact_refs"),
+                render_options=render_options, delivery_options=delivery_options, **scope,
             )
 
             def render(ctx):
@@ -4194,6 +4825,7 @@ def export_content_project():
                         output_kind=normalized["output_kind"],
                         title=normalized["title"], render_media=normalized["render_media"],
                         previous_artifact_id=normalized["previous_artifact_id"],
+                        source_project_artifact_refs=normalized.get("source_project_artifact_refs"),
                         source_artifact_refs=source_refs, render_options=render_options, delivery_options=delivery_options,
                     )
                 except LocalArtifactError as exc:
@@ -4310,12 +4942,22 @@ def content_project_detail(artifact_id: str):
 
 @experience_bp.route("/api/experience/content-projects/<artifact_id>/package")
 def content_project_package(artifact_id: str):
-    from shared_artifacts import _verified_content_project
+    from shared_artifacts import _verified_content_project, ContentProjectMedia, _source_file_identity
 
     try:
-        actor, scope = _content_project_scope("read")
-        _, _, _, path = _verified_content_project(artifact_id, actor=actor, **scope)
-        return send_file(path, mimetype="application/zip", as_attachment=True, download_name=f"{artifact_id}.zip")
+        if set(request.args) - {'format','context','sha256'}:
+            raise ValueError('CONTENT_PROJECT_FORMAT_INVALID')
+        if not _content_source_same_origin():
+            raise ValueError('CONTENT_SOURCE_ORIGIN_DENIED')
+        selectors = _content_media_selectors(expected_format='package')
+        actor, scope = _content_project_scope("read", selectors=selectors)
+        project, _, record, path = _verified_content_project(artifact_id, actor=actor, **scope)
+        if 'sha256' in request.args and request.args.getlist('sha256') != [record['sha256']]:
+            raise ValueError('CONTENT_PROJECT_VERSION_MISMATCH')
+        media = ContentProjectMedia(f'{artifact_id}.zip', 'application/zip', record['sha256'], record['size_bytes'],
+            path, 0, _source_file_identity(path), artifact_id, actor, scope, record['sha256'],
+            tuple(project.get('source_artifact_refs', [])))
+        return _content_project_stream_response(media, actor=actor, scope=scope, selectors=selectors, as_attachment=True)
     except ValueError as exc:
         return _content_project_error(exc)
     except Exception:
@@ -4324,18 +4966,53 @@ def content_project_package(artifact_id: str):
 
 @experience_bp.route("/api/experience/content-projects/<artifact_id>/media")
 def content_project_media(artifact_id: str):
-    from io import BytesIO
-    from shared_artifacts import authorized_project_media
+    from shared_artifacts import open_content_project_media
 
     try:
-        actor, scope = _content_project_scope("read")
-        media = authorized_project_media(artifact_id, actor=actor, **scope)
-        return send_file(BytesIO(media["data"]), mimetype=media["media_type"],
-                         download_name=media["filename"], conditional=True)
+        if set(request.args) - {"format", "context", "sha256"}:
+            raise ValueError("CONTENT_PROJECT_FORMAT_INVALID")
+        if not _content_source_same_origin():
+            raise ValueError('CONTENT_SOURCE_ORIGIN_DENIED')
+        selectors = _content_media_selectors()
+        actor, scope = _content_project_scope("read", selectors=selectors)
+        media = open_content_project_media(artifact_id, actor=actor, **scope)
+        if "sha256" in request.args and request.args.getlist("sha256") != [media.sha256]:
+            raise ValueError("CONTENT_PROJECT_VERSION_MISMATCH")
+        return _content_project_stream_response(media, actor=actor, scope=scope, selectors=selectors)
     except ValueError as exc:
         return _content_project_error(exc)
     except Exception:
         return jsonify({"ok": False, "code": "CONTENT_PROJECT_UNAVAILABLE"}), 503
+
+
+def _content_project_stream_response(media, *, actor, scope, selectors, as_attachment=False):
+    from flask import Response, stream_with_context
+    etag = f'"{media.sha256}"'
+    disposition = 'attachment' if as_attachment else 'inline'
+    headers = {"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+               "Accept-Ranges": "bytes", "ETag": etag,
+               "Cross-Origin-Resource-Policy": "same-origin",
+               "Content-Disposition": f'{disposition}; filename="{media.filename}"'}
+    start, stop, status = 0, media.size_bytes, 200
+    if request.method != 'HEAD' and request.headers.get('Range') and request.headers.get('If-Range', etag) == etag:
+        ranges = request.range
+        selected = ranges.range_for_length(media.size_bytes) if ranges is not None and ranges.units == 'bytes' else None
+        if selected is None:
+            headers['Content-Range'] = f'bytes */{media.size_bytes}'
+            return Response(status=416, headers=headers)
+        start, stop = selected
+        status = 206
+        headers['Content-Range'] = f'bytes {start}-{stop - 1}/{media.size_bytes}'
+
+    def authorize_stream():
+        if (actor, scope) != _content_project_scope('read', selectors=selectors):
+            raise ValueError('CONTENT_PROJECT_CONTEXT_MISMATCH')
+
+    response = Response(() if request.method == 'HEAD' else stream_with_context(
+        media.iter_bytes(start, stop, authorize=authorize_stream)), status=status,
+        headers=headers, mimetype=media.media_type, direct_passthrough=True)
+    response.content_length = stop - start
+    return response
 
 
 @experience_bp.route("/api/experience/shared-skills/shared.video_shotcraft/render", methods=["POST"])

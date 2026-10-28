@@ -695,13 +695,69 @@ def test_editable_project_saves_without_render_and_keeps_immutable_parent(media_
         assert artifacts.read_content_project(first_id, actor=ACTOR, **SCOPE) == reopened
 
 
+def test_cross_kind_project_lineage_is_saved_authorized_and_inherited(media_store):
+    approve(media_store)
+    source_id = import_source(media_store)["artifact"]["artifact_id"]
+    with artifacts.resolve_content_source_assets([source_id], actor=ACTOR, **SCOPE) as sources:
+        asset = sources[0]["asset"]
+        timeline = Timeline.from_assets([asset]).add_audio_track("voice", audio_role="voiceover")
+        timeline = timeline.add_clip(asset.asset_id, track_id="voice", source_out=.4)
+        common = dict(actor=ACTOR, **SCOPE, source_artifact_refs=[source_id], render_media=False)
+        video = artifacts.stage_timeline_artifact(
+            timeline, source_execution_id="source-video-project", output_kind="video",
+            title="Source draft", **common,
+        )
+        video_id = video["artifact"]["artifact_id"]
+        audio = artifacts.stage_timeline_artifact(
+            timeline, source_execution_id="derived-audio-project", output_kind="audio",
+            source_project_artifact_refs=[video_id], title="Derived audio", **common,
+        )
+        audio_id = audio["artifact"]["artifact_id"]
+        assert audio["project"]["parent_artifact_id"] is None
+        assert audio["project"]["source_project_artifact_refs"] == [video_id]
+        assert artifacts.read_content_project(audio_id, actor=ACTOR, **SCOPE)["project"] == audio["project"]
+
+        revised = artifacts.stage_timeline_artifact(
+            timeline, source_execution_id="derived-audio-revision", output_kind="audio",
+            previous_artifact_id=audio_id, title="Derived audio revised", **common,
+        )
+        assert revised["project"]["parent_artifact_id"] == audio_id
+        assert revised["project"]["source_project_artifact_refs"] == [video_id]
+        assert artifacts.read_content_project(video_id, actor=ACTOR, **SCOPE)["project"] == video["project"]
+        before_rejected_revision = [tuple(row) for row in rows(media_store)]
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_SOURCE_LINEAGE_CHANGED"):
+            artifacts.stage_timeline_artifact(
+                timeline, source_execution_id="derived-audio-lineage-change", output_kind="audio",
+                previous_artifact_id=audio_id, source_project_artifact_refs=[],
+                title="Lineage cannot be silently removed", **common,
+            )
+        assert [tuple(row) for row in rows(media_store)] == before_rejected_revision
+
+        with pytest.raises(artifacts.LocalArtifactError, match="ACTOR_SCOPE_PERMISSION_DENIED"):
+            artifacts._validate_content_project_source_refs(
+                [video_id], actor={"id": 999, "role": "admin"}, scope=SCOPE,
+                read_only_registry=True,
+            )
+        before = [tuple(row) for row in rows(media_store)]
+        with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_NOT_FOUND"):
+            artifacts.stage_timeline_artifact(
+                timeline, source_execution_id="invalid-project-source", output_kind="audio",
+                source_project_artifact_refs=["ART-0000000000000000"], title="Invalid source",
+                **common,
+            )
+        assert [tuple(row) for row in rows(media_store)] == before
+
+
 def test_project_save_intent_is_permission_bound():
     # Resource encoding is deterministic, without touching a database or source.
     base = {"context": {}, "timeline_data": {}, "source_refs": [], "output_kind": "audio", "previous_artifact_id": None}
     rendered = artifacts._content_project_export_resource_for_context(**base)
     saved = artifacts._content_project_export_resource_for_context(**base, title="Draft", render_media=False)
     renamed = artifacts._content_project_export_resource_for_context(**base, title="Revised", render_media=False)
-    assert len({rendered, saved, renamed}) == 3
+    derived = artifacts._content_project_export_resource_for_context(
+        **base, source_project_artifact_refs=["ART-0123456789abcdef"],
+    )
+    assert len({rendered, saved, renamed, derived}) == 4
     with pytest.raises(artifacts.LocalArtifactError, match="INVALID_CONTENT_INPUT"):
         artifacts._validate_content_project_save("Draft", "false")
     with pytest.raises(artifacts.LocalArtifactError, match="CONTENT_PROJECT_TITLE_INVALID"):

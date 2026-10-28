@@ -45,6 +45,7 @@ websocket-client>=1.6.0
 python-dotenv>=0.21.0
 python-dateutil>=2.8.2
 PyYAML>=6.0
+packaging==26.3
 colorama>=0.4.6
 tqdm>=4.64.0
 
@@ -68,6 +69,7 @@ markitdown[pptx]==0.1.8  # 可选本地 PPTX/HTML 文档转换；仅经 importer
 alembic>=1.19.1
 
 feedparser>=6.0.11  # RSS / Atom public-feed adapter
+yt-dlp==2026.10.21  # Public media library only; pinned Source transport, no CLI/plugins/browser cookies/DRM
 cryptography==50.0.2  # SYSTEM Security Ed25519 training phase receipts; private keys remain local
 
 jsonschema>=4.23,<5  # MCP registered-tool JSON Schema validation

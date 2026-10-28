@@ -187,6 +187,9 @@ class TestAIBrowserRuntimeCore(unittest.TestCase):
     def test_navigate_action(self):
         """测试导航操作（不经过实际浏览器，只验证调用链）。"""
         self.mock_page.evaluate.side_effect = ["New page text", 5]
+        # The redirect guard is covered with a fake CDP request stream in the
+        # Browser owner tests; this unit only verifies the action call chain.
+        self.runtime._run_with_navigation_guard = lambda operation, **_kwargs: operation()
         result = self.runtime.execute_action(
             BrowserActionType.NAVIGATE,
             url="https://www.bing.com/",

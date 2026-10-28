@@ -192,7 +192,8 @@ def test_scoped_reader_calls_permission_and_canonical_owners_with_global_scope(m
     ))
     canonical_calls = []
     expected = {
-        "records": [{"canonical_id": "signed-global", "scope_evidence": {"integrity": {"verified": True}}}],
+        "records": [{"canonical_id": "signed-global", "subject_id": "SUBJECT-A",
+                     "scope_evidence": {"integrity": {"verified": True}}}],
         "candidate_count": 1, "scanned_count": 1, "rejected_count": 0,
         "returned_count": 1, "limit": 10, "truncated": False,
     }
@@ -213,7 +214,11 @@ def test_scoped_reader_calls_permission_and_canonical_owners_with_global_scope(m
     }
     assert canonical_calls == [(connection, {
         "product_id": "CTH", "subject_id": None, "limit": 10, "source_ids": None,
-    })]
+    }), (connection, {"product_id": "CTH", "subject_id": None, "limit": 10,
+                      "canonical_ids": ["signed-global"]})]
+    assert permission_calls[1][1]["subject_id"] == "SUBJECT-A"
+    assert permission_calls[1][1]["global_scope"] is False
+    assert permission_calls[-1][1]["global_scope"] is True
     assert result["scope"] == {
         "mode": "GLOBAL_ALL", "domain_id": "cth", "product_id": "CTH",
         "subject_id": None, "global": True,
@@ -245,6 +250,28 @@ def test_request_subject_alias_resolution_has_no_implicit_reference_focus(monkey
             api._cth_request_subject(connection)
     finally:
         clear_domain_context()
+        connection.close()
+
+
+def test_scoped_reader_rejects_a_different_actor_at_the_response_boundary(monkeypatch):
+    import sqlite3
+    from types import SimpleNamespace
+    import canonical_data
+    from lumenis.auth import service
+    from lumenis.system.security import permission
+    connection = sqlite3.connect(":memory:")
+    actors = iter([{"id": 17}, {"id": 18}])
+    monkeypatch.setattr(api, "_cth_request_subject", lambda _con: None)
+    monkeypatch.setattr(service, "get_current_user", lambda **kwargs: next(actors))
+    monkeypatch.setattr(permission, "check_actor_scope_permission", lambda *args, **kwargs:
+        SimpleNamespace(allowed=True, verification_state="verified", audit_id="isolated-read"))
+    row = {"canonical_id": "verified-test-source", "subject_id": "SUBJECT-A"}
+    monkeypatch.setattr(canonical_data, "list_scoped_canonical", lambda *args, **kwargs: {"records": [row]})
+    try:
+        with pytest.raises(api.CTHScopedReadError, match="CTH_SCOPE_CHANGED") as denied:
+            api.read_cth_scoped_canonical(connection, module="reports")
+        assert denied.value.status == 403
+    finally:
         connection.close()
 
 
@@ -367,6 +394,40 @@ def test_cth_overview_real_permission_registry_and_signed_canonical(tmp_path, mo
             row["scope_evidence"]["integrity"]["verified"] is True
             for row in signed_global["records"]
         )
+
+        # A global account grant does not keep a removed/disabled registry
+        # resource active. Re-enabling the same resource restores its retained
+        # source; no Canonical/Evidence row is rewritten to repair the reader.
+        with isolated_repository.transaction() as connection:
+            connection.execute("UPDATE lumenis_subject_registry SET status='disabled' WHERE subject_id='SUBJECT-B'")
+        disabled = client.get("/api/cth/overview")
+        assert disabled.status_code == 403 and disabled.get_json()["error"] == "CTH_SOURCE_SCOPE_READ_DENIED"
+        assert disabled.get_json()["data"] == {}
+        with isolated_repository.transaction() as connection:
+            connection.execute("UPDATE lumenis_subject_registry SET status='configured' WHERE subject_id='SUBJECT-B'")
+        restored = client.get("/api/cth/overview")
+        assert restored.status_code == 200
+        assert restored.get_json()["data"]["recent_records"] == global_payload["data"]["recent_records"]
+
+        from lumenis.system.security import permission
+        original_check = permission.check_actor_scope_permission
+        changed = []
+        def change_during_source_read(actor, **kwargs):
+            decision = original_check(actor, **kwargs)
+            if not changed and kwargs.get("subject_id") == "SUBJECT-B" and not kwargs.get("global_scope"):
+                with isolated_repository.transaction() as writer:
+                    writer.execute("UPDATE canonical_data SET title='Changed during read' WHERE source_id='source-b'")
+                changed.append(True)
+            return decision
+        with monkeypatch.context() as during_read:
+            during_read.setattr(permission, "check_actor_scope_permission", change_during_source_read)
+            conflicted = client.get("/api/cth/overview")
+            assert conflicted.status_code == 409
+            assert conflicted.get_json()["error"] == "CTH_CANONICAL_SOURCE_CHANGED"
+            assert conflicted.get_json()["data"] == {}
+        with isolated_repository.transaction() as connection:
+            connection.execute("UPDATE canonical_data SET title='source-b' WHERE source_id='source-b'")
+        assert client.get("/api/cth/overview").get_json()["data"]["recent_records"] == global_payload["data"]["recent_records"]
 
         client.set_cookie(AUTH_CONFIG["session_cookie_name"], focus_token)
         focus_response = client.get(

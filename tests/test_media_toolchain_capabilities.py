@@ -1,5 +1,19 @@
 import subprocess
-from lumenis.shared.content_creation.toolchain_capabilities import inspect_media_toolchain
+from lumenis.shared.content_creation.toolchain_capabilities import (
+    _available_filter_names,
+    inspect_media_toolchain,
+)
+
+
+def test_filter_parser_accepts_ffmpeg_two_and_three_flag_columns():
+    output = """Filters:
+ TS afftdn            A->A       Denoise audio samples using FFT.
+ .. loudnorm          A->A       EBU R128 loudness normalization
+ TSC example_filter   V->V       Compatible three-flag format
+"""
+    assert _available_filter_names(output) == {
+        "afftdn", "loudnorm", "example_filter",
+    }
 
 
 def test_real_media_toolchain_reports_actual_filters_and_font():

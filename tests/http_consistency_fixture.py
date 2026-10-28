@@ -56,7 +56,7 @@ def http_scope(env, monkeypatch, tmp_path):
     )
     monkeypatch.setattr(permission, "get_permission_gate", lambda: gate)
     monkeypatch.setattr(core.db, "get_repository", lambda: repository)
-    server = make_server("127.0.0.1", 8201, core.app)
+    server = make_server("127.0.0.1", 0, core.app)
     thread = threading.Thread(
         target=server.serve_forever, name="synthetic-http-consistency"
     )
@@ -72,7 +72,7 @@ def http_scope(env, monkeypatch, tmp_path):
 
     def get(path, *, context=True):
         request = urllib.request.Request(
-            "http://127.0.0.1:8201" + path, headers=headers if context else {}
+            f"http://127.0.0.1:{server.server_port}" + path, headers=headers if context else {}
         )
         try:
             with opener.open(request, timeout=10) as response:

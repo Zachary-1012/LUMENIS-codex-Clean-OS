@@ -826,12 +826,14 @@ class CoreSys06BrowserRepository
     required String url,
     required String leaseToken,
     required LumenisBrowserFrameBinding frameBinding,
+    String? confirmationId,
   }) async {
     final response = await client.navigateBrowserSessionWithHumanControl(
       sessionId: sessionId,
       url: url,
       leaseToken: leaseToken,
       frameBinding: frameBinding,
+      confirmationId: confirmationId,
     );
     if (response['ok'] != true) {
       _requireActionSuccess(response, action: 'navigate');

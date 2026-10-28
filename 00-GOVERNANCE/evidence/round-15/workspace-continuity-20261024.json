@@ -1,58 +1,78 @@
 {
-  "recorded_at": "2026-10-24T06:36:40.294983+00:00",
-  "source_base": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
+  "recorded_at": "2026-10-27T04:19:44.5332399+08:00",
+  "source_base": "ceb55251f8e0776d474bb65fcaeed8b4458d807e",
   "scope": "Integrated Web/Windows Home, unsent draft and existing manuscript continuity. Entire 30 outcome groups / 396 requirements remain OPEN.",
-  "state": "IMPLEMENTED_WITH_BOUNDED_WEB_OPERATION",
+  "state": "IMPLEMENTATION_IN_PROGRESS_NOT_RELEASED",
   "source_pins": {
-    ".github/workflows/app-verify.yml": "05a4ca41e578fc306c66418e414aaec3eed8ba74f69ebe33f510afdd73199b79",
-    ".github/workflows/platform-verify.yml": "ef0018ce28335243896c364193d6ebfa031aadbf291c1339479def55ec5c0eb1",
-    "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": "1bb6acca3a764d754338342f1044a1112745ad3231bfd2859b305aa4e88227fb",
-    "app/lib/core/lumenis_core_client.dart": "caf7c7b2c4b787ff927b27d8cc68a9dc5d57c333c1266195f96ed13a8c642e56",
-    "app/lib/core/lumenis_theme.dart": "169f2abbc6b400877794a2b4b7867284ca9b5b1f164bbb0a5118afc341c3dabe",
-    "app/lib/features/account/acc03/acc03_screen.dart": "0f5cdd0ba0ba98dfea7391edc1b7a9c3fe7fa61564dde269f580211c7d32bfdb",
-    "app/lib/features/ai01/ai01_conversation_panel.dart": "757451a9fa1b368281c48a91b42152bc95f81848fd2431eaaa8682b2952eb9a7",
-    "app/lib/features/ai01/ai01_screen.dart": "530676daee4de5d725162a79aa00b3a714f48cd67db80abd5c0274eca6580975",
-    "app/lib/features/ai01/ai01_workspace_draft.dart": "055a37ea125183ba971e42d794b81b99d6893326cbb105230c036bd0f375e1e2",
-    "app/lib/features/shared/sh01/manuscript_controller.dart": "2d52874c01a93963c15615ca39a71fdd55ef1c52a8d53fce70fa150f27bd70c5",
-    "app/lib/features/shared/sh01/manuscript_editor.dart": "b06654c5a43ef550b8c0e67ebb9f0a6bece575851755386357ce635c42281133",
-    "app/lib/product/lumenis_app.dart": "255e120a41bd51ccc1dec19ff699d62bc25e084e3d45d5520eab6786abf94e81",
-    "app/lib/shell/lumenis_workspace_shell.dart": "f00b9818d20349948c63af02d4cf7b5da6bf494010970d89cd21141b83bcfc40",
-    "app/test/features/ai01/ai01_workspace_draft_test.dart": "5184ac8dd6f4b73b102e48ca3f21a19790ecdd1dec76b858acde3d173c15a3b8",
-    "app/test/features/shared/sh01/manuscript_controller_test.dart": "beef35c94badf71f83f8b62db64556487e26fe9109d4e5439a3307bdd0825455",
-    "app/test/shell/lumenis_workspace_shell_test.dart": "f2086822776266ce2c4aead6b36f8a349fd21b7d2a2bc04d737e7ec244fb8763",
-    "contracts/experience/screen-specifications/ACC-03.md": "264c28b035c1af48cc4cbf0acfe6f388dd96cc39b015274b8475023daf6dffa4",
-    "contracts/experience/screen-specifications/AI-01.md": "2e7c8117053b05eed8caddf46ee50899f7deaf0bcadebc751f0d1ed5bf756b20",
-    "contracts/experience/screen-specifications/SH-01.md": "499d1e9f8edc4bd8a121d877dd47e5d1156f5744144849da55889165a42ced8b",
-    "lumenis/ai_hub/conversations.py": "f08d8e36b7403bf79770050fa3d0efd8ecd40f8a4ec4fdbe0943742e18d67f7a",
-    "lumenis/ai_hub/routes.py": "32432177e84007f416f7a320e1e82e4eb46ce824781e48b77e27a1c447c4c5a5",
-    "lumenis/shared/database/migrations.py": "660d1a844357640b8c357781c4aa31359249107d3385175d5af183ad0d881ec6",
-    "tests/test_ai_conversation_migration.py": "e872fd48175d3e75e2bd1a408acc86fdab398852f27e66ccd9a7d6a68ab5b413",
-    "tests/test_ai_conversation_owner.py": "f33cdeca12da1f95cb7b6c2855e34aa62560bfd23fd100ec946b391fb785f7de",
-    "app/lib/features/shared/sh01/sh01_screen.dart": "f1d2b35724357fe29de7aa99ebc978ad33e6637787a63248cc582446dc32d0dc"
+    "app.py": "8978bc24910b746225352375910411bfc5241c032d2457d1b2e888fc49272f10",
+    "api_dual_domain.py": "6b67f72ca5a014558c69075d1c499481ccaae945f5e6d5b651309aa77c4a1627",
+    "lumenis_app_api.py": "dde3c40407c5c9c4b929ddf6ae203e9d426aa94b5042507144c8d8c500f979cd",
+    "experience_runtime.py": "ebf5eabacdb1d033e22fd8ae1712be6eee9616a4eeccc092d3a803faf5d2516d",
+    "lumenis/importer/documents.py": "cc2d63a85014b5847d0bea2eef74f890ea76fd38817b1f4607038a4ded0f1546",
+    "lumenis/importer/office_package.py": "38f0195da8a396af6661e18e8bf0e902b0cdb72b0388b328294a0372d315a274",
+    "lumenis/shared/evidence/signing_config.py": "f7dba73c4428ebdc874107e36ff09cca82bac58d31d88e9b17944200c813360f",
+    "lumenis/shared/database/migrations.py": "0b6c6732067182aeac3939f8b02bd46ebbfd87255d0e46411a5fa67e9ff7d0c0",
+    "lumenis/shared/reporting/word_pdf_export.py": "748ace54fac158e35cbefbd67412276b089f6a82163b2dd4c41c900d79c3e361",
+    "lumenis/shared/reporting/saved_work.py": "b2430b433ace83d2c690911f921182bfcf582d86db6bcb9e42563cbb2fc711e1",
+    "shared_artifacts.py": "4571e7a9837f1558915720452cf6e31e2cfcef094e40e2aafef7c804953fb64f",
+    "lumenis/shared/content_creation/rendering.py": "39c42faa46e6532be6863d55940049684160564c0739881a3709ed4d76aa3813",
+    "lumenis/shared/content_creation/video_editing.py": "fb8b63c718e1115f3d79bdcf4f140affd44fc277a55896c92e642b79d884e271",
+    "lumenis/ai_hub/conversations.py": "c7a34579f254219bb1f3110691a2bb0215e21e7bb00e9db85c5602f5585dac5e",
+    "lumenis/ai_hub/context_pack.py": "3d4c3997d62bb141bd6a36877da8d3b81a50177b9b7633a30744cfc4c0ef543e",
+    "agent_memory/retrieval.py": "9bc5ca3a495c048b0f3db8c57b7ad983a5a9236c7c977ddc80a850b7d2a6d5c2",
+    "app/lib/features/cth/cth10/business_work_panel.dart": "df3d4c4cb05cac4d337795a8ab6da01b4d6b07932bdc9ca053c5686c18c4e4f1",
+    "app/tool/build_windows.ps1": "76bac1abd5967988ef1af6f9d2bf51b4b4835cb1288213c7809e35905b7df713",
+    "scripts/start_production.ps1": "cd39b3df071852e0896f4709f5e86b604c976528d780f790a3c40b62128d7f75"
   },
   "verification": {
-    "python_owner_migration": "16 PASS, isolated SQLite, not production DB",
-    "flutter_affected": "82 distinct affected regressions: 26 shell, 15 manuscript controller, 10 manuscript editor, 4 draft including IME, 4 Home and 23 creation-screen tests including Chinese/English/Korean at 200 percent. Not product acceptance.",
-    "flutter_analyze": "PASS no issues; latest creation layout 9.6 seconds",
-    "flutter_web_build": "PASS final paired narrow layout release, 108.5 seconds. Build is not user acceptance.",
-    "flutter_windows_build": "PASS final paired narrow layout release, 75.1 seconds. Native write acceptance remains NOT_VERIFIED.",
-    "ruff": "46 baseline findings, 0 new against exact base; full-file lint is not clean",
-    "governance": "Constitution, Experience authority/anti-template/screen blueprints, machine governance, configuration, single product and refreshed source adoption PASS. Publication gate runs against staged change.",
-    "owned_http_ci_step": "PASS all 12 existing selected tests under the exact workflow owned-ephemeral socket guard; no external connection, no thread leak."
+    "media_composition": "146 PASS isolated contracts and actual installed-encoder cases; media-composition-final.log. Not professional multi-hour user E2E.",
+    "business": "136 PASS /1 existing BMP Case not applicable skip; business-report-number-regression.log.",
+    "source_brief": "71 passing tests; one initial narrow-layout failure repaired and isolated9-layout-case rereun passed;14 local read-aloud tests passed. Analyzer0 errors/0 warnings/8 INFO retained.",
+    "business_ui": "38 cases have final passing evidence across initial36 and targeted failure repairs; 12 viewport/locale/text-scale combinations; final analysis0diagnostics. No claim of one final38-case run or visual acceptance.",
+    "database_signing_restore": "98 isolated checks, Windows DPAPI and independent process signatures. Actual permitted data restore below.",
+    "startup_signing": "26 PASS cold-start and persisted-signing contracts.",
+    "current_combined_build": "1280-breakpoint Web112.2s andWindows77.2s PASS; subsequent business-export consumer changes are not included in these builds and require new paired build.",
+    "public_product_acceptance": "NOT_DELIVERED; complete visuals NOT_ACCEPTED",
+    "decision_revision": "28 focused and49 dependent owner/permission/planning/history checks PASS. Independent source review found no new P0/P1/P2. Not real UI acceptance.",
+    "office_formula_results": "11 isolated checks PASS; formula output ranges remain readonly and ordinary-cell export/reopen retains original parent package.",
+    "bundle_existing_data": "8 isolated real-Windows-junction startup cases and2 data-preservation/launcher cases PASS. Actual assembled bundle startup remains pending.",
+    "compile_static": "44 Python source/test files AST-pass; raw-byte Ruff baseline1126 current1117;0introduced. Existing findings retained. Earlier Windows text-pipe newline diagnostic preserved.",
+    "business_1280_layout": "2 targeted widget checks with30 width/locale/text-size combinations PASS; analyzer0diagnostics. Actual1280 screenshot shows source/options/decision simultaneously with corrected review date. Complete visual quality remains NOT_ACCEPTED.",
+    "keyless_backup_restore": "65 cases have passing evidence:64 initial,1 exact rerun after using an offline backup rather than protected live canonical DB. Original failure retained. Compile/diff pass; Ruff17 baseline/current,0introduced. No production/runtime operation by helper."
   },
   "runtime": {
     "port": 58724,
-    "parent_pid": 19952,
-    "listener_pid": 31348,
-    "boot_id": "e55c89f92a50484eb9733c671fc8657f",
-    "data": "D:/OEVIRA-Runtime/workspace-20261024",
+    "launcher_pid": 26080,
+    "boot_id": "9b4d4e5a374e41b9823587508fe1667e",
+    "data": "data/runtime/workspace-20261024",
     "entry": "app.py --manual-workspace --host 127.0.0.1 --port 58724 --no-scheduler",
     "scheduler": "not_started",
-    "base_commit": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
-    "loaded_version_boundary": "Working backend at initial launch; later schema compatibility validation not reloaded. Disk hashes alone are not memory proof.",
-    "restart": "BLOCKED_BY_EXECUTION_POLICY; stop/start command rejected before execution",
+    "restart": "OWNED_INSTANCE_RELOADED_AFTER_SIGNED_CONSISTENT_BACKUP",
+    "restart_at": "2026-10-24T23:23:21.406+08:00",
+    "backup_sha256": "79a180f2e7ec9a92af56e6a5b3641d55877f2042b08242580083f03f4ab83a5a",
+    "preserved_artifacts": 24,
+    "loaded_version_boundary": "Owned manual workspace only. Health is not user acceptance. No production 8201, production data or automatic collection touched. Exact source pins captured at controlled launch; later disk hashes do not retroactively prove loaded versions.",
     "production_8201_changed": false,
-    "production_database_changed": false
+    "production_database_changed": false,
+    "loaded_source_pins": {
+      "app.py": "8978bc24910b746225352375910411bfc5241c032d2457d1b2e888fc49272f10",
+      "api_dual_domain.py": "6b67f72ca5a014558c69075d1c499481ccaae945f5e6d5b651309aa77c4a1627",
+      "lumenis_app_api.py": "dde3c40407c5c9c4b929ddf6ae203e9d426aa94b5042507144c8d8c500f979cd",
+      "experience_runtime.py": "ebf5eabacdb1d033e22fd8ae1712be6eee9616a4eeccc092d3a803faf5d2516d",
+      "lumenis/importer/documents.py": "cc2d63a85014b5847d0bea2eef74f890ea76fd38817b1f4607038a4ded0f1546",
+      "lumenis/importer/office_package.py": "38f0195da8a396af6661e18e8bf0e902b0cdb72b0388b328294a0372d315a274",
+      "lumenis/shared/evidence/signing_config.py": "f7dba73c4428ebdc874107e36ff09cca82bac58d31d88e9b17944200c813360f",
+      "lumenis/shared/database/migrations.py": "25d369a1c20d6914b0af9d89d0672f85cdfaa69b0c898f2393ddd6c13d1b590e",
+      "lumenis/shared/reporting/word_pdf_export.py": "748ace54fac158e35cbefbd67412276b089f6a82163b2dd4c41c900d79c3e361",
+      "lumenis/shared/reporting/saved_work.py": "b2430b433ace83d2c690911f921182bfcf582d86db6bcb9e42563cbb2fc711e1",
+      "shared_artifacts.py": "4571e7a9837f1558915720452cf6e31e2cfcef094e40e2aafef7c804953fb64f",
+      "lumenis/shared/content_creation/rendering.py": "39c42faa46e6532be6863d55940049684160564c0739881a3709ed4d76aa3813",
+      "lumenis/shared/content_creation/video_editing.py": "fb8b63c718e1115f3d79bdcf4f140affd44fc277a55896c92e642b79d884e271",
+      "lumenis/ai_hub/conversations.py": "c7a34579f254219bb1f3110691a2bb0215e21e7bb00e9db85c5602f5585dac5e",
+      "lumenis/ai_hub/context_pack.py": "3d4c3997d62bb141bd6a36877da8d3b81a50177b9b7633a30744cfc4c0ef543e",
+      "agent_memory/retrieval.py": "9bc5ca3a495c048b0f3db8c57b7ad983a5a9236c7c977ddc80a850b7d2a6d5c2"
+    },
+    "production_statement_time_boundary": "Only the recorded controlled restart stage ending 2026-10-24T15:23:21.406000+00:00; the later erroneous test-entry import has no pre-import DB hash and complete logical non-change is NOT_VERIFIED. See current_integration_delta_20261025."
   },
   "real_operations": [
     {
@@ -78,6 +98,25 @@
       "surface": "Web",
       "action": "Creation entry groups verified versions of the same work and previews actual saved text",
       "observed": "At 1440x900, one manuscript folio displayed version3 and its version menu independently opened version2 and version1. Final 390x844 release uses two paired action rows; clicking the folio reopened actual saved version3 and returning retained the library. No Artifact edited or overwritten by grouping."
+    },
+    {
+      "surface": "Web",
+      "action": "Business decision correction, immutable v3 save and independent v3/v2 reopen",
+      "observed_at": "2026-10-24T23:41:48.437029+08:00",
+      "v1": "ART-5327f3c44017408b",
+      "v2": "ART-29ebcf7ca68d44e8",
+      "v3": "ART-232c6cafeff84427",
+      "observed": "Actual product edit set review to 2026-10-25T11:00:00+08:00, with separate correction reason. v3 independently reopened with 2026-10-25T03:00:00.000Z; v2 independently reopened retaining 2026-10-31T14:40:19.531Z. Original analysis, four options and ownership retained. No claim of external business execution or independent platform verification.",
+      "evidence": [
+        "work/product-closure-20261011/workspace-20261024/business-v3-readback.txt",
+        "work/product-closure-20261011/workspace-20261024/business-v2-after-v3-readback.txt",
+        "work/product-closure-20261011/workspace-20261024/business-1280-actual.png"
+      ],
+      "artifact_sha256": {
+        "ART-5327f3c44017408b": "ccdb2723b821c53514def39a20c2390852d243c087887ab334ae326d0906053e",
+        "ART-29ebcf7ca68d44e8": "d6170d21341a91b42e737edb5076b6f3dd757ab96b77c7c2f4846998b6ec5440",
+        "ART-232c6cafeff84427": "e00756d7564068c8673331afeda8e6d9236bd29d271b0c0cfb0605ecf09aac04"
+      }
     }
   ],
   "retained_failures": [
@@ -89,7 +128,22 @@
     "Real old-parent save returned WORK_REVISION_CONFLICT; task-pitch-72223d5779469ba0b6d5b189 was cancelled and read back cancelled. New explicit continue-from-latest operation subsequently saved v3 through original Owner/CAS, not replay or weakened guard.",
     "First staged publication guard found the historical RULES_ONLY_PUBLICATION marker still active; current publication state reconciled in the existing snapshot before commit, without changing the validator.",
     "Authorized XLSX upload was denied by browser tool workspace-root enforcement for both the supplied attachment and a previously approved project-local seed; no upload occurred and no alternate transport was attempted.",
-    "PR140 first Product Gate failed because the complete conversation owner test file includes a real ephemeral TCP test and had been assigned to the offline-deny-all step. Entire owner file moved to existing guarded ephemeral HTTP step; no test or assertion removed, skipped or weakened. Exact step replay passed 12 tests."
+    "PR140 first Product Gate failed because the complete conversation owner test file includes a real ephemeral TCP test and had been assigned to the offline-deny-all step. Entire owner file moved to existing guarded ephemeral HTTP step; no test or assertion removed, skipped or weakened. Exact step replay passed 12 tests.",
+    "2026-10-24T16:17Z erroneous unittest app.tool entry imported root app.py; signing guard refused v21-to-v22 migration. Observed schema21 and older main-file mtime do not prove complete logical unchanged without pre-import hash; no8201 process started/restarted. Exact failure/readback paths are retained in current_integration_delta_20261025.",
+    {
+      "observed_at": "2026-10-27T04:01:59.7560583+08:00",
+      "kind": "ACCIDENTAL_ROOT_APP_IMPORT",
+      "command": "python -m unittest app.tool.test_build_windows.WindowsPortableBundleTests.test_web_and_windows_receipts_require_every_asset_manifest_variant_file",
+      "exit_code": 1,
+      "observed_chain": [
+        "root app.py imported instead of Flutter app/tool test module",
+        "db.init_db -> get_db -> apply_business_schema; connection context commits",
+        "migration backup refused WORKSPACE_SIGNING_KEY_RECOVERY_REQUIRED"
+      ],
+      "database_effect": "NOT_VERIFIED",
+      "response": "No DB repair/restoration/restart. Early guard now rejects mistaken app.tool imports before environment/product imports; isolated source checks passed. Prior database effect remains NOT_VERIFIED.",
+      "boundary": "Failure after initialization does not prove no production write"
+    }
   ],
   "remaining": [
     "Full planned visual acceptance and task-specific surfaces",
@@ -107,7 +161,7 @@
     "local_remote_parity": "Confirmed after PR140 merge; each subsequent batch requires fresh readback."
   },
   "browser_continuity": {
-    "recorded_at": "2026-10-24T07:07:54.778344+00:00",
+    "recorded_at": "2026-10-24T15:07:54.778344+08:00",
     "base_sha": "875cd8b31d0b5b77234945b3dbcdd1d30a9b4de6",
     "source_pins": {
       "app/lib/features/system/sys06/sys06_screen.dart": "ec97f823e83986336d67d9ac379da9df6c4f5165fdfd1ec5c6dc5ed55af850e9",
@@ -149,7 +203,7 @@
     }
   },
   "media_source_preview": {
-    "recorded_at": "2026-10-24T08:35:22.037534+00:00",
+    "recorded_at": "2026-10-24T16:35:22.037534+08:00",
     "base_sha": "27a92b7c04ba6a75bc01c6cb6de3a2340fdab3ef",
     "source_pins": {
       "app.py": "6fd49d880644a4ec193916df49e2de4cd88732922f921156741b19be8bd11b07",
@@ -231,7 +285,7 @@
     },
     "runtime": {
       "url": "http://127.0.0.1:58724/workspace/SH-01?entry=video",
-      "recorded_at": "2026-10-24T08:35:22.037534+00:00",
+      "recorded_at": "2026-10-24T16:35:22.037534+08:00",
       "mode": "manual-workspace --no-scheduler",
       "boot_id": "d504200f4a784268badb5ea0008ba02b",
       "boot_source_pins": {
@@ -278,7 +332,7 @@
     ],
     "production_effects": "No production service restart, DB mutation, collection, inference, training or deployment.",
     "previous_observation": {
-      "recorded_at": "2026-10-24T07:33:21.584312+00:00",
+      "recorded_at": "2026-10-24T15:33:21.584312+08:00",
       "source_pins": {
         "shared_artifacts.py": "f54e0162da829f86a491fe45b896943ad862919fce83428443c63350941ab7f9",
         "experience_runtime.py": "cddc4dbe74d4dcfa0eeb4b4c88262a5d81d4032ea8869290f00141b6978fb631",
@@ -309,7 +363,7 @@
     }
   },
   "professional_enhancement": {
-    "adopted_at": "2026-10-24T08:35:22.037534+00:00",
+    "adopted_at": "2026-10-24T16:35:22.037534+08:00",
     "original": "00-GOVERNANCE/evidence/round-15/professional-enhancement-20261024.md",
     "plan": "00-GOVERNANCE/LOOP-PLAN-20261014/product-plan-full.md#90-一体化执行批次",
     "scope": "All PE01-24, original 30 groups/396 coverage/213 interactions retained. Adoption not completion.",
@@ -324,7 +378,7 @@
     "copy_boundary": "Complete supplied specification retained; line endings and trailing Markdown whitespace normalized only. Unchanged original attachment remains outside Git."
   },
   "media_lease_repair": {
-    "recorded_at": "2026-10-24T08:50:24.598726+00:00",
+    "recorded_at": "2026-10-24T16:50:24.598726+08:00",
     "failure": "PR142 App run40078998376: 4 active-media cache preservation assertions failed on Linux; POSIX advisory locks are process-wide. Original CI failure retained.",
     "repair": "New lease directories bind the creating process. Stale recovery skips current-process directories before opening a second marker handle; OS locks still protect other processes. Explicit release remains exact-file and retryable.",
     "reference": "https://api.dart.dev/dart-io/RandomAccessFile/lock.html",
@@ -346,7 +400,7 @@
     "claim_boundary": "Local regressions are not native product playback or whole-product acceptance."
   },
   "report_delivery": {
-    "recorded_at": "2026-10-24T09:47:07.725913+00:00",
+    "recorded_at": "2026-10-24T17:47:07.725913+08:00",
     "source_base": "ae3e7a4ba211d1d73c0e87f245096966a554eb3c",
     "source_pins": {
       ".github/workflows/platform-verify.yml": "9b2f662d2671829da3cf42c3063af5ecde3f206a770405a9add6895b92e250fa",
@@ -394,7 +448,7 @@
       "export_after_font_repair_sha256": "4de8fe56ab2ed31ebc9ca7b80ee2175f7c278451008973dc3537ac37ae39301f",
       "final_web_screenshot_sha256": "0d4365d262ee5bc980ca88cd009f5b96f466be7121ec08e87cb55b7381f880c3",
       "native_export_readback": {
-        "at": "2026-10-24T09:54:16.386709+00:00",
+        "at": "2026-10-24T17:54:16.386709+08:00",
         "file": "delivery-report-v2-runtime-final.docx",
         "sha256": "4de8fe56ab2ed31ebc9ca7b80ee2175f7c278451008973dc3537ac37ae39301f",
         "application": "WPS Office 12.1.0.29161",
@@ -407,7 +461,7 @@
       "initial_move_preserved_artifacts": 10,
       "first_move_launch": "FAILED guard required outside source checkout; retained original receipt",
       "reload": {
-        "at": "2026-10-24T09:45:30.069982+00:00",
+        "at": "2026-10-24T17:45:30.069982+08:00",
         "root": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024",
         "old_pids": [
           9636,
@@ -474,11 +528,11 @@
     ]
   },
   "media_range": {
-    "recorded_at": "2026-10-24T10:26:50.614510+00:00",
+    "recorded_at": "2026-10-24T18:26:50.61451+08:00",
     "base": "695eceb83552f51b493346299d1276dbf8f9081f",
     "implementation": "Existing content source HEAD/single-range immutable package stream, server-authored scope/identity recheck, bounded digest cache, Web/native player adapters. No alternate media store.",
     "real_web": {
-      "at": "2026-10-24T10:26:50.614510+00:00",
+      "at": "2026-10-24T18:26:50.61451+08:00",
       "source_base": "695eceb83552f51b493346299d1276dbf8f9081f",
       "entry": "http://127.0.0.1:58724/workspace/SH-01?entry=video",
       "operations": [
@@ -501,7 +555,7 @@
       "boundary": "Real short supplied recording in dedicated manual workspace. Not large-file capacity, Windows native playback, visual acceptance or complete PE01."
     },
     "runtime_reload": {
-      "at": "2026-10-24T10:18:32.775098+00:00",
+      "at": "2026-10-24T18:18:32.775098+08:00",
       "root": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024",
       "old_pids": [
         33584,
@@ -1024,6 +1078,930 @@
       "production_data_mutated": false,
       "services_changed": false
     },
-    "source_only_approval": "00-GOVERNANCE/evidence/approvals/PO-20261028-SOURCE-RETIREMENT.json"
+    "source_only_approval": "00-GOVERNANCE/evidence/approvals/PO-20261028-SOURCE-RETIREMENT.json",
+    "publication_readback": {
+      "pr": 148,
+      "merge_commit": "5b27421cf24e951796a462ecd0b29515b5f12aa1",
+      "head_commit": "c0405aea5ccb0ab0da8bbf50203ece269b535e5e",
+      "app_ci": "SUCCESS",
+      "product_ci": "SUCCESS",
+      "runtime_acceptance": "NOT_VERIFIED"
+    }
+  },
+  "initial_workspace_observation": {
+    "recorded_at": "2026-10-24T14:36:40.294983+08:00",
+    "source_base": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
+    "source_pins": {
+      ".github/workflows/app-verify.yml": "05a4ca41e578fc306c66418e414aaec3eed8ba74f69ebe33f510afdd73199b79",
+      ".github/workflows/platform-verify.yml": "ef0018ce28335243896c364193d6ebfa031aadbf291c1339479def55ec5c0eb1",
+      "00-GOVERNANCE/LUMENIS-CODEX-TAKEOVER-CURRENT.md": "1bb6acca3a764d754338342f1044a1112745ad3231bfd2859b305aa4e88227fb",
+      "app/lib/core/lumenis_core_client.dart": "caf7c7b2c4b787ff927b27d8cc68a9dc5d57c333c1266195f96ed13a8c642e56",
+      "app/lib/core/lumenis_theme.dart": "169f2abbc6b400877794a2b4b7867284ca9b5b1f164bbb0a5118afc341c3dabe",
+      "app/lib/features/account/acc03/acc03_screen.dart": "0f5cdd0ba0ba98dfea7391edc1b7a9c3fe7fa61564dde269f580211c7d32bfdb",
+      "app/lib/features/ai01/ai01_conversation_panel.dart": "757451a9fa1b368281c48a91b42152bc95f81848fd2431eaaa8682b2952eb9a7",
+      "app/lib/features/ai01/ai01_screen.dart": "530676daee4de5d725162a79aa00b3a714f48cd67db80abd5c0274eca6580975",
+      "app/lib/features/ai01/ai01_workspace_draft.dart": "055a37ea125183ba971e42d794b81b99d6893326cbb105230c036bd0f375e1e2",
+      "app/lib/features/shared/sh01/manuscript_controller.dart": "2d52874c01a93963c15615ca39a71fdd55ef1c52a8d53fce70fa150f27bd70c5",
+      "app/lib/features/shared/sh01/manuscript_editor.dart": "b06654c5a43ef550b8c0e67ebb9f0a6bece575851755386357ce635c42281133",
+      "app/lib/product/lumenis_app.dart": "255e120a41bd51ccc1dec19ff699d62bc25e084e3d45d5520eab6786abf94e81",
+      "app/lib/shell/lumenis_workspace_shell.dart": "f00b9818d20349948c63af02d4cf7b5da6bf494010970d89cd21141b83bcfc40",
+      "app/test/features/ai01/ai01_workspace_draft_test.dart": "5184ac8dd6f4b73b102e48ca3f21a19790ecdd1dec76b858acde3d173c15a3b8",
+      "app/test/features/shared/sh01/manuscript_controller_test.dart": "beef35c94badf71f83f8b62db64556487e26fe9109d4e5439a3307bdd0825455",
+      "app/test/shell/lumenis_workspace_shell_test.dart": "f2086822776266ce2c4aead6b36f8a349fd21b7d2a2bc04d737e7ec244fb8763",
+      "contracts/experience/screen-specifications/ACC-03.md": "264c28b035c1af48cc4cbf0acfe6f388dd96cc39b015274b8475023daf6dffa4",
+      "contracts/experience/screen-specifications/AI-01.md": "2e7c8117053b05eed8caddf46ee50899f7deaf0bcadebc751f0d1ed5bf756b20",
+      "contracts/experience/screen-specifications/SH-01.md": "499d1e9f8edc4bd8a121d877dd47e5d1156f5744144849da55889165a42ced8b",
+      "lumenis/ai_hub/conversations.py": "f08d8e36b7403bf79770050fa3d0efd8ecd40f8a4ec4fdbe0943742e18d67f7a",
+      "lumenis/ai_hub/routes.py": "32432177e84007f416f7a320e1e82e4eb46ce824781e48b77e27a1c447c4c5a5",
+      "lumenis/shared/database/migrations.py": "660d1a844357640b8c357781c4aa31359249107d3385175d5af183ad0d881ec6",
+      "tests/test_ai_conversation_migration.py": "e872fd48175d3e75e2bd1a408acc86fdab398852f27e66ccd9a7d6a68ab5b413",
+      "tests/test_ai_conversation_owner.py": "f33cdeca12da1f95cb7b6c2855e34aa62560bfd23fd100ec946b391fb785f7de",
+      "app/lib/features/shared/sh01/sh01_screen.dart": "f1d2b35724357fe29de7aa99ebc978ad33e6637787a63248cc582446dc32d0dc"
+    },
+    "verification": {
+      "python_owner_migration": "16 PASS, isolated SQLite, not production DB",
+      "flutter_affected": "82 distinct affected regressions: 26 shell, 15 manuscript controller, 10 manuscript editor, 4 draft including IME, 4 Home and 23 creation-screen tests including Chinese/English/Korean at 200 percent. Not product acceptance.",
+      "flutter_analyze": "PASS no issues; latest creation layout 9.6 seconds",
+      "flutter_web_build": "PASS final paired narrow layout release, 108.5 seconds. Build is not user acceptance.",
+      "flutter_windows_build": "PASS final paired narrow layout release, 75.1 seconds. Native write acceptance remains NOT_VERIFIED.",
+      "ruff": "46 baseline findings, 0 new against exact base; full-file lint is not clean",
+      "governance": "Constitution, Experience authority/anti-template/screen blueprints, machine governance, configuration, single product and refreshed source adoption PASS. Publication gate runs against staged change.",
+      "owned_http_ci_step": "PASS all 12 existing selected tests under the exact workflow owned-ephemeral socket guard; no external connection, no thread leak."
+    },
+    "runtime": {
+      "port": 58724,
+      "parent_pid": 19952,
+      "listener_pid": 31348,
+      "boot_id": "e55c89f92a50484eb9733c671fc8657f",
+      "data": "D:/OEVIRA-Runtime/workspace-20261024",
+      "entry": "app.py --manual-workspace --host 127.0.0.1 --port 58724 --no-scheduler",
+      "scheduler": "not_started",
+      "base_commit": "c15a6a5822e0dd32a4d2d17a4081d38df39d8c54",
+      "loaded_version_boundary": "Working backend at initial launch; later schema compatibility validation not reloaded. Disk hashes alone are not memory proof.",
+      "restart": "BLOCKED_BY_EXECUTION_POLICY; stop/start command rejected before execution",
+      "production_8201_changed": false,
+      "production_database_changed": false
+    }
+  },
+  "runtime_history": [
+    {
+      "port": 58724,
+      "launcher_pid": 14636,
+      "boot_id": "721104ca75974ae8944103247ef32e22",
+      "data": "data/runtime/workspace-20261024",
+      "entry": "app.py --manual-workspace --host 127.0.0.1 --port 58724 --no-scheduler",
+      "scheduler": "not_started",
+      "restart": "OWNED_INSTANCE_RELOADED_AFTER_SIGNED_CONSISTENT_BACKUP",
+      "restart_at": "2026-10-24T21:55:14.181334+08:00",
+      "backup_sha256": "811bdccc1f0349bc0cfd112c83c70c3c4a4f8a65831859bd864ac2c15cda6f3e",
+      "preserved_artifacts": 23,
+      "loaded_version_boundary": "Controlled process restart and actual entry hash; per-module files pinned at restart. A disk hash alone is not an in-memory module identity. Final frontend builds and packaged runtime have independent receipts.",
+      "production_8201_changed": false,
+      "production_database_changed": false
+    },
+    {
+      "port": 58832,
+      "pid": 10820,
+      "launcher_pid": 18284,
+      "boot_id": "625eb3b92694404491582d71d1ac0df3",
+      "entry_sha256": "d16754157127af739c170774b3e38f9f43eb7b4b29705cd03d11ececd5b1afa1",
+      "mode": "owned packaged manual workspace",
+      "scheduler": "not_started",
+      "backup_receipt": "data/runtime/collector-acceptance-20261025/backups/pre-report-continuation-20261026T222001Z/receipt.json",
+      "launch_receipt": "work/business-product-delivery-20261024/report-continuation-launch-20261027.json",
+      "boundary": "Actual package process, reported entry identity, health and native readback. No independent memory-module hash attestation. Production8201 was not started or restarted.",
+      "launch_id": "674577ab6de64e5c905b91a3e491873d",
+      "data_root": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\collector-acceptance-20261025",
+      "current_state": "NO_LISTENER_58832_AT_RETIREMENT_READBACK; NOT_RUNNING_AS_RECORDED",
+      "current_state_observed_at": "2026-10-27T10:23:51.127518+08:00"
+    }
+  ],
+  "current_integration_delta_20261025": {
+    "recorded_at": "2026-10-25T00:52:15.055725+08:00",
+    "state": "LOCAL_FROZEN_OWNER_FIXES_WITH_BOUNDED_NATIVE_READBACK_NOT_PUBLISHED",
+    "source_pins": {
+      "ai_api.py": "c5335fc9ea2187be152efb0060e4a849ad65c5b04c824be363f511a3595066c8",
+      "agent_memory/retrieval.py": "9bc5ca3a495c048b0f3db8c57b7ad983a5a9236c7c977ddc80a850b7d2a6d5c2",
+      "agent_memory/semantic.py": "fb0a79fcee27a8120a40de41749a528c2a62d21483e6457439649bb37a947927",
+      "agent_runtime/durable_adapter.py": "f64fb3b3dee3ed67bb88aeb94c07b9074899204a28c388594068b13dac41c4df",
+      "agent_runtime/planner.py": "62537e17aa7d11201b5f709c492003a4325ee40bd51f06be00b2c0b7cb521667",
+      "agent_runtime/task_binding.py": "7b600d693f4d7cb5b3e0829231ffacbdc6e80a915025e221a65b954a38c7adb7",
+      "lumenis/ai_hub/context_pack.py": "3d4c3997d62bb141bd6a36877da8d3b81a50177b9b7633a30744cfc4c0ef543e",
+      "lumenis/ai_hub/conversations.py": "c7a34579f254219bb1f3110691a2bb0215e21e7bb00e9db85c5602f5585dac5e",
+      "lumenis/ai_hub/routes.py": "1b7f2105a1af26a1ee797ee37fc2b570d4ff2d2b6a867ad576ff10f0f76aff9d",
+      "lumenis/ai_hub/service.py": "254b385ea3e55e98c9104216399c284b84127ffa7dd13a68645450b03c38a580",
+      "lumenis/system/ai_gateway/core.py": "2f5115e9448f4eea954cf96538e07a2805c5af458ac0b0898e9ac4dc7a477edb",
+      "app/lib/features/ai01/ai01_conversation_panel.dart": "cfac76b4fd53961b9ae1db4201f8add0837c8dc56f770c842689385bc32b2f65",
+      "app/lib/features/ai01/ai01_conversations.dart": "f2b6556d0ddad6eb5282494503fe18f620aad698f72ae5d5e346411300ff12b9",
+      "contracts/experience/screen-specifications/AI-01.md": "cb4edff6eeecd89dd0c691d3699d52ff3d74fc7cede741e8782746b6ce6471db",
+      "tests/test_ai_context_pack.py": "b3bb3ab60888cce93edc81d742adae5ed84d389aa1ca03ad2fc7137925015d34",
+      "tests/test_agent_conversation_context.py": "1f88551c69f96c124e0b7a7c7342a5f6e887e981a334e31a0029628ea7289e61",
+      "tests/test_ai_conversation_owner.py": "d8f5ddde664ba32551f94bc409a2d19b164a0e3c1d863a8e646461594d4468a9",
+      "tests/test_ai_hub_owned_gateway.py": "ddc22368ec0df61901e317526c28f48f26d821b71fc1870efc9fa7ed34765f8d",
+      "tests/test_scoped_derived_memory.py": "9b9b7d6980216d7c71887c4e4bf03064f01467ef36aa2dcd3b7ae5c2e083795a",
+      "tests/agent_runtime/test_loop_checkpoint_contract.py": "a4d206667427a4a1d6c4237d27886f0cc21450f597d410ba6267c80689dfa86b",
+      "tests/agent_runtime/test_loop_execution_resume.py": "ca17ed5869e16491aaecf102eb99b42b114b336f68aa1ce419f9af6f35294d56",
+      "app/test/features/ai01/ai01_conversations_test.dart": "0323f3034aaf229d378bac12a6cb30c17a0d98238a247c019593880e741e7e0d"
+    },
+    "source_pin_boundary": "Frozen AI/Memory owner files only. Existing top-level runtime/source pins describe earlier snapshots; root integrates and refreshes final package/runtime pins. No claim that later disk repairs are loaded by the recorded package.",
+    "visual_composition": "New task-specific business, creation/media and shell compositions remain source/local-operation evidence; full visual NOT_ACCEPTED. Initial CTH binding and long-title repair are still being repaired/reviewed.",
+    "memory_after_rank": {
+      "state": "IMPLEMENTED_ISOLATED_TESTED",
+      "selected_source_original_bytes": "verified_research_source after actual BM25 ranking, followed by Task permission and database-version checks",
+      "tests": "16 memory_search cases PASS / 13 deselected, including actual temporary imported Artifact deletion and same-length rewrite rejection, valid-source retention and unselected-file deletion; sockets denied and source DB main bytes unchanged",
+      "scope": "BM25_ONLY; not admitted dense/cross-encoder execution; no source body in source-free chat/Planner"
+    },
+    "context_revocation": {
+      "state": "IMPLEMENTED_ISOLATED_TESTED",
+      "tests": "24 AI01 widget cases PASS; read401/403/404/410 clears restricted context and parent detail, write denial rechecks reading, network/server-unknown retains draft and reconciles before repeating unknown save; two-file analyzer no issues"
+    },
+    "gateway_ci": {
+      "workflow": ".github/workflows/platform-verify.yml",
+      "selection": "tests/test_ai_hub_owned_gateway.py added to original isolated offline step",
+      "replay": "8 cases PASS, exit0; explicit temporary data/DB/schema seed created before pytest, network denied, no real model invocation",
+      "log": "work/product-closure-20261011/workspace-20261024/ai-hub-owned-gateway-offline-replay-20261025.log",
+      "log_sha256": "93a5513981e8dfed5a47d9f711021729252e006df31fd0fd0fba34d64c6ab8cf"
+    },
+    "static": "AST compile and git diff check PASS; Ruff baseline/current semantic12/12, scopedtest29/29 and ai_api50/50, zero introduced; three Experience gates PASS at their recorded scope",
+    "native_bundle": {
+      "receipt": "work/product-closure-20261011/workspace-20261024/bundle-launch-20261024T163516Z.json",
+      "bundle": "D:\\LUMENIS_REBUILD\\序\\序境\\app\\build\\distribution\\OEVIRA-5.9.9-20261025",
+      "manifest_sha256": "536f2d7862705d6a8d403971246cb33a26108d151437cedd5bca4a34f413ea88",
+      "data_root": "D:\\LUMENIS_REBUILD\\序\\序境\\data\\runtime\\workspace-20261024",
+      "launch_observed_at": "2026-10-25T00:35:46.789766+08:00",
+      "artifacts_unchanged": true,
+      "chinese_ime_draft": "保存报告 并重新打开",
+      "draft_observation": "Root actual native Windows IME save; same draft survived cold Home reopening",
+      "manuscript_v4": {
+        "title": "寰意产品工作流交付说明修订",
+        "saved_version": 4,
+        "cold_home": "same v4 shown",
+        "normal_open_list_independent_reopen": "work/product-closure-20261011/workspace-20261024/native-bundle-manuscript-v4-reopened.txt",
+        "body": "Original summary/body retained; saved-version4 state observed"
+      },
+      "manuscript_v3": {
+        "title": "寰意产品工作流交付说明",
+        "saved_version": 3,
+        "independent_reopen": "work/product-closure-20261011/workspace-20261024/native-bundle-manuscript-v3-reopened.txt",
+        "body": "Original title/body retained; saved-version3 state observed"
+      },
+      "acceptance_boundary": "Same recorded package actual operations; not final post-repair source alignment, complete Windows, visual, release or full-product acceptance"
+    },
+    "business_export": {
+      "filename": "oevira-operations-v4.docx",
+      "observed": "Actual v4 DOCX opened in installed LibreOffice",
+      "long_title_repair": "UNDER_REVIEW_NOT_PASS",
+      "initial_cth_binding": "FRONTEND_REPAIR_IN_PROGRESS_NOT_PASS"
+    },
+    "retained_test_entry_incident": {
+      "entry_receipt": "work/business-product-delivery-20261024/launcher-test-entry-error-20261025.json",
+      "readback_receipt": "work/business-product-delivery-20261024/test-import-production-readback-20261025.json",
+      "error": "Incorrect python -m unittest app.tool entry imported root app.py and attempted schema initialization",
+      "guard_refusal": "WORKSPACE_SIGNING_KEY_RECOVERY_REQUIRED before v21-to-v22 migration",
+      "observed_production_schema_max": 21,
+      "production_main_mtime_utc": "2026-10-24T12:45:59.185769+08:00",
+      "observed_wal_bytes": 0,
+      "pre_import_hash": "NOT_CAPTURED",
+      "complete_logical_unchanged": "NOT_VERIFIED; earlier initialization side-writes not ruled out",
+      "production_8201_process_changed": false,
+      "historical_no_change_boundary": "Earlier untouched statements apply only to their recorded stages and do not establish batch-wide production logical non-change"
+    },
+    "remaining_boundary": "All still-effective original coverage and interaction requirements, PE01-PE24 professional requirements, full Website/Web/Windows workflows, nine math families and product-native AI remain subject to the latest explicit PO convergence. Withdrawn GPU training is not an active acceptance prerequisite; G163 remains OPEN. Complete visual NOT_ACCEPTED; full product NOT_DELIVERED; this local batch has not been pushed or accepted on main.",
+    "office_signature_detection": {
+      "state": "IMPLEMENTED_AND_ISOLATED_VERIFIED",
+      "scope": "OPC signature recognition by relationship and ContentType, preserving existing acknowledgement and original parts; not signature validity or re-signing",
+      "checks": "12 affected cases PASS, AST/Ruff PASS, independent source review no new P0-P2",
+      "source_sha256": "4b7bf2eb5cf15e4cbdcc5115795da4973682a3e5d0575a967edbd05e9b914011",
+      "test_sha256": "2974f05def642b4b18bc06da2270e8dbfbf85b5c459f391b8eb45be2601992f4",
+      "runtime": "not included in the earlier OEVIRA-5.9.9-20261025-release recorded bundle; final rebuild pending"
+    },
+    "current_resume_20261027": {
+      "observed_at": "2026-10-27T05:51:20.206917+00:00",
+      "local_head": "ec831c8e80b6463797d7223cdd3c6a20ae327ef2",
+      "main_at_session_fetch": "31a193bdc4cce13464ba1c46551dc7c66ff1dfb0",
+      "publication": "LOCAL_ONLY_NOT_ACCEPTED",
+      "frontend_snapshot": "work/business-product-delivery-20261024/current_frontend_snapshot.json",
+      "frontend_pin": "b776b65bcd759b1d9efc1275ef628a3395b9e7d5e2af529a7b1e10dc33adbf2b",
+      "retired": [
+        "Replaced AI02 unbound workspace implementation in the original four owner files",
+        "Removed SYS02 scope-free manual collection action, CoreClient method and unused localization keys",
+        "Deleted GPU LoRA/CUDA training execution body; retained immediate denial compatibility, historical readback and authorized interruption",
+        "Removed unused training/inference imports and assignments; no active old-training execution fallback"
+      ],
+      "current_build": "NEW_WEB_BUILD_LOADED_PARTIAL_REAL_OPERATIONS; SUBJECT_SCOPE_REGISTRATION_UI_REBUILD_IN_PROGRESS; WINDOWS_NOT_REBUILT; NOT_DELIVERED",
+      "windows_observation": {
+        "opened": true,
+        "process_id": 34028,
+        "process_closed": false,
+        "native_window_id": 19403364,
+        "receipt": "work/business-product-delivery-20261024/report-continuation-launch-20261027.json",
+        "executable_sha256": "9acc5fc5a71cd76867b898794bc6b8d7c1d82c96fbb723179e25041a795ff662",
+        "app_so_sha256": "d160fc2dbec60f7be3566a1d1fc691437deaa85ec7e138ebac76846c1fa4b6a7",
+        "draft_reopened": true,
+        "draft_screenshot": "work/business-product-delivery-20261024/sh04-windows-cold-reopen-20261027.png",
+        "saved_work_reopened": {
+          "artifact_id": "ART-451fc6d046d14096",
+          "version": 3,
+          "screenshot": "work/business-product-delivery-20261024/sh04-windows-cold-reopen-20261027.png"
+        },
+        "chinese_ime": "NOT_VERIFIED",
+        "boundary": "Actual Web revision/save v3, independent old v1 and new v3 readback, Windows native DOCX export, then controlled Core and Windows cold restart with v3 reopened in both surfaces. No AI inference, professional complexity, full visual or native IME acceptance. Web download initiated but filesystem delivery not observed; DOCX package content verified, not opened in Word/WPS.",
+        "native_docx_export": {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\work\\business-product-delivery-20261024\\oevira-work-v3.docx",
+          "bytes": 36295,
+          "sha256": "3fe416db10b3ce5e3d3916a4388a53ee6b4a1b016a64237527527eadaab3adae",
+          "visible_content": "寰意 · 工作稿\n寰意\n从资料到作品\n资料有来源，结论可修订。\n成果可以保存、重新打开并继续编辑。",
+          "kind": "customer_delivery_no_internal_snapshot"
+        },
+        "current_process_state": "PREVIOUS_PID_NOT_PRESENT_AT_RETIREMENT_READBACK; HISTORICAL_OPERATION_ONLY"
+      },
+      "runtime": {
+        "port": 58832,
+        "pid": 38952,
+        "boot_id": "8071dffb664849a293c4c0980b975f1e",
+        "mode": "owned manual-workspace",
+        "data_root": "data/runtime/collector-acceptance-20261025",
+        "database": "data/runtime/collector-acceptance-20261025/monitor.db",
+        "scheduler": "not_started",
+        "current_state": "RUNNING_HEALTHY_PARTIAL_REAL_OPERATIONS",
+        "launch_receipt": "work/business-product-delivery-20261024/collector-acceptance-58832.launch.json",
+        "backup_receipt": "work/business-product-delivery-20261024/before-product-load-20261027-132729.json",
+        "source_pins": {
+          "agent_capability/formation.py": "97005c1032269ef9d6c44952a9bf663163e11568fec1012cb6dbc92840901bfc",
+          "agent_memory/base.py": "5c52913f5928a3e9a72372f8f393497e843facafcd849bcf439f7c296d048b5f",
+          "agent_memory/retrieval.py": "90068cac61be83d08154a02431eef58abd8773c3a33a45e1f4d0b6dea69d31b8",
+          "agent_memory/semantic.py": "dc99080e952855fc6d7720b7e6dcfd841122b4ef226e1863cef9a2ee100d7a6a",
+          "agent_runtime/durable_adapter.py": "90e4b8a912813f5897e530ef8fc74df436a6af940dd7291c428a7ec3b4740340",
+          "agent_runtime/loop.py": "d9dc19332277d296f6c38c4bb3ecfef884a647333253920b2f0bc1d13a4e79a6",
+          "agent_runtime/planner.py": "4ddcbde13f2944f7acbb5ffdec88e60acdd328902f38288c523a2672752f55d0",
+          "agent_runtime/task_binding.py": "e39ad36b555aebdc9e02235b4387945dc7b029f8e73efa966d068f302aabbf3f",
+          "ai_api.py": "ea7f8d16d5fcab48b7f986da2a5cc96caa4db7e826bc5a35c1084c66749180f7",
+          "ai_browser_api.py": "69f69c6d84a2afc3ba39be52db43fba628e2bee845cdec4d4e3542f9a779c1ac",
+          "ai_browser_runtime.py": "8cf9a8374706d88e681d1c752d356ebaf46240a5c8f467a9a3e4173676b5fdc3",
+          "ai_task_engine.py": "2fc78a62972b08fe1f2c5568d0c01452a05a33133c535b2ae24551e5248c80ed",
+          "api_dual_domain.py": "a1bad5471927cbbd9ccc14ee78f72ba74dddc0e01019c4ec778526e1e50f16b1",
+          "app.py": "d16754157127af739c170774b3e38f9f43eb7b4b29705cd03d11ececd5b1afa1",
+          "app/build/web/flutter_bootstrap.js": "291e3ad415de151815a584b2f7a71dabe3301ffa6a814fd72fee5d309d0a6f4e",
+          "app/build/web/main.dart.js": "b6a2a55caf81e34610dbbce5918b1ed37ee4532fc50ed0c7fdd976d2a53d572e",
+          "browser_surface.py": "9abb82f938819c1aa58aefbb735c898bac65e16565ccee81db49f9153735c70b",
+          "collector.py": "099efe6297d4cc5c37e9ad9c5d844f86b6ac86fb43af05bff8792cee6aea3eae",
+          "config/ai-owned-foundation.json": "c829ca80d6566c309e6701d5568505c51d7a9b900ec79dffb0f386769d417c9e",
+          "experience_runtime.py": "65e0801493a4136b96b3f935715ab05386c5427619c7dc5425060063c97a415d",
+          "experience_screens.py": "90a1ae69c2d1a2edaa116d0bd099e5c6d86d5b9a9157a247d2330e6583147a01",
+          "intelligence_library_api.py": "124939fc25a872ed38761e986df50ff321438d1c125ed40385463cf51825e6d1",
+          "lumenis/adapters/auth_recovery.py": "9c46c1bccb6c2ec820ff0f3d8c8b97d1c07bf88a791948a6c0bbd0c1ba25a5c5",
+          "lumenis/adapters/base.py": "78a8e6f0e8105ea8761f93d7141cce08c5af4027364ddbcdc80c3a5f16a58232",
+          "lumenis/adapters/bilibili.py": "e48ec38928781caef15da3dc001ef7e177aa53c57b1e7dca2f8087bcd81ceac9",
+          "lumenis/adapters/cookie_vault.py": "f03e6b668ae242f433ffadfd24c896dd888169b197f7aee78fcd81eee4b0de2b",
+          "lumenis/adapters/human_browser.py": "a89fec874da91ec3a68c9d1e316286da514c845c7d68725ad01a85fcabbbc186",
+          "lumenis/adapters/risk_controller.py": "a9aa7f198bf7613d56cea0eafd5ed4b5d2c2ed3ca6443f4dd661be2fe4b5823b",
+          "lumenis/adapters/weibo.py": "44203c742f3e7a486f0cf4a716537f7466d4bf7d24dad45ba5c0d72dc006d14e",
+          "lumenis/adapters/zhihu.py": "f42d79726e2472cb071cb026fb1516e2b3c4c7251b55f83d20bbd8e0fdb08de6",
+          "lumenis/ai_hub/conversations.py": "31445187f1f7d182d2a36a814a6313c59b93d1f7a4184b81c6a357526e09bba1",
+          "lumenis/ai_hub/service.py": "e3aafd0d31a04d85324f3725e531ce2275593b620180e64de077c876cd1bd58e",
+          "lumenis/importer/documents.py": "93b2771faf3e6bcc48d4a39899d2d01ed0a7f4f7b2248a278ef2695725f90193",
+          "lumenis/shared/agents/skills/execution.py": "330270f77d8a6e1db62b1e918170cf98eab64cead2a01040863273798a461d0c",
+          "lumenis/shared/content_creation/rendering.py": "e14d132443cfa266e135cbf3398ab44cbdded9cd92ac619b9562c40a667d7714",
+          "lumenis/shared/content_creation/speech_transcription.py": "1c4a4fac97f434d7e5cb4c0a4ad50e20bbee8c5dba89bf59b608ee7e6c14e8ea",
+          "lumenis/shared/content_creation/toolchain_capabilities.py": "b77b29b677676ecde9ab2911c4955da03ab09a79cb63aac42f2035319b4393f1",
+          "lumenis/shared/content_creation/transcript_editing.py": "eaebd87bf7d62eef59e3574c55f6f511f2d1243ce3364db819da03bd104c6ee6",
+          "lumenis/shared/content_creation/video_editing.py": "ad2a54b16012aea8858aa8aeab3327a672899a6439f996dbafbf3442e9542c77",
+          "lumenis/shared/database/platform_content.py": "88c9ae6a096c8397dcfe2b1033413a81dc262dc1146d830219fe5c45fbd7f755",
+          "lumenis/shared/evaluation/ai.py": "69b93bff92af844286f75f92a30b83502c18292ddbd350e1406ad5cef9422223",
+          "lumenis/shared/reporting/delivery_preferences.py": "a3387aed6a457c25926c1efeb2d9c27f62e37702c7803cecf20517b91ed95270",
+          "lumenis/shared/reporting/media_brief.py": "41d6cc49d72e07546bba39a3bf856a1030d227f7b543a184ea92c2b106693f76",
+          "lumenis/shared/reporting/saved_work.py": "200f0c92486fcdeda8bb9db74204bd6923cf3f91cee0f31fead7d32b65fb657b",
+          "lumenis/system/ai_gateway/core.py": "f516afba0c02a3f3aefbf08a4ae047e02616fb9ddc2e48b2b965f8184aa4d929",
+          "lumenis/system/ai_gateway/owned_inference.py": "ac8fb8efaeeaa7c1b08c2db288630b8bd5810811f4d03355c7ab561c55fcf43c",
+          "lumenis/system/ai_gateway/owned_service.py": "116cfba0f0c112b793e97ae5cd1564b491044df13c5099afcac31b28460b0d0e",
+          "lumenis/system/ai_gateway/owned_training.py": "ebb2e475226fd311dac1809b668d57d9d7d093b5a7cec85a62ac1f20feb8fae2",
+          "lumenis/system/collector/adapters/__init__.py": "6c53b2b015bdaa314c33c0ee1db898485c085f2345095e5945a79543c88d0324",
+          "lumenis/system/collector/adapters/_init.py": "abd76052822697d488073b2425a38b28b4a0a3eed0ad9613b12809943d5c2130",
+          "lumenis/system/collector/adapters/base.py": "065f7b30bfa9fce098bdde5156fb1b53b2fefc0533703db5818c93f7eb5ab90e",
+          "lumenis/system/collector/adapters/bilibili.py": "3d5e3458d98f7a2015e1ef6df9d4987c716c620fbf541d740e6b85e8f7be1225",
+          "lumenis/system/collector/adapters/browser.py": "0ac5455b1862ba9d9e62f872a4e733a75176cd230847fa4903c4fa86214fa826",
+          "lumenis/system/collector/adapters/channels.py": "48e316027ce53e5942c520430424a92b3efdffc8be687b3118b6558c58a4ede2",
+          "lumenis/system/collector/adapters/config.py": "366225d19c75d8b101609eb9d4cfc5d64bdf11785b44560c79b97277bd769cf1",
+          "lumenis/system/collector/adapters/daum.py": "323343de42221c75571bc473b96e5cd3e4073f1369af377b6aba03348f5fc969",
+          "lumenis/system/collector/adapters/douyin.py": "0fb3f51722600e947ba011980729b30f20f8d68e4ef1b7a435a2d6deae9b5e35",
+          "lumenis/system/collector/adapters/evidence_exporter.py": "6e198bd9cf42ad021df491620d88aa43f1d1d87d7c7342eb3bb8bb7d7ea8c7ef",
+          "lumenis/system/collector/adapters/facebook.py": "ea8b0d003ac4e43cb04cc7a859434971f00923f648a611f8db5231b0c4411fb6",
+          "lumenis/system/collector/adapters/github.py": "eca4c4548f027dcdd45aefe54ae67b944ab9464b904a1f0668a8a53d61a0b535",
+          "lumenis/system/collector/adapters/google.py": "c7367e0dfd1a30cb97c8c036c60c41cd98c6a8946a65a0d066353daa7f4538ef",
+          "lumenis/system/collector/adapters/health_center.py": "1ce7585e5b0995422585ead4e96c6ddd93b6452a5099751278af185039b04559",
+          "lumenis/system/collector/adapters/instagram.py": "e34510c2989e10366979c7257b59247c79697445e23837a5a5439136f3fbbcd3",
+          "lumenis/system/collector/adapters/kuaishou.py": "4fe2be9db8cb9d666046f57762f7c107515b0ea59fde366261856eb4303a0d9a",
+          "lumenis/system/collector/adapters/linkedin.py": "cd031e98516f15197c75c649bfe30178be95c7e468f6eb270f0cd4edf606bb04",
+          "lumenis/system/collector/adapters/multi_platform_import.py": "b800757ace9ec160e1c80d8f632004503377299f20870c97ff426176e779957c",
+          "lumenis/system/collector/adapters/naver.py": "a713d625056daf14daa7ecca123c229da5e2cdf4970db89107db427cb1898193",
+          "lumenis/system/collector/adapters/overture_places.py": "0aa376fb03eed392ed8b1df748f58d9ab3b1238891042648fde957d4b2a33498",
+          "lumenis/system/collector/adapters/platform_naming.py": "4710bc4fd1838858f7f3f1ad513442d7b395baa66cd1da69a9cb4178fd8a5690",
+          "lumenis/system/collector/adapters/public_http.py": "1e6ce7624269d5208e5dfde87cfafa447c90547a8cfeec768585c90546d9dc4b",
+          "lumenis/system/collector/adapters/public_media.py": "4d07144f86438bbe33a45dc61db0da460fb3c2837500358d5dbca023ecdeb1e8",
+          "lumenis/system/collector/adapters/public_source.py": "13c9cbf166fcd79906e4ac7abbc4ddaf0a3d11b04e2057e2bf28396c0efca44b",
+          "lumenis/system/collector/adapters/reddit.py": "fe4514b33d143967ef7e766ee58fd73647e57dbc5f67bee858499404ab3b2185",
+          "lumenis/system/collector/adapters/rednote_policy.py": "0e96318ae4cb8309dbb7dfdb6f103d73b710a8608007d5f7154739e986b3bb8e",
+          "lumenis/system/collector/adapters/registry.py": "e855419e2602a0e93e128f27dee9a183b2283014091a0faa6e194bf67c9c5137",
+          "lumenis/system/collector/adapters/response_shape.py": "e7fe174ba5d82f6162d0b8723db45ba8fc80ac03845bf0cb4d969e212a05bdc2",
+          "lumenis/system/collector/adapters/routing.py": "a4ba3fda7b14da80d560329bdd963405b241ab6e74cbcba78f35b751626e00a7",
+          "lumenis/system/collector/adapters/safe_collection.py": "501f88d5fc8530922666e3a9d0adadeeb376d4af35ade7ce2efbde96acd26ea5",
+          "lumenis/system/collector/adapters/secondary_collection.py": "7a376f17dcbde2c2f3680ba88e4dc330c450d0fdbcda0d3d136066ac0bd315da",
+          "lumenis/system/collector/adapters/sitemap.py": "d4b47e947132c1ecf775d9335db379c933b29326a66744e144bc90f0047be1f2",
+          "lumenis/system/collector/adapters/tieba.py": "bfe5ca1faf12d4f88624ed0f75c327e18a867a1db0bbaba59877ae951b1a50d8",
+          "lumenis/system/collector/adapters/tiktok.py": "b8a5c93b49d2fb695a9f20456aa6e7dec10257288a0031b0cb2f88bd09fbf8ad",
+          "lumenis/system/collector/adapters/web_atom.py": "4c09d43df9b758cb532b928c3df0eca5165c75aa6cecedb146f436b8f9d97f66",
+          "lumenis/system/collector/adapters/web_rss.py": "76db6d2c73ef27e01531761e787428aad6f1fc56fa7d1de40e3581c4abf72f3f",
+          "lumenis/system/collector/adapters/wechat.py": "4d5afc3b0cd4ab9853b416bedff4e565c3dafb4d8b819d9aa2d0a62ddf0095ee",
+          "lumenis/system/collector/adapters/weibo.py": "599a97a7ba4b16c6a5c63edd2d3ca50fd76b6b3dceba3f77c018de77ee4ac8dd",
+          "lumenis/system/collector/adapters/x_platform.py": "53afd75334d1802e64e94c4cbe20eb26770d8ef56826430de9e4ef0f07a1d34a",
+          "lumenis/system/collector/adapters/xhs.py": "22275aff8b9bd0dc7280666c5b0fb4fe020fb650e3d3fdb117bf4d012cbbf3b8",
+          "lumenis/system/collector/adapters/xhs_app_topic.py": "de70af8b7d78d8d68e9c668f1918c2f50d75472e34c6f2ec650fd7a1e136ee76",
+          "lumenis/system/collector/adapters/youtube.py": "5e62cfdb8fb3d43915dccb15fed85d4d289b5df5eafabb425e0948e7178c7703",
+          "lumenis/system/collector/adapters/zhihu.py": "374a88f3611d27e55b84848fca631a1d2c242a9704478ea073b5a5f77b4c4a3e",
+          "lumenis/system/collector/guard/task_queue.py": "d2e707241b0fd4da8b7ede17f3ff7c3fcb3f20cd477eb3be6e3ebaf764f49a6e",
+          "lumenis/system/security/owned_model_admission.py": "9df7918c2df25756ba49e6ef08be8e71a7704de7f4fea077548ea95999f1a48e",
+          "lumenis/system/security/permission.py": "2c5d434003808c6ad693ed9c3f5bedcba4a0ab4f632b1e38d3aa098b14741c22",
+          "lumenis_app_api.py": "3e90b7ebd18f5bbadacd3d2095d8e1b6f46e75a82d888bf09ff35ffd92a81f0e",
+          "runtime_preflight.py": "4645e005ddf789256e3c507960df4825acb40f4dfbac57af92010aaa991d1875",
+          "shared_artifacts.py": "69301ff726dde57ae28696433b006bf22174c8025aa2a12c217b09dcb99e197d",
+          "subject_registry.py": "b2d4b9c80cf589f553f3dae62aefe8b5b13c264753a462f56742a5ea3523c9c5",
+          "xhs_cdp_collector.py": "87eab4a8fa579aa85594833564f427c69ed3c4c4e8cdc16db0ec11321ecb01b5",
+          "xhs_cookie_bridge.py": "fd0ade06ed3e5b290a222f64fc3c65715042587846d52f8707e5248ecad50969"
+        },
+        "boundary": "Controlled process restart and observed health/real operations. Disk pins are not independent memory-module attestations. Subsequent agent source edits are not loaded. No production8201 change."
+      },
+      "collector_reopen": {
+        "body_characters": 964,
+        "canonical_admission": "NOT_ADMITTED",
+        "evidence_ref": "app_evidence_records:207",
+        "actual_web_modal_opened": true,
+        "source_url": "https://www.taikoohui.com/zh-CN",
+        "publication_time_state": "UNKNOWN",
+        "network_attempted": false,
+        "candidate_id": "public-http:f23bf6b5247f75b692bfbe317ebb37af",
+        "task_id": 10,
+        "boundary": "Preserved original after Core restart; not new capture or all-platform closure"
+      },
+      "ai": {
+        "task_http_projection": "IMPLEMENTED_SCOPED_TESTED_LIVE_LIST_AND_STATUS_READ",
+        "live_task_list": "ONE_EXISTING_TASK_READABLE_RESULT_RESTRICTED",
+        "request_identity": "Persistent actor/scope/payload-bound 32hex request id; atomic creation; read/replay never redispatch; exact id survives client cold reopening and multiple windows",
+        "verification": "7 isolated backend cases; 12 scoped Flutter cases before final result-state fix plus one exact result-state regression afterward; final two Dart owners analyze clean",
+        "owned_model": "OWNED_SERVICE_EXECUTOR_NOT_BOUND",
+        "new_pretrained_admission": "IMPLEMENTED_SCOPED_TESTED_NOT_BOUND_TO_A_REAL_MODEL",
+        "training_execution": "WITHDRAWN_BY_PO; real approval and phase-task routes return410 without starting training",
+        "boundary": "No actual model answer, professional AI acceptance, GPU/weight download or training. Ordinary existing draft/task/result readback verified separately.",
+        "remaining_code_path": {
+          "startup": "app.py registers ai_api but has no production caller of restore_owned_service_bindings",
+          "binding": "No production v2 request/verifier/runtime/SourceUse binding resolver exists yet",
+          "resource": "Historical NF4 training artifact is present but not admitted or compatible with the v2 CPU runtime; service environment lacks torch/transformers/tokenizers/safetensors.",
+          "classification": "IMPLEMENTATION_AND_RESOURCE_GAPS; no successful binding or model result claimed",
+          "continuation": "Production bootstrap resolver and its reader/verifier/SourceUse bindings are not implemented. No active worker or successful model execution is claimed. A compatible admitted CPU artifact and actual quality evidence remain required."
+        },
+        "local_model_material": {
+          "state": "HISTORICAL_NF4_TRAINING_INPUT_FOUND_NOT_ADMITTED_FOR_V2_CPU",
+          "path": "work/w2-owned-ai-20261002/training-resume-20261003/model-snapshot",
+          "files": 11,
+          "bytes": 12554840321,
+          "identity_check": "File names/sizes match the declared historical variant; weight bytes not hashed or loaded",
+          "format": "gpt_oss bitsandbytes NF4 4-bit / bfloat16; current v2 requires nonquantized transformers-cpu",
+          "license_chain": "No local LICENSE/USAGE_POLICY matching the v2 artifact; base identity license metadata cannot substitute",
+          "candidate_recommendations": "Qwen3 and other calibration options remain unadmitted research, not downloaded available assets"
+        },
+        "retrieval": "BM25_ONLY; NEURAL_COMPONENTS_NOT_ADMITTED",
+        "current_implementation_delta": "Loaded typed request/result/evaluation and conversation forget-context changes; new Planner/Durable/BusinessBrief/ContextPack changes are not yet loaded. No model quality/inference claim."
+      },
+      "cleanup": {
+        "desktop_handoff": "C:/Users/28049/Desktop/寰意待删除旧构建/collector-web-20261027",
+        "active_path_absent": true,
+        "reason": "Delete policy rejected; used explicitly authorized Desktop handoff",
+        "permanently_deleted": false,
+        "retired_path": "app/build/collector-web",
+        "failed_bundle": {
+          "path": "C:/Users/28049/Desktop/寰意待删除/OEVIRA-0.1.0-1-20261027-ai02-result-access",
+          "files": 19759,
+          "bytes": 939155242,
+          "reparse_points": 0,
+          "action": "MOVED_TO_AUTHORIZED_DESKTOP_HANDOFF_NOT_DELETED",
+          "reason": "Automatic approval review rejected recursive removal: blocked by policy",
+          "verification": "Source absent before new bundle creation; five key hashes match"
+        },
+        "empty_old_distribution_directories": {
+          "paths": [
+            "app/build/distribution/OEVIRA-5.9.9-20261024-final",
+            "app/build/distribution/OEVIRA-5.9.9-20261025",
+            "app/build/distribution/OEVIRA-5.9.9-20261025-product-integrated",
+            "app/build/distribution/OEVIRA-5.9.9-20261025-release"
+          ],
+          "regular_files": 0,
+          "regular_bytes": 0,
+          "junctions_per_directory": [
+            "core/data",
+            "core/logs"
+          ],
+          "protected_target": "data/runtime/workspace-20261024",
+          "active_process_reference_observed": false,
+          "requested_action": "Remove only verified junction objects non-recursively, then empty directories",
+          "action_result": "NOT_EXECUTED;AUTOMATIC_APPROVAL_REJECTED",
+          "reported_reason": "blocked by policy",
+          "deleted": false,
+          "boundary": "No policy bypass or alternate deletion retry; no traversal/removal of data targets"
+        },
+        "previous_full_bundle": {
+          "path": "app/build/distribution/OEVIRA-0.1.0-1-20261027-ai02-result-access",
+          "processes_stopped": true,
+          "deleted": false,
+          "reason": "Contains data/log junctions to the retained workspace; no recursive cleanup attempted"
+        }
+      },
+      "accidental_import_guard": {
+        "prior_database_effect": "NOT_VERIFIED",
+        "behavior": "Reject only module app invoked through app.tool or app.tool.* before dotenv/third-party/database imports; ordinary Core imports preserved",
+        "verification": "Two pure-source isolated cases and py_compile passed; application and databases not imported",
+        "files": [
+          "app.py",
+          "tests/test_internal_beta_workspace_context_acceptance.py"
+        ],
+        "state": "IMPLEMENTED_SCOPED_TESTED",
+        "bounded_source_analysis": {
+          "order": "app.py init_db returns and commits before migrate attempts the signing-aware backup",
+          "possible_pre_backup_writes": [
+            "SCHEMA statements",
+            "missing-column DDL",
+            "metric provenance triggers/indexes",
+            "notes/events default backfill and publication-date corrections"
+          ],
+          "migration_v21_to_v22": "Not entered after the observed backup refusal",
+          "attribution": "Recurring supervised_app.out errors lack attempt IDs; cannot bind them to the erroneous unittest command",
+          "preimage_identity": "NOT_AVAILABLE; changed row count and zero-write claim remain NOT_VERIFIED",
+          "production_action": "No production database opened, changed, restored or restarted by this investigation"
+        },
+        "startup_order_repair": {
+          "files": [
+            "app.py",
+            "tests/test_shared_database_migrations.py"
+          ],
+          "app_sha256": "d16754157127af739c170774b3e38f9f43eb7b4b29705cd03d11ececd5b1afa1",
+          "behavior": "Canonical signing-aware migration/backup completes before root business schema initialization; backup refusal prevents that init_db call.",
+          "verification": "One real isolated v21 missing-signing-key refusal case, existing v0 initialization and current-version no-op migration cases passed; affected compilation passed.",
+          "boundary": "Fixes this determined initialization-before-backup path. Does not retroactively establish zero writes in the original incident or all early imports."
+        }
+      },
+      "build_receipts": [
+        "app/build/native-build-receipts/verified-web.json",
+        "app/build/native-build-receipts/20261026-221348-7913.json",
+        "app/build/native-build-receipts/verified-windows.json"
+      ],
+      "previous_windows_observation": {
+        "screenshot": "work/business-product-delivery-20261024/current-windows-home-20261027.png",
+        "process_closed": true,
+        "app_so_sha256": "f4db7a8e4b8eb81f3ce85ba81fe102fe88629ace6482b94bfc895a109c775197",
+        "draft_reopened": "整理本次公开页面的来源和时间，保留原文依据。",
+        "executable_sha256": "9acc5fc5a71cd76867b898794bc6b8d7c1d82c96fbb723179e25041a795ff662",
+        "chinese_ime": "NOT_VERIFIED",
+        "boundary": "Actual own native window opened and read existing draft/works. No claim that runner hash alone identifies Dart code; native Chinese entry and full visual acceptance remain unverified.",
+        "opened": true,
+        "receipt": "app/build/native-build-receipts/20261026-200726-7149.json"
+      },
+      "web_observation": {
+        "at": "2026-10-27T05:51:20.206917+00:00",
+        "build_sha256": "b6a2a55caf81e34610dbbce5918b1ed37ee4532fc50ed0c7fdd976d2a53d572e",
+        "actual_routes": [
+          "SH-01 video/podcast",
+          "CTH-01",
+          "BMP-01",
+          "SYS-02"
+        ],
+        "observed": [
+          "Saved video project reopened and revised using existing versioned Artifact contracts",
+          "Audio project ART-8eae11127e4d40c7 reopened in product player; playback advanced to00:23 then paused",
+          "CTH/BMP task-specific new layouts render actual empty/unknown data states",
+          "Public-source collection returned partial, unknown-time homepage excerpt; original-source URL/body projection survived saved-task reopening and browser reload"
+        ],
+        "limits": [
+          "Not all planned pages/interactions are implemented",
+          "No complete CTH/BMP decision/action/result chain accepted",
+          "Directory scope/register changes not yet in loaded build",
+          "No full visual acceptance or Windows current-build acceptance"
+        ]
+      },
+      "static_quality": {
+        "python_compile": "Affected owners passed",
+        "scoped_unused_cleanup": "owned_training.py/owned_inference.py F401/F841 and task_binding.py F401 passed",
+        "scoped_full_ruff": "FAILED_WITH_REMAINING_FINDINGS; not full quality approval",
+        "ruff_evidence": "work/business-product-delivery-20261024/ai-task-retirement-ruff-20261027.json",
+        "boundary": "Original Ruff output predates scoped unused cleanup; legacy findings were not all repaired or hidden."
+      },
+      "bundle": {
+        "path": "D:\\LUMENIS_REBUILD\\序\\序境\\app\\build\\distribution\\OEVIRA-0.1.0-1-20261027-saved-report-continuation",
+        "manifest_sha256": "0ab266aae22c89d24f035a17d4d41e4eb0b06ff2eb37e5612c9f3c76cdf9f98f",
+        "manifest_files": 19764,
+        "manifest_bytes": 1149963228,
+        "runtime_dependencies": 129,
+        "status": "WITHDRAWN; APP_WEB_AND_START_ENTRY_REMOVED; NOT_A_COMPLETE_RUNNABLE_BUNDLE",
+        "describe_bundle": "PASS; manual58832; automatic_collection=false; starts_product=false",
+        "redistribution": "BLOCKED",
+        "redistribution_blockers": [
+          "FFMPEG_CORRESPONDING_SOURCE_AND_BUILD_DEPENDENCIES_REQUIRED",
+          "VISUAL_STUDIO_REDISTRIBUTION_ENTITLEMENT_REQUIRED"
+        ],
+        "source_commit_scope": "Local HEAD plus manifest file hashes; not published or equal to main",
+        "model_resources": "Apache-2.0 Magika file-type detector and MIT ONNX Runtime sample graphs; not owned or domain inference weights",
+        "boundary": "Bundle originally excludes data and credentials; active launcher now binds explicit external data/log roots with junctions. Never recursively remove through those junctions.",
+        "manifest_scope": "Historical manifest before frontend retirement; no current completeness claim"
+      },
+      "runtime_before_portable_bundle": {
+        "port": 58832,
+        "pid": 28952,
+        "boot_id": "b0eb393cf5854372bb44c94dabd06c8a",
+        "entry_sha256": "c016dd0ed69bd28d66b7965da0e6430bd08927f98477d17836d5654eecf0a81f",
+        "mode": "owned manual workspace",
+        "scheduler": "not_started",
+        "backup_receipt": "data/runtime/collector-acceptance-20261025/backups/pre-ai-task-reload-20261027T045004/receipt.json",
+        "launch_receipt": "work/business-product-delivery-20261024/collector-acceptance-58832.launch.json",
+        "http_receipt": "work/business-product-delivery-20261024/ai-task-reload-runtime-20261027.json",
+        "served_web_receipt": "work/business-product-delivery-20261024/current-served-web-20261027.json",
+        "boundary": "Controlled process launch, source pins, boot identity, actual endpoint/UI behavior and served Web bytes. No independent backend memory-module hash attestation; production8201 not restarted.",
+        "listener_pid_at_readback": 34684,
+        "listener_parent_pid": 28952,
+        "process_stopped": true
+      },
+      "windows_observation_before_portable_bundle": {
+        "opened": true,
+        "process_id": 32700,
+        "process_closed": true,
+        "receipt": "app/build/native-build-receipts/20261026-210059-6015.json",
+        "executable_sha256": "9acc5fc5a71cd76867b898794bc6b8d7c1d82c96fbb723179e25041a795ff662",
+        "app_so_sha256": "6226851a2deb0ebf3904b545e82f8505c2cc33542a5071cfe6d70307f2a11747",
+        "screenshot": "work/business-product-delivery-20261024/current-windows-task-20261027.png",
+        "draft_reopened": "整理本次公开页面的来源和时间，保留原文依据。",
+        "task_reopened": "task_fb1f146fb9b84f5d",
+        "result_access_copy": "当前没有查看此成果的权限。",
+        "chinese_ime": "NOT_VERIFIED",
+        "boundary": "Actual native navigation and permitted task status readback; no new model generation, full native or visual acceptance claim.",
+        "saved_work_reopened": {
+          "artifact_id": "ART-30f94e8d6f144a25",
+          "version": 1,
+          "entry": "Home continue work card to report preview",
+          "screenshot": "work/business-product-delivery-20261024/current-windows-report-reopen-20261027.png",
+          "boundary": "Existing author-created report read back through actual native product. Not new professional creation, revision, export or AI acceptance."
+        }
+      },
+      "previous_report_batch": {
+        "runtime": {
+          "port": 58832,
+          "pid": 31960,
+          "launcher_pid": 33596,
+          "boot_id": "f5b77bacc8534657b27033cc9faa7a67",
+          "entry_sha256": "d16754157127af739c170774b3e38f9f43eb7b4b29705cd03d11ececd5b1afa1",
+          "mode": "owned packaged manual workspace",
+          "scheduler": "not_started",
+          "backup_receipt": "data/runtime/collector-acceptance-20261025/backups/pre-portable-bundle-20261027T053145/receipt.json",
+          "launch_receipt": "work/business-product-delivery-20261024/portable-bundle-launch-20261027.json",
+          "boundary": "Actual package process, reported entry identity, health and native readback. No independent memory-module hash attestation. Production8201 was not started or restarted.",
+          "process_stopped": true
+        },
+        "bundle": {
+          "path": "D:\\LUMENIS_REBUILD\\序\\序境\\app\\build\\distribution\\OEVIRA-0.1.0-1-20261027-ai02-result-access",
+          "manifest_sha256": "bcf904cf4ecf4138e3460ea160f73b1ad1bb327515325d7df7e8406b97feed15",
+          "manifest_files": 19764,
+          "manifest_bytes": 1149957533,
+          "runtime_dependencies": 129,
+          "status": "LOCAL_PORTABLE_BUNDLE_BUILT_AND_OPENED_WITH_EXISTING_WORKSPACE",
+          "describe_bundle": "PASS; manual58832; automatic_collection=false; starts_product=false",
+          "redistribution": "BLOCKED",
+          "redistribution_blockers": [
+            "FFMPEG_CORRESPONDING_SOURCE_AND_BUILD_DEPENDENCIES_REQUIRED",
+            "VISUAL_STUDIO_REDISTRIBUTION_ENTITLEMENT_REQUIRED"
+          ],
+          "source_commit_scope": "Local HEAD plus manifest file hashes; not published or equal to main",
+          "model_resources": "Apache-2.0 Magika file-type detector and MIT ONNX Runtime sample graphs; not owned or domain inference weights",
+          "boundary": "Bundle originally excludes data and credentials; active launcher now binds explicit external data/log roots with junctions. Never recursively remove through those junctions."
+        },
+        "windows_observation": {
+          "opened": true,
+          "process_id": 22752,
+          "process_closed": true,
+          "native_window_id": 34345606,
+          "receipt": "work/business-product-delivery-20261024/portable-bundle-launch-20261027.json",
+          "executable_sha256": "9acc5fc5a71cd76867b898794bc6b8d7c1d82c96fbb723179e25041a795ff662",
+          "app_so_sha256": "6226851a2deb0ebf3904b545e82f8505c2cc33542a5071cfe6d70307f2a11747",
+          "draft_reopened": true,
+          "draft_screenshot": "work/business-product-delivery-20261024/portable-bundle-home-20261027.png",
+          "saved_work_reopened": {
+            "artifact_id": "ART-30f94e8d6f144a25",
+            "version": 1,
+            "screenshot": "work/business-product-delivery-20261024/portable-bundle-report-reopen-20261027.png"
+          },
+          "chinese_ime": "NOT_VERIFIED",
+          "boundary": "Actual new-package cold launch and native Home-to-report reopen of existing author-created work. Not new professional content generation, revision, export or full visual acceptance."
+        }
+      },
+      "sh04_revision": {
+        "state": "IMPLEMENTED;SCOPED_VERIFICATION_AND_REAL_REPORT_OPERATIONS_PASSED",
+        "evidence": "work/business-product-delivery-20261024/sh04-revision-live-20261027.json",
+        "work_id": "WORK-0a16dea936faa0f8e8d07ef8",
+        "v3_artifact": "ART-451fc6d046d14096",
+        "v1_v2_unchanged": true,
+        "behavior": "Explicit continue_as_report converts a legacy visual report into a new editable ordinary report; immutable prior versions and source permissions retained; client checks submitted body and returned parent/work/version.",
+        "backend_source_hashes": {
+          "lumenis/shared/reporting/saved_work.py": "200f0c92486fcdeda8bb9db74204bd6923cf3f91cee0f31fead7d32b65fb657b",
+          "experience_runtime.py": "b1147a3d5bf74a3b16e90cda1044c076695edf6391043ec5aaeb4172014e5053",
+          "tests/test_visual_document_workflow.py": "5243dd1df7f9bc588f8c2f3d1e35200c928f11d898a97614567ab1e2c4c32c71",
+          "tests/test_issue17_product_repairs.py": "a759e53c78f1a0afeac2bf6d511ba7f822c7337a69002f4a6ace155d8f891e2e"
+        },
+        "verification": {
+          "affected_python_compile": "PASS",
+          "backend_cases": "7 focused isolated cases passed; tool receipt only, no fabricated file log",
+          "flutter_analyze": "PASS; scoped changed owners",
+          "sh04_regressions": "3 passed",
+          "media_client_regressions": "6 passed after fixture repair",
+          "initial_flutter_result": "59 PASS / 6 FAIL; original failure log retained",
+          "flutter_logs": [
+            "work/business-product-delivery-20261024/sh04-revision-focused-20261027.log",
+            "work/business-product-delivery-20261024/sh04-revision-flutter-20261027.log"
+          ]
+        },
+        "boundary": "Actual Web revision/save v3, independent old v1 and new v3 readback, Windows native DOCX export, then controlled Core and Windows cold restart with v3 reopened in both surfaces. No AI inference, professional complexity, full visual or native IME acceptance. Web download initiated but filesystem delivery not observed; DOCX package content verified, not opened in Word/WPS.",
+        "current_acceptance_boundary": "Backend/repository/version behavior retained; old screen removed. Historical handwritten short-draft operations are not data-derived report generation or professional product acceptance."
+      },
+      "last_current_readback_at": "2026-10-27T10:23:51.127518+08:00",
+      "frontend_pin_state": "Historical pinned/retired builds above are not current frontend acceptance; current Web pin is in current runtime source_pins; next Web rebuild pending.",
+      "frontend_retirement": {
+        "observed_at": "2026-10-27T10:23:51.127518+08:00",
+        "po_instruction": "立即删除被否定的旧前端，不继续在旧骨架上修补；有效非视觉能力、用户数据及历史证据保留。按完整规划重建，不以清退冒充新前端交付。",
+        "branch": "codex/full-product-implementation-20261025",
+        "local_head": "ec831c8e80b6463797d7223cdd3c6a20ae327ef2",
+        "fresh_origin_main": "31a193bdc4cce13464ba1c46551dc7c66ff1dfb0",
+        "live_main_readback": "31a193bdc4cce13464ba1c46551dc7c66ff1dfb0",
+        "publication": "LOCAL_ONLY; NOT_COMMITTED_NOT_MERGED; ONLINE_OFFLINE_NOT_UNIFIED",
+        "deleted_tracked_frontend_paths_observed": [
+          "app/lib/core/generated_result_reveal.dart",
+          "app/lib/core/lumenis_botanical.dart",
+          "app/lib/core/lumenis_context_menu.dart",
+          "app/lib/core/lumenis_icon.dart",
+          "app/lib/core/lumenis_icon_geometry.dart",
+          "app/lib/core/lumenis_split_handle.dart",
+          "app/lib/core/lumenis_theme.dart",
+          "app/lib/core/lumenis_work_object.dart",
+          "app/lib/features/account/acc01/acc01_screen.dart",
+          "app/lib/features/account/acc02/acc02_screen.dart",
+          "app/lib/features/account/acc03/acc03_recent_work.dart",
+          "app/lib/features/account/acc03/acc03_screen.dart",
+          "app/lib/features/account/acc04/acc04_screen.dart",
+          "app/lib/features/ai01/ai01_conversation_panel.dart",
+          "app/lib/features/ai01/ai01_draft_actions.dart",
+          "app/lib/features/ai01/ai01_screen.dart",
+          "app/lib/features/ai01/ai01_source_picker.dart",
+          "app/lib/features/ai02/ai02_screen.dart",
+          "app/lib/features/ai03/ai03_screen.dart",
+          "app/lib/features/ai04/ai04_screen.dart",
+          "app/lib/features/ai05/ai05_screen.dart",
+          "app/lib/features/bmp01/bmp01_screen.dart",
+          "app/lib/features/bmp02/bmp02_screen.dart",
+          "app/lib/features/bmp03/bmp03_screen.dart",
+          "app/lib/features/bmp04/bmp04_screen.dart",
+          "app/lib/features/bmp05/bmp05_screen.dart",
+          "app/lib/features/bmp06/bmp06_screen.dart",
+          "app/lib/features/bmp07/bmp07_screen.dart",
+          "app/lib/features/bmp08/bmp08_screen.dart",
+          "app/lib/features/bmp09/bmp09_screen.dart",
+          "app/lib/features/bmp10/bmp10_screen.dart",
+          "app/lib/features/bmp11/bmp11_screen.dart",
+          "app/lib/features/cth/cth01/cth01_screen.dart",
+          "app/lib/features/cth/cth02/cth02_screen.dart",
+          "app/lib/features/cth/cth03/cth03_screen.dart",
+          "app/lib/features/cth/cth04/cth04_screen.dart",
+          "app/lib/features/cth/cth05/cth05_screen.dart",
+          "app/lib/features/cth/cth06/cth06_screen.dart",
+          "app/lib/features/cth/cth07/cth07_screen.dart",
+          "app/lib/features/cth/cth08/cth08_screen.dart",
+          "app/lib/features/cth/cth09/cth09_screen.dart",
+          "app/lib/features/cth/cth10/business_domain_plan_editor.dart",
+          "app/lib/features/cth/cth10/business_work_panel.dart",
+          "app/lib/features/cth/cth10/cth10_screen.dart",
+          "app/lib/features/cth/cth10/source_brief_panel.dart",
+          "app/lib/features/launch/launch_surface.dart",
+          "app/lib/features/shared/read_aloud_action.dart",
+          "app/lib/features/shared/research/shared_research_workspace.dart",
+          "app/lib/features/shared/sh01/creation_brief_dialog.dart",
+          "app/lib/features/shared/sh01/manuscript_editor.dart",
+          "app/lib/features/shared/sh01/media_audio_comparison.dart",
+          "app/lib/features/shared/sh01/media_preview.dart",
+          "app/lib/features/shared/sh01/media_preview_native.dart",
+          "app/lib/features/shared/sh01/media_preview_stub.dart",
+          "app/lib/features/shared/sh01/media_preview_web.dart",
+          "app/lib/features/shared/sh01/media_project_workbench.dart",
+          "app/lib/features/shared/sh01/media_source_waveform.dart",
+          "app/lib/features/shared/sh01/sh01_screen.dart",
+          "app/lib/features/shared/sh02/office_property_editor.dart",
+          "app/lib/features/shared/sh02/sh02_screen.dart",
+          "app/lib/features/shared/sh03/sh03_screen.dart",
+          "app/lib/features/shared/sh04/sh04_screen.dart",
+          "app/lib/features/shared/sh05/sh05_screen.dart",
+          "app/lib/features/shared/sh06/sh06_screen.dart",
+          "app/lib/features/system/sys01/sys01_screen.dart",
+          "app/lib/features/system/sys02/collected_comments_panel.dart",
+          "app/lib/features/system/sys02/collector_request_panel.dart",
+          "app/lib/features/system/sys02/sys02_screen.dart",
+          "app/lib/features/system/sys03/sys03_screen.dart",
+          "app/lib/features/system/sys04/sys04_screen.dart",
+          "app/lib/features/system/sys05/sys05_appearance_editor.dart",
+          "app/lib/features/system/sys05/sys05_screen.dart",
+          "app/lib/features/system/sys06/sys06_page_context.dart",
+          "app/lib/features/system/sys06/sys06_screen.dart",
+          "app/lib/features/system/sys07/sys07_screen.dart",
+          "app/lib/features/system/sys08/sys08_screen.dart",
+          "app/lib/main.dart",
+          "app/lib/navigation/lumenis_router.dart",
+          "app/lib/product/lumenis_app.dart",
+          "app/lib/shell/lumenis_workspace_frame.dart",
+          "app/lib/shell/lumenis_workspace_shell.dart",
+          "website/src/components/CreativePaths.astro",
+          "website/src/components/PaintedIcon.astro",
+          "website/src/components/PixelPlant.astro",
+          "website/src/components/PublicContent.astro",
+          "website/src/components/PublicNavigation.astro",
+          "website/src/components/SitePage.astro",
+          "website/src/pages/[...page].astro",
+          "website/src/pages/en/index.astro",
+          "website/src/pages/index.astro",
+          "website/src/pages/ko/index.astro",
+          "website/src/scripts/site-motion.js",
+          "website/src/styles/site.css"
+        ],
+        "entry_absent": true,
+        "remaining_screen_files": [],
+        "local_dart_import_targets": {
+          "missing": [],
+          "boundary": "Path-existence audit only; no compilation or product acceptance"
+        },
+        "retained_controller_sha256": {
+          "app/lib/features/system/sys02/sys02_collection_controller.dart": "c34760c6401dc30c63a53d5022f6d5fa81108f53e0727cd850e8b360a38b5c9e",
+          "app/lib/features/system/sys02/sys_system_foundation.dart": "4a7d8e33f1407795ea9412ca223153e6feb685ef4e3260cc493ef9087bbec827",
+          "app/lib/features/system/sys06/sys06_page_context_controller.dart": "c589436d98fbb673cc792461b672c9d9e0c878c15388d448c6443aa9789b2f68",
+          "app/lib/features/cth/cth10/business_work_controller.dart": "adf2dc1935f020685ac812836b6445abc0a342995f506d67fc3652bd6046c74f",
+          "app/lib/features/cth/cth10/source_brief_view_model.dart": "d021a708b0b08472d6699ae90cdb4c0c9c91c1abffdeb8a7309f4d7de8b0a14c",
+          "app/lib/features/ai01/ai01_conversations.dart": "7e29ac66ccb2015e0f1372218ca5c6af3b8f4438e744c96938f0e6a31b5e9440",
+          "app/lib/features/ai01/ai01_draft_files.dart": "c2867b50f1a2c4e82942cf087ae9201ef8c2bd9fe0a4f2d531d0a7afec6bfa0f",
+          "app/lib/features/ai01/ai01_workspace_draft.dart": "45425f0d29def79e5a6355e7620eb057f452423c9447a995b516bdcf3cc0d922",
+          "app/lib/features/shared/research/shared_research_repository.dart": "00bdad021ce91c22f7bcdc78686673f28bbd5462f82db59525507b68717feff8"
+        },
+        "controller_checks": {
+          "collector": "Owner reported final dart analyze exit0, no errors, 1 style info",
+          "business": "Owner reported dart analyze no errors, 3 style infos",
+          "conversation_research": "Owner reported dart analyze exit0, No issues found",
+          "whole_app": "NOT_BUILDABLE; OLD_WIDGET_ASSERTIONS_RETAINED_NOT_RUN; NO_VISUAL_OR_E2E_ACCEPTANCE"
+        },
+        "cache_handoff": {
+          "action": "MOVED_NOT_DELETED_BY_THIS_OPERATION",
+          "reason": "Previous recursive removal was rejected by automatic approval; used explicit PO Desktop-handoff authorization",
+          "paths": [
+            {
+              "source": "app/build/08f341fceb60936cc29531b2a30a18c1",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\08f341fceb60936cc29531b2a30a18c1",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/build/6c0992b68b941d41475a179c984fbecd",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\6c0992b68b941d41475a179c984fbecd",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/build/test_cache",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\test_cache",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/build/windows",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\windows",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/.dart_tool/flutter_build",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\.dart_tool\\flutter_build",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/build/.last_build_id",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\.last_build_id",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/build/04347a3a0439207c6b81ab51b2d1c75c.cache.dill.track.dill",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\04347a3a0439207c6b81ab51b2d1c75c.cache.dill.track.dill",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/build/3d4e98b43a5b3e3f3d6eede506139ce6.cache.dill.track.dill",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\3d4e98b43a5b3e3f3d6eede506139ce6.cache.dill.track.dill",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            },
+            {
+              "source": "app/build/a2310844005e3ab884c7c755af2c7df1.cache.dill.track.dill",
+              "source_absent": true,
+              "destination": "C:\\Users\\28049\\Desktop\\寰意待删除\\frontend-cache-retired-20261027\\app\\build\\a2310844005e3ab884c7c755af2c7df1.cache.dill.track.dill",
+              "destination_present_at_move": true,
+              "destination_present_at_later_readback": false
+            }
+          ],
+          "later_absence_boundary": "Move readback confirmed destination present. Later destination paths are absent; remover and permanent deletion mechanism were not observed. No operation replay."
+        },
+        "prior_handoff_readback": {
+          "C:/Users/28049/Desktop/寰意待删除/old-app-web-20261027-frontend-removal": false,
+          "C:/Users/28049/Desktop/寰意待删除/old-website-dist-20261027-frontend-removal": false,
+          "C:/Users/28049/Desktop/寰意待删除/frontend-retired-20261027": false
+        },
+        "remaining": [
+          "No new frontend entry/navigation/layout/interaction/Website presentation or runnable product.",
+          "Extracted collection/comments/business/SourceBrief/chat/research controllers need real new UI consumers.",
+          "Account login/code/recovery, subject batch operations, privacy/session actions, browser navigation/takeover/return orchestration from deleted screens still need reconstruction; repositories alone do not establish complete preservation.",
+          "Shared Research cancellation has no current repository/CoreClient callable.",
+          "Original widget assertions reference retired components; adapt to real replacement UI without deleting assertions for green.",
+          "Dependency/build receipt directories, old distribution Core copies and protected data/log junctions remain; no zero-residue whole-computer claim."
+        ],
+        "protected_boundary": "No backend code, database, service/8201, external model/training or Git publication action in this retirement step. Other dirty work retained.",
+        "next_action": "Rebuild only from full current Architecture/Experience/plan; never restore rejected renderers or count bounded old draft operations as product closure."
+      },
+      "media_current": {
+        "audio_task": 18,
+        "audio_artifact": "ART-8eae11127e4d40c7",
+        "revision": 1,
+        "parent_artifact_id": null,
+        "source_artifact_refs": [
+          "ART-7a6aa59c8bc94f4aaf6f784a4b697b20"
+        ],
+        "actual_product_playback": "REOPENED_AND_ADVANCED_00:23_THEN_PAUSED",
+        "retry": "SAME_REQUEST_SAME_TASK_AND_ARTIFACT",
+        "cancel_task": 16,
+        "cancel_result": "CANCELLED_NO_RESULT_ARTIFACT",
+        "retained_failure_task": 17,
+        "retained_failure": "VIDEO_PARENT_NOT_AUDIO_PROJECT; CROSS_TYPE_GUARD_FIXED_AND_LOADED",
+        "remaining": "Cross-type derived project lineage field is being added; full professional video/podcast scope remains open; ASR not available, no new weights downloaded."
+      }
+    }
+  },
+  "source_reconciliation_20261028": {
+    "scope": "PR146 source reconciliation only; preserve accepted source retirement and all current product requirements.",
+    "base_main": "22641cd23bb0e1e6172ff7246c3bb4eea53fbeaa",
+    "previous_pr_head": "ec831c8e80b6463797d7223cdd3c6a20ae327ef2",
+    "source_owners": [
+      "SYSTEM Collector and source data",
+      "CTH/BMP business services",
+      "Shared Office/media/reporting",
+      "AI Gateway/Agent/Memory",
+      "Runtime/signing/database",
+      "retained nonvisual Flutter clients"
+    ],
+    "frontend": "REMOVED_PENDING_REBUILD; no retired presentation or route restored.",
+    "runtime": "NOT_LOADED_OR_NOT_VERIFIED; no production switch. An unintended root app import ran initialization against the default database; see runtime_incident.",
+    "release": "BLOCKED; source integration is not full product delivery.",
+    "checks": {
+      "windows_build_contracts": "39 Windows helper contracts passed in isolated synthetic bundles after declaring packaging/PyYAML and removing untracked license-fixture dependencies; not a product build.",
+      "retained_flutter_static": "flutter analyze lib --no-pub passed.",
+      "boundaries": "146 isolated source-retirement, signing, protected-identity, navigation and runtime-preflight cases passed; no live collection or production data.",
+      "governance": "Constitution, machine contract, current configuration, single product, database authority, Experience authority and blueprint gates passed.",
+      "required_ci": "Exact PR head and merge status are authoritative; historical PR checks do not transfer to this source.",
+      "python_static": "239 changed Python sources parsed; Ruff F821/F822/F823 found no undefined-name defects.",
+      "retained_flutter_clients": "Initial retained-client run:191 pass/2 fail; existing fr locale and valid audio response made two malformed-input fixtures stale. Corrected invalid inputs retain rejection assertions; both affected files rerun:49 passed.",
+      "developer_hooks": "Initial193-case tool regression had6 errors in5 pause methods. Corrected optional execution-binding compatibility and pause evidence flow;9 affected/new cases passed. Global workstation hooks were not installed or modified.",
+      "signing_and_backup_repair": "Workspace signing and cold-start checks passed; all 37 backup contracts passed including tampered/unowned companion retention. Only isolated synthetic databases used for these checks.",
+      "ci_repair_limits": "Exact current-head CI remains required. Prior candidate-suite failures are preserved; local focused checks do not establish Linux Chromium execution, production loading or product acceptance.",
+      "candidate_contract_reconciliation": "Current synthetic fixtures bind admitted China subjects, exact inference request/attempt receipts and safe workspace projections; Office/media assertions retain conversion rechecks and valid audio semantics. Real public-browser nodes remain actual Chromium tests in the required offline namespace; no fixture substitutes for their execution.",
+      "http_isolation": "HTTP checks use only process-owned ephemeral loopback listeners and schema-initialized disposable databases. Metric fixtures migrate before inserting signed Evidence; production port 8201 is not used."
+    },
+    "remaining": [
+      "New frontend and all original professional user-outcome requirements remain unaccepted.",
+      "Runtime/DB/model bindings and same-version Web/Windows user work must be verified separately before release."
+    ],
+    "runtime_incident": {
+      "observed_at_utc": "2026-10-28T13:48:03.597521+00:00",
+      "cause": "Import app.tool.test_build_windows resolved root app.py, executed initialization and exited with ModuleNotFoundError.",
+      "database_binding": "Canonical default data/monitor.db; no ZBC_DB_PATH override observed.",
+      "current_readback": {
+        "mode": "read-only immutable with empty WAL",
+        "quick_check": "ok",
+        "table_count": 120,
+        "main_file_metadata_unchanged_during_readback": true
+      },
+      "preimport_diff": "NOT_VERIFIED_NO_PREIMPORT_SNAPSHOT",
+      "recovery_actions": "No root repair, rollback, migration, restart or business-content write; do not infer no initialization effects."
+    }
   }
 }

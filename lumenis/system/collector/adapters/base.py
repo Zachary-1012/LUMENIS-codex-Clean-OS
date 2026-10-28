@@ -57,6 +57,9 @@ class CollectionResult:
     attempted_access_class: Optional[AccessClass] = None
     attempted_backend: Optional[str] = None
     actual_access_state: Optional[str] = None
+    # Ephemeral original transport response, retained only for Source/Artifact
+    # custody in the owning transaction; never metadata, API or logging output.
+    original_response: Any = field(default=None, repr=False, compare=False)
 
     @property
     def ok(self) -> bool:
@@ -155,6 +158,7 @@ class BasePlatformAdapter(ABC):
             "comments": item.get("comments"),
             "collects": item.get("collects"),
             "shares": item.get("shares"),
+            "cover": item.get("cover"),
             "captured_at": item.get("captured_at"),
             "raw": item.get("raw"),
         }
@@ -166,13 +170,23 @@ def map_v4_comments(notes: Iterable[Any]) -> list[Dict[str, Any]]:
     for note in notes or []:
         raw = getattr(note, "raw_data", {})
         raw = raw if isinstance(raw, dict) else {}
-        comment_id = raw.get("rpid") or raw.get("comment_id") or raw.get("id") or ""
+        def identity(value):
+            return str(value) if type(value) in (str, int) and str(value).strip() else None
+        comment_id = identity(raw.get('platform_comment_id') or raw.get("rpid") or raw.get("comment_id") or raw.get('cid') or raw.get("id"))
+        parent = raw.get('parent_comment_id', raw.get('parent_id', raw.get('root')))
+        parent = None if parent in (None, '', 0, '0') else identity(parent)
         comments.append({
-            "platform_comment_id": str(comment_id),
+            "platform_comment_id": comment_id,
+            'parent_comment_id': parent,
+            'reply_to_comment_id': identity(raw.get('reply_to_comment_id', raw.get('reply_id'))),
+            'parent_content_id': identity(raw.get('parent_content_id', raw.get('aweme_id', raw.get('post_id')))),
             "content": getattr(note, "content", "") or "",
             "author_id": getattr(note, "author_id", "") or "",
             "author_nickname": getattr(note, "author", "") or "",
             "publish_datetime": getattr(note, "publish_date", "") or "",
             "likes": getattr(note, "likes", None),
+            'url': getattr(note, 'url', '') or '',
+            'identity_state': 'NATIVE_ID_OBSERVED' if comment_id else 'NATIVE_ID_NOT_OBSERVED',
+            'raw': raw,
         })
     return comments

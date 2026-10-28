@@ -1,15 +1,21 @@
-"""No-GPU remote training preflight contracts."""
-
+"""Retained transport contract plus the withdrawn HTTP preflight endpoint."""
+import builtins
+import sqlite3
+import subprocess
+import threading
 from pathlib import Path
 
-from flask import Flask
 import pytest
 
+import ai_task_engine
 import experience_runtime as runtime
+from lumenis.shared.database import repository
 from lumenis.system.ai_gateway import owned_training_ssh as ssh
-from lumenis.system.security import permission as permission
-from tests.test_owned_training_phase_http_v2 import _actual_app_guards
+from tests.test_owned_training_phase_http_v2 import (
+    BASE_HEADERS, _db_snapshot, phase_http, strict_permission_mode,
+)
 
+pytestmark = pytest.mark.usefixtures("strict_permission_mode")
 
 _PINS = {
     "lumenis/system/ai_gateway/owned_training.py": "a" * 64,
@@ -42,178 +48,78 @@ def test_remote_preflight_verifies_only_the_source_pin_contract(tmp_path, monkey
 
     def query(code, body, timeout):
         observed.update(code=code, body=body, timeout=timeout)
-        return {
-            "state": "REMOTE_TRAINING_PREFLIGHT_OK",
-            "source_pins": dict(_PINS),
-        }
+        return {"state": "REMOTE_TRAINING_PREFLIGHT_OK", "source_pins": dict(_PINS)}
 
     monkeypatch.setattr(transport, "_query", query)
-
     assert transport.preflight_source() == {
         "state": "REMOTE_TRAINING_PREFLIGHT_SOURCE_PINS_VERIFIED",
         "source_pins_verified": True,
     }
-    assert observed["body"] == {
-        "source_root": "/srv/lumenis",
-        "source_pins": _PINS,
-    }
+    assert observed["body"] == {"source_root": "/srv/lumenis", "source_pins": _PINS}
     assert observed["timeout"] == 20
     assert "REMOTE_TRAINING_PREFLIGHT_OK" in observed["code"]
-    assert transport._channel is None
-    assert transport._peer is None
+    assert transport._channel is None and transport._peer is None
 
 
 def test_remote_preflight_rejects_a_malformed_or_changed_observation(tmp_path, monkeypatch):
     transport = ssh.AuthenticatedSSHTrainingTransport(_endpoint(tmp_path))
     monkeypatch.setattr(
-        transport,
-        "_query",
+        transport, "_query",
         lambda *_args, **_kwargs: {"state": "REMOTE_TRAINING_PREFLIGHT_OK", "source_pins": {}},
     )
-
     with pytest.raises(ssh.RemoteTrainingError, match="REMOTE_TRAINING_PREFLIGHT_INVALID"):
         transport.preflight_source()
-    assert transport._channel is None
-    assert transport._peer is None
+    assert transport._channel is None and transport._peer is None
 
 
-def _install_route_fixtures(monkeypatch, *, remote_result, fresh_error=None):
-    endpoint = object()
-    calls = {"fresh": 0, "transport": 0, "preflight": 0}
+def test_http_preflight_is_withdrawn_before_database_ssh_or_worker_access(phase_http, monkeypatch):
+    case = phase_http
+    before = _db_snapshot(case["db"])
+    attempted = []
 
-    def fresh():
-        calls["fresh"] += 1
-        if fresh_error is not None:
-            raise fresh_error
+    def forbidden(name):
+        def fail(*_args, **_kwargs):
+            attempted.append(name)
+            raise AssertionError(f"withdrawn preflight attempted {name}")
+        return fail
 
-    monkeypatch.setattr(runtime, "_owned_training_phase_body", lambda: {"fixture": True})
-    monkeypatch.setattr(
-        runtime,
-        "_owned_training_phase_material",
-        lambda body: (None, None, None, "cth", None, None, None, fresh),
-    )
-    monkeypatch.setattr(
-        runtime,
-        "_owned_training_parent_profile",
-        lambda body, domain: (
-            Path("C:/lumenis"),
-            {
-                "worker_source_pins": dict(_PINS),
-                "private_endpoint_configuration_reference": "private-reference",
-            },
-            {},
-        ),
-    )
-    monkeypatch.setattr(
-        runtime,
-        "_owned_training_parent_endpoint",
-        lambda pins, reference: endpoint,
-    )
-
-    class FakeTransport:
-        def __init__(self, supplied_endpoint):
-            assert supplied_endpoint is endpoint
-            calls["transport"] += 1
-
-        def preflight_source(self):
-            calls["preflight"] += 1
-            return remote_result
-
-    monkeypatch.setattr(ssh, "AuthenticatedSSHTrainingTransport", FakeTransport)
-    return calls
-
-
-def test_execution_preflight_never_starts_training_or_a_model(monkeypatch):
-    calls = _install_route_fixtures(
-        monkeypatch,
-        remote_result={
-            "state": "REMOTE_TRAINING_PREFLIGHT_SOURCE_PINS_VERIFIED",
-            "source_pins_verified": True,
-        },
-    )
-    app = Flask(__name__)
-
-    with app.test_request_context("/", method="POST"):
-        response = runtime.preflight_owned_training_execution()
-
-    assert response.status_code == 200
-    assert response.get_json() == {
-        "ok": True,
-        "state": "REMOTE_TRAINING_PREFLIGHT_BOUND",
-        "configuration_revision": "owned-parent-remote-preflight-1",
-        "endpoint_present": True,
-        "exact_source_pins": True,
-        "remote_source_pins_verified": True,
-        "training_started": False,
-        "model_loaded": False,
-        "optimizer_steps": 0,
+    blocked_imports = {
+        "ai_task_engine", "lumenis.system.ai_gateway.owned_training_runtime",
+        "lumenis.system.ai_gateway.owned_training_ssh", "subprocess",
     }
-    assert calls == {"fresh": 2, "transport": 1, "preflight": 1}
+    original_import = builtins.__import__
 
+    def guarded_import(name, *args, **kwargs):
+        if name in blocked_imports:
+            attempted.append("import:" + name)
+            raise AssertionError(f"withdrawn preflight imported {name}")
+        return original_import(name, *args, **kwargs)
 
-def test_app_permission_guard_routes_preflight_to_the_existing_sealed_owner(monkeypatch):
-    calls = _install_route_fixtures(
-        monkeypatch,
-        remote_result={
-            "state": "REMOTE_TRAINING_PREFLIGHT_SOURCE_PINS_VERIFIED",
-            "source_pins_verified": True,
-        },
-    )
-    gate = permission.PermissionGate(enabled_permissions={permission.PermissionLevel.COMMIT})
-    app = Flask(__name__)
-    app.config["LUMENIS_OPEN_WORKSPACE"] = True
-    app.register_blueprint(runtime.experience_bp)
-    _actual_app_guards(app, gate)
+    with monkeypatch.context() as effects:
+        effects.setattr(builtins, "__import__", guarded_import)
+        effects.setattr(runtime, "_owned_training_phase_body", forbidden("phase-body"))
+        effects.setattr(runtime, "_owned_training_phase_material", forbidden("permission-material"))
+        effects.setattr(runtime, "_owned_training_parent_profile", forbidden("parent-profile"), raising=False)
+        effects.setattr(runtime, "_owned_training_parent_endpoint", forbidden("parent-endpoint"), raising=False)
+        effects.setattr(ai_task_engine, "get_task_engine", forbidden("task-engine"))
+        effects.setattr(repository, "get_repository", forbidden("database"))
+        effects.setattr(sqlite3, "connect", forbidden("sqlite"))
+        effects.setattr(ssh, "AuthenticatedSSHTrainingTransport", forbidden("ssh-transport"))
+        effects.setattr(subprocess, "Popen", forbidden("worker-process"))
+        effects.setattr(threading.Thread, "start", forbidden("worker-thread"))
+        response = case["client"].post(
+            "/api/experience/owned-training/execution-preflight", json={}, headers=BASE_HEADERS,
+            environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
+        )
 
-    response = app.test_client().post(
-        "/api/experience/owned-training/execution-preflight",
-        json={"training_request": {}, "scope_descriptors": {}},
-        headers={"Host": "localhost"},
-        environ_overrides={"REMOTE_ADDR": "127.0.0.1"},
-    )
-
-    assert response.status_code == 200
-    assert response.get_json()["state"] == "REMOTE_TRAINING_PREFLIGHT_BOUND"
-    assert calls == {"fresh": 2, "transport": 1, "preflight": 1}
-
-
-def test_execution_preflight_fails_closed_before_remote_access_without_exact_approval(monkeypatch):
-    calls = _install_route_fixtures(
-        monkeypatch,
-        remote_result={
-            "state": "REMOTE_TRAINING_PREFLIGHT_SOURCE_PINS_VERIFIED",
-            "source_pins_verified": True,
-        },
-        fresh_error=PermissionError("OWNED_TRAINING_PHASE_APPROVAL_REQUIRED"),
-    )
-    app = Flask(__name__)
-
-    with app.test_request_context("/", method="POST"):
-        response, status = runtime.preflight_owned_training_execution()
-
-    assert status == 403
+    assert response.status_code == 410
     assert response.get_json() == {
         "ok": False,
-        "code": "OWNED_TRAINING_PHASE_APPROVAL_REQUIRED",
+        "state": "GPU_TRAINING_WITHDRAWN_BY_PO",
+        "code": "GPU_TRAINING_WITHDRAWN_BY_PO",
         "training_started": False,
+        "execution_available": False,
+        "ai_status_url": "/api/ai/status",
     }
-    assert calls == {"fresh": 1, "transport": 0, "preflight": 0}
-
-
-def test_execution_preflight_rejects_a_remote_result_without_training(monkeypatch):
-    calls = _install_route_fixtures(
-        monkeypatch,
-        remote_result={"state": "wrong", "source_pins_verified": False},
-    )
-    app = Flask(__name__)
-
-    with app.test_request_context("/", method="POST"):
-        response, status = runtime.preflight_owned_training_execution()
-
-    assert status == 409
-    assert response.get_json() == {
-        "ok": False,
-        "code": "REMOTE_TRAINING_PREFLIGHT_INVALID",
-        "training_started": False,
-    }
-    assert calls == {"fresh": 1, "transport": 1, "preflight": 1}
+    assert attempted == []
+    assert _db_snapshot(case["db"]) == before

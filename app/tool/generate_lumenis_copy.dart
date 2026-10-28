@@ -18,8 +18,11 @@ Future<void> main() async {
       return;
     }
     final decoded = jsonDecode(await file.readAsString());
-    if (decoded is! Map<String, dynamic> || decoded['locale'] != locale) {
+    if (decoded is! Map<String, dynamic> ||
+        decoded['locale'] != locale ||
+        decoded.keys.any((key) => key != 'locale' && key != 'delta')) {
       stderr.writeln('Invalid locale contract: ${file.path}');
+      stderr.writeln('Translation entries must be inside the delta object.');
       exitCode = 1;
       return;
     }

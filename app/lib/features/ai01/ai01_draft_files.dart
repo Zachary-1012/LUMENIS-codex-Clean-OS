@@ -2,7 +2,10 @@ import 'dart:convert';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+
+enum Ai01DraftFileOpenResult { opened, cancelled, replacementRequired, changed }
 
 /// User-selected, unsent text only. This never imports business records or
 /// establishes account, context, Permission, or Evidence.
@@ -30,6 +33,35 @@ class Ai01DraftFiles {
     if (await file.length() > maxBytes) throw const FormatException();
     return decode(await file.readAsBytes());
   }
+
+  /// Reads a user-selected text file into the existing unsent draft.
+  ///
+  /// Call again with [replaceExisting] only after the caller has obtained the
+  /// user's replacement decision. A concurrently edited draft is never lost.
+  Future<Ai01DraftFileOpenResult> openInto(
+    TextEditingController controller, {
+    bool replaceExisting = false,
+  }) async {
+    final before = controller.value;
+    final text = await open();
+    if (text == null) return Ai01DraftFileOpenResult.cancelled;
+    if (controller.value != before) return Ai01DraftFileOpenResult.changed;
+    if (before.text.isNotEmpty && before.text != text && !replaceExisting) {
+      return Ai01DraftFileOpenResult.replacementRequired;
+    }
+    if (controller.value != before) return Ai01DraftFileOpenResult.changed;
+    controller.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    return Ai01DraftFileOpenResult.opened;
+  }
+
+  Future<bool> saveController(TextEditingController controller) =>
+      save(controller.text);
+
+  Future<void> copyController(TextEditingController controller) =>
+      Clipboard.setData(ClipboardData(text: controller.text));
 
   static String decode(Uint8List bytes) {
     if (bytes.length > maxBytes) throw const FormatException();

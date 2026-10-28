@@ -6,18 +6,21 @@ responsibilities. Unsupported timeline features fail instead of disappearing.
 from __future__ import annotations
 
 import hashlib
-from bisect import bisect_left
 import json
 import math
 import os
 import re
 import shutil
-import subprocess
 import struct
+import subprocess
 import tempfile
 import time
 import unicodedata
+from bisect import bisect_left
 from collections.abc import Callable
+from dataclasses import replace
+from fractions import Fraction
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -31,10 +34,13 @@ from .video_editing import (
     fingerprint_local_media,
 )
 
-
 SAMPLE_RATE = 48000
 FRAME_RATE = 30
-MAX_RENDER_CLIPS = 128
+RENDER_INPUT_BATCH_SIZE = 16
+SILENCE_SCAN_WINDOW_SECONDS = 600
+SILENCE_SCAN_WINDOW_STEP_SECONDS = 588  # Preserve a 12 second overlap at window boundaries.
+MAX_SILENCE_SCAN_WINDOWS = 256
+MAX_SILENCE_CANDIDATES = 20_000
 MIX_SAMPLE_PEAK_LIMIT = 0.891251  # -1 dBFS sample peak; not a true-peak/LUFS guarantee.
 FINAL_TRUE_PEAK_LIMIT_DBTP = -1.0
 PEAK_CORRECTION_HEADROOM_DB = .5  # Codec response can change with gain; remeasure, never assume.
@@ -107,7 +113,7 @@ def _number(value: float) -> str:
 
 def _frame_at(seconds: float) -> int:
     # Round shared boundaries once so adjacent clips cannot accumulate drift.
-    return int(math.floor(round(seconds * FRAME_RATE, 6) + 0.5))
+    return int(Fraction(str(seconds)) * FRAME_RATE + Fraction(1, 2))
 
 
 def _video_transition_plan(timeline: Timeline, clips: list[TimelineClip]) -> dict[int, dict[str, Any]]:
@@ -117,7 +123,10 @@ def _video_transition_plan(timeline: Timeline, clips: list[TimelineClip]) -> dic
                   for index, (left, right) in enumerate(zip(clips, clips[1:]), 1)}
     seen: set[int] = set()
     plan: dict[int, dict[str, Any]] = {}
+    clip_ids = {clip.clip_id for clip in clips}
     for transition in timeline.transitions:
+        if transition.from_clip not in clip_ids and transition.to_clip not in clip_ids:
+            continue
         if transition.transition_type not in {"cut", "dissolve"}:
             raise VideoEditingError("TRANSITION_RENDER_NOT_SUPPORTED")
         index = boundaries.get((transition.from_clip, transition.to_clip))
@@ -134,22 +143,24 @@ def _video_transition_plan(timeline: Timeline, clips: list[TimelineClip]) -> dic
         before, after = frames // 2, frames - frames // 2
         left, right = clips[index - 1], clips[index]
         cut_frame = _frame_at(right.timeline_start)
+        if cut_frame != _frame_at(left.timeline_start + left.duration_sec):
+            raise VideoEditingError("TRANSITION_REQUIRES_CONTIGUOUS_VIDEO_CLIPS")
         start, end = cut_frame - before, cut_frame + after
         if (start < _frame_at(left.timeline_start)
                 or end > _frame_at(right.timeline_start + right.duration_sec)):
             raise VideoEditingError("TRANSITION_WINDOW_EXCEEDS_CLIP")
         left_frames = cut_frame - _frame_at(left.timeline_start)
-        outgoing_end = left.source_in + (left_frames + after) / FRAME_RATE
+        outgoing_end = left.source_in + (left_frames + after) * left.playback_rate / FRAME_RATE
         if (outgoing_end > assets[left.media_asset_id].duration_sec
-                or right.source_in < before / FRAME_RATE):
+                or right.source_in < before * right.playback_rate / FRAME_RATE):
             raise VideoEditingError("TRANSITION_MEDIA_HANDLES_UNAVAILABLE")
         plan[index] = {
             "from_clip": left.clip_id, "to_clip": right.clip_id, "type": "dissolve",
             "requested_duration_sec": transition.duration_sec, "duration_frames": frames,
             "before_cut_frames": before, "after_cut_frames": after,
             "start_frame": start, "end_frame": end,
-            "outgoing_extra_source_range": [left.source_in + left_frames / FRAME_RATE, outgoing_end],
-            "incoming_extra_source_range": [right.source_in - before / FRAME_RATE, right.source_in],
+            "outgoing_extra_source_range": [left.source_in + left_frames * left.playback_rate / FRAME_RATE, outgoing_end],
+            "incoming_extra_source_range": [right.source_in - before * right.playback_rate / FRAME_RATE, right.source_in],
         }
     previous_end = -1
     for item in sorted(plan.values(), key=lambda item: item["start_frame"]):
@@ -372,6 +383,17 @@ def _audio_filter(clip: TimelineClip) -> str:
         "aformat=sample_fmts=fltp:channel_layouts=stereo",
         f"volume={_number(mix.volume)}",
     ]
+    if clip.playback_rate != 1:
+        rate = clip.playback_rate
+        tempos = []
+        while rate > 2:
+            tempos.append("atempo=2")
+            rate /= 2
+        while rate < .5:
+            tempos.append("atempo=0.5")
+            rate *= 2
+        tempos.append(f"atempo={_number(rate)}")
+        filters[3:3] = tempos
     if mix.fade_in_sec:
         filters.append(f"afade=t=in:st=0:d={_number(mix.fade_in_sec)}")
     if mix.fade_out_sec:
@@ -393,7 +415,7 @@ def _verify_sources(timeline: Timeline) -> None:
     for asset_id in used:
         asset = assets[asset_id]
         try:
-            path = validate_local_asset(asset.path)
+            path = validate_local_asset(asset.path, resource_budget=True)
             current = fingerprint_local_media(str(path))
         except (OSError, ValueError) as exc:
             raise VideoEditingError("SOURCE_MEDIA_NOT_READABLE") from exc
@@ -406,6 +428,20 @@ def _verify_sources(timeline: Timeline) -> None:
 def _render_audio(timeline: Timeline, *, duration: float, ffmpeg: str, work: Path,
                   check_continue: Callable[[], None] | None = None) -> Path | None:
     assets = {asset.asset_id: asset for asset in timeline.assets}
+    selected = [clip for track in timeline.audible_tracks() for clip in track.clips
+                if clip.audio_role != "muted" and assets[clip.media_asset_id].audio_stream_count]
+    if not selected and any(clip.audio_role != "muted" and assets[clip.media_asset_id].audio_stream_count
+                            for track in timeline.tracks for clip in track.clips):
+        output = work / 'audio.wav'
+        samples = round(duration * SAMPLE_RATE)
+        _run([ffmpeg,'-v','error','-nostdin','-n','-f','lavfi','-i',
+              f'anullsrc=r={SAMPLE_RATE}:cl=stereo','-af',f'atrim=end_sample={samples},asetpts=N/SR/TB',
+              '-ar',str(SAMPLE_RATE),'-ac','2','-c:a','pcm_s24le','-rf64','auto','-f','wav',str(output)],
+             cwd=work,timeout=max(60,duration*4),**({'check_continue':check_continue} if check_continue else {}))
+        return output
+    if len(selected) > RENDER_INPUT_BATCH_SIZE:
+        return _render_batched_audio(selected, assets, duration=duration, ffmpeg=ffmpeg,
+                                     work=work, check_continue=check_continue)
     command = [ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_threads", "1",
                "-filter_complex_threads", "1", "-threads", "1"]
     graph: list[str] = []
@@ -414,7 +450,8 @@ def _render_audio(timeline: Timeline, *, duration: float, ffmpeg: str, work: Pat
     ducked_labels: list[str] = []
     sample_count = round(duration * SAMPLE_RATE)
     input_index = 0
-    for track in timeline.tracks:
+    voice_key_available = any(clip.audio_role == 'voiceover' and clip.audio_mix.volume > 0 for clip in selected)
+    for track in timeline.audible_tracks():
         for clip in track.clips:
             asset = assets[clip.media_asset_id]
             if clip.audio_role == "muted" or asset.audio_stream_count == 0:
@@ -435,7 +472,7 @@ def _render_audio(timeline: Timeline, *, duration: float, ffmpeg: str, work: Pat
             labels.append(label)
             if clip.audio_role == "voiceover" and clip.audio_mix.volume > 0:
                 voice_labels.append(label)
-            if clip.audio_mix.ducking:
+            if clip.audio_mix.ducking and voice_key_available:
                 ducked_labels.append(label)
             input_index += 1
 
@@ -468,23 +505,194 @@ def _render_audio(timeline: Timeline, *, duration: float, ffmpeg: str, work: Pat
 
     output = work / "audio.wav"
     _run(command + ["-filter_complex", ";".join(graph), "-map", "[out]", "-ar", str(SAMPLE_RATE),
-                    "-ac", "2", "-c:a", "pcm_s24le", "-threads:a", "1", "-f", "wav", str(output)],
-         cwd=work, **({"check_continue": check_continue} if check_continue else {}))
+                    "-ac", "2", "-c:a", "pcm_s24le", "-threads:a", "1", "-rf64", "auto", "-f", "wav", str(output)],
+         cwd=work, timeout=max(60, duration * 4), **({"check_continue": check_continue} if check_continue else {}))
     return output
 
 
-def _probe_output(path: Path, ffprobe: str, *, output_kind: str, duration: float,
-                  has_audio: bool, preview: bool = False) -> dict[str, Any]:
+def _render_batched_audio(clips, assets, *, duration, ffmpeg, work, check_continue=None):
+    options = {"check_continue": check_continue} if check_continue else {}
+    counter = 0
+
+    def encode(inputs, filters, output_label, sample_count):
+        nonlocal counter
+        if check_continue:
+            check_continue()
+        if shutil.disk_usage(work).free < sample_count * 8 + 16 * 1024 * 1024:
+            raise VideoEditingError("MEDIA_RENDER_STORAGE_UNAVAILABLE")
+        counter += 1
+        output = work / f"audio-stem-{counter:06d}.wav"
+        command = [ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_complex_threads", "1",
+                   "-threads", "1"]
+        for path in inputs:
+            command += ["-protocol_whitelist", "file", "-format_whitelist", MEDIA_INPUT_DEMUXERS,
+                        "-i", str(path)]
+        _run(command + ["-filter_complex", ";".join(filters), "-map", f"[{output_label}]",
+                        "-ar", str(SAMPLE_RATE), "-ac", "2", "-c:a", "pcm_f32le", "-rf64", "auto",
+                        "-t", _number(sample_count / SAMPLE_RATE), str(output)],
+             cwd=work, timeout=max(60, sample_count / SAMPLE_RATE * 4), **options)
+        return output
+
+    def mix_batches(stems):
+        while len(stems) > 1:
+            reduced = []
+            for start in range(0, len(stems), RENDER_INPUT_BATCH_SIZE):
+                group = stems[start:start + RENDER_INPUT_BATCH_SIZE]
+                if len(group) == 1:
+                    reduced.extend(group)
+                    continue
+                begin, end = min(s[1] for s in group), max(s[2] for s in group)
+                graph = [f"[{i}:a:0]asetpts=N/SR/TB,adelay={s[1] - begin}S:all=1[a{i}]"
+                         for i, s in enumerate(group)]
+                graph.append("".join(f"[a{i}]" for i in range(len(group))) +
+                             f"amix=inputs={len(group)}:normalize=0:dropout_transition=0:duration=longest,"
+                             f"apad=whole_len={end - begin},atrim=end_sample={end - begin}[mixed]")
+                output = encode([s[0] for s in group], graph, "mixed", end - begin)
+                reduced.append((output, begin, end))
+                for path, _, _ in group:
+                    path.unlink()
+            stems = reduced
+        return stems[0] if stems else None
+
+    stems_by_role = {}
+    categories = {"voice": [], "ducked": [], "other": []}
+    voice_key_available = any(clip.audio_role == "voiceover" and clip.audio_mix.volume > 0
+                              for clip in clips)
+    for clip in clips:
+        role = ("ducked" if clip.audio_mix.ducking and voice_key_available else
+                "voice" if clip.audio_role == "voiceover" and clip.audio_mix.volume > 0 else "other")
+        categories[role].append(clip)
+    for role, members in categories.items():
+        levels = [[]]
+        members.sort(key=lambda clip: (clip.timeline_start, clip.clip_id))
+        for start in range(0, len(members), RENDER_INPUT_BATCH_SIZE):
+            group = members[start:start + RENDER_INPUT_BATCH_SIZE]
+            begin = min(round(clip.timeline_start * SAMPLE_RATE) for clip in group)
+            end = max(round(clip.timeline_start * SAMPLE_RATE) + round(clip.duration_sec * SAMPLE_RATE)
+                      for clip in group)
+            graph, paths = [], []
+            for i, clip in enumerate(group):
+                asset = assets[clip.media_asset_id]
+                stream = clip.audio_stream_index
+                if stream is None:
+                    if asset.audio_stream_count != 1:
+                        raise VideoEditingError("AUDIO_STREAM_SELECTION_REQUIRED")
+                    stream = 0
+                shifted = replace(clip, timeline_start=(round(clip.timeline_start * SAMPLE_RATE) - begin) / SAMPLE_RATE)
+                paths.append(asset.path)
+                graph.append(f"[{i}:a:{stream}]" + _audio_filter(shifted) + f"[a{i}]")
+            graph.append("".join(f"[a{i}]" for i in range(len(group))) +
+                         f"amix=inputs={len(group)}:normalize=0:dropout_transition=0:duration=longest,"
+                         f"apad=whole_len={end - begin},atrim=end_sample={end - begin}[mixed]")
+            stem = (encode(paths, graph, "mixed", end - begin), begin, end)
+            level = 0
+            while True:
+                if level == len(levels):
+                    levels.append([])
+                levels[level].append(stem)
+                if len(levels[level]) < RENDER_INPUT_BATCH_SIZE:
+                    break
+                stem = mix_batches(levels[level])
+                levels[level] = []
+                level += 1
+        stem = mix_batches([stem for level in levels for stem in level])
+        if stem:
+            stems_by_role[role] = stem
+    if not stems_by_role:
+        return None
+    sample_count = round(duration * SAMPLE_RATE)
+    command = [ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_complex_threads", "1"]
+    graph, labels = [], []
+    for index, (role, (path, begin, _)) in enumerate(stems_by_role.items()):
+        command += ["-protocol_whitelist", "file", "-format_whitelist", "wav", "-i", str(path)]
+        graph.append(f"[{index}:a:0]asetpts=N/SR/TB,adelay={begin}S:all=1,"
+                     f"apad=whole_len={sample_count},atrim=end_sample={sample_count},"
+                     f"asetnsamples=n=1024:p=1[{role}]")
+        labels.append(role)
+    if "ducked" in stems_by_role:
+        if "voice" not in stems_by_role:
+            raise VideoEditingError("AUDIO_DUCKING_REQUIRES_VOICEOVER")
+        graph.append("[voice]asplit=2[voicemix][voicekey]")
+        graph.append("[ducked][voicekey]sidechaincompress=threshold=0.025:ratio=8:"
+                     "attack=10:release=250:makeup=1:link=maximum:detection=rms[duckedmix]")
+        labels = ["voicemix" if x == "voice" else "duckedmix" if x == "ducked" else x for x in labels]
+    graph.append("".join(f"[{label}]" for label in labels) +
+                 f"amix=inputs={len(labels)}:normalize=0:dropout_transition=0:duration=longest,"
+                 f"alimiter=limit={MIX_SAMPLE_PEAK_LIMIT}:attack=5:release=50:level=0:latency=1,"
+                 f"apad=whole_len={sample_count},atrim=end_sample={sample_count},asetpts=N/SR/TB[out]")
+    output = work / "audio.wav"
+    if shutil.disk_usage(work).free < sample_count * 6 + 16 * 1024 * 1024:
+        raise VideoEditingError("MEDIA_RENDER_STORAGE_UNAVAILABLE")
+    _run(command + ["-filter_complex", ";".join(graph), "-map", "[out]", "-ar", str(SAMPLE_RATE),
+                    "-ac", "2", "-c:a", "pcm_s24le", "-rf64", "auto", str(output)],
+         cwd=work, timeout=max(60, duration * 4), **options)
+    for path, _, _ in stems_by_role.values():
+        path.unlink()
+    return output
+
+
+def _programme_timeout(duration, minimum=60.0):
+    if duration is None:
+        return minimum
+    if type(duration) not in (int, float) or not math.isfinite(duration) or not 0 < duration <= MAX_EDIT_TIME_SEC:
+        raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
+    return max(minimum, duration * 4.0)
+
+
+def _probe_json(command, *, cwd, duration, check_continue=None,
+                error_code="RENDER_OUTPUT_VERIFICATION_FAILED"):
+    callback_error = None
+    def check_status():
+        nonlocal callback_error
+        if check_continue:
+            try:
+                check_continue()
+            except BaseException as exc:
+                callback_error = exc
+                raise
     try:
-        result = subprocess.run(
-            [ffprobe, "-v", "error", "-protocol_whitelist", "file", "-format_whitelist", "mov,wav",
-             "-count_frames", "-show_entries",
-             "stream=codec_type,codec_name,start_time,nb_read_frames,sample_rate,channels:format=duration,format_name",
-             "-of", "json", "-i", str(path)],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30,
-            check=True, shell=False,
-        )
-        probe = json.loads(result.stdout)
+        check_status()
+        deadline = time.monotonic() + _programme_timeout(duration, 30.0)
+        with subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True, encoding="utf-8", errors="replace", shell=False) as process:
+            try:
+                while True:
+                    check_status()
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise subprocess.TimeoutExpired(command, _programme_timeout(duration, 30.0))
+                    try:
+                        stdout, _ = process.communicate(timeout=min(.25, remaining))
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
+                check_status()
+            except BaseException:
+                process.kill()
+                process.communicate()
+                raise
+    except (OSError, subprocess.SubprocessError) as exc:
+        if exc is callback_error:
+            raise
+        raise VideoEditingError(error_code) from exc
+    if process.returncode != 0:
+        raise VideoEditingError(error_code)
+    try:
+        return json.loads(stdout)
+    except (ValueError, TypeError) as exc:
+        raise VideoEditingError(error_code) from exc
+
+
+def _probe_output(path: Path, ffprobe: str, *, output_kind: str, duration: float,
+                  has_audio: bool, preview: bool = False,
+                  check_continue: Callable[[], None] | None = None) -> dict[str, Any]:
+    probe = _probe_json(
+        [ffprobe, "-v", "error", "-protocol_whitelist", "file", "-format_whitelist", "mov,wav",
+         "-count_frames", "-show_entries",
+         "stream=codec_type,codec_name,start_time,nb_read_frames,sample_rate,channels:format=duration,format_name",
+         "-of", "json", "-i", str(path)], cwd=path.parent, duration=duration, check_continue=check_continue,
+    )
+    try:
         streams = probe["streams"]
         audio = [stream for stream in streams if stream.get("codec_type") == "audio"]
         video = [stream for stream in streams if stream.get("codec_type") == "video"]
@@ -550,6 +758,7 @@ def _validate_output_path(output: Path, *, output_kind: str,
 
 
 def _measure_loudness(path: Path, ffmpeg: str, *,
+                      duration: float | None = None,
                       check_continue: Callable[[], None] | None = None) -> dict[str, Any]:
     # Analyze the final encoded file. The transformed stream goes to null; only
     # input_* statistics describe this file, not loudnorm's hypothetical output.
@@ -557,7 +766,8 @@ def _measure_loudness(path: Path, ffmpeg: str, *,
         ffmpeg, "-hide_banner", "-nostdin", "-nostats", "-v", "info",
         "-protocol_whitelist", "file", "-format_whitelist", "mov,wav,mp3", "-i", str(path),
         "-map", "0:a:0", "-vn", "-sn", "-dn", "-af", "loudnorm=print_format=json", "-f", "null", "-",
-    ], cwd=path.parent, **({"check_continue": check_continue} if check_continue else {}))
+    ], cwd=path.parent, timeout=_programme_timeout(duration),
+        **({"check_continue": check_continue} if check_continue else {}))
     try:
         start = diagnostic.rfind("{")
         if start < 0:
@@ -587,7 +797,7 @@ def _verify_final_audio_peak(rendered: Path, audio: Path, *, ffmpeg: str,
                              check_continue: Callable[[], None] | None = None
                              ) -> tuple[Path, dict[str, Any], dict[str, Any]]:
     run_options = {"check_continue": check_continue} if check_continue else {}
-    loudness = _measure_loudness(rendered, ffmpeg, **run_options)
+    loudness = _measure_loudness(rendered, ffmpeg, duration=duration, **run_options)
     initial = dict(loudness)
     peak = loudness["true_peak_dbtp"]
     correction_db = 0.0
@@ -604,15 +814,15 @@ def _verify_final_audio_peak(rendered: Path, audio: Path, *, ffmpeg: str,
             command += ["-map", "0:v:0", "-c:v", "copy", "-map", "1:a:0", "-c:a", "aac", "-b:a", "192k",
                         "-movflags", "+faststart"]
         else:
-            command += ["-map", "0:a:0", "-c:a", "pcm_s24le"]
+            command += ["-map", "0:a:0", "-c:a", "pcm_s24le", "-rf64", "auto"]
         samples = round(duration * SAMPLE_RATE)
         command += ["-af", f"volume={_number(correction_db)}dB,apad=whole_len={samples},"
                     f"atrim=end_sample={samples},asetpts=N/SR/TB",
                     "-ar", str(SAMPLE_RATE), "-ac", "2", "-threads:a", "1", "-t", _number(duration),
-                    "-map_metadata", "-1", "-metadata", "comment=Demo - source rights not verified", str(corrected)]
-        _run(command, cwd=rendered.parent, **run_options)
+                    "-map_metadata", "-1", str(corrected)]
+        _run(command, cwd=rendered.parent, timeout=_programme_timeout(duration), **run_options)
         rendered = corrected
-        loudness = _measure_loudness(rendered, ffmpeg, **run_options)
+        loudness = _measure_loudness(rendered, ffmpeg, duration=duration, **run_options)
         peak = loudness["true_peak_dbtp"]
     if (peak is None and loudness["state"] != "silent"
             or peak is not None and (not math.isfinite(peak) or peak > FINAL_TRUE_PEAK_LIMIT_DBTP)):
@@ -630,9 +840,10 @@ def _verify_final_audio_peak(rendered: Path, audio: Path, *, ffmpeg: str,
 
 def _timeline_render_plan(timeline: Timeline, output_kind: str):
     clips = [clip for track in timeline.tracks for clip in track.clips]
-    if not clips or len(clips) > MAX_RENDER_CLIPS:
-        raise VideoEditingError("RENDER_REQUIRES_ONE_TO_128_CLIPS")
-    ducked_clips = [clip for clip in clips if clip.audio_mix.ducking]
+    if not clips:
+        raise VideoEditingError("RENDER_REQUIRES_CLIPS")
+    audible = [clip for track in timeline.audible_tracks() for clip in track.clips]
+    ducked_clips = [clip for clip in audible if clip.audio_mix.ducking and clip.audio_role != 'muted']
     if any(clip.audio_role != "bgm" for clip in ducked_clips):
         raise VideoEditingError("AUDIO_DUCKING_REQUIRES_BACKGROUND_MUSIC")
     assets = {asset.asset_id: asset for asset in timeline.assets}
@@ -640,43 +851,188 @@ def _timeline_render_plan(timeline: Timeline, output_kind: str):
         raise VideoEditingError("AUDIO_DUCKING_REQUIRES_AUDIO_SOURCE")
     if ducked_clips and not any(
         clip.audio_role == "voiceover" and clip.audio_mix.volume > 0
-        and assets[clip.media_asset_id].audio_stream_count for clip in clips
+        and assets[clip.media_asset_id].audio_stream_count for clip in audible
     ):
-        raise VideoEditingError("AUDIO_DUCKING_REQUIRES_VOICEOVER")
-    video_tracks = [track for track in timeline.tracks if track.kind == "video" and track.clips]
-    if len(video_tracks) > 1:
+        if any(clip.audio_role == 'voiceover' and assets[clip.media_asset_id].audio_stream_count for clip in clips):
+            ducked_clips = []  # The user muted or unsoloed its key; preserve the configured mix.
+        else:
+            raise VideoEditingError("AUDIO_DUCKING_REQUIRES_VOICEOVER")
+    all_video = [track for track in timeline.tracks if track.kind == 'video' and track.clips]
+    video_tracks = [track for track in all_video if not track.hidden]
+    if output_kind == "video" and not all_video:
         raise VideoEditingError("RENDER_REQUIRES_ONE_VIDEO_TRACK")
-    if output_kind == "video" and len(video_tracks) != 1:
-        raise VideoEditingError("RENDER_REQUIRES_ONE_VIDEO_TRACK")
-    if output_kind == "audio" and video_tracks:
+    if output_kind == "audio" and all_video:
         raise VideoEditingError("AUDIO_EXPORT_REQUIRES_AUDIO_ONLY_TIMELINE")
 
-    if video_tracks:
-        cursor = 0.0
-        for clip in video_tracks[0].clips:
-            if abs(clip.timeline_start - cursor) > 0.00001:
-                raise VideoEditingError("VIDEO_CLIPS_MUST_BE_CONTIGUOUS")
-            cursor += clip.duration_sec
-            if not math.isfinite(cursor) or cursor > MAX_EDIT_TIME_SEC:
-                raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
-        duration = cursor
-        if any(clip.timeline_start + clip.duration_sec > duration + 0.00001
-               for track in timeline.tracks if track.kind != "video" for clip in track.clips):
-            raise VideoEditingError("AUDIO_EXTENDS_BEYOND_VIDEO")
-    else:
-        duration = max(clip.timeline_start + clip.duration_sec for clip in clips)
-        if not math.isfinite(duration) or duration <= 0 or duration > MAX_EDIT_TIME_SEC:
-            raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
+    duration = max(clip.timeline_start + clip.duration_sec for clip in clips)
+    if not math.isfinite(duration) or duration <= 0 or duration > MAX_EDIT_TIME_SEC:
+        raise VideoEditingError("TIMELINE_DURATION_OUT_OF_RANGE")
+    clip_tracks = {clip.clip_id: track.track_id for track in video_tracks for clip in track.clips}
+    hidden_ids = {clip.clip_id for track in all_video if track.hidden for clip in track.clips}
+    for transition in timeline.transitions:
+        if transition.from_clip in hidden_ids and transition.to_clip in hidden_ids:
+            continue
+        if (transition.from_clip not in clip_tracks or transition.to_clip not in clip_tracks
+                or clip_tracks[transition.from_clip] != clip_tracks[transition.to_clip]):
+            raise VideoEditingError("TRANSITION_REQUIRES_ONE_VIDEO_TRACK")
+    transitions = {}
+    for track in video_tracks:
+        ordered = sorted(track.clips, key=lambda clip: clip.timeline_start)
+        if any(_frame_at(a.timeline_start + a.duration_sec) > _frame_at(b.timeline_start)
+               for a, b in pairwise(ordered)):
+            raise VideoEditingError("VIDEO_TRACK_OVERLAP_REQUIRES_SEPARATE_LAYER")
+        plan = _video_transition_plan(timeline, ordered)
+        for index, item in plan.items():
+            transitions[index if len(video_tracks) == 1 else (track.track_id, index)] = item
 
-    transitions = _video_transition_plan(timeline, list(video_tracks[0].clips) if video_tracks else [])
-
-    audio_clips = [clip for track in timeline.tracks for clip in track.clips
+    audio_clips = [clip for track in timeline.audible_tracks() for clip in track.clips
                    if clip.audio_role != "muted"
                    and next(asset for asset in timeline.assets if asset.asset_id == clip.media_asset_id).audio_stream_count]
-    if output_kind in {"audio", "audio_preview"} and not audio_clips:
+    if output_kind in {"audio", "audio_preview"} and not audio_clips and not any(
+            assets[clip.media_asset_id].audio_stream_count for clip in clips):
         raise VideoEditingError("AUDIO_EXPORT_REQUIRES_AUDIO_SOURCE")
 
     return duration, video_tracks, ducked_clips, audio_clips, transitions
+
+
+def _render_layered_video(timeline, tracks, *, duration, width, height, ffmpeg, work,
+                          audio, rendered, overlays, check_continue=None):
+    from .video_editing import VideoPlacement
+
+    options = {"check_continue": check_continue} if check_continue else {}
+    end_frame = _frame_at(duration)
+    boundaries = {0, end_frame, *range(FRAME_RATE * 30, end_frame, FRAME_RATE * 30)}
+    spans = []
+    assets = {asset.asset_id: asset for asset in timeline.assets}
+    for layer, track in enumerate(tracks):
+        clips = sorted(track.clips, key=lambda clip: clip.timeline_start)
+        plan = _video_transition_plan(timeline, clips)
+        for index, clip in enumerate(clips):
+            start = _frame_at(clip.timeline_start)
+            end = _frame_at(clip.timeline_start + clip.duration_sec)
+            if end <= start:
+                raise VideoEditingError("VIDEO_CLIP_SHORTER_THAN_OUTPUT_FRAME")
+            incoming, outgoing = plan.get(index), plan.get(index + 1)
+            visible_start = incoming["start_frame"] if incoming else start
+            visible_end = outgoing["end_frame"] if outgoing else end
+            spans.append((layer, clip, start, visible_start, visible_end, incoming))
+            boundaries.update((visible_start, visible_end))
+            if incoming:
+                boundaries.add(incoming["end_frame"])
+            if outgoing:
+                boundaries.add(outgoing["start_frame"])
+    ordered = sorted(boundaries)
+    segments = []
+    maximum_inputs = 0
+    maximum_encoder_inputs = 0
+    composition_passes = 0
+    for interval, (begin, end) in enumerate(pairwise(ordered)):
+        if check_continue:
+            check_continue()
+        frames = end - begin
+        active = [item for item in spans if item[3] <= begin and item[4] >= end]
+        maximum_inputs = max(maximum_inputs, len(active))
+        layers = {}
+        for item in active:
+            layers.setdefault(item[0], []).append(item)
+        batches, pending = [], []
+        for items in layers.values():
+            if len(items) > 2:
+                raise VideoEditingError("VIDEO_LAYER_COMPOSITION_CONFLICT")
+            capacity = RENDER_INPUT_BATCH_SIZE - int(bool(batches))
+            if pending and len(pending) + len(items) > capacity:
+                batches.append(pending)
+                pending = []
+            pending.extend(items)
+        if pending or not batches:
+            batches.append(pending)
+        previous = None
+        for batch_index, batch in enumerate(batches):
+            final = batch_index == len(batches) - 1
+            command = [ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_threads", "1",
+                       "-filter_complex_threads", "1", "-threads", "1"]
+            if previous:
+                command += ["-protocol_whitelist", "file", "-format_whitelist", "matroska,webm", "-i", str(previous)]
+                graph = [f"[0:v:0]trim=end_frame={frames},settb=1/{FRAME_RATE},setpts=N[canvas]"]
+            else:
+                graph = [(f"color=c=black:s={width}x{height}:r={FRAME_RATE},trim=end_frame={frames},"
+                          f"settb=1/{FRAME_RATE},setpts=N[canvas]")]
+            maximum_encoder_inputs = max(maximum_encoder_inputs, len(batch) + int(previous is not None))
+            by_layer = {}
+            for index, (layer, clip, cut_start, _, _, incoming) in enumerate(batch, int(previous is not None)):
+                source_start = Fraction(str(clip.source_in)) + Fraction(begin - cut_start, FRAME_RATE) * Fraction(str(clip.playback_rate))
+                if source_start < 0:
+                    raise VideoEditingError("TRANSITION_MEDIA_HANDLES_UNAVAILABLE")
+                command += ["-ss", _number(float(source_start)), "-protocol_whitelist", "file",
+                            "-format_whitelist", MEDIA_INPUT_DEMUXERS, "-i", assets[clip.media_asset_id].path]
+                placement = clip.video_placement or VideoPlacement()
+                w = max(2, int(width * placement.width) // 2 * 2)
+                h = max(2, int(height * placement.height) // 2 * 2)
+                x = min(width - w, int(width * placement.x) // 2 * 2)
+                y = min(height - h, int(height * placement.y) // 2 * 2)
+                crop = clip.frame_crop
+                crop_filter = (f"crop=w=trunc(iw*{crop.width:.9f}/2)*2:h=trunc(ih*{crop.height:.9f}/2)*2:"
+                               f"x=trunc(iw*{crop.x:.9f}/2)*2:y=trunc(ih*{crop.y:.9f}/2)*2,") if crop else ""
+                graph.append(f"[{index}:v:0]setpts=(PTS-STARTPTS)/{_number(clip.playback_rate)},fps={FRAME_RATE},trim=end_frame={frames},"
+                             f"{crop_filter}scale={w}:{h}:force_original_aspect_ratio=decrease,format=rgba,"
+                             f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:color=black@0,"
+                             f"pad={width}:{height}:{x}:{y}:color=black@0,setsar=1,"
+                             f"colorchannelmixer=aa={placement.opacity:.9f},"
+                             f"settb=1/{FRAME_RATE},setpts=N[v{index}]")
+                by_layer.setdefault(layer, []).append((f"v{index}", incoming))
+            current = "canvas"
+            for layer, items in by_layer.items():
+                top = items[0][0]
+                if len(items) == 2:
+                    incoming = items[1][1]
+                    if incoming is None or not incoming["start_frame"] <= begin < end <= incoming["end_frame"]:
+                        raise VideoEditingError("VIDEO_LAYER_COMPOSITION_CONFLICT")
+                    phase = f"min(1,max(0,(N-1+{begin - incoming['start_frame']})/{incoming['duration_frames']}))"
+                    graph.append(f"[{current}]split=2[baseout{layer}][basein{layer}]")
+                    for side, item in zip(("out", "in"), items, strict=True):
+                        graph.append(f"[base{side}{layer}][{item[0]}]overlay=eof_action=pass:repeatlast=0:"
+                                     f"shortest=0:format=yuv420[composite{side}{layer}]")
+                    graph.append(f"[compositeout{layer}][compositein{layer}]"
+                                 f"blend=all_expr='A*(1-{phase})+B*{phase}'[layer{layer}]")
+                else:
+                    graph.append(f"[{current}][{top}]overlay=eof_action=pass:repeatlast=0:"
+                                 f"shortest=0:format=yuv420[layer{layer}]")
+                current = f"layer{layer}"
+            graph.append(f"[{current}]trim=end_frame={frames},setpts=N/({FRAME_RATE}*TB)[outv]")
+            segment = work / (f"interval-{interval:06d}.mp4" if final else
+                              f"interval-{interval:06d}-pass-{batch_index:04d}.mkv")
+            codec = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18"] if final else ["-c:v", "ffv1", "-level", "3"]
+            if shutil.disk_usage(work).free < frames * width * height * 2 + 16 * 1024 * 1024:
+                raise VideoEditingError("MEDIA_RENDER_STORAGE_UNAVAILABLE")
+            _run(command + ["-filter_complex", ";".join(graph), "-map", "[outv]", "-an",
+                            "-frames:v", str(frames), *codec, "-threads:v", "1", "-pix_fmt", "yuv420p", str(segment)],
+                 cwd=work, timeout=max(60, frames / FRAME_RATE * 4), **options)
+            composition_passes += 1
+            if previous:
+                previous.unlink()
+            previous = segment
+        segments.append(segment)
+    manifest = work / "intervals.ffconcat"
+    manifest.write_text("ffconcat version 1.0\n" + "".join(f"file {item.name}\n" for item in segments), encoding="utf-8")
+    command = [ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_threads", "1", "-f", "concat",
+               "-safe", "1", "-protocol_whitelist", "file", "-i", str(manifest)]
+    if audio is not None:
+        command += ["-protocol_whitelist", "file", "-format_whitelist", "wav", "-i", str(audio)]
+    command += ["-map", "0:v:0"]
+    if overlays:
+        command += ["-vf", ",".join(overlays), "-c:v", "libx264", "-preset", "veryfast", "-threads:v", "1", "-pix_fmt", "yuv420p"]
+    else:
+        command += ["-c:v", "copy"]
+    command += (["-map", "1:a:0", "-c:a", "aac", "-b:a", "192k", "-ar", str(SAMPLE_RATE)]
+                if audio is not None else ["-an"])
+    command += ["-t", _number(duration), "-map_metadata", "-1", "-movflags", "+faststart", str(rendered)]
+    _run(command, cwd=work, timeout=max(60, duration * 4), **options)
+    return {"mode": "interval_video_layers", "video_layers": len(tracks), "intervals": len(segments),
+            "maximum_active_video_inputs": maximum_inputs, "layer_order": [track.track_id for track in tracks],
+            "maximum_encoder_inputs": maximum_encoder_inputs, "composition_passes": composition_passes,
+            "output_timebase": f"1/{FRAME_RATE}", "boundary_rounding": "rational_half_up",
+            "gap_fill": "black", "placements": [{"clip_id": c.clip_id, **c.video_placement.to_dict()}
+                                                   for track in tracks for c in track.clips if c.video_placement]}
 
 
 def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "video",
@@ -707,7 +1063,7 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
         raise VideoEditingError("MEDIA_RENDER_TOOLS_UNAVAILABLE")
     _verify_sources(timeline)
     width, height = FRAME_SIZES[timeline.format_ratio]
-    has_audio = bool(audio_clips)
+    has_audio = bool(audio_clips) or output_kind in {'audio','audio_preview'}
 
     with tempfile.TemporaryDirectory(prefix="timeline-render-", dir=output.parent) as temporary:
         work = Path(temporary)
@@ -720,9 +1076,22 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                           "font_sha256": hashlib.sha256((work / "caption-font.ttc").read_bytes()).hexdigest()}
                          if overlays else {})
         audio = _render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=work, **run_options)
-        audio, mastering, denoising = _process_audio(audio, ffmpeg, render_options, **run_options)
+        audio, mastering, denoising = _process_audio(audio, ffmpeg, render_options, duration=duration, **run_options)
         rendered = work / ("media.mp4" if output_kind == "video" else "media.wav")
-        if video_tracks:
+        layered = output_kind == 'video' and (not video_tracks or (
+            len(video_tracks) > 1 or any(len(track.clips) > RENDER_INPUT_BATCH_SIZE for track in video_tracks)
+            or any(track.layout == "free" for track in video_tracks)
+            or any(clip.video_placement is not None for track in video_tracks for clip in track.clips)
+            or any(abs(clip.timeline_start - sum(c.duration_sec for c in track.clips[:index])) > 1e-6
+                   for track in video_tracks for index, clip in enumerate(track.clips))
+            or duration > max(clip.timeline_start + clip.duration_sec for track in video_tracks for clip in track.clips) + 1e-6
+        ))
+        composition = {}
+        if layered:
+            composition = _render_layered_video(timeline, video_tracks, duration=duration, width=width,
+                                                height=height, ffmpeg=ffmpeg, work=work, audio=audio,
+                                                rendered=rendered, overlays=overlays, **run_options)
+        elif video_tracks:
             segments: list[Path] = []
             asset_paths = {asset.asset_id: asset.path for asset in timeline.assets}
             for index, clip in enumerate(video_tracks[0].clips):
@@ -737,13 +1106,14 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                 crop_filter=(f"crop=w=trunc(iw*{crop.width:.9f}/2)*2:h=trunc(ih*{crop.height:.9f}/2)*2:"
                              f"x=trunc(iw*{crop.x:.9f}/2)*2:y=trunc(ih*{crop.y:.9f}/2)*2,") if crop else ""
                 _run([ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_threads", "1",
-                      "-filter_complex_threads", "1", "-threads", "1", "-ss", _number(clip.source_in - before / FRAME_RATE),
+                      "-filter_complex_threads", "1", "-threads", "1", "-ss", _number(clip.source_in - before * clip.playback_rate / FRAME_RATE),
                       "-protocol_whitelist", "file", "-format_whitelist", MEDIA_INPUT_DEMUXERS,
                       "-i", asset_paths[clip.media_asset_id], "-frames:v", str(frame_count), "-map", "0:v:0",
-                      "-an", "-vf", f"setpts=PTS-STARTPTS,{crop_filter}scale={width}:{height}:force_original_aspect_ratio=decrease,"
+                      "-an", "-vf", f"setpts=(PTS-STARTPTS)/{_number(clip.playback_rate)},{crop_filter}scale={width}:{height}:force_original_aspect_ratio=decrease,"
                       f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={FRAME_RATE}",
                       "-c:v", "libx264", "-preset", "veryfast", "-threads:v", "1", "-pix_fmt", "yuv420p",
-                      str(segment)], cwd=work, **run_options)
+                      str(segment)], cwd=work,
+                     timeout=_programme_timeout(frame_count / FRAME_RATE), **run_options)
                 segments.append(segment)
 
             command = [ffmpeg, "-v", "error", "-nostdin", "-n", "-filter_complex_threads", "1"]
@@ -778,8 +1148,7 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             else:
                 command += ["-an"]
             command += ["-c:v", "libx264", "-preset", "veryfast", "-threads:v", "1", "-pix_fmt", "yuv420p",
-                        "-t", _number(duration), "-map_metadata", "-1",
-                        "-metadata", "comment=Demo - source rights not verified", "-movflags", "+faststart",
+                        "-t", _number(duration), "-map_metadata", "-1", "-movflags", "+faststart",
                         str(rendered)]
             # A complete programme can take longer than the command helper's
             # short default. Keep a finite duration-based budget and the same
@@ -801,7 +1170,7 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
                           abs(loudness["integrated_lufs"] - mastering["target_lufs"]) > 1):
             raise VideoEditingError("AUDIO_MASTER_TARGET_NOT_REACHED")
         measured = _probe_output(rendered, ffprobe, output_kind=output_kind,
-                                 duration=duration, has_audio=has_audio)
+                                 duration=duration, has_audio=has_audio, **run_options)
         if has_audio:
             measured["loudness"] = loudness
         _verify_sources(timeline)
@@ -823,7 +1192,12 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             digest.update(block)
     return {"state": "rendered_verified", "output_kind": output_kind, "timeline_version": timeline.version,
             "media_sha256": digest.hexdigest(), "size_bytes": output.stat().st_size,
-            "measurement": measured, "renderer": "lumenis-timeline-4",
+            "measurement": measured, "renderer": "lumenis-timeline-5",
+            "composition": composition,
+            "track_processing":{'muted_audio_tracks':[track.track_id for track in timeline.tracks if track.muted],
+                'solo_audio_tracks':[track.track_id for track in timeline.tracks if track.solo],
+                'hidden_video_tracks':[track.track_id for track in timeline.tracks if track.hidden],
+                'locked_tracks':[track.track_id for track in timeline.tracks if track.locked]},
             "overlay_processing": {"count": len(timeline.overlays),
                                    **font_readback,
                                    "profile": ("mixed-literal-installed-font-v3" if caption_layouts else
@@ -844,18 +1218,18 @@ def render_timeline(timeline: Timeline, output: Path, *, output_kind: str = "vid
             "rights_state": "unknown", "publish_status": "not_performed"}
 
 
-def _process_audio(audio, ffmpeg, options, *, check_continue=None):
+def _process_audio(audio, ffmpeg, options, *, duration=None, check_continue=None):
     mastering, denoising = {}, {}
     if options and audio is None:
         raise VideoEditingError("AUDIO_MASTER_REQUIRES_AUDIO")
     if "noise_reduction_db" in options:
         audio, denoising = _denoise_audio(
             audio, ffmpeg=ffmpeg, reduction=options["noise_reduction_db"],
-            noise_floor=options["noise_floor_db"], check_continue=check_continue,
+            noise_floor=options["noise_floor_db"], duration=duration, check_continue=check_continue,
         )
     if "loudness_target_lufs" in options:
         audio, mastering = _master_audio(
-            audio, ffmpeg=ffmpeg, target=options["loudness_target_lufs"], check_continue=check_continue,
+            audio, ffmpeg=ffmpeg, target=options["loudness_target_lufs"], duration=duration, check_continue=check_continue,
         )
     return audio, mastering, denoising
 
@@ -883,8 +1257,8 @@ def preview_audio_processing(timeline: Timeline, *, start_sec: float, end_sec: f
         work = Path(temporary)
         original = _render_audio(timeline, duration=duration, ffmpeg=ffmpeg, work=work,
                                  check_continue=check_continue)
-        before = _measure_loudness(original, ffmpeg, check_continue=check_continue)
-        processed, mastering, _ = _process_audio(original, ffmpeg, options, check_continue=check_continue)
+        before = _measure_loudness(original, ffmpeg, duration=duration, check_continue=check_continue)
+        processed, mastering, _ = _process_audio(original, ffmpeg, options, duration=duration, check_continue=check_continue)
         processed, after, _ = _verify_final_audio_peak(
             processed, processed, ffmpeg=ffmpeg, output_kind="audio", duration=duration,
             check_continue=check_continue,
@@ -901,7 +1275,7 @@ def preview_audio_processing(timeline: Timeline, *, start_sec: float, end_sec: f
                   "-ar", str(SAMPLE_RATE), "-ac", "2", "-c:a", "pcm_s16le", str(output)],
                  cwd=work, check_continue=check_continue)
             _probe_output(output, ffprobe, output_kind="audio", duration=end_sec-start_sec,
-                          has_audio=True, preview=True)
+                          has_audio=True, preview=True, check_continue=check_continue)
             data = output.read_bytes()
             if len(data) > 12 * 1024 * 1024:
                 raise VideoEditingError("AUDIO_COMPARISON_TOO_LARGE")
@@ -939,31 +1313,33 @@ def validate_render_options(options: Any = None) -> dict[str, Any]:
     return normalized
 
 
-def _denoise_audio(audio:Path,*,ffmpeg:str,reduction:float,noise_floor:float,
+def _denoise_audio(audio:Path,*,ffmpeg:str,reduction:float,noise_floor:float,duration=None,
                    check_continue:Callable[[],None]|None=None):
     """Opt-in FFT denoising, not speech restoration or a perceptual quality claim.
 
     Filter contract: https://www.ffmpeg.org/ffmpeg-filters.html#afftdn
     """
     output=audio.with_name("denoised.wav")
-    before=_measure_loudness(audio,ffmpeg,check_continue=check_continue)
+    before=_measure_loudness(audio,ffmpeg,duration=duration,check_continue=check_continue)
     _run([ffmpeg,"-v","error","-nostdin","-n","-protocol_whitelist","file","-format_whitelist","wav",
           "-i",str(audio),"-map","0:a:0","-af",f"afftdn=nr={reduction}:nf={noise_floor}:tn=0:om=o",
-          "-ar",str(SAMPLE_RATE),"-ac","2","-c:a","pcm_s24le",str(output)],cwd=audio.parent,check_continue=check_continue)
-    after=_measure_loudness(output,ffmpeg,check_continue=check_continue)
+          "-ar",str(SAMPLE_RATE),"-ac","2","-c:a","pcm_s24le","-rf64","auto",str(output)],
+         cwd=audio.parent,timeout=_programme_timeout(duration),check_continue=check_continue)
+    after=_measure_loudness(output,ffmpeg,duration=duration,check_continue=check_continue)
     return output,{"method":"ffmpeg_afftdn","noise_reduction_db":reduction,"noise_floor_db":noise_floor,
                    "automatic_noise_tracking":False,"input_measurement":before,"output_measurement":after,
                    "perceptual_quality_verified":False,"original_sources_modified":False}
 
 
 def _master_audio(audio: Path, *, ffmpeg: str, target: float,
+                  duration: float | None = None,
                   check_continue: Callable[[], None] | None = None) -> tuple[Path, dict[str, Any]]:
     """Two-pass linear EBU R128 normalization, with measured feasibility checks."""
     def measure(arguments: str, destination: list[str]) -> dict[str, Any]:
         raw = _run([ffmpeg, "-v", "info", "-nostdin", "-nostats", "-n",
                     "-protocol_whitelist", "file", "-format_whitelist", "wav", "-i", str(audio),
                     "-map", "0:a:0", "-af", arguments, *destination], cwd=audio.parent,
-                   check_continue=check_continue)
+                   timeout=_programme_timeout(duration), check_continue=check_continue)
         try:
             parsed, _ = json.JSONDecoder().raw_decode(raw[raw.rfind("{"):])
             return parsed
@@ -992,16 +1368,16 @@ def _master_audio(audio: Path, *, ffmpeg: str, target: float,
         _run([ffmpeg, "-v", "error", "-nostdin", "-n", "-protocol_whitelist", "file",
               "-format_whitelist", "wav", "-i", str(audio), "-map", "0:a:0", "-af",
               f"volume={target - values['input_i']}dB:precision=double",
-              "-ar", str(SAMPLE_RATE), "-ac", "2", "-c:a", "pcm_s24le", str(output)],
-             cwd=audio.parent, check_continue=check_continue)
+              "-ar", str(SAMPLE_RATE), "-ac", "2", "-c:a", "pcm_s24le", "-rf64", "auto", str(output)],
+             cwd=audio.parent, timeout=_programme_timeout(duration), check_continue=check_continue)
     else:
         second = measure(settings + f":measured_I={values['input_i']}:measured_TP={values['input_tp']}:"
                          f"measured_LRA={values['input_lra']}:measured_thresh={values['input_thresh']}:"
                          f"offset={values['target_offset']}:linear=true:print_format=json",
-                         ["-ar", str(SAMPLE_RATE), "-ac", "2", "-c:a", "pcm_s24le", str(output)])
+                         ["-ar", str(SAMPLE_RATE), "-ac", "2", "-c:a", "pcm_s24le", "-rf64", "auto", str(output)])
         if second.get("normalization_type") != "linear":
             raise VideoEditingError("LINEAR_MASTER_NOT_CONFIRMED")
-    verified = _measure_loudness(output, ffmpeg, check_continue=check_continue)
+    verified = _measure_loudness(output, ffmpeg, duration=duration, check_continue=check_continue)
     if (verified["integrated_lufs"] is None or abs(verified["integrated_lufs"] - target) > 1
             or verified["true_peak_dbtp"] is None or verified["true_peak_dbtp"] > -1):
         raise VideoEditingError("AUDIO_MASTER_TARGET_NOT_REACHED")
@@ -1013,8 +1389,9 @@ def extract_waveform(asset: Any, *, start_sec: float = 0, end_sec: float | None 
                      bins: int = 256, audio_stream_index: int | None = None,
                      check_continue: Callable[[], None] | None = None) -> dict[str, Any]:
     """Bounded source waveform from actual decoded PCM; never infer a mixed track."""
-    from array import array
     import sys
+    from array import array
+
     from shared_artifacts import _ffmpeg_path, validate_local_asset
     asset.validate()
     if type(start_sec) not in (int, float) or not math.isfinite(start_sec):
@@ -1033,7 +1410,7 @@ def extract_waveform(asset: Any, *, start_sec: float = 0, end_sec: float | None 
         audio_stream_index = 0
     if type(audio_stream_index) is not int or not 0 <= audio_stream_index < asset.audio_stream_count:
         raise VideoEditingError("WAVEFORM_AUDIO_STREAM_INVALID")
-    path = validate_local_asset(asset.path)
+    path = validate_local_asset(asset.path, resource_budget=True)
     def verify():
         if check_continue:
             check_continue()
@@ -1105,9 +1482,10 @@ def subtitle_documents(timeline: Timeline) -> dict[str, str]:
 
 def encode_audio_delivery(audio: Path, *, format: str, duration: float,
                           target_lufs: float | None = None,
-                          check_continue: Callable[[], None] | None = None) -> dict[str, Any]:
+                          check_continue: Callable[[], None] | None = None,
+                          stream_files: bool = False) -> dict[str, Any]:
     """Encode and fully decode an offline delivery copy; never alter the master."""
-    from shared_artifacts import _ffmpeg_path
+    from shared_artifacts import _ffmpeg_path, _hash_file
     if format not in {"mp3", "m4a"}:
         raise VideoEditingError("AUDIO_DELIVERY_FORMAT_INVALID")
     ffmpeg, ffprobe = _ffmpeg_path(), _ffprobe_path()
@@ -1117,28 +1495,31 @@ def encode_audio_delivery(audio: Path, *, format: str, duration: float,
     _run([ffmpeg,"-v","error","-nostdin","-n","-protocol_whitelist","file","-format_whitelist","wav",
           "-i",str(audio),"-map","0:a:0","-vn","-map_metadata","-1","-c:a",
           "libmp3lame" if format=='mp3' else 'aac',"-b:a","192k","-ar",str(SAMPLE_RATE),"-ac","2",str(output)],
-         cwd=audio.parent,check_continue=check_continue)
-    raw=subprocess.run([ffprobe,"-v","error","-protocol_whitelist","file","-format_whitelist","mov,mp3",
-                        "-show_streams","-show_format","-of","json",str(output)],capture_output=True,text=True,
-                       encoding="utf-8",check=True,timeout=30,shell=False)
+         cwd=audio.parent,timeout=_programme_timeout(duration),check_continue=check_continue)
+    probe = _probe_json([ffprobe,"-v","error","-protocol_whitelist","file","-format_whitelist","mov,mp3",
+                         "-show_streams","-show_format","-of","json",str(output)],
+                        cwd=audio.parent,duration=duration,check_continue=check_continue,
+                        error_code="AUDIO_DELIVERY_VERIFICATION_FAILED")
     try:
-        probe=json.loads(raw.stdout);streams=probe['streams'];stream=streams[0]
+        streams=probe['streams'];stream=streams[0]
+        actual_duration = float(probe['format']['duration'])
         if (len(streams)!=1 or stream['codec_type']!='audio' or stream['codec_name']!=('mp3' if format=='mp3' else 'aac')
                 or int(stream['sample_rate'])!=SAMPLE_RATE or int(stream['channels'])!=2
-                or abs(float(probe['format']['duration'])-duration)>.1):
+                or not math.isfinite(actual_duration) or abs(actual_duration-duration)>.1):
             raise ValueError('delivery probe mismatch')
     except (KeyError,ValueError,TypeError,IndexError) as exc:
         raise VideoEditingError('AUDIO_DELIVERY_VERIFICATION_FAILED') from exc
     _run([ffmpeg,"-v","error","-nostdin","-protocol_whitelist","file","-format_whitelist","mov,mp3",
-          "-i",str(output),"-f","null","-"],cwd=audio.parent,check_continue=check_continue)
-    loudness=_measure_loudness(output,ffmpeg,check_continue=check_continue)
+          "-i",str(output),"-f","null","-"],cwd=audio.parent,
+         timeout=_programme_timeout(duration),check_continue=check_continue)
+    loudness=_measure_loudness(output,ffmpeg,duration=duration,check_continue=check_continue)
     if loudness['true_peak_dbtp'] is not None and loudness['true_peak_dbtp']>-1:
         raise VideoEditingError('AUDIO_DELIVERY_TRUE_PEAK_EXCEEDED')
     if target_lufs is not None and (loudness['integrated_lufs'] is None or abs(loudness['integrated_lufs']-target_lufs)>1):
         raise VideoEditingError('AUDIO_DELIVERY_LOUDNESS_TARGET_NOT_REACHED')
-    data=output.read_bytes()
+    data=output if stream_files else output.read_bytes()
     return {'files':{output.name:data},'report':{'format':format,'codec':stream['codec_name'],
-            'duration_sec':float(probe['format']['duration']),'size_bytes':len(data),'sha256':hashlib.sha256(data).hexdigest(),
+            'duration_sec':actual_duration,'size_bytes':output.stat().st_size,'sha256':_hash_file(output),
             'loudness':loudness,'decode_all_frames':'passed','publish_status':'not_performed'}}
 
 
@@ -1148,8 +1529,7 @@ def propose_silence_edits(asset: Any, *, min_silence_sec: float = .5, threshold_
     """Read-only measured candidates. No word-safety claim and no automatic edit."""
     from shared_artifacts import _ffmpeg_path, validate_local_asset
     asset.validate()
-    if (asset.duration_sec > 600 or
-            any(type(x) not in (int,float) or not math.isfinite(x) for x in (min_silence_sec, threshold_db, margin_sec))
+    if (any(type(x) not in (int,float) or not math.isfinite(x) for x in (min_silence_sec, threshold_db, margin_sec))
             or not .1 <= min_silence_sec <= 30 or not -80 <= threshold_db <= -10 or not 0 <= margin_sec <= 2):
         raise VideoEditingError('SILENCE_DETECTION_OPTIONS_INVALID')
     if asset.audio_stream_count == 0:
@@ -1160,30 +1540,85 @@ def propose_silence_edits(asset: Any, *, min_silence_sec: float = .5, threshold_
         audio_stream_index=0
     if type(audio_stream_index) is not int or not 0 <= audio_stream_index < asset.audio_stream_count:
         raise VideoEditingError('WAVEFORM_AUDIO_STREAM_INVALID')
-    path=validate_local_asset(asset.path)
+    path=validate_local_asset(asset.path, resource_budget=True)
     def verify():
         if check_continue:check_continue()
         if fingerprint_local_media(str(path)).to_dict()!=asset.to_dict():raise VideoEditingError('SOURCE_MEDIA_CHANGED')
     verify();ffmpeg=_ffmpeg_path()
     if not ffmpeg:raise VideoEditingError('MEDIA_RENDER_TOOLS_UNAVAILABLE')
     with tempfile.TemporaryDirectory(prefix='silence-proposal-') as temporary:
-        report=_run([ffmpeg,'-v','info','-nostdin','-nostats','-protocol_whitelist','file','-format_whitelist',MEDIA_INPUT_DEMUXERS,
-                     '-i',str(path),'-map',f'0:a:{audio_stream_index}','-af',
-                     f'asetpts=PTS-STARTPTS,silencedetect=noise={threshold_db}dB:d={min_silence_sec}',
-                     '-f','null','-'],cwd=Path(temporary),timeout=max(60,asset.duration_sec*2),check_continue=check_continue)
-    intervals=[];start=None
-    for kind,value in re.findall(r'silence_(start|end):\s*([-+]?\d+(?:\.\d+)?)',report):
-        time=float(value)
-        if kind=='start':start=max(0,time)
-        elif start is not None:
-            end=min(asset.duration_sec,time)
-            if end>start:intervals.append((start,end))
-            start=None
-    if start is not None and start<asset.duration_sec:intervals.append((start,asset.duration_sec))
+        windows=[]
+        if asset.duration_sec <= SILENCE_SCAN_WINDOW_SECONDS:
+            windows.append((0.0,asset.duration_sec))
+        else:
+            start_sec=0.0
+            while start_sec < asset.duration_sec:
+                end_sec=min(start_sec+SILENCE_SCAN_WINDOW_SECONDS,asset.duration_sec)
+                windows.append((start_sec,end_sec))
+                if end_sec >= asset.duration_sec:
+                    break
+                start_sec += SILENCE_SCAN_WINDOW_STEP_SECONDS
+                if len(windows) >= MAX_SILENCE_SCAN_WINDOWS:
+                    raise VideoEditingError('SILENCE_DETECTION_RESOURCE_LIMIT')
+        closed=[];open_at_boundary=[]
+        for index,(window_start,window_end) in enumerate(windows):
+            if check_continue:check_continue()
+            window_duration=window_end-window_start
+            report=_run([ffmpeg,'-v','info','-nostdin','-nostats','-ss',_number(window_start),
+                         '-t',_number(window_duration),'-protocol_whitelist','file',
+                         '-format_whitelist',MEDIA_INPUT_DEMUXERS,'-i',str(path),
+                         '-map',f'0:a:{audio_stream_index}','-af',
+                         f'asetpts=PTS-STARTPTS,silencedetect=noise={threshold_db}dB:d={min_silence_sec}',
+                         '-f','null','-'],cwd=Path(temporary),
+                         timeout=max(60,window_duration*2),check_continue=check_continue)
+            current_start=None
+            for kind,value in re.findall(r'silence_(start|end):\s*([-+]?\d+(?:\.\d+)?)',report):
+                try:
+                    relative=float(value)
+                except (TypeError,ValueError,OverflowError) as exc:
+                    raise VideoEditingError('SILENCE_DETECTION_RESULT_INVALID') from exc
+                if not math.isfinite(relative):
+                    raise VideoEditingError('SILENCE_DETECTION_RESULT_INVALID')
+                relative=min(max(relative,0.0),window_duration)
+                if kind=='start':
+                    if current_start is None:current_start=relative
+                elif current_start is not None:
+                    begin=window_start+current_start;end=window_start+relative
+                    if end>begin:closed.append((begin,end))
+                    current_start=None
+                if len(closed)+len(open_at_boundary)>MAX_SILENCE_CANDIDATES:
+                    raise VideoEditingError('SILENCE_DETECTION_CANDIDATE_LIMIT_EXCEEDED')
+            if current_start is not None:
+                item=(window_start+current_start,window_end)
+                if index == len(windows)-1:
+                    closed.append(item)
+                else:
+                    open_at_boundary.append(item)
+            if len(closed)+len(open_at_boundary)>MAX_SILENCE_CANDIDATES:
+                raise VideoEditingError('SILENCE_DETECTION_CANDIDATE_LIMIT_EXCEEDED')
+        # Earlier windows cannot know whether a silence continues beyond their
+        # end. A later overlapping window supplies the real end; use that end
+        # instead of stretching a truncated event to the chunk boundary.
+        for begin,partial_end in open_at_boundary:
+            continuations=[end for other_begin,end in closed
+                           if other_begin <= partial_end+.02 and end >= begin-.02]
+            closed.append((begin,max(continuations)) if continuations else (begin,asset.duration_sec))
+        intervals=[]
+        for begin,end in sorted(closed):
+            if intervals and begin <= intervals[-1][1]+.02:
+                intervals[-1]=(intervals[-1][0],max(intervals[-1][1],end))
+            else:
+                intervals.append((begin,end))
     verify()
     return {'state':'proposal','source_sha256':asset.sha256,'audio_stream_index':audio_stream_index,
             'method':'ffmpeg_silencedetect','threshold_db':threshold_db,'minimum_silence_sec':min_silence_sec,
             'margin_sec':margin_sec,'time_reference':'selected_audio_stream_elapsed_seconds',
+            'scan_window_count':len(windows),
+            'scan_strategy':'overlapping_bounded_windows_v1' if len(windows)>1 else 'single_bounded_window_v1',
+            'scan_window_seconds':SILENCE_SCAN_WINDOW_SECONDS,
+            'scan_overlap_seconds':SILENCE_SCAN_WINDOW_SECONDS-SILENCE_SCAN_WINDOW_STEP_SECONDS if len(windows)>1 else 0,
+            'scan_windows':[{'start_sec':start,'end_sec':end} for start,end in windows],
+            'scanned_source_duration_sec':asset.duration_sec,
             'word_alignment_verified':False,'automatic_application':False,'requires_user_review':True,
             'candidates':[{'silence_start_sec':a,'silence_end_sec':b,'suggested_remove_start_sec':a+margin_sec,
                            'suggested_remove_end_sec':b-margin_sec} for a,b in intervals if b-a>2*margin_sec]}

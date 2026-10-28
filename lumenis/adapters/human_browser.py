@@ -21,7 +21,9 @@ nodriver、SeleniumBase 等的共识）：
 线程模型：playwright sync_api 需在工作线程内独立创建实例，HumanBrowser
 作为上下文管理器在单次采集任务内创建与释放。
 """
+import hashlib
 import ipaddress
+import json
 import logging
 import os
 import random
@@ -31,9 +33,259 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 logger = logging.getLogger(__name__)
+
+
+class NativePageWindowError(ValueError):
+    """A saved position cannot safely identify the observed native page."""
+
+
+def validate_native_page_window_cursor(cursor):
+    """Validate adapter page offsets before making a browser read.
+
+    These fields describe a position *inside* a platform page. They never
+    replace its native cursor or grant permission to read that page.
+    """
+    if cursor is None:
+        return
+    if not isinstance(cursor, dict):
+        raise NativePageWindowError('NATIVE_CURSOR_WINDOW_INVALID')
+    has_offset = 'item_offset' in cursor
+    has_digest = 'page_sha256' in cursor
+    if has_offset != has_digest:
+        raise NativePageWindowError('NATIVE_CURSOR_WINDOW_INVALID')
+    if has_offset and (type(cursor['item_offset']) is not int
+            or not 0 <= cursor['item_offset'] <= 1_000_000
+            or not isinstance(cursor['page_sha256'], str)
+            or re.fullmatch(r'[0-9a-f]{64}', cursor['page_sha256']) is None):
+        raise NativePageWindowError('NATIVE_CURSOR_WINDOW_INVALID')
+
+
+def native_page_window(rows, *, limit, cursor=None, identities):
+    """Return a bounded window without dropping an already observed remainder.
+
+    The digest binds the ordered native identities, rather than changing view
+    or like counts. An insertion, removal or reorder requires a fresh read;
+    silently applying an old offset would skip or misattribute source data.
+    """
+    validate_native_page_window_cursor(cursor)
+    if not isinstance(rows, list) or len(identities) != len(rows):
+        raise NativePageWindowError('NATIVE_PAGE_IDENTITIES_INVALID')
+    if type(limit) is not int or limit < 1:
+        raise NativePageWindowError('NATIVE_PAGE_LIMIT_INVALID')
+    digest = hashlib.sha256(json.dumps(
+        identities, ensure_ascii=False, separators=(',', ':'), allow_nan=False
+    ).encode('utf-8')).hexdigest()
+    start = (cursor or {}).get('item_offset', 0)
+    if 'page_sha256' in (cursor or {}) and (
+            cursor['page_sha256'] != digest or start >= len(rows)):
+        raise NativePageWindowError('NATIVE_CURSOR_PAGE_CHANGED')
+    end = min(start + limit, len(rows))
+    complete = end == len(rows)
+    return {
+        'rows': rows[start:end], 'page_complete': complete,
+        'next_window': None if complete else {'item_offset': end, 'page_sha256': digest},
+        'window_start': start, 'window_end': end, 'observed_native_rows': len(rows),
+        'page_sha256': digest, 'page_identity_basis': 'ORDERED_NATIVE_IDENTITIES',
+    }
+
+
+class NativeReadCapture:
+    """Observe completed reads from the current registered browser page.
+
+    This never constructs/replays a signed request or exports a session. Only
+    explicitly named native resource/pagination variables leave the transient
+    request; headers, cookies, CSRF fields and signed URLs are not retained.
+    Continuation is driven by the platform's own visible read controls.
+    """
+
+    def __init__(self, *, hosts, paths, request_keys=(), max_pages=64, object_decoder=None):
+        self.hosts = frozenset(hosts)
+        self.paths = tuple(paths)
+        self.request_keys = frozenset(request_keys)
+        self.max_pages = max_pages
+        self.pages = []
+        self.page = None
+        self.object_decoder = object_decoder or self._objects
+
+    def attach(self, page):
+        self.page = page
+        page.on("requestfinished", self._finished)
+        return self
+
+    def close(self):
+        if self.page is not None:
+            try:
+                self.page.remove_listener("requestfinished", self._finished)
+            except Exception:
+                pass
+        self.page = None
+
+    @staticmethod
+    def _objects(text):
+        text = text.lstrip()
+        if text.startswith("for (;;);"):
+            text = text[len("for (;;);"):].lstrip()
+        decoder = json.JSONDecoder()
+        values = []
+        offset = 0
+        while offset < len(text):
+            while offset < len(text) and text[offset].isspace():
+                offset += 1
+            if offset == len(text):
+                break
+            try:
+                value, offset = decoder.raw_decode(text, offset)
+            except (ValueError, TypeError):
+                break
+            if isinstance(value, (dict, list)):
+                values.append(value)
+        return values
+
+    def _finished(self, request):
+        try:
+            parsed = urlsplit(request.url)
+            if (parsed.scheme != "https" or parsed.hostname not in self.hosts
+                    or parsed.username is not None or parsed.password is not None
+                    or request.resource_type not in {"xhr", "fetch"}
+                    or request.method not in {"GET", "POST"}
+                    or not any(path in parsed.path for path in self.paths)
+                    or len(self.pages) >= self.max_pages):
+                return
+            # Read only the configured keys, never retain the original request.
+            fields = {key: values[-1] for key, values in parse_qs(parsed.query).items()
+                      if key in self.request_keys and values}
+            query = parse_qs(parsed.query)
+            variables = query.get("variables", [None])[-1]
+            post = request.post_data if request.method == "POST" else None
+            if isinstance(post, str) and len(post) <= 2_000_000:
+                try:
+                    decoded = json.loads(post)
+                except ValueError:
+                    decoded = {key: values[-1] for key, values in parse_qs(post).items()
+                               if values}
+                if isinstance(decoded, dict):
+                    variables = decoded.get("variables", variables)
+                    fields.update({key: value for key, value in decoded.items()
+                                   if key in self.request_keys})
+            if isinstance(variables, str):
+                try:
+                    variables = json.loads(variables)
+                except ValueError:
+                    variables = None
+            if isinstance(variables, dict):
+                fields.update({key: value for key, value in variables.items()
+                               if key in self.request_keys})
+            fields = {key: value for key, value in fields.items()
+                      if value is None or type(value) in {int, bool}
+                      or isinstance(value, str) and len(value) <= 4096
+                      and not any(ord(c) < 32 for c in value)}
+            response = request.response()
+            if response is None:
+                return
+            status = response.status
+            retry = response.header_value("retry-after")
+            retry_seconds = None
+            if isinstance(retry, str) and retry.isascii() and retry.isdigit():
+                retry_seconds = min(int(retry), 86400)
+            elif retry:
+                try:
+                    from datetime import datetime, timezone
+                    from email.utils import parsedate_to_datetime
+                    deadline = parsedate_to_datetime(retry)
+                    retry_seconds = min(86400, max(0, int((deadline - datetime.now(timezone.utc)).total_seconds())))
+                except (ValueError, TypeError, OverflowError):
+                    pass
+            failure = ({401: "AUTH_REQUIRED", 403: "ACCESS_BLOCKED",
+                        404: "CONTENT_UNAVAILABLE", 412: "ACCESS_BLOCKED",
+                        429: "RATE_LIMITED"}.get(status)
+                       if not 200 <= status < 300 else None)
+            if not 200 <= status < 300 and failure is None:
+                failure = "PROVIDER_UNAVAILABLE"
+            body = response.text()
+            objects = self.object_decoder(body) if len(body) <= 8_000_000 else []
+            if not objects and failure is None:
+                failure = "NATIVE_RESPONSE_NOT_JSON"
+            self.pages.append({"path": parsed.path, "request": fields,
+                               "http_status": status, "retry_after_seconds": retry_seconds,
+                               "failure_class": failure, "objects": objects})
+        except Exception:
+            # No exception text: browser exceptions can contain a signed URL.
+            return
+
+    def failure(self):
+        return next((page for page in self.pages if page["failure_class"]), None)
+
+    def seek(self, page, select, advance, *, max_steps=12, wait_ms=650):
+        """Reach an observed native page using only the supplied read control."""
+        checked = 0
+        for step in range(max_steps + 1):
+            for observation in self.pages[checked:]:
+                if observation["failure_class"]:
+                    return None
+                selected = select(observation)
+                if selected is not None:
+                    selected.setdefault("observed_prior_native_responses", checked)
+                    return selected
+                checked += 1
+            if step == max_steps or self.failure() is not None:
+                break
+            if advance(step) is False:
+                break
+            page.wait_for_timeout(wait_ms)
+        return None
+
+
+def native_read_scroll(page, *, reply_id=None, reply_attribute=None):
+    """One bounded official comment/list read action; never a social write."""
+    if reply_id and reply_attribute:
+        if not re.fullmatch(r"[A-Za-z0-9_:-]{1,200}", str(reply_id)):
+            return False
+        anchor = page.locator(f'[{reply_attribute}="{reply_id}"]').first
+        if anchor.count():
+            button = anchor.get_by_text(re.compile(
+                r"^(?:View|Show|See|Load|查看|展开|显示|載入|查看全部).{0,28}(?:repl(?:y|ies)|回复|回覆)", re.I)).first
+            if button.count() and button.is_visible():
+                button.click(timeout=3000)
+                return True
+    # A comment panel may be a nested scrolling container. Move the pointer
+    # over an observed comment list before wheeling so it receives the event.
+    for selector in ('[role="dialog"] [role="list"]', '[data-e2e="comment-list"]',
+                     '[data-e2e="comment-list-container"]', '[role="feed"]', 'article'):
+        target = page.locator(selector).first
+        if target.count() and target.is_visible():
+            target.hover(timeout=3000)
+            break
+    page.mouse.wheel(0, 750)
+    return True
+
+
+def native_json_nodes(value):
+    """Walk provider JSON in source order; each adapter verifies its own IDs."""
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from native_json_nodes(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from native_json_nodes(child)
+
+
+def native_page_json(page, *, max_bytes=8_000_000):
+    """Read inert native SSR JSON, without evaluating page scripts or storage."""
+    used = 0
+    for body in page.locator('script[type="application/json"]').all_text_contents():
+        used += len(body)
+        if used > max_bytes:
+            break
+        try:
+            value = json.loads(body)
+        except (ValueError, TypeError):
+            continue
+        if isinstance(value, (dict, list)):
+            yield value
 
 _LEGACY_IPV4_LITERAL = re.compile(
     r"(?:0[xX][0-9a-fA-F]+|[0-9]+)(?:\.(?:0[xX][0-9a-fA-F]+|[0-9]+)){0,3}\Z"
@@ -168,13 +420,13 @@ def readonly_worker_spec(platform: str, private_data_dir=None) -> dict:
     """Resolve isolated worker parameters from the existing platform catalog."""
     from lumenis.system.collector.adapters.config import get_platform_capabilities
 
-    from .cookie_vault import _current_data_dir
+    from .cookie_vault import registered_session_data_dir
 
     binding = get_platform_capabilities(platform).get("readonly_worker")
     if not isinstance(binding, dict):
         raise RuntimeError("READONLY_WORKER_NOT_REGISTERED")
     root = (Path(private_data_dir) if private_data_dir is not None
-            else Path(_current_data_dir()) / "private")
+            else registered_session_data_dir() / "private")
     profiles = (root / "profiles").resolve()
     profile = (profiles / binding["profile"]).resolve()
     if profile.parent != profiles or binding["port"] in {9222, 9223, 9224}:

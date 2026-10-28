@@ -199,6 +199,8 @@ def check_sensitive_tracked():
     targets = targets[:SENSITIVE_SCAN_FILE_CAP]
     findings = []
     unreadable = []
+    removed = []
+    deleted = None
     for rel in targets:
         fp = os.path.join(ROOT_DIR, rel.replace("/", os.sep))
         try:
@@ -212,6 +214,21 @@ def check_sensitive_tracked():
                         if mm and _looks_like_real_secret(line, mm):
                             findings.append({"file": rel, "line": ln, "type": desc})
                             break
+        except FileNotFoundError:
+            if deleted is None:
+                try:
+                    result = subprocess.run(
+                        ["git", "-C", ROOT_DIR, "ls-files", "--deleted", "-z"],
+                        capture_output=True, text=True, encoding="utf-8",
+                        errors="strict", timeout=15,
+                    )
+                    deleted = set(result.stdout.split("\0")) if result.returncode == 0 else set()
+                except (OSError, UnicodeError, subprocess.TimeoutExpired):
+                    deleted = set()
+            if rel in deleted and not os.path.lexists(fp):
+                removed.append(rel)
+            else:
+                unreadable.append(rel)
         except (OSError, UnicodeError):
             unreadable.append(rel)
         if len(findings) >= 50:
@@ -230,7 +247,9 @@ def check_sensitive_tracked():
                       scanned_count=len(targets), target_count=total_targets,
                       verification_state="INCOMPLETE")
     return _check("SEC-SCAN", "sensitive", "P0", "pass",
-                  f"扫描 {len(targets)} 个被跟踪代码文件，未发现明文 Cookie/Token/密钥")
+                  f"扫描 {len(targets) - len(removed)} 个现存跟踪代码文件，未发现明文 Cookie/Token/密钥",
+                  scanned_count=len(targets) - len(removed),
+                  worktree_deleted=removed, worktree_deleted_count=len(removed))
 
 
 def check_dangerous_mode():

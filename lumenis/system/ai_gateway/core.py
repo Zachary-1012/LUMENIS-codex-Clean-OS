@@ -62,6 +62,27 @@ def bind_owned_service(binding):
     return bind(binding)
 
 
+def restore_owned_service_bindings(binding_resolver):
+    """Restore exact service slots from fresh server-owned admission readback."""
+    from .owned_service import restore_owned_service_bindings as restore
+
+    return restore(binding_resolver)
+
+
+def bind_owned_pretrained_service(profile):
+    """Load and bind one exact admitted CPU pretrained runtime through the Gateway."""
+    from .owned_service import bind_owned_pretrained_service as bind
+
+    return bind(profile)
+
+
+def restore_owned_pretrained_service_bindings(profile_resolver):
+    """Restore exact CPU pretrained profiles using existing owner readbacks."""
+    from .owned_service import restore_owned_pretrained_service_bindings as restore
+
+    return restore(profile_resolver)
+
+
 def clear_owned_service(domain_id, expected_binding_sha256):
     """Safety-stop one domain binding without retrying or replaying work."""
     from .owned_service import clear_owned_service as clear
@@ -118,15 +139,15 @@ def owned_service_observation(domain_id=None):
                 'model_id': model, 'fallback_allowed': False}
 
     if domain_id is not None:
-        if domain_id not in {'cth', 'bmp'}:
+        if domain_id not in {'cth', 'bmp', 'shared'}:
             return {'provider': 'owned', 'available': False, 'service_binding': 'BLOCKED',
                     'state': 'BLOCKED', 'reason': 'OWNED_SERVICE_DOMAIN_INVALID',
                     'model_id': None, 'fallback_allowed': False}
         return scoped(domain_id)
-    domains = {domain: scoped(domain) for domain in ('cth', 'bmp')}
-    cth, bmp = domains.values()
-    if cth == bmp:
-        return {**cth, 'domains': domains}
+    domains = {domain: scoped(domain) for domain in ('cth', 'bmp', 'shared')}
+    first = next(iter(domains.values()))
+    if all(value == first for value in domains.values()):
+        return {**first, 'domains': domains}
     ready = sum(item['available'] for item in domains.values())
     return {'provider': 'owned', 'available': ready == len(domains),
             'service_binding': 'BOUND' if ready == len(domains) else 'PARTIALLY_BOUND' if ready else 'NOT_BOUND',
@@ -135,8 +156,25 @@ def owned_service_observation(domain_id=None):
             'fallback_allowed': False, 'domains': domains}
 
 
+def owned_retrieval_status():
+    """Report actual serving capabilities, without probing/loading any model.
+
+    The currently admitted OwnedProductionRuntime is a text generator with a
+    tokenizer measurement API. It has no typed embedding or cross-encoder
+    executor. A text-model binding cannot stand in for either capability; new
+    retrieval weights and runtime admission remain separate requirements.
+    """
+    return {
+        'embedding': {'available': False, 'state': 'BLOCKED_MODEL_NOT_ADMITTED',
+                      'code': 'OWNED_EMBEDDING_EXECUTOR_NOT_BOUND', 'model_id': None},
+        'cross_encoder': {'available': False, 'state': 'BLOCKED_MODEL_NOT_ADMITTED',
+                          'code': 'OWNED_RERANKER_EXECUTOR_NOT_BOUND', 'model_id': None},
+        'model_execution': 'NOT_RUN', 'fallback_allowed': False,
+    }
+
+
 def run_owned_analysis(*, text=None, analysis_type=None, note_id=None, request=None,
-                       is_cancelled=None):
+                       is_cancelled=None, context_sections=None):
     """Route analysis through the owned-runtime boundary without provider fallback.
 
     The current offline candidate loader is evaluation-only. Until a promoted
@@ -145,7 +183,12 @@ def run_owned_analysis(*, text=None, analysis_type=None, note_id=None, request=N
     inference.
     """
     if request is not None:
-        result = run_owned_request(request, is_cancelled=is_cancelled)
+        if context_sections is not None:
+            from lumenis.ai_hub.context_pack import run_budgeted_owned_request
+            result = run_budgeted_owned_request(request, optional_sections=context_sections,
+                                                is_cancelled=is_cancelled)
+        else:
+            result = run_owned_request(request, is_cancelled=is_cancelled)
         if note_id is not None:
             result.setdefault("note_id", note_id)
         return result

@@ -31,6 +31,7 @@ void main() {
     expect(find.text('已受理，等待整理'), findsOneWidget);
     expect(find.text('已保存并重新核验'), findsNothing);
     expect(find.text('来源记录'), findsNothing);
+    await _expandRecovery(tester);
     expect(find.text(_taskId), findsOneWidget);
   });
 
@@ -169,7 +170,7 @@ void main() {
       find.byKey(const ValueKey('generated-result-reveal/paint')),
       findsOneWidget,
     );
-    expect(find.text('可核验来源标题'), findsOneWidget);
+    expect(find.text('可核验来源标题'), findsWidgets);
 
     await tester.tap(
       find.byKey(const ValueKey('generated-result-reveal/skip')),
@@ -197,7 +198,15 @@ void main() {
       ..jobResponse = _savedJobEnvelope();
 
     await _showCompletedResult(tester, client);
-    await tester.drag(find.text('来源简报'), const Offset(0, -80));
+    await tester.drag(
+      find
+          .descendant(
+            of: find.byType(SourceBriefPanel),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+      const Offset(0, 80),
+    );
     await tester.pumpAndSettle();
 
     preferences.resolveRead(null);
@@ -296,6 +305,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
+    await _expandPreferences(tester);
     await tester.tap(find.byKey(const ValueKey('source-brief/reveal/off')));
     await tester.pumpAndSettle();
     await _tapCreate(tester);
@@ -318,6 +328,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('已保存并重新核验'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('刷新状态'));
     await tester.tap(find.text('刷新状态'));
     await tester.pumpAndSettle();
     expect(find.text('当前范围无法打开或整理这份简报。'), findsOneWidget);
@@ -325,9 +336,11 @@ void main() {
     expect(find.text('整理结束，正在核对已保存简报'), findsNothing);
     expect(find.text('已保存并重新核验'), findsNothing);
     expect(find.text('来源记录'), findsNothing);
+    await _expandRecovery(tester);
     expect(find.text(_taskId), findsOneWidget);
 
     client.taskResponse = _taskEnvelope(state: 'succeeded', canResume: false);
+    await tester.ensureVisible(find.text('刷新状态'));
     await tester.tap(find.text('刷新状态'));
     await tester.pumpAndSettle();
     expect(find.text('已保存并重新核验'), findsOneWidget);
@@ -351,6 +364,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('本次整理已中断'), findsOneWidget);
+    await tester.ensureVisible(find.text('继续这次整理'));
     await tester.tap(find.text('继续这次整理'));
     await tester.pumpAndSettle();
 
@@ -360,6 +374,7 @@ void main() {
     ]);
     expect(client.jobReads, isEmpty);
     expect(find.text('已受理，等待整理'), findsOneWidget);
+    await _expandRecovery(tester);
     expect(find.text(_taskId), findsOneWidget);
     expect(find.text('已保存并重新核验'), findsNothing);
   });
@@ -369,6 +384,7 @@ void main() {
 
     await tester.pumpWidget(_panelApp(client));
     await tester.pumpAndSettle();
+    await _expandRecovery(tester);
     await tester.enterText(
       find.byKey(const ValueKey('source-brief/reference')),
       _jobId,
@@ -383,7 +399,7 @@ void main() {
     expect(client.taskReads, isEmpty);
     expect(find.text('已保存并重新核验'), findsOneWidget);
     _expectSkipUnavailable(tester);
-    expect(find.text('可核验来源标题'), findsOneWidget);
+    expect(find.text('可核验来源标题'), findsWidgets);
     expect(find.widgetWithText(SelectableText, _jobId), findsOneWidget);
   });
 
@@ -406,6 +422,7 @@ void main() {
           await tester.binding.setSurfaceSize(Size(width, 900));
           await tester.pumpWidget(_panelApp(client, locale: locale));
           await tester.pumpAndSettle();
+          await _expandRecovery(tester);
           final reference = find.byKey(
             const ValueKey('source-brief/reference'),
           );
@@ -440,6 +457,82 @@ void main() {
     },
   );
 
+  testWidgets(
+    'question goes to real route and research paper shows bound source statements',
+    (tester) async {
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      for (final locale in [
+        const Locale('zh', 'CN'),
+        const Locale('en'),
+        const Locale('ko'),
+      ]) {
+        for (final (width, textScale) in [
+          (390.0, 1.0),
+          (1440.0, 1.0),
+          (390.0, 2.0),
+        ]) {
+          final client = _SourceBriefClient()
+            ..startResponse = _taskEnvelope(
+              state: 'succeeded',
+              canResume: false,
+            )
+            ..jobResponse = _researchJobEnvelope();
+          await tester.binding.setSurfaceSize(Size(width, 900));
+          await tester.pumpWidget(
+            _panelApp(client, locale: locale, textScale: textScale),
+          );
+          await tester.pumpAndSettle();
+          final input = find.byKey(const ValueKey('source-brief/question'));
+          await tester.ensureVisible(input);
+          await tester.enterText(
+            input,
+            '  Which report claims need checking?  ',
+          );
+          await _tapCreate(tester);
+          await tester.pumpAndSettle();
+          expect(
+            client.startCalls.single['businessQuestion'],
+            'Which report claims need checking?',
+          );
+          expect(
+            find.byKey(const ValueKey('source-brief/report-paper')),
+            findsOneWidget,
+          );
+          final excerpt = find.byKey(
+            const ValueKey('source-brief/finding/finding_1'),
+          );
+          await tester.ensureVisible(excerpt);
+          expect(
+            find.text('The secondary report mentioned 18% growth.'),
+            findsOneWidget,
+          );
+          expect(
+            find.text('Could the full source support this claim?'),
+            findsOneWidget,
+          );
+          expect(
+            find.text('18%'),
+            findsNothing,
+          ); // Numbers are folded with the comparability caveat.
+          final limits = find.byKey(
+            const ValueKey('source-brief/research-limits'),
+          );
+          await tester.ensureVisible(limits);
+          await tester.tap(
+            find.descendant(of: limits, matching: find.byType(ListTile)).first,
+          );
+          await tester.pumpAndSettle();
+          expect(find.text('18%'), findsOneWidget);
+          expect(
+            tester.takeException(),
+            isNull,
+            reason: '${locale.languageCode} / $width / scale$textScale',
+          );
+        }
+      }
+    },
+  );
+
   testWidgets('blocked CTH-10 still exposes a separate source-brief entry', (
     tester,
   ) async {
@@ -464,8 +557,10 @@ void main() {
 Widget _panelApp(
   LumenisCoreClient client, {
   Locale locale = const Locale('zh', 'CN'),
+  double textScale = 1,
 }) => _app(
   locale: locale,
+  textScale: textScale,
   child: SourceBriefPanel(
     key: ObjectKey(client),
     client: client,
@@ -516,6 +611,30 @@ void _expectSkipUnavailable(WidgetTester tester) {
   );
 }
 
+Future<void> _expandRecovery(WidgetTester tester) async {
+  final input = find.byKey(const ValueKey('source-brief/reference'));
+  if (input.evaluate().isNotEmpty) return;
+  final section = find.byKey(const ValueKey('source-brief/recovery-options'));
+  final header = find
+      .descendant(of: section, matching: find.byType(ListTile))
+      .first;
+  await tester.ensureVisible(header);
+  await tester.tap(header);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _expandPreferences(WidgetTester tester) async {
+  final choice = find.byKey(const ValueKey('source-brief/reveal/off'));
+  if (choice.evaluate().isNotEmpty) return;
+  final section = find.byKey(const ValueKey('source-brief/preferences'));
+  final header = find
+      .descendant(of: section, matching: find.byType(ListTile))
+      .first;
+  await tester.ensureVisible(header);
+  await tester.tap(header);
+  await tester.pumpAndSettle();
+}
+
 Future<void> _tapCreate(WidgetTester tester) async {
   final create = find.byKey(const ValueKey('source-brief/create'));
   await tester.ensureVisible(create);
@@ -563,6 +682,7 @@ Widget _cth10App(
 Widget _app({
   required Widget child,
   Locale locale = const Locale('zh', 'CN'),
+  double textScale = 1,
 }) => MaterialApp(
   locale: locale,
   supportedLocales: const [Locale('zh', 'CN'), Locale('en'), Locale('ko')],
@@ -573,6 +693,12 @@ Widget _app({
     LumenisLocalizations.delegate,
   ],
   theme: LumenisTheme.dark,
+  builder: (context, child) => MediaQuery(
+    data: MediaQuery.of(
+      context,
+    ).copyWith(textScaler: TextScaler.linear(textScale)),
+    child: child!,
+  ),
   home: Scaffold(body: child),
 );
 
@@ -884,6 +1010,73 @@ Map<String, dynamic> _savedJobEnvelope() => {
   },
   'publish_status': 'not_performed',
 };
+
+Map<String, dynamic> _researchJobEnvelope() {
+  final envelope = _savedJobEnvelope();
+  final result = envelope['result'] as Map<String, dynamic>;
+  result['business_question'] = 'Which report claims need checking?';
+  result['research_analysis'] = {
+    'schema': 'source_bound_research.v1',
+    'status': 'research_draft',
+    'scope': (result['source_brief'] as Map)['scope'],
+    'goal': 'Which report claims need checking?',
+    'summary': 'Source-bound reading draft.',
+    'source_set_sha256': 'c' * 64,
+    'permission_granted': false,
+    'canonical_promotion': false,
+    'ranked_findings': [
+      {
+        'finding_id': 'finding_1',
+        'source_id': 'SRC-001',
+        'lineage_id': 'lineage_1',
+        'content': 'The secondary report mentioned 18% growth.',
+        'title': '可核验来源标题',
+        'evidence_refs': ['EV-001'],
+        'claim_type': 'source_statement',
+        'validated': false,
+        'fact_verified': false,
+        'confidence': null,
+        'excerpt_truncated': true,
+      },
+    ],
+    'evidence_lineage': [
+      {
+        'lineage_id': 'lineage_1',
+        'source': 'SRC-001',
+        'evidence_id': 'EV-001',
+        'provenance': {'fact_verified': false},
+      },
+    ],
+    'hypotheses': [
+      {
+        'statement': 'Could the full source support this claim?',
+        'status': 'proposed',
+        'claim_type': 'hypothesis',
+        'confidence': null,
+        'source_set_sha256': 'c' * 64,
+        'finding_ids': ['finding_1'],
+        'evidence_refs': ['EV-001'],
+        'validation_needed': ['Check time, scope and independent evidence.'],
+      },
+    ],
+    'comparisons': [
+      {
+        'source_id': 'SRC-001',
+        'evidence_refs': ['EV-001'],
+        'numeric_literals': ['18%'],
+        'comparison_status': 'NOT_COMPARABLE_WITHOUT_MEASURE_DEFINITIONS',
+        'unit': null,
+        'currency': null,
+        'period': null,
+        'denominator': null,
+      },
+    ],
+    'limitations': [
+      'The report does not establish an observed business result.',
+    ],
+  };
+  return envelope;
+}
 
 const String _taskId = 'rbrief_01234567-89ab-cdef-0123-456789abcdef';
 const String _jobId = 'brief-0123456789abcdef0123456789abcdef';

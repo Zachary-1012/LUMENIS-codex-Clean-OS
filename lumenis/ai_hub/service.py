@@ -5,7 +5,7 @@ It retrieves product context and asks the owned runtime for analysis. It does
 not discover provider APIs or turn rule output into completed AI work.
 """
 from __future__ import annotations
-import os, sys, json, time, threading, logging
+import os, sys, json, time, threading, logging, re
 from datetime import datetime
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -24,23 +24,22 @@ _learn_lock = threading.Lock()
 LEARN_LOG = os.path.join(os.path.dirname(DB_PATH), "ai_learning_log.jsonl")
 
 SYSTEM_ROLE = (
-    "你是序境 LUMENIS 的业务助手，服务于 CTH 与 BMP 工作流。回答要求：\n"
-    "1. 只依据“系统内可核对数据”和用户给出的内容作答，数据不足就明确说不足，绝不编造数字、来源或事实；\n"
-    "2. 单一用户/单一来源的指控一律表述为“待证实”，不得写成已确认事实；\n"
-    "3. 结论优先、结构清晰，必要时分点；涉及风险给出可执行的下一步；\n"
-    "4. 你可以分析系统内任意模块（采集、事件、笔记、话题、案例库、报告、账号、风控），"
-    "但你只能提出建议，涉及写库/变更的动作会进入“影子队列”由人工确认，你不能直接改动客户数据；\n"
-    "5. 使用与用户相同的语言，简洁专业。"
+    "你是寰意 OEVIRA 的业务助手，服务于 CTH 与 BMP 工作流。回答要求：\n"
+    "1. 根据本次实际提供的用户材料与获准来源作答；来源不足、口径不明或证据相互冲突时清楚说明，不编造数字、来源或事实；\n"
+    "2. 区分可核验事实、来源主张、用户提供内容、推断与待核实事项；单一来源的指控不得写成已确认事实；\n"
+    "3. 用户要求研究、分析或写作时，直接给出可修改的有来源答案、分析或原创草稿，并提供结论、限制与可执行下一步；\n"
+    "4. 普通草稿保存、修订与版本由对应的现有工作流和权限合同处理；只有确属需审批的效果才进入相应审批/效果边界。不得宣称保存、变更或外部行动已完成，除非收到对应所有者的成功回执；\n"
+    "5. 只在本次确实绑定并核验来源时才声称使用了系统业务数据；功能目录不是业务数据。使用与用户相同的语言，简洁专业。"
 )
 
 MODULE_HINTS = {
     "collect": "采集中心：各平台采集任务、六态健康、动态风控、登录恢复。",
     "notes": "笔记库：各平台原始笔记、情感、风险、正文与发布时间。",
     "events": "事件中心：事件聚类、传播、影响、处置建议。",
-    "topics": "话题：热门话题、专题（如广州太古汇15周年）。",
+    "topics": "话题：按用户当前选定的主体、范围与时间分析话题；主体或证据未绑定时先说明，不默认任何参考主体。",
     "cases": "品牌营销案例库：历史公关/营销案例与应对公式。",
     "report": "报告中心：日报/周报、导出。",
-    "account": "账号与权限：三级角色、安全问答、登录态。",
+    "account": "主体与权限：仅依据当前已核验的主体、用户访问范围与权限状态回答；无法核验的状态明确标为未知。",
     "risk": "动态风控：健康/轻度/中度/需验证/IP风险/恢复 六态。",
 }
 
@@ -61,7 +60,9 @@ def status():
         return {**user_api_adapter.status(), "enabled": user_api_adapter.is_configured(),
                 "rule_fallback": False, "ok": True}
     try:
-        runtime = intelligence.owned_inference_status()
+        # Conversation consumes the independently admitted Shared service, not
+        # the legacy offline-evaluation handle or a business-domain slot.
+        runtime = intelligence.owned_inference_status('shared')
     except Exception:
         runtime = None
     if not isinstance(runtime, dict):
@@ -70,10 +71,19 @@ def status():
             "service_binding": "NOT_BOUND", "state": "UNAVAILABLE",
             "reason": "OWNED_RUNTIME_STATUS_UNAVAILABLE",
         }
+    from .conversations import conversation_source_use_policy
+    policy = conversation_source_use_policy()
+    service_available = runtime.get('available') is True and runtime.get('service_binding') == 'BOUND'
+    conversation_available = (service_available and policy['operation'] in runtime.get('allowed_operations', [])
+        and runtime.get('source_use_policy_version') == policy['version']
+        and runtime.get('source_use_policy_sha256') == policy['sha256'])
+    if service_available and not conversation_available:
+        runtime = {**runtime, 'state': 'UNAVAILABLE', 'reason': 'OWNED_CONVERSATION_POLICY_NOT_ADMITTED'}
     return {
         **runtime,
         "provider": "owned",
-        "enabled": runtime.get("available") is True and runtime.get("service_binding") == "BOUND",
+        "available": conversation_available, "enabled": conversation_available,
+        "service_available": service_available, "conversation_available": conversation_available,
         "rule_fallback": False,
         "fallback_allowed": False,
         "ok": True,
@@ -109,10 +119,14 @@ def _owned_result_text(result):
     if isinstance(analysis, str) and analysis.strip():
         return analysis.strip()
     if isinstance(analysis, dict):
-        for key in ("reply", "summary", "text", "content"):
+        for key in ("reply", "answer", "summary", "text", "content"):
             value = analysis.get(key)
             if isinstance(value, str) and value.strip():
                 return value.strip()
+    if isinstance(result, dict) and result.get('real_input_bound') is True:
+        text = result.get('text')
+        if isinstance(text, str) and text.strip():
+            return text.strip()
     return None
 
 
@@ -152,11 +166,29 @@ def invalid_chat_input(code, *, external_approval=None):
     return result
 
 
-def chat(question: str, history=None, scope: str = "all", *, source_scope=None, external_approval=None) -> dict:
+def chat(question: str, history=None, scope: str = "all", *, source_scope=None, external_approval=None,
+         _owned_request=None, is_cancelled=None, _include_evaluation_ref=False) -> dict:
     """Chat through the explicitly selected Gateway, without business data export."""
     t0 = time.time()
-    if not isinstance(question, str) or len(question) > 4000 or not isinstance(scope, str):
+    if (not isinstance(question, str) or (len(question) > 4000 and _owned_request is None)
+            or not isinstance(scope, str)):
         return invalid_chat_input("MESSAGE_INVALID", external_approval=external_approval)
+    if _owned_request is not None:
+        from lumenis.system.ai_gateway.owned_service import OwnedServiceRequest
+        from .conversations import conversation_source_use_policy
+        policy = conversation_source_use_policy()
+        if (type(_owned_request) is not OwnedServiceRequest
+                or _owned_request.operation != policy['operation']
+                or _owned_request.source_use_policy_version != policy['version']
+                or _owned_request.source_use_policy_sha256 != policy['sha256']):
+            return invalid_chat_input('CONVERSATION_TYPED_REQUEST_REQUIRED', external_approval=external_approval)
+    typed_source_bound = False
+    if _owned_request is not None:
+        try:
+            typed_material = json.loads(_owned_request.user_payload)['material']
+            typed_source_bound = typed_material.get('source_use_mode') == 'explicit_selected_sources'
+        except (KeyError, TypeError, ValueError):
+            return invalid_chat_input('CONVERSATION_TYPED_REQUEST_REQUIRED', external_approval=external_approval)
     question = question.strip()
     if not question:
         return invalid_chat_input("MESSAGE_REQUIRED", external_approval=external_approval)
@@ -186,22 +218,43 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None, 
     conversation = question
     if isinstance(history, list):
         turns = []
-        for item in history[-6:]:
+        for item in history:
             if not isinstance(item, dict) or item.get("role") not in {"user", "human", "assistant"}:
-                continue
+                return invalid_chat_input("CONVERSATION_HISTORY_INVALID", external_approval=external_approval)
             content = item.get("content")
             if isinstance(content, str) and content.strip():
                 role = "用户" if item["role"] in {"user", "human"} else "LUMENIS"
-                turns.append(f"{role}：{content[:800]}")
+                turns.append(f"{role}：{content}")
+            else:
+                return invalid_chat_input("CONVERSATION_HISTORY_INVALID", external_approval=external_approval)
         if turns:
-            conversation = "最近对话（用户提供，非核验事实）：\n" + "\n".join(turns) + "\n当前问题：" + question
+            conversation = "完整选定对话与人工任务状态（用户提供，非核验事实、授权或效果回执）：\n" + "\n".join(turns) + "\n当前问题：" + question
     # Both routes must receive the same bounded, caller-supplied conversation.
     # Passing only the last question makes follow-up turns lose their context.
     prompt = sys_prompt + "\n\n用户对话：" + conversation
+    # The selected external transport has a hard 32k-character envelope. This
+    # is a transport limit, not a token estimate. Never silently cut constraints
+    # or writing to fit a model whose tokenizer has not been admitted here.
     from lumenis.system.ai_gateway import user_api_adapter
+    external_selected = user_api_adapter.is_selected()
+    if external_selected and typed_source_bound:
+        return {'ok': False, 'status': 'BLOCKED',
+            'code': 'CONVERSATION_SOURCE_EXTERNAL_TRANSMISSION_NOT_GRANTED',
+            'reply': None, 'provider': 'owned', 'generation_performed': False,
+            'source_context': {'scope_state': 'EXTERNAL_TRANSMISSION_NOT_GRANTED',
+                'business_retrieval_state': 'NOT_SENT', 'notes_state': 'NOT_READ', 'events_state': 'NOT_READ'}}
+    if (external_selected or _owned_request is None) and len(sys_prompt) + len(conversation) > 32000:
+        return {"ok": False, "status": "BLOCKED", "code": "CONVERSATION_CONTEXT_EXCEEDS_TRANSPORT_LIMIT",
+                "reply": None, "generation_performed": False,
+                "context_accounting": {"transport_characters": len(sys_prompt) + len(conversation),
+                    "transport_character_limit": 32000, "token_budget_verified": False,
+                    "recovery": "EXPLICIT_CONTEXT_CORRECTION_OR_FORGET_REQUIRED"}}
     usage = None
     approval_request = None
-    if user_api_adapter.is_selected():
+    model_budget = None
+    owned_provenance = None
+    owned_evaluation_call_ref = None
+    if external_selected:
         # Only user-entered conversation and static routing metadata go out.
         # Configuring an API does not grant export of stored business sources.
         content, transport, _meta = intelligence.chat(
@@ -230,9 +283,66 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None, 
         completed = False
         provider = "user_api"
     else:
-        result = _run_owned(prompt, "conversation")
+        if _owned_request is not None:
+            from lumenis.ai_hub.context_pack import run_budgeted_owned_request
+            from lumenis.system.ai_gateway.owned_service import owned_service_request_digest
+            result = run_budgeted_owned_request(_owned_request, is_cancelled=is_cancelled)
+            if type(result) is not dict:
+                result = {'ok': False, 'status': 'ERROR',
+                    'code': 'OWNED_CONVERSATION_RESULT_INVALID', 'provider': 'owned'}
+            elif result.get('ok') is True and (
+                    result.get('status') != 'COMPLETED'
+                    or type(result.get('attempt_id')) is not str
+                    or not re.fullmatch(r'attempt_[0-9a-f]{32}', result.get('attempt_id', ''))
+                    or type(result.get('run_id')) is not str or not result.get('run_id')
+                    or result.get('real_input_bound') is not True
+                    or result.get('request_digest') != owned_service_request_digest(_owned_request)
+                    or result.get('operation') != _owned_request.operation
+                    or result.get('domain_id') != _owned_request.domain_id
+                    or result.get('scope') != _owned_request.scope
+                    or result.get('input_revision_sha256') != _owned_request.input_revision_sha256
+                    or result.get('source_binding_sha256') != _owned_request.source_binding_sha256):
+                original = result
+                result = {'ok': False, 'status': 'ERROR', 'code': 'OWNED_CONVERSATION_RESULT_INVALID',
+                    'provider': 'owned', 'real_input_bound': False}
+                # Keep only opaque execution/version identifiers so Evaluation
+                # can record a real but rejected attempt without retaining text.
+                for key in ('attempt_id', 'request_digest', 'run_id', 'model_id', 'model_revision',
+                            'runtime_sha256', 'executor_sha256', 'operation', 'domain_id', 'scope',
+                            'input_revision_sha256', 'source_binding_sha256', 'prompt_tokens',
+                            'completion_tokens', 'total_tokens'):
+                    value = original.get(key)
+                    if type(value) in (str, int) and (type(value) is not str or len(value) <= 512):
+                        result[key] = value
+                if type(original.get('context_accounting')) is dict:
+                    result['context_accounting'] = original['context_accounting']
+            model_budget = result.get('context_accounting')
+        else:
+            result = _run_owned(prompt, "conversation")
         completed = _completed(result)
         provider = "owned"
+        if _owned_request is not None:
+            try:
+                from lumenis.shared.evaluation.ai import record_owned_gateway_execution
+                owned_evaluation_call_ref = record_owned_gateway_execution(
+                    _owned_request, result, latency_ms=max(0, int((time.time() - t0) * 1000)))
+            except Exception:
+                # Evaluation is a non-blocking side record. Its absence stays
+                # unlinked in the conversation instead of fabricating a PASS.
+                owned_evaluation_call_ref = None
+        if completed and _owned_request is not None:
+            owned_provenance = {key: value for key, value in result.items() if key in {
+                'operation', 'request_id', 'request_digest', 'run_id', 'model_id', 'model_revision',
+                'recipe', 'domain_id', 'scope', 'candidate_identity_sha256', 'runtime_sha256',
+                'executor_sha256', 'manifest_sha256', 'adapter_sha256', 'adapter_config_sha256',
+                'input_revision_sha256', 'source_binding_sha256', 'source_evidence_refs',
+                'source_use_policy_version', 'source_use_policy_sha256', 'source_audit_ids',
+                'admission_request_sha256', 'evaluation_ref', 'quality_review_ref', 'evaluation_state',
+                'quality_state', 'product_acceptance', 'context_window_tokens', 'output_token_limit'}}
+            if _include_evaluation_ref is True and owned_evaluation_call_ref:
+                owned_provenance['evaluation_call_ref'] = owned_evaluation_call_ref
+            usage = {key: result[key] for key in ('prompt_tokens', 'completion_tokens', 'total_tokens')
+                     if type(result.get(key)) is int and result[key] >= 0} or None
     record_learning("chat", {
         # An inference request grants neither corpus admission nor retention
         # of raw conversation. Keep operational counts, never input/output.
@@ -247,16 +357,20 @@ def chat(question: str, history=None, scope: str = "all", *, source_scope=None, 
         ) or "ERROR",
         "code": None if completed else (result.get("code") or "OWNED_ANALYSIS_NOT_COMPLETED"),
         "reply": _owned_result_text(result) if completed else None,
-        "provider": provider, "model": st.get("model_id"), "runtime": st.get("state"),
+        "provider": provider, "model": result.get('model_id') or st.get("model_id"), "runtime": st.get("state"),
+        "model_budget": model_budget, "owned_provenance": owned_provenance,
         "usage": usage, "approval_request": approval_request, "audit_id": result.get("audit_id"),
         "used_rule_fallback": False, "fallback_allowed": False, "targets": targets,
         "context": context,
         "source_context": {
-            "scope_state": "SOURCE_USE_NOT_BOUND_FOR_CONVERSATION",
-            "business_retrieval_state": "UNAVAILABLE_TYPED_SOURCE_USE_OPERATION_REQUIRED",
+            "scope_state": "SOURCE_USE_VERIFIED_FOR_REQUEST" if typed_source_bound and completed else
+                "SOURCE_USE_NOT_BOUND_FOR_CONVERSATION",
+            "business_retrieval_state": "EXPLICITLY_SELECTED_INTERNAL_SOURCES_ONLY" if typed_source_bound and completed else
+                "UNAVAILABLE_TYPED_SOURCE_USE_OPERATION_REQUIRED",
             "notes_state": "NOT_READ",
             "events_state": "NOT_READ",
         },
+        "owned_analysis": result.get('analysis') if typed_source_bound and type(result.get('analysis')) is dict else None,
         "matched": {"brands": len(hits.get("brands", [])), "cases": len(hits.get("cases", [])),
                     "notes": 0, "events": 0},
         "elapsed_seconds": round(time.time() - t0, 2),

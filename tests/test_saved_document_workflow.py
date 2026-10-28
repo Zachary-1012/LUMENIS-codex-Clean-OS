@@ -62,6 +62,77 @@ def _source(workspace, *, filename="source.txt", source_url="https://www.swirepr
     return path, args, result
 
 
+@pytest.mark.parametrize("fault", ["missing_ring", "invalid_ring", "missing_active", "unknown_active"])
+def test_document_import_signer_configuration_fails_before_any_write(workspace, monkeypatch, fault):
+    ws = workspace
+    path = ws["root"] / "signer-preflight.txt"
+    path.write_text("Isolated original document, never a production input.", encoding="utf-8")
+    args = {"actor": ws["actor"], "scope": ws["scope"], "provenance": {
+        "source_url": "https://example.org/signer-preflight", "published_at": None,
+        "captured_at": "2026-10-24T00:00:00Z", "rights": "public-reference-only", "title": "Signer preflight"}}
+    resource = ws["documents"].document_import_resource(str(path), **args)
+    ws["gate"].grant_approval("data_import", resource=resource, granted_by="isolated-test")
+    before = [ws["repo"].query_one("SELECT COUNT(*) FROM " + table)[0] for table in
+              ("app_evidence_records", "canonical_data", "lumenis_shared_artifacts")]
+    if fault == "missing_ring":
+        monkeypatch.delenv("LUMENIS_EVIDENCE_HMAC_KEY_RING")
+    elif fault == "invalid_ring":
+        monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_KEY_RING", "invalid-json")
+    elif fault == "missing_active":
+        monkeypatch.delenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID")
+    else:
+        monkeypatch.setenv("LUMENIS_EVIDENCE_HMAC_ACTIVE_KEY_ID", "not-configured")
+    for call in (ws["documents"].document_import_resource, ws["documents"].import_document):
+        with pytest.raises(ValueError, match="^DOCUMENT_EVIDENCE_SIGNING_UNAVAILABLE$"):
+            call(str(path), **args)
+    after = [ws["repo"].query_one("SELECT COUNT(*) FROM " + table)[0] for table in
+             ("app_evidence_records", "canonical_data", "lumenis_shared_artifacts")]
+    assert after == before
+    assert not [path for path in (ws["root"] / "artifacts").rglob("*") if path.is_file()]
+
+
+@pytest.mark.parametrize("configuration_lost", [False, True])
+def test_document_signing_failure_rolls_back_with_stable_owner_code(workspace, monkeypatch, configuration_lost):
+    from lumenis.shared.evidence import store
+
+    ws = workspace
+    path = ws["root"] / "signer-race.txt"
+    path.write_text("Isolated signed source.", encoding="utf-8")
+    args = {"actor": ws["actor"], "scope": ws["scope"], "provenance": {
+        "source_url": "https://example.org/signer-race", "published_at": None,
+        "captured_at": "2026-10-24T00:00:00Z", "rights": "public-reference-only", "title": "Signer race"}}
+    resource = ws["documents"].document_import_resource(str(path), **args)
+    ws["gate"].grant_approval("data_import", resource=resource, granted_by="isolated-test")
+    def fail_signature(*args, **kwargs):
+        if configuration_lost:
+            monkeypatch.delenv("LUMENIS_EVIDENCE_HMAC_KEY_RING")
+        raise store.EvidenceIntegrityError("Untrusted or unavailable signature")
+    monkeypatch.setattr(store, "_sign_evidence_record", fail_signature)
+    code = "DOCUMENT_EVIDENCE_SIGNING_UNAVAILABLE" if configuration_lost else "DOCUMENT_EVIDENCE_INTEGRITY_FAILED"
+    with pytest.raises(ValueError, match="^" + code + "$"):
+        ws["documents"].import_document(str(path), **args)
+    for table in ("app_evidence_records", "canonical_data", "lumenis_shared_artifacts"):
+        assert ws["repo"].query_one("SELECT COUNT(*) FROM " + table)[0] == 0
+    assert not [path for path in (ws["root"] / "artifacts").rglob("*") if path.is_file()]
+
+
+def test_document_configuration_error_keeps_stable_shared_api_status(workspace, monkeypatch):
+    from experience_runtime import _shared_work_response
+
+    path = workspace["root"] / "api-signer-preflight.txt"
+    path.write_text("Isolated API signer preflight.", encoding="utf-8")
+    monkeypatch.delenv("LUMENIS_EVIDENCE_HMAC_KEY_RING")
+    response, status = _shared_work_response(lambda: workspace["documents"].document_import_resource(
+        str(path), actor=workspace["actor"], scope=workspace["scope"], provenance={
+            "source_url": "https://example.org/api-signer-preflight", "published_at": None,
+            "captured_at": "2026-10-24T00:00:00Z", "rights": "public-reference-only", "title": "API preflight"}))
+    body = response.get_json()
+    assert status == 503
+    assert body["ok"] is False and body["code"] == "DOCUMENT_EVIDENCE_SIGNING_UNAVAILABLE"
+    assert "persistence_state" not in body
+    assert response.headers["Cache-Control"] == "no-store"
+
+
 def _save(workspace, *, request_id="request-0001", **changes):
     params = {"title": "Research draft", "markdown": "A source-backed draft for review.",
               "kind": "research", "payload": {"unknowns": ["Usefulness needs user review"]},

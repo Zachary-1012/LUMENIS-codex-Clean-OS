@@ -1,3 +1,4 @@
+import 'dart:convert';
 import '../../../core/lumenis_core_client.dart';
 
 enum Cth01BackendState {
@@ -162,14 +163,40 @@ class Cth01Repository {
       throw const Cth01ContextUnavailable(Cth01BlockReason.contextUnavailable);
     }
 
+    final signature = jsonEncode(_client.currentContextEnvelope);
     final response = await _client.screen('CTH-01');
+    if (signature != jsonEncode(_client.currentContextEnvelope)) {
+      throw const Cth01ContextUnavailable(Cth01BlockReason.contextUnavailable);
+    }
     if (response['ok'] != true || response['screen'] != 'CTH-01') {
       throw const FormatException(
         'CTH-01 response does not match its contract',
       );
     }
-    final focusBinding = _map(response['focus_binding']);
-    if (focusBinding?['applied'] != true || response['bound'] != true) {
+    final global = mode == 'GLOBAL_ALL';
+    final binding = _map(response[global ? 'global_binding' : 'focus_binding']);
+    final policyAllowed = switch (binding?['policy']) {
+      'local-workspace-read-v1' =>
+        binding?['actor_scope'] == 'anonymous_read' &&
+            binding?['global_all_granted'] == false,
+      'actor-exact-scope-v1' =>
+        binding?['actor_scope'] == 'authenticated' &&
+            binding?['global_all_granted'] == global,
+      _ => false,
+    };
+    if (response['bound'] != true ||
+        response['source'] != 'runtime' ||
+        binding?['contract'] != 'lumenis.scope-read-binding.v1' ||
+        binding?['module'] != 'commercial_realtime_stream' ||
+        binding?['domain_id'] != 'CTH' ||
+        binding?['product_id'] != 'CTH' ||
+        binding?['canonical_scope'] != mode ||
+        binding?['applied'] != true ||
+        binding?['read_allowed'] != true ||
+        binding?['scope_verified'] != true ||
+        binding?.containsKey('subject_id') != true ||
+        binding?['subject_id'] != (global ? null : context['subject_id']) ||
+        !policyAllowed) {
       throw const Cth01ContextUnavailable(Cth01BlockReason.pageNotBound);
     }
 

@@ -14,9 +14,6 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from lumenis.system.ai_gateway.owned_training import TrainingApprovalRequest, TrainingBlocked
 from lumenis.system.ai_gateway.owned_training_phases import TrainingPhaseClient
 from lumenis.system.security import permission as p, training_receipts as receipts
-from tests.test_owned_training_phase_http_v2 import phase_http, strict_permission_mode
-
-pytestmark = pytest.mark.usefixtures("strict_permission_mode")
 
 
 def _context(request):
@@ -199,121 +196,12 @@ def test_wrong_challenge_binding_never_requests_decision(bound_phase, mutation):
     assert not any(path.endswith("/challenge-decisions") for _, path, _ in server.calls)
 
 
-def test_plain_allow_without_phase_client_cannot_start_compute(tmp_path, monkeypatch):
+def test_withdrawn_gpu_training_never_starts_from_plain_allow(tmp_path, monkeypatch):
     from tests.test_owned_ai_training import _inputs
     from lumenis.system.ai_gateway import owned_training as training
     paths = _inputs(tmp_path, monkeypatch)
     monkeypatch.setattr(training, "_require_cuda", lambda: pytest.fail("compute before phase binding"))
-    with pytest.raises(TrainingBlocked, match="TRANSPORT_NOT_BOUND"):
+    with pytest.raises(TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
         training.run_owned_lora_training(paths[0], paths[2], paths[3], paths[4], manifest_path=paths[1], execute=True,
                                         approval_verifier=lambda request: True)
-    assert not paths[-1].exists()
-
-
-def _real_http_client(case):
-    grant = case["grant"]("account")
-    material = case["request_data"]
-    request = TrainingApprovalRequest(**{**material, "scopes": tuple(material["scopes"])})
-    calls = []
-    def transport(method, path, body):
-        calls.append((method, path, copy.deepcopy(body)))
-        response = case["client"].open(path, method=method,
-            json=body if body is not None else None,
-            headers={"Host": "localhost", "X-Domain-Id": "CTH", "X-Product-Id": "CTH",
-                     "X-Lumenis-Context-Mode": "GLOBAL_ALL", "Authorization": grant["identity"]},
-            environ_overrides={"REMOTE_ADDR": "127.0.0.1"})
-        if response.status_code not in {200, 202}: raise ConnectionError("isolated HTTP denied")
-        return response.get_json()
-    client = TrainingPhaseClient(request, {"scope_descriptors": case["body"]["scope_descriptors"]},
-        actor_id=grant["actor_id"], pinned_public_key=case["initial_public_key"], transport=transport)
-    return request, client, grant, calls
-
-
-def test_actual_metadata_routes_accept_full_nine_phase_chain(phase_http):
-    request, client, grant, calls = _real_http_client(phase_http)
-    phases = ["initial", "before_output_dir", "before_train", "step_begin", "substep_end",
-              "substep_end", "pre_optimizer_step", "step_begin", "pre_optimizer_step",
-              "before_adapter_save", "before_tokenizer_save", "after_saved_artifact_check"]
-    for phase in phases: client.authorize(request, phase)
-    assert client._sequence == len(phases) + 1
-    for method, path, body in calls:
-        assert set(body) <= {"training_request", "scope_descriptors", "phase", "challenge"}
-        assert grant["approval_token"] not in json.dumps(body)
-    assert client.read_last_history()["authorization_usable"] is False
-
-
-def test_actual_grant_revocation_denies_next_caller_phase(phase_http):
-    request, client, grant, calls = _real_http_client(phase_http)
-    client.authorize(request, "initial")
-    assert phase_http["gate"].revoke_approval(grant["approval_token"])
-    with pytest.raises(TrainingBlocked, match="TRANSPORT_FAILED"):
-        client.authorize(request, "before_output_dir")
-    assert client._sequence == 2
-
-
-def _simulated_training_with_actual_metadata(case, tmp_path, monkeypatch, boundary=None):
-    """Real owners/DB/signatures; synthetic snapshot and compute are explicitly fixtures."""
-    from dataclasses import asdict
-    from tests.test_owned_ai_training import _inputs, _mock_training_stack
-    from lumenis.system.ai_gateway import owned_training as training
-    paths = _inputs(tmp_path, monkeypatch)
-    data = training.run_owned_lora_training(paths[0], paths[2], paths[3], paths[4], manifest_path=paths[1])
-    request = TrainingApprovalRequest(data["model_id"], data["model_revision"], data["train_sha256"],
-        data["heldout_sha256"], tuple(data["scopes"]), data["training_recipe"], data["manifest_sha256"], data["domain_id"])
-    material = asdict(request)
-    material["scopes"] = list(request.scopes)
-    case["request_data"].clear()
-    case["request_data"].update(material)
-    observed = _mock_training_stack(monkeypatch, boundary=boundary)
-    request, client, grant, calls = _real_http_client(case)
-    verifier = p.make_owned_training_approval_verifier(case["gate"], actor_id=grant["actor_id"],
-        domain_id=request.domain_id, context=_context(request))
-    def execute():
-        with case["app"].test_request_context("/", headers={"Authorization": grant["identity"]},
-                environ_overrides={"REMOTE_ADDR": "127.0.0.1"}):
-            return training.run_owned_lora_training(paths[0], paths[2], paths[3], paths[4],
-                manifest_path=paths[1], execute=True, approval_verifier=verifier, phase_client=client)
-    return execute, client, calls, observed, paths
-
-
-def test_simulated_compute_composes_all_nine_boundaries_with_actual_metadata(phase_http, tmp_path, monkeypatch):
-    execute, client, calls, observed, paths = _simulated_training_with_actual_metadata(phase_http, tmp_path, monkeypatch)
-    result = execute()
-    assert result["execution_state"] == "TRAINED_NOT_EVALUATED"
-    assert result["candidate_status"] == "NOT_EVALUATED"
-    phases = [body["phase"] for method, path, body in calls if path.endswith("/challenges")]
-    assert phases == ["initial", "before_output_dir", "before_train", "step_begin", "substep_end",
-                      "pre_optimizer_step", "before_adapter_save", "before_tokenizer_save", "after_saved_artifact_check"]
-    assert observed["optimizer_steps"] == observed["save_calls"] == 1
-    assert (paths[-1] / "adapter_model.safetensors").read_bytes() == b"synthetic-unit-artifact"
-
-
-def test_simulated_worker_cancel_with_actual_metadata_stops_before_optimizer(phase_http, tmp_path, monkeypatch):
-    client_box = []
-    def boundary(name):
-        if name == "0:on_pre_optimizer_step": client_box[0].cancel()
-    execute, client, calls, observed, paths = _simulated_training_with_actual_metadata(
-        phase_http, tmp_path, monkeypatch, boundary=boundary)
-    client_box.append(client)
-    with pytest.raises(TrainingBlocked, match="CANCELLED_AT_BOUNDARY"): execute()
-    assert observed["optimizer_steps"] == observed["save_calls"] == 0
-    assert not (paths[-1] / "adapter_model.safetensors").exists()
-    assert json.loads((paths[-1] / "training_status.json").read_text())["execution_state"] == "TRAINING_CANCELLED_AT_BOUNDARY"
-
-
-def test_actual_metadata_lost_response_prevents_output_write_and_physical_retry(phase_http, tmp_path, monkeypatch):
-    execute, client, calls, observed, paths = _simulated_training_with_actual_metadata(phase_http, tmp_path, monkeypatch)
-    actual_transport = client._transport
-    def lost_reply(method, path, body):
-        reply = actual_transport(method, path, body)
-        if path.endswith("/challenge-decisions") and body["challenge"]["phase"] == "before_output_dir":
-            raise ConnectionError("isolated response loss after actual metadata commit")
-        return reply
-    client._transport = lost_reply
-    with pytest.raises(TrainingBlocked, match="TRANSPORT_FAILED"): execute()
-    assert not paths[-1].exists() and observed["train_calls"] == 0
-    history = client.read_last_history()
-    assert history["authorization_usable"] is False and history["challenge"]["phase"] == "before_output_dir"
-    with pytest.raises(TrainingBlocked, match="PHYSICAL_RECOVERY_REQUIRED"):
-        client.authorize(client._request, "before_output_dir")
     assert not paths[-1].exists()

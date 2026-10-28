@@ -18,7 +18,7 @@ jobs:
   verify:
     name: production source integrity + runtime prerequisites
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -97,12 +97,13 @@ jobs:
       - name: Prepare product schema and media tools (BLOCKING)
         shell: bash
         run: |
-          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+          if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1 || ! test -f /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc; then
             sudo apt-get update -qq
-            sudo apt-get install -y --no-install-recommends ffmpeg
+            sudo apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk
           fi
           ffmpeg -version
           ffprobe -version
+          test -f /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
 
       - name: Prepare disposable product schema (BLOCKING)
         shell: bash
@@ -114,7 +115,7 @@ jobs:
 
 
       - name: Run isolated unit and integration regressions (BLOCKING)
-        timeout-minutes: 6
+        timeout-minutes: 10
         shell: bash
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
@@ -122,7 +123,7 @@ jobs:
           PYTHONUNBUFFERED: "1"
         run: |
           set -o pipefail
-          timeout --signal=TERM --kill-after=15s 300s python - <<'PY' 2>&1 | tee "$RUNNER_TEMP/oevira-offline.log"
+          timeout --signal=TERM --kill-after=15s 540s python - <<'PY' 2>&1 | tee "$RUNNER_TEMP/oevira-offline.log"
           import os, pathlib, socket, tempfile
           root = pathlib.Path(tempfile.mkdtemp(prefix='lumenis-ci-regression-'))
           for key in list(os.environ):
@@ -149,6 +150,10 @@ jobs:
           # Keep full node identities in XML, not multi-megabyte parameter IDs
           # on the runner live log transport. Selection and assertions unchanged.
           import pytest
+          class FailureLog:
+              def pytest_runtest_logreport(self, report):
+                  if report.failed:
+                      print('\nFAILED ' + report.nodeid[:400] + '\n' + str(report.longrepr)[-6000:], flush=True)
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-offline.xml'),
               'tests/test_rectification_truth_chain_20261010.py',
@@ -156,6 +161,25 @@ jobs:
               'tests/test_experience_source_retirement.py', '.codex/tests/test_engineering.py',
               'tests/test_ai_task_engine.py', 'tests/test_content_generation_parent_evidence.py',
               'tests/test_ai_conversation_migration.py',
+              'tests/test_ai_context_pack.py',
+              'tests/test_ai_hub_owned_gateway.py',
+              'tests/test_audit_inventory_boundaries.py',
+              'tests/test_business_work_owner_routes.py',
+              'tests/test_business_domain_workbench.py',
+              'tests/test_business_execution_observations.py',
+              'tests/test_business_single_derived_revision.py',
+              'tests/test_agent_conversation_context.py',
+              'tests/test_collector_manual_task_continuity.py',
+              'tests/test_collector_native_source_consumers.py',
+              'tests/test_collected_media_consumer.py',
+              'tests/test_public_source_transport.py',
+              'tests/test_agent_runtime_http_binding.py',
+              'tests/agent_runtime/test_loop_execution_resume.py',
+              'tests/test_office_package_editing.py',
+              'tests/test_office_owner_routes.py',
+              'tests/test_workspace_evidence_signing.py',
+              'tests/test_database_backup_signing_contract.py',
+              'tests/test_database_restore_contract.py',
               'tests/test_cold_start_owner_initialization.py',
               'tests/test_xhs_cdp_native_truth.py', 'tests/test_source_brief_job.py',
               'tests/test_business_decision_workflow.py', 'tests/test_runtime_api_diagnostics.py',
@@ -180,7 +204,7 @@ jobs:
               'tests/test_owned_training_runtime_recovery.py::test_unbound_invocation_reaps_real_managed_worker_without_waiting',
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_preserves_private_venv_for_start_replace_and_reap',
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_invalid_interpreter_before_spawn',
-              'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_identity_or_entry_change_and_reaps']))
+              'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_identity_or_entry_change_and_reaps'], plugins=[FailureLog()]))
           PY
 
       - name: Verify adopted candidate contracts and media integrity (BLOCKING)
@@ -189,6 +213,7 @@ jobs:
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
           PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONUNBUFFERED: "1"
         run: |
           python - <<'PY'
           import os, pathlib, socket, tempfile
@@ -213,10 +238,46 @@ jobs:
           finally:
               connection.close()
           import pytest
+          class FailureLog:
+              def pytest_runtest_logreport(self, report):
+                  if report.failed:
+                      print('\nFAILED ' + report.nodeid[:400] + '\n' + str(report.longrepr)[-6000:], flush=True)
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-candidates.xml'),
+              # These browser nodes run below in the required offline Chromium namespace.
+              '--deselect=tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_installed_runtime_visible_native_read_and_original_custody',
+              '--deselect=tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_denial_and_private_subrequests_stop_without_backend_switch',
               '--basetemp=' + str(root / 'pytest'),
-              '-k', 'not test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation',
+              'tests/test_agent_planner_evaluation.py',
+              'tests/test_agent_skill_contract_binding.py',
+              'tests/test_ai_conversation_evaluation_feedback.py',
+              'tests/test_ai_memory_passages.py',
+              'tests/test_builtin_skill_discovery_execution.py',
+              'tests/test_builtin_skill_status_confirmation.py',
+              'tests/test_business_action_costs.py',
+              'tests/test_business_global_sources.py',
+              'tests/test_collected_public_research_workflow.py',
+              'tests/test_collected_source_use.py',
+              'tests/test_collector_comment_pages.py',
+              'tests/test_collector_native_author_data.py',
+              'tests/test_collector_native_comment_adapters.py',
+              'tests/test_collector_public_browser.py',
+              'tests/test_collector_public_original.py',
+              'tests/test_collector_request_confirmation.py',
+              'tests/test_comment_page_source_use.py',
+              'tests/test_comment_research_saved_work.py',
+              'tests/test_content_source_streaming.py',
+              'tests/test_korean_public_platform_adapters.py',
+              'tests/test_native_api_page_windows.py',
+              'tests/test_native_browser_page_windows.py',
+              'tests/test_owned_conversation_consumer.py',
+              'tests/test_owned_creation_research_parent.py',
+              'tests/test_owned_creation_shared_accounts.py',
+              'tests/test_owned_creation_workflow.py',
+              'tests/test_session_adapter_page_windows.py',
+              'tests/test_sh02_collected_sources.py',
+              'tests/test_timeline_track_controls.py',
+              'tests/test_visual_document_workflow.py',
               'tests/test_risk_dual_domain.py',
               'tests/test_internal_pitch_workflow.py',
               'tests/test_saved_work_pptx_exports.py',
@@ -261,8 +322,9 @@ jobs:
               'tests/test_video_editing_core.py',
               'tests/test_timeline_rendering.py',
               'tests/test_audio_timeline_rendering.py',
+              'tests/test_media_long_programme_contract.py',
               'tests/test_internal_pitch_shared_av.py::test_pitch_owner_response_preserves_unavailable_and_denied',
-              'tests/test_internal_pitch_shared_av.py::test_pitch_unauthenticated_read_cannot_initialize_account_database']))
+              'tests/test_internal_pitch_shared_av.py::test_pitch_unauthenticated_read_cannot_initialize_account_database'], plugins=[FailureLog()]))
           PY
 
       - name: Test owner HTTP authorization with owned ephemeral listener (BLOCKING)
@@ -309,7 +371,7 @@ jobs:
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-owned-http.xml'),
               'tests/test_ai_conversation_owner.py',
-              'tests/test_owned_training_runtime_recovery.py::test_actual_authenticated_phase_http_preserves_original_task_pin_and_fresh_revocation']))
+              'tests/test_scoped_derived_memory.py']))
           PY
 
       - name: Test owned loopback HTTP consistency (BLOCKING)
@@ -328,27 +390,30 @@ jobs:
           os.environ.update(ZBC_DB_PATH=str(root/'seed.sqlite3'), ZBC_DATA_DIR=str(root),
               LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
               XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
-          original_connect = socket.socket.connect
-          original_connect_ex = socket.socket.connect_ex
-          original_bind = socket.socket.bind
-          original_getaddrinfo = socket.getaddrinfo
-          def no_other_network(*args, **kwargs):
-              raise RuntimeError('LOOPBACK_FIXTURE_OTHER_NETWORK_FORBIDDEN')
-          def local_address(host, port, *args, **kwargs):
-              if host != '127.0.0.1' or port != 8201:
-                  return no_other_network()
-              return original_getaddrinfo(host, port, *args, **kwargs)
-          socket.getaddrinfo = local_address
-          socket.gethostbyname = lambda host: '127.0.0.1' if host == '127.0.0.1' else no_other_network()
-          socket.gethostbyaddr = lambda host: ('localhost', [], ['127.0.0.1']) if host == '127.0.0.1' else no_other_network()
-          socket.socket.sendto = no_other_network
-          def checked(original, sock, address):
-              if not isinstance(address, tuple) or address[:2] != ('127.0.0.1', 8201):
-                  raise RuntimeError('LOOPBACK_FIXTURE_OTHER_NETWORK_FORBIDDEN')
-              return original(sock, address)
-          socket.socket.connect = lambda sock, address: checked(original_connect, sock, address)
-          socket.socket.connect_ex = lambda sock, address: checked(original_connect_ex, sock, address)
-          socket.socket.bind = lambda sock, address: checked(original_bind, sock, address)
+          import sqlite3
+          from lumenis.shared.database import apply_business_schema
+          connection = sqlite3.connect(root/'seed.sqlite3')
+          try:
+              apply_business_schema(connection)
+              connection.commit()
+          finally:
+              connection.close()
+          original_bind, original_connect = socket.socket.bind, socket.socket.connect
+          owned_ports = set()
+          def denied(*args, **kwargs):
+              raise RuntimeError('ONLY_OWNED_EPHEMERAL_HTTP_FIXTURE_ALLOWED')
+          def bind(sock, address):
+              if not isinstance(address, tuple) or address[:2] != ('127.0.0.1', 0):
+                  return denied()
+              result = original_bind(sock, address)
+              owned_ports.add(sock.getsockname()[1])
+              return result
+          def connect(sock, address):
+              if not isinstance(address, tuple) or address[0] != '127.0.0.1' or address[1] not in owned_ports:
+                  return denied()
+              return original_connect(sock, address)
+          socket.socket.bind, socket.socket.connect = bind, connect
+          socket.socket.connect_ex = socket.socket.sendto = denied
           import pytest
           raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-http.xml'),
@@ -396,10 +461,20 @@ jobs:
               LUMENIS_TEST_SEED_DB=str(root/'seed.sqlite3'), ZBC_TEST_OFFLINE='1',
               LUMENIS_TEST_REAL_BROWSER='1', LUMENIS_TEST_CHROMIUM_EXECUTABLE=executable,
               XHS_PRODUCTION='0', ZBC_PREFLIGHT_ENFORCE='0', ZBC_GUARDIAN_ENABLED='0')
+          import sqlite3
+          from lumenis.shared.database import apply_business_schema
+          connection = sqlite3.connect(root/'seed.sqlite3')
+          try:
+              apply_business_schema(connection)
+              connection.commit()
+          finally:
+              connection.close()
           import pytest
           raise SystemExit(pytest.main(['-vv', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-browser.xml'),
-              'tests/test_browser_extract.py::test_real_chromium_visible_capture_without_network']))
+              'tests/test_browser_extract.py::test_real_chromium_visible_capture_without_network',
+              'tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_installed_runtime_visible_native_read_and_original_custody',
+              'tests/test_collector_public_browser.py::PublicBrowserBoundaryTests::test_denial_and_private_subrequests_stop_without_backend_switch']))
           PY
 
       - name: Preserve real fixture XML receipts

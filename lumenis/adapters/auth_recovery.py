@@ -335,9 +335,45 @@ def _read_auth_cookies(platform: str, launch: bool = False, cfg: Optional[dict] 
         hb.connect()
         # context 级读 cookie，无需新开标签（不打扰用户正在用的窗口）
         jars = hb._context.cookies(cfg["login_url"])
-        ck = {c.get("name"): (c.get("value") or "")[:8] for c in jars}
+        ck = {c.get('name'):True for c in jars
+              if c.get('name') in cfg['auth_cookies'] and c.get('value')}
         have = [k for k in cfg["auth_cookies"] if k in ck and ck[k]]
         if have:
+            if platform == _XHS_RECOVERY_PLATFORM:
+                try:
+                    _verify_xhs_recovery_identity(hb._context,cfg)
+                except Exception as exc:
+                    if launch and getattr(exc,'stage',None)=='NO_EXISTING_APPROVED_ORIGIN_PAGE':
+                        # The same registered HK context already passed its
+                        # Cookie identity/country checks. Restore its official
+                        # landing tab; no account switch, injection or stealth.
+                        try:
+                            page = hb.new_page(stealth=False)
+                            page.goto(cfg['login_url'],wait_until='domcontentloaded',timeout=30000)
+                            if urlsplit(page.url).hostname != 'www.rednote.com':
+                                raise RuntimeError('APPROVED_RECOVERY_ORIGIN_CHANGED')
+                            # Retain this owner-created official tab for normal
+                            # human recovery/inspection even if auth is pending.
+                            if page in hb._owned_pages:
+                                hb._owned_pages.remove(page)
+                            _set(platform,official_page_restored=True)
+                            page.locator('a.link-wrapper, a.bottom-channel').first.wait_for(timeout=15000)
+                            _verify_xhs_recovery_identity(hb._context,cfg)
+                        except Exception as restored:
+                            import re
+                            network = re.search(r'net::(ERR_[A-Z_]+)',str(restored))
+                            _set(platform,identity_failure_stage=getattr(restored,'stage','OFFICIAL_PAGE_RESTORE_FAILED'),
+                                 official_page_restore_error_type=type(restored).__name__,
+                                 navigation_error_code=network.group(1) if network else None)
+                            return UNKNOWN,ck
+                        if page in hb._owned_pages:
+                            hb._owned_pages.remove(page)
+                        _set(platform,identity_failure_stage=None,official_page_restored=True)
+                        return AUTH_VALID,ck
+                    _set(platform,identity_failure_stage=getattr(exc,'stage','IDENTITY_OWNER_READBACK_FAILED'))
+                    return (EXPIRED if getattr(exc,'stage',None)=='WEB_SESSION_NOT_PRESENT' else
+                            PLATFORM_BLOCKED if str(exc)=='COLLECTOR_IDENTITY_MISMATCH' else UNKNOWN), ck
+                _set(platform,identity_failure_stage=None)
             return AUTH_VALID, ck
         # 浏览器开着但缺关键登录cookie → 失效
         return EXPIRED, ck
@@ -348,6 +384,15 @@ def _read_auth_cookies(platform: str, launch: bool = False, cfg: Optional[dict] 
             hb.close()
         except Exception:
             pass
+
+
+def _verify_xhs_recovery_identity(context,cfg):
+    """Recovery uses the same registered HK identity proof as acquisition."""
+    import collector
+    from xhs_cdp_collector import _assert_collection_identity
+    environment = collector._collection_env(account=cfg['account'],region=cfg['region'],
+        cdp_url=cfg['cdp_url'],require_local_cookie=False)
+    _assert_collection_identity(context,expected_user_id=environment['XHS_EXPECTED_COLLECTION_USER_ID'])
 
 
 def health_check(platform: str) -> dict:
@@ -361,7 +406,8 @@ def health_check(platform: str) -> dict:
         return {"success": False, "status": UNKNOWN, "error": "非真人浏览器平台，无需登录态检查"}
     status, ck = _read_auth_cookies(platform, launch=False, cfg=cfg)
     return {"success": True, "platform": platform, "status": status,
-            "status_cn": STATE_CN.get(status, status), "cookie_keys": sorted(ck.keys())}
+            "status_cn": STATE_CN.get(status, status), "cookie_keys": sorted(ck.keys()),
+            'identity_failure_stage':(_get(platform) or {}).get('identity_failure_stage')}
 
 
 def _set(platform, **kw):
@@ -434,6 +480,9 @@ def _open_and_watch(platform: str, kind: str):
             jars = page.context.cookies(cfg["login_url"])
             have = [c for c in jars if c.get("name") in cfg["auth_cookies"] and c.get("value")]
             if have:
+                if platform == _XHS_RECOVERY_PLATFORM:
+                    _verify_xhs_recovery_identity(page.context,cfg)
+                    _set(platform,identity_failure_stage=None)
                 risk_controller.mark_recovered(platform)
                 _set(platform, state=AUTH_VALID, recovered_at=time.time(),
                      message="检测到采集浏览器仍处于登录态，直接恢复，无需扫码",
@@ -607,7 +656,7 @@ def request_recovery(platform: str, source_state: str = "", detail: str = "") ->
     return {"success": True, "session": _get(platform), "reuse": False, "kind": kind}
 
 
-def check_recovery(platform: str) -> dict:
+def check_recovery(platform: str, *, resume_pending: bool = True) -> dict:
     """手动立即探测一次。"""
     cfg, config_error = _resolve_recovery_profile(platform)
     if not cfg:
@@ -619,9 +668,14 @@ def check_recovery(platform: str) -> dict:
         risk_controller.mark_recovered(platform)
         _set(platform, state=AUTH_VALID, recovered_at=time.time(),
              message="检测到登录态已恢复", steps={"open": True, "scan": True, "done": True})
-        _resume_pending(platform)
+        if resume_pending:
+            _resume_pending(platform)
     return {"success": True, "recovered": recovered, "status": status,
-            "status_cn": STATE_CN.get(status, status)}
+            "status_cn": STATE_CN.get(status, status),
+            'identity_failure_stage':(_get(platform) or {}).get('identity_failure_stage'),
+            'official_page_restore_error_type':(_get(platform) or {}).get('official_page_restore_error_type'),
+            'navigation_error_code':(_get(platform) or {}).get('navigation_error_code'),
+            'official_page_restored':(_get(platform) or {}).get('official_page_restored') is True}
 
 
 def cancel_recovery(platform: str):

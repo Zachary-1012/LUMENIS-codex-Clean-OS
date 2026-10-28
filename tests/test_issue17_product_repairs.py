@@ -389,6 +389,79 @@ def test_shared_citations_keep_original_cth_permission_and_same_actor(shared_wor
         work.reopen_work(saved["artifact"]["artifact_id"], actor=other_actor, scope=SHARED_SCOPE)
 
 
+def test_shared_legacy_visual_continue_rechecks_source_permission_and_keeps_parent(shared_workspace):
+    from tests.test_visual_document_workflow import document as visual_document
+    from lumenis.shared.content_creation.audio_visuals import visual_document_markdown
+
+    work = shared_workspace['saved_work']
+    documents = shared_workspace['documents']
+    actor = _account(shared_workspace)
+    for action in ('read', 'write'):
+        _grant(shared_workspace, actor, product='CTH', module='reports', action=action,
+               data_scope={'global': True})
+    source_scope = {'domain_id': 'cth', 'subject_id': None, 'brand_focus_id': None,
+                    'global_scope': True}
+    value = visual_document()
+    value['layers'][1]['text'] = '寰意\n从资料到作品\n\n资料有来源，结论可修订。\n\n成果可以保存、重新打开并继续编辑。'
+    original_markdown = visual_document_markdown(value)
+    source_path = shared_workspace['root'] / 'legacy-visual-source.txt'
+    source_path.write_bytes(original_markdown.encode('utf-8'))
+    provenance = {
+        'source_url': None,
+        'source_origin': {'kind': 'approved-file', 'ref': 'issue17-legacy-visual-source-0001'},
+        'published_at': None,
+        'captured_at': '2026-10-27T00:00:00Z',
+        'rights': 'owner-approved',
+        'title': 'Isolated source citation for legacy visual continuation',
+    }
+    source_args = {'actor': actor, 'scope': source_scope, 'provenance': provenance}
+    resource = documents.document_import_resource(str(source_path), **source_args)
+    shared_workspace['gate'].grant_approval(
+        permission.OperationType.DATA_IMPORT.value, resource=resource, granted_by='isolated-test',
+    )
+    imported = documents.import_document(str(source_path), **source_args)
+    quote = '资料有来源，结论可修订。'
+    source_start = original_markdown.index(quote)
+    citation = documents.locate_quote(imported['evidence_id'], actor=actor, scope=source_scope,
+                                      start=source_start, end=source_start + len(quote))['citation']
+    first = work.save_work(**_save_args(actor, request_id='issue17-legacy-visual-0001',
+        title='寰意 · 工作稿', markdown=original_markdown, kind='report',
+        payload={'visual_document': value}, citations=[citation]))
+
+    new_markdown = ('寰意\n从资料到作品\n\n资料有来源，结论可修订。\n\n'
+                    '成果可以保存、重新打开并继续编辑。')
+    edits = [{'pointer': '/markdown', 'expected': original_markdown, 'value': new_markdown}]
+    with shared_workspace['repo'].transaction() as con:
+        con.execute("DELETE FROM v4_member_authorizations WHERE user_id=? AND product_id='CTH' "
+                    "AND module='reports' AND action='read'", (actor['id'],))
+    before = _artifact_state(shared_workspace)
+    with pytest.raises(ValueError, match='WORK_PERMISSION_DENIED'):
+        work.revise_work(first['artifact']['artifact_id'], actor=actor, scope=SHARED_SCOPE,
+            request_id='issue17-legacy-visual-revise-0002', expected_sha256=first['artifact']['sha256'],
+            reason='继续写作；保留原版本与来源。', edits=edits, citations=[],
+            continue_as_report=True)
+    assert _artifact_state(shared_workspace) == before
+
+    _grant(shared_workspace, actor, product='CTH', module='reports', action='read',
+           data_scope={'global': True})
+    revised = work.revise_work(first['artifact']['artifact_id'], actor=actor, scope=SHARED_SCOPE,
+        request_id='issue17-legacy-visual-revise-0002', expected_sha256=first['artifact']['sha256'],
+        reason='继续写作；保留原版本与来源。', edits=edits, citations=[],
+        source_adoptions=[{'from_evidence_id': imported['evidence_id'], 'to_evidence_id': None}],
+        continue_as_report=True)
+    assert revised['document']['version'] == 2
+    assert revised['document']['parent_artifact_id'] == first['artifact']['artifact_id']
+    assert revised['document']['markdown'] == new_markdown
+    assert 'visual_document' not in revised['document']['payload']
+    assert revised['document']['citations'] == []
+    old = work.reopen_work(first['artifact']['artifact_id'], actor=actor, scope=SHARED_SCOPE)
+    assert old['document']['markdown'] == original_markdown
+    assert old['document']['payload']['visual_document'] == value
+    assert old['document']['citations'][0]['evidence_id'] == imported['evidence_id']
+    assert old['document']['citations'][0]['quote'] == quote
+    assert old['receipt']['sources'][0]['scope'] == source_scope
+
+
 def test_shared_workspace_api_saves_reads_revises_and_exports(shared_workspace):
     import experience_runtime
 

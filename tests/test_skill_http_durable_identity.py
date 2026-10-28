@@ -49,6 +49,7 @@ def test_skill_http_result_reopens_with_owner_identity_and_revocation(skill_clie
     result = response.get_json()
     assert result['success'] is True
     identifier = result['execution_id']
+    assert len(identifier) == 16 and all(char in '0123456789abcdef' for char in identifier)
     reopened = app.test_client().get('/api/ai/tasks/' + identifier, headers=own)
     assert reopened.status_code == 200, reopened.get_json()
     row = reopened.get_json()['task']

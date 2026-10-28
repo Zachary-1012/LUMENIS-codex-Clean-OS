@@ -466,11 +466,45 @@ void main() {
     final revisionBody = jsonDecode(server.requests[4].body!) as Map;
     expect(revisionBody['expected_sha256'], List.filled(64, 'a').join());
     expect(revisionBody.containsKey('citations'), isFalse);
+    expect(revisionBody.containsKey('continue_as_report'), isFalse);
     expect(
       (revisionBody['edits'] as List).map((edit) => edit['pointer']).toList(),
       ['/title', '/markdown'],
     );
   });
+
+  test(
+    'Shared report continuation uses the existing scoped revision route',
+    () async {
+      final server = await _CoreStub.start();
+      addTearDown(server.close);
+      final client = LumenisCoreClient(baseUrl: server.baseUrl);
+      await client.reviseSharedReport(
+        artifactId: 'ART-0123456789abcdef',
+        requestId: 'sh04_continue_0001',
+        expectedSha256: List.filled(64, 'a').join(),
+        reason: 'Continue writing',
+        expectedTitle: 'Original',
+        title: 'Document',
+        expectedMarkdown: 'Original text',
+        markdown: 'Revised text',
+        continueAsReport: true,
+      );
+      final request = server.requests.last;
+      final body = jsonDecode(request.body!) as Map;
+      expect(
+        request.path,
+        '/api/experience/saved-work/ART-0123456789abcdef/revise',
+      );
+      expect(
+        request.workspaceScope,
+        '{"scope_kind":"shared_workspace","version":1}',
+      );
+      expect(body['continue_as_report'], isTrue);
+      expect(body.containsKey('citations'), isFalse);
+      expect(body.containsKey('actor'), isFalse);
+    },
+  );
 
   test(
     'browser notes remain independent of the selected business scope',
@@ -676,11 +710,25 @@ void main() {
 
     expect(file.filename, 'ART-contract.zip');
     expect(file.mediaType, 'application/zip');
-    expect(file.bytes, [80, 75, 5, 6, ...List<int>.filled(18, 0)]);
-    expect(server.requests.map((request) => request.path), [
+    expect(file.bytes, isEmpty);
+    expect(
+      file.streamUri,
+      Uri.parse('${server.baseUrl}${server.requests.last.path}'),
+    );
+    expect(server.requests.map((request) => Uri.parse(request.path).path), [
       '/api/experience/runtime/identity',
       '/api/experience/content-projects/ART-contract/package',
     ]);
+    final packageUri = Uri.parse(server.requests.last.path);
+    expect(packageUri.queryParameters['format'], 'package');
+    expect(
+      jsonDecode(packageUri.queryParameters['context']!) as Map,
+      {
+        'X-Lumenis-Context-Mode': 'GLOBAL_ALL',
+        'X-Domain-Id': 'CTH',
+        'X-Product-Id': 'CTH',
+      },
+    );
     expect(
       server.requests.every((request) => request.authorization == null),
       isTrue,
@@ -785,9 +833,13 @@ void main() {
             ),
           ),
         );
-        expect(server.requests.map((request) => request.path), [
+        expect(server.requests.map((request) => Uri.parse(request.path).path), [
           '/api/experience/content-projects/ART-contract/package',
         ]);
+        expect(
+          Uri.parse(server.requests.single.path).queryParameters['format'],
+          'package',
+        );
         expect(server.requests.single.authorization, isNull);
       },
     );
@@ -1205,11 +1257,15 @@ class _CoreStub {
       await request.response.close();
       return;
     }
-    if (path == '/api/experience/content-projects/ART-contract/package') {
+    if (request.uri.path ==
+        '/api/experience/content-projects/ART-contract/package') {
+      final packageBytes = [80, 75, 5, 6, ...List<int>.filled(18, 0)];
       request.response
         ..statusCode = authorized ? fileStatus : HttpStatus.unauthorized
         ..headers.contentType = ContentType('application', 'zip')
-        ..add([80, 75, 5, 6, ...List<int>.filled(18, 0)]);
+        ..contentLength = packageBytes.length
+        ..headers.set('accept-ranges', 'bytes')
+        ..add(packageBytes);
       await request.response.close();
       return;
     }

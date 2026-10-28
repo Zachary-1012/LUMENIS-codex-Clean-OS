@@ -6,7 +6,7 @@ Status: **CURRENT EXECUTION ENTRYPOINT / NO-REDISCOVERY**
 
 ## 1. Online reader's current-state snapshot
 
-Implementation publication state: `RULES_ONLY_PUBLICATION`
+Implementation publication state: `PUBLISHED_SOURCE_VERIFIED`
 Runtime load state: `NOT_LOADED_OR_NOT_VERIFIED`
 
 PR #148 已在两项必需检查通过后合入 main，合并提交为 `5b27421cf24e951796a462ecd0b29515b5f12aa1`，可由 [PR #148](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/148) 核对。该记录仅证明源码清退发布，不证明进程加载或产品验收。其后源码仍以实际 Git 读回为准。
@@ -19,9 +19,11 @@ PR #148 已在两项必需检查通过后合入 main，合并提交为 `5b27421c
 | 业务初始数据 | 新工作区允许为空，不要求内置主体、业务记录、种子或固定语料。用户输入及已获准的导入/采集经原权限与数据链进入产品；已有用户资料不删除。 | [范围与数据合同](LUMENIS-GLOBAL-UNIVERSE-CONTEXT-DATA-MATURITY-CURRENT.md)；原 Collector 合同 |
 | 保留源码 | 原 Core、CTH/BMP/Shared/SYSTEM、控制器、仓储、平台宿主及接口合同继续保留。源码存在不等于实际能力已经验收。 | [Source Owner Index](LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md) |
 | 运行与数据库 | 本次结构和源码清退不证明某个进程已加载该版本，也不执行生产切换或数据删除。历史 Core 恢复结果只对其记录版本有效。 | 原 Runtime、DB、恢复回执 |
-| 未发布工作 | 既有未提交/未合并有效工作必须与当前 main 逐项核对，不能因清退 PR 合并而自动算已发布。 | 实际 `git status`、分支差异及 PR，而非旧数量或旧 SHA |
+| PR #146 源码整合 | 归并原采集/数据、Office/媒体、业务、AI/Agent、运行与非视觉客户端改动，并继承 #148/#149 的清退和规则修订；修复任务撤权投影、同步执行重开、签名备份清理与采集失败状态保真；校准当前主体准入、签名推理、导出合同及隔离检查依赖，删除测试对开发机临时目录的写入依赖。以 PR 当前提交、必需检查及合并记录判断是否已进入 main；本行不证明运行加载或完整能力验收。 | [PR #146](https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/pull/146)；原 workspace continuity 的 `source_reconciliation_20261028` |
 
 没有预装数据不降低能力验收：采集、分析、创作等仍须以获准真实输入验证，缺少数据不得造零值或虚构成果。空库成功启动不等于采集成功或业务闭环。
+
+本轮检查中一次错误的测试模块导入触发根 `app.py` 初始化，并选择默认主库；进程随后退出。2026-10-28T13:48:03Z 的只读 `quick_check` 为 `ok`，但缺少导入前快照，不能证明初始化未写入或确定全部差异。没有据此执行回滚或生产切换；该事件不作为运行验收通过依据，详见同一源码整合记录。
 
 ## 2. Canonical navigation / 唯一文件导航
 

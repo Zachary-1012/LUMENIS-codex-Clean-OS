@@ -347,10 +347,10 @@ def run_tests():
     check("Adapter enabled=True", adapter.enabled is True)
     check("Adapter monitor_priority=primary", adapter.monitor_priority == "primary")
 
-    # detail 未接入应以 NOT_SUPPORTED 明确声明能力缺失，不伪装成 Provider 故障。
+    # 独立详情已复用原HK/intl worker；非法ID在加载会话前明确拒绝。
     detail_result = adapter.detail("test_id")
-    check("detail 未接入显式返回 NOT_SUPPORTED", detail_result.status == CollectionStatus.NOT_SUPPORTED)
-    check("detail 未接入有明确 message", "独立详情" in detail_result.message)
+    check("detail 非法来源显式返回 COLLECT_ERROR", detail_result.status == CollectionStatus.COLLECT_ERROR)
+    check("detail 非法来源有明确原因", detail_result.metadata.get("error_type") == "DETAIL_SOURCE_UNVERIFIED")
 
     # ===== 汇总 =====
     print("\n" + "=" * 60)

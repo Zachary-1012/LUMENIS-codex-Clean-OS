@@ -161,6 +161,10 @@ def test_cth01_external_metrics_are_not_collected(isolated_client):
     cli, _ = isolated_client
     j = cli.get("/api/experience/screen/CTH-01").get_json()
     assert j["bound"] is True
+    assert j["global_binding"]["contract"] == "lumenis.scope-read-binding.v1"
+    assert j["global_binding"]["canonical_scope"] == "GLOBAL_ALL"
+    assert j["global_binding"]["subject_id"] is None
+    assert j["global_binding"]["read_allowed"] is True
     k = _kpis(j)
     # POS/销售外部源缺失：必须 None + notcollected，绝不是 0
     assert k["cth.footfall"]["value"] is None and k["cth.footfall"]["state"] == "notcollected"

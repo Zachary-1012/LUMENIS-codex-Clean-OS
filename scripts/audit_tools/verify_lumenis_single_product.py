@@ -156,14 +156,15 @@ def tracked() -> list[str]:
 
 
 def production_python_files(root: Path) -> list[Path]:
-    """Preserve the import audit scope without entering local work or env trees."""
+    """Audit source without entering local trees or Flutter's generated output."""
     ignored_dirs = {".git", "__pycache__", "node_modules", "tests", "test", "docs"}
     local_roots = {"work", ".venv", "venv", "vendor"}
     result = []
     for directory, dirs, files in os.walk(root, onerror=_scan_error):
         current = Path(directory)
         dirs[:] = [name for name in dirs if name.lower() not in ignored_dirs
-                   and not (current == root and name in local_roots)]
+                   and not (current == root and name in local_roots)
+                   and current / name != root / "app" / "build"]
         result.extend(current / name for name in files if name.endswith(".py")
                       and not name.lower().startswith(("test_", "audit_")))
     return sorted(result)
@@ -190,6 +191,8 @@ def tracked_path_errors(tracked_paths: list[str]) -> list[str]:
             errors.append(f"invalid recovered evidence inventory: {exc}")
     for path in tracked_paths:
         normalized = path.replace("\\", "/")
+        if normalized.casefold().startswith("app/build/") and normalized.casefold().endswith(".py"):
+            errors.append(f"tracked Python source in generated app/build output: {path}")
         if normalized.casefold().startswith("08-audit/"):
             errors.append(f"obsolete audit archive path present: {path}")
         if LEGACY_PATH_TOKEN.search(normalized) and path not in recovered_paths:

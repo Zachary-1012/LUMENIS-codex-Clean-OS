@@ -518,7 +518,7 @@ P0执行入口裁决已经收敛，不再作为单独待办批次：`AGENTS.md` 
 
 2026-10-26路线决定：获准预训练推理＋行业证据/业务数学工具＋受控知识与策略学习；可选CPU专用参数学习须另有数据权利、独立收益与资源批准。GPU训练路线为WITHDRAWN_BY_PO，不是所有推理的前置条件。 不新建AI产品、Owner、调度或数据真相。G17撤销路线，G21六项、U18–U20、九family及G163专业增益保持，G163仍OPEN。
 
-现有`owned_service`/`owned_inference`/`security/owned_model_admission`需迁移到显式版本化的 PRETRAINED_INFERENCE、CPU_SPECIALIST、STRATEGY_CONFIGURATION 三类合同。共享actor/workspace/scope/SourceUse、运行资源、操作/预算、并发/取消、版本与回滚必验；仅对应类别要求训练/参数证据，不填假hash或假TRAINED。旧v1历史回执不能自动晋升新类别。完整字段、调用者、兼容/迁移和专业验收设计由唯一主规划J27维护；本轮只改规划，执行器及config仍是旧合同，未宣称新推理已可运行。
+现有`owned_service`/`owned_inference`/`security/owned_model_admission`需迁移到显式版本化的 PRETRAINED_INFERENCE、CPU_SPECIALIST、STRATEGY_CONFIGURATION 三类合同。共享actor/workspace/scope/SourceUse、运行资源、操作/预算、并发/取消、版本与回滚必验；仅对应类别要求训练/参数证据，不填假hash或假TRAINED。旧v1历史回执不能自动晋升新类别。完整字段、调用者、兼容/迁移和专业验收设计由唯一主规划J27维护；实现沿同一版本化准入合同接通执行器及config；源码与隔离回归不能替代真实模型绑定、生成质量、重载恢复及各消费者验收。
 
 
 AI provider and owned-model responsibilities:

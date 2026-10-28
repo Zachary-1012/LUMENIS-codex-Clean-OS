@@ -259,34 +259,37 @@ def evaluate_ai_dimension(
                 SELECT COUNT(*) as c, AVG(confidence) as avg_conf
                 FROM ai_filter_log WHERE provider != 'rule'
             """)
-            ai_total = ai_rows[0]["c"] if ai_rows else 0
+            ai_total = ai_rows[0]["c"] if ai_rows else None
             avg_conf = ai_rows[0]["avg_conf"] if ai_rows else None
-            # accuracy: filter_result 非 pending/error 视为有效（简化口径，实际需人工标注对比）
+            # A completed classification is execution evidence, not a labelled
+            # quality benchmark. Preserve the observation under its real name.
             acc_rows = _safe_query(conn, """
                 SELECT COUNT(*) as c FROM ai_filter_log
                 WHERE provider != 'rule' AND filter_result IN ('pass', 'filtered')
             """)
-            ai_correct = acc_rows[0]["c"] if acc_rows else 0
+            usable_filters = acc_rows[0]["c"] if acc_rows else None
+            ai_correct = None
             # human corrections
             corr_rows = _safe_query(conn, "SELECT COUNT(*) as c FROM note_review_history")
-            human_corr = corr_rows[0]["c"] if corr_rows else 0
+            human_corr = corr_rows[0]["c"] if corr_rows else None
             # provider reliability
             prov_rows = _safe_query(conn, """
                 SELECT COUNT(*) as total,
-                       SUM(CASE WHEN filter_result != 'error' THEN 1 ELSE 0 END) as success
+                       SUM(CASE WHEN filter_result IN ('pass','filtered') THEN 1 ELSE 0 END) as success
                 FROM ai_filter_log WHERE provider != 'rule'
             """)
-            provider_calls = prov_rows[0]["total"] if prov_rows else 0
-            provider_success = prov_rows[0]["success"] if prov_rows else 0
-            # fallback: provider='rule' 的比例
+            provider_calls = prov_rows[0]["total"] if prov_rows else None
+            provider_success = prov_rows[0]["success"] if prov_rows else None
+            # Rule-only baseline work has no fallback lineage. Counting it
+            # cannot establish that a model invocation fell back to rules.
             fb_rows = _safe_query(conn, "SELECT COUNT(*) as c FROM ai_filter_log WHERE provider = 'rule'")
-            fallback_count = fb_rows[0]["c"] if fb_rows else 0
+            fallback_count = fb_rows[0]["c"] if fb_rows else None
             evidence = "SELECT FROM ai_filter_log, note_review_history"
         finally:
             conn.close()
 
     # 1. accuracy
-    accuracy = round(ai_correct / ai_total, 4) if ai_total > 0 else None
+    accuracy = round(ai_correct / ai_total, 4) if mock_data and ai_total > 0 else None
     th = _get_threshold("ai.accuracy")
     records.append(record_evaluation(
         dimension="ai", metric_name="accuracy",
@@ -294,7 +297,11 @@ def evaluate_ai_dimension(
         pass_threshold=th["pass"], warn_threshold=th["warn"],
         higher_is_better=th["higher_is_better"],
         source=source, evidence_ref=f"{evidence} | correct={ai_correct}/{ai_total}",
-        metadata={"ai_total": ai_total, "ai_correct": ai_correct},
+        metadata={"ai_total": ai_total, "ai_correct": ai_correct,
+                  "measurement": "SYNTHETIC_FIXTURE" if mock_data else "INDEPENDENT_LABELLED_QUALITY_NOT_MEASURED",
+                  **({} if mock_data else {"completed_filter_count": usable_filters,
+                      "execution_completion_rate": round(usable_filters / ai_total, 4)
+                          if ai_total and usable_filters is not None else None})},
         db_path=db_path,
     ))
 
@@ -311,8 +318,8 @@ def evaluate_ai_dimension(
     ))
 
     # 3. human correction rate
-    total_for_correction = ai_total + human_corr
-    human_rate = round(human_corr / total_for_correction, 4) if total_for_correction > 0 else None
+    total_for_correction = ai_total + human_corr if mock_data else None
+    human_rate = round(human_corr / total_for_correction, 4) if mock_data and total_for_correction > 0 else None
     th = _get_threshold("ai.human_correction_rate")
     records.append(record_evaluation(
         dimension="ai", metric_name="human_correction_rate",
@@ -320,12 +327,13 @@ def evaluate_ai_dimension(
         pass_threshold=th["pass"], warn_threshold=th["warn"],
         higher_is_better=th["higher_is_better"],
         source=source, evidence_ref=f"{evidence} | corrections={human_corr}/{total_for_correction}",
-        metadata={"human_corrections": human_corr},
+        metadata={"human_corrections": human_corr,
+                  "measurement": "SYNTHETIC_FIXTURE" if mock_data else "REVIEWS_NOT_LINKED_TO_MODEL_CALLS"},
         db_path=db_path,
     ))
 
     # 4. provider reliability
-    prov_rel = round(provider_success / provider_calls, 4) if provider_calls > 0 else None
+    prov_rel = round(provider_success / provider_calls, 4) if provider_calls and provider_success is not None else None
     th = _get_threshold("ai.provider_reliability")
     records.append(record_evaluation(
         dimension="ai", metric_name="provider_reliability",
@@ -338,8 +346,8 @@ def evaluate_ai_dimension(
     ))
 
     # 5. fallback rate
-    total_ai_calls = provider_calls + fallback_count
-    fallback_rate = round(fallback_count / total_ai_calls, 4) if total_ai_calls > 0 else None
+    total_ai_calls = provider_calls + fallback_count if mock_data else None
+    fallback_rate = round(fallback_count / total_ai_calls, 4) if mock_data and total_ai_calls > 0 else None
     th = _get_threshold("ai.fallback_rate")
     records.append(record_evaluation(
         dimension="ai", metric_name="fallback_rate",
@@ -347,7 +355,9 @@ def evaluate_ai_dimension(
         pass_threshold=th["pass"], warn_threshold=th["warn"],
         higher_is_better=th["higher_is_better"],
         source=source, evidence_ref=f"{evidence} | fallback={fallback_count}/{total_ai_calls}",
-        metadata={"fallback_count": fallback_count, "total_ai_calls": total_ai_calls},
+        metadata={"rule_only_count": fallback_count, "fallback_count": fallback_count if mock_data else None,
+                  "total_ai_calls": total_ai_calls,
+                  "measurement": "SYNTHETIC_FIXTURE" if mock_data else "FALLBACK_LINEAGE_NOT_RECORDED"},
         db_path=db_path,
     ))
 

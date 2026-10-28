@@ -57,3 +57,24 @@ def test_health_summary_reuses_database_parent_for_runtime_data(tmp_path, monkey
     monkeypatch.setattr(health, "get_db_path", lambda: str(db_path))
 
     assert Path(health.get_data_dir()) == data_dir.resolve()
+
+
+def test_account_selector_blocks_mainland_before_touching_protected_path(monkeypatch):
+    class ForbiddenPath:
+        def __fspath__(self):
+            raise AssertionError("protected Mainland identity path was accessed")
+
+    monkeypatch.setitem(
+        bridge.ACCOUNT_PROFILES,
+        bridge.XHS_CN_PRIMARY_NAME,
+        (ForbiddenPath(), ForbiddenPath()),
+    )
+    monkeypatch.setattr(bridge, "_ACTIVE_ACCOUNT", None)
+    monkeypatch.delenv("XHS_COOKIE_FILE_OVERRIDE", raising=False)
+
+    selected, reason = bridge.select_account(bridge.XHS_CN_PRIMARY_NAME)
+
+    assert selected is False
+    assert reason == "POLICY_BLOCKED"
+    assert bridge._ACTIVE_ACCOUNT is None
+    assert "XHS_COOKIE_FILE_OVERRIDE" not in bridge.os.environ

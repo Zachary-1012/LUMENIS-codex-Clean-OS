@@ -168,6 +168,39 @@ def ai_conversation_append(conversation_id):
     return _conversation_response(call)
 
 
+@ai_bp.route('/ai/conversations/<conversation_id>/context', methods=['GET', 'PUT'])
+def ai_conversation_context(conversation_id):
+    from . import conversations as owner
+    def call():
+        actor = owner.current_actor('read' if request.method == 'GET' else 'write')
+        if request.method == 'GET':
+            if (set(request.args) - {'query', 'limit', 'offset', 'snapshot', 'source_reference'}
+                    or any(len(request.args.getlist(key)) != 1 for key in request.args)
+                    or 'source_reference' in request.args and len(request.args) != 1
+                    or set(request.args) - {'source_reference'} and 'query' not in request.args):
+                raise ValueError('CONVERSATION_CONTEXT_SEARCH_INVALID')
+            options = {}
+            if 'query' in request.args:
+                numbers = [request.args.get('limit', '30'), request.args.get('offset', '0')]
+                if any(not value.isascii() or not value.isdecimal() for value in numbers):
+                    raise ValueError('MEMORY_SEARCH_INVALID')
+                options = {'query': request.args['query'], 'limit': int(numbers[0]), 'offset': int(numbers[1]),
+                           'expected_snapshot': request.args.get('snapshot')}
+            if 'source_reference' in request.args:
+                import json
+                if len(request.args['source_reference']) > 4096:
+                    raise ValueError('MEMORY_REFERENCE_INVALID')
+                options['source_reference'] = json.loads(request.args['source_reference'])
+                if type(options['source_reference']) is not dict:
+                    raise ValueError('MEMORY_REFERENCE_INVALID')
+            return owner.read_context(actor, conversation_id, **options)
+        data = _conversation_body({'value', 'idempotency_key', 'expected_revision', 'source_references'})
+        if 'source_references' in data and type(data['source_references']) is not list:
+            raise ValueError('CONVERSATION_SOURCE_REFERENCES_INVALID')
+        return owner.update_context(actor, conversation_id, **data)
+    return _conversation_response(call)
+
+
 @ai_bp.route('/ai/conversations/<conversation_id>/tasks', methods=['POST'])
 def ai_conversation_attach_task(conversation_id):
     from . import conversations as owner
@@ -181,7 +214,8 @@ def ai_conversation_attach_task(conversation_id):
 def ai_conversation_respond(conversation_id, turn_id):
     from . import conversations as owner
     def call():
-        data = _conversation_body({'operation','idempotency_key','expected_revision','retry_confirmed','confirmed','external_approval'})
+        data = _conversation_body({'operation','idempotency_key','expected_revision','retry_confirmed','confirmed',
+            'external_approval','source_use_confirmed','source_references'})
         actor = owner.current_actor('write')
         operation = data.pop('operation', 'respond')
         if operation == 'interrupt':
@@ -202,6 +236,7 @@ def authorize_conversation_root_request():
         'v4.v4_ai.ai_conversations_list_create': ('/v4/ai/conversations', {'GET','POST'}),
         'v4.v4_ai.ai_conversation_read_update': ('/v4/ai/conversations/<conversation_id>', {'GET','PATCH'}),
         'v4.v4_ai.ai_conversation_append': ('/v4/ai/conversations/<conversation_id>/turns', {'POST'}),
+        'v4.v4_ai.ai_conversation_context': ('/v4/ai/conversations/<conversation_id>/context', {'GET','PUT'}),
         'v4.v4_ai.ai_conversation_attach_task': ('/v4/ai/conversations/<conversation_id>/tasks', {'POST'}),
         'v4.v4_ai.ai_conversation_respond': ('/v4/ai/conversations/<conversation_id>/turns/<turn_id>/respond', {'POST'}),
     }

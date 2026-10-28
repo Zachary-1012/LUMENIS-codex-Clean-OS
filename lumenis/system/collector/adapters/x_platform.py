@@ -5,7 +5,7 @@ import re
 from typing import Any
 from urllib.parse import urlsplit
 
-from .base import BasePlatformAdapter, CollectionResult, CollectionStatus
+from .base import BasePlatformAdapter, CollectionResult, CollectionStatus, map_v4_comments
 from .registry import register_adapter
 
 logger = logging.getLogger(__name__)
@@ -128,6 +128,13 @@ class XAdapter(BasePlatformAdapter):
                 "raw": raw,
             }))
         return items
+
+    @classmethod
+    def _observed_status(cls, result, safe_error=''):
+        return {'AUTH_REQUIRED': CollectionStatus.SESSION_EXPIRED, 'VERIFICATION_REQUIRED': CollectionStatus.NEED_VERIFY,
+                'ACCESS_BLOCKED': CollectionStatus.BLOCKED, 'RATE_LIMITED': CollectionStatus.COOLING_DOWN,
+                'CONTENT_UNAVAILABLE': CollectionStatus.PROVIDER_UNAVAILABLE, 'PROVIDER_UNAVAILABLE': CollectionStatus.PROVIDER_UNAVAILABLE}.get(
+                    (getattr(result, 'metadata', None) or {}).get('failure_class')) or cls._v4_status_to_main(result.success, result.notes, safe_error or result.error)
 
     @staticmethod
     def _status_id_from_url(value: Any) -> str | None:
@@ -378,14 +385,16 @@ class XAdapter(BasePlatformAdapter):
             except (TypeError, ValueError, OverflowError):
                 requested_limit = 20
             max_results = min(20, max(0, requested_limit))
-            if checkpoint_used:
+            if kwargs.get("cursor") is not None:
+                result = backend.search(keyword, max_results=max_results, skip_tweet_ids=skip_tweet_ids, cursor=kwargs["cursor"])
+            elif checkpoint_used:
                 result = backend.search(
                     keyword, max_results=max_results, skip_tweet_ids=skip_tweet_ids,
                 )
             else:
                 result = backend.search(keyword, max_results=max_results)
             safe_error = self._safe_failure_code(result.error, phase="page") if result.error else ""
-            status = self._v4_status_to_main(result.success, result.notes, safe_error)
+            status = self._observed_status(result, safe_error)
             items = self._v4_notes_to_items((result.notes or [])[:max_results])
             detail_counts = {"attempted": 0, "succeeded": 0, "failed": 0, "pending": 0,
                              "not_attempted_no_native_id": 0, "reused_same_native_id": 0}
@@ -546,10 +555,14 @@ class XAdapter(BasePlatformAdapter):
         return self._delegate_v4("detail", content_id)
 
     def comments(self, content_id: str, **kwargs: Any) -> CollectionResult:
-        return self._delegate_v4("comments", content_id, max_comments=kwargs.get("max_comments", 20))
+        return self._delegate_v4("comments", content_id, max_comments=kwargs.get("max_comments", 20),
+                                 cursor=kwargs.get("cursor"), include_replies=kwargs.get("include_replies", False))
 
     def creator(self, creator_id: str, **kwargs: Any) -> CollectionResult:
         return self._delegate_v4("creator", creator_id)
+
+    def author_posts(self, author_id: str, **kwargs: Any) -> CollectionResult:
+        return self._delegate_v4("author_posts", author_id, max_results=kwargs.get("max_results", 20), cursor=kwargs.get("cursor"))
 
     def _delegate_v4(self, method: str, *args, **kwargs) -> CollectionResult:
         failure_phase = "worker"
@@ -558,11 +571,14 @@ class XAdapter(BasePlatformAdapter):
             failure_phase = "page"
             result = getattr(backend, method)(*args, **kwargs)
             safe_error = self._safe_failure_code(result.error, phase="page") if result.error else ""
-            status = self._v4_status_to_main(result.success, result.notes, safe_error)
+            status = self._observed_status(result, safe_error)
             items = self._v4_notes_to_items(result.notes)
-            return CollectionResult(status=status, platform=self.platform, items=items,
+            comments = map_v4_comments(result.notes) if method == 'comments' else []
+            return CollectionResult(status=status, platform=self.platform, items=[] if method == 'comments' else items,
+                                    comments=comments,
                                     raw_count=result.raw_count, message=safe_error,
-                                    metadata={"failure_code": safe_error} if safe_error else {})
+                                    metadata={**(getattr(result, 'metadata', None) or {}),
+                                              **({"failure_code": safe_error} if safe_error else {})})
         except Exception as exc:
             safe_error = self._safe_failure_code(exc, phase=failure_phase)
             return CollectionResult(status=self._v4_status_to_main(False, [], safe_error), platform=self.platform,

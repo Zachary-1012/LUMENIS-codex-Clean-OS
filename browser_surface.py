@@ -222,6 +222,26 @@ def evaluate_navigation(url: str, mode: Optional[str] = None) -> dict:
     return {"allowed": True, "status": "allowed", "mode": mode, "host": host, "reason": "open 模式公网放行"}
 
 
+def evaluate_navigation_for_action(url: str, mode: Optional[str] = None, *,
+                                   confirmed: bool = False) -> dict:
+    """Evaluate one navigation, optionally honoring its explicit user confirmation.
+
+    ``confirmed`` is meaningful only to the caller that has already obtained a
+    current, one-use human confirmation for this exact URL. This function does
+    not create or persist authorization and never changes the configured policy.
+    Redirect requests must use :func:`evaluate_navigation` without confirmation.
+    """
+    gate = evaluate_navigation(url, mode)
+    if confirmed and gate.get("status") == "need_confirmation":
+        return {
+            **gate,
+            "allowed": True,
+            "status": "confirmed",
+            "reason": "当前导航已由用户单次确认",
+        }
+    return gate
+
+
 # ─────────────────────────── CDP HTTP 底层 ───────────────────────────
 
 def _resolve_port(account=None, port: Optional[int] = None) -> int:
@@ -366,10 +386,10 @@ def navigate_tab(url: str, target_id: Optional[str] = None, account=None,
                  port: Optional[int] = None, mode: Optional[str] = None,
                  wait_ms: int = 600, confirmed: bool = False) -> dict:
     """在指定（或当前）标签页内导航；统一过导航门。平台内完成，不新开外部浏览器。"""
-    gate = evaluate_navigation(url, mode)
+    gate = evaluate_navigation_for_action(url, mode, confirmed=confirmed)
     # strict/allowlist 下的未知公网域必须由用户在内置浏览器界面明确确认；
     # confirmed 只放行这一次当前 Tab 导航，不改变持久白名单和默认模式。
-    if not gate["allowed"] and not (gate.get("status") == "need_confirmation" and confirmed):
+    if not gate["allowed"]:
         return {"ok": False, "error": gate["reason"], "gate": gate}
     p = _resolve_port(account, port)
     ws, chosen = _find_tab_ws(p, target_id, account=account)

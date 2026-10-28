@@ -875,20 +875,94 @@ def api_github_authorization_url():
     })
 
 
-@account_bp.route("/skills/<skill_id>/enable", methods=["POST"])
+def _builtin_skill_status_actor():
+    from lumenis.auth.service import get_current_user as current_user
+    from lumenis.system.security.permission import resolve_local_workspace_principal
+    actor = current_user(read_only=True)
+    if isinstance(actor, dict):
+        if actor.get('role') != 'owner':
+            raise PermissionError('SKILL_STATUS_OWNER_REQUIRED')
+        return actor
+    actor = resolve_local_workspace_principal(module='skills', action='write')
+    if actor is None:
+        raise PermissionError('SKILL_STATUS_IDENTITY_REQUIRED')
+    return actor
+
+
+def authorize_builtin_skill_status_root_request():
+    """Delegate only the original explicit builtin status confirmation routes."""
+    entries = {'account.api_enable_skill': '/api/system/account/skills/<skill_id>/enable',
+               'account.api_disable_skill': '/api/system/account/skills/<skill_id>/disable'}
+    try:
+        if (request.method != 'POST' or request.endpoint not in entries or request.url_rule is None
+                or request.url_rule.rule != entries[request.endpoint]):
+            return False
+        body = request.get_json(silent=True)
+        if type(body) is not dict or body.get('mode') not in {'prepare', 'confirm'}:
+            return False
+        from .skills import _builtin_status_row, _builtin_status_identity
+        from lumenis.shared.database import get_repository
+        with get_repository().connection(read_only=True, wal=False) as connection:
+            _builtin_status_identity(_builtin_skill_status_actor(), connection)
+            _builtin_status_row(connection, (request.view_args or {}).get('skill_id'))
+        return True
+    except (PermissionError, ValueError, LookupError, RuntimeError):
+        return False
+
+
+def _builtin_skill_status_response(skill_id, status):
+    from .skills import prepare_builtin_skill_status, confirm_builtin_skill_status
+    try:
+        data = request.get_json(silent=True)
+        if request.args or type(data) is not dict or (request.content_length or 0) > 8192:
+            raise ValueError('SKILL_STATUS_REQUEST_INVALID')
+        actor = _builtin_skill_status_actor()
+        if data.get('mode') == 'prepare' and set(data) == {'mode', 'operation_id'}:
+            result = prepare_builtin_skill_status(skill_id, status, actor=actor, operation_id=data['operation_id'])
+        elif data.get('mode') == 'confirm' and set(data) == {
+                'mode', 'operation_id', 'expected_binding', 'confirm', 'confirmed_resource'}:
+            from experience_runtime import _content_source_same_origin
+            result = confirm_builtin_skill_status(skill_id, status, actor=actor,
+                operation_id=data['operation_id'], expected_binding=data['expected_binding'],
+                confirm=data['confirm'], confirmed_resource=data['confirmed_resource'],
+                same_origin=_content_source_same_origin())
+        else:
+            raise ValueError('SKILL_STATUS_REQUEST_INVALID')
+        return jsonify({'ok': True, 'success': True, 'result': result})
+    except PermissionError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 403
+    except ValueError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 400
+    except LookupError:
+        return jsonify({'ok': False, 'code': 'SKILL_NOT_REGISTERED'}), 404
+    except RuntimeError as exc:
+        return jsonify({'ok': False, 'code': str(exc)}), 409
+    except Exception:
+        return jsonify({'ok': False, 'code': 'SKILL_STATUS_UNAVAILABLE'}), 503
+
+
 @require_owner
+def _legacy_skill_status(skill_id, status):
+    result = set_skill_status(skill_id, status)
+    return jsonify(result), 200 if result['success'] else 400
+
+
+@account_bp.route("/skills/<skill_id>/enable", methods=["POST"])
 def api_enable_skill(skill_id):
-    """启用技能"""
-    result = set_skill_status(skill_id, "enabled")
-    return jsonify(result), 200 if result["success"] else 400
+    """Enable the selected skill; explicit builtin mode also supports local work."""
+    data = request.get_json(silent=True)
+    if isinstance(data, dict) and 'mode' in data:
+        return _builtin_skill_status_response(skill_id, 'enabled')
+    return _legacy_skill_status(skill_id, 'enabled')
 
 
 @account_bp.route("/skills/<skill_id>/disable", methods=["POST"])
-@require_owner
 def api_disable_skill(skill_id):
     """禁用技能"""
-    result = set_skill_status(skill_id, "disabled")
-    return jsonify(result), 200 if result["success"] else 400
+    data = request.get_json(silent=True)
+    if isinstance(data, dict) and 'mode' in data:
+        return _builtin_skill_status_response(skill_id, 'disabled')
+    return _legacy_skill_status(skill_id, 'disabled')
 
 
 @account_bp.route("/skills/<skill_id>/config", methods=["PUT"])

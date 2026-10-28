@@ -108,6 +108,10 @@ class ToolDefinition:
     dependency_paths: Tuple[str, ...] = ()
     resource_manifest: List[Dict[str, Any]] = field(default_factory=list)
     resource_reader: Optional[Callable] = None
+    input_schema: Optional[Dict[str, Any]] = None
+    output_schema: Optional[Dict[str, Any]] = None
+    # Only a trusted server registration may opt in. Never a model argument.
+    forwards_execution_control: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         d = {f.name: deepcopy(getattr(self, f.name)) for f in fields(self)
@@ -122,6 +126,14 @@ class ToolDefinition:
 
     def validate_params(self, params: Dict[str, Any]) -> Tuple[bool, str]:
         """校验输入参数。"""
+        if type(params) is not dict:
+            return False, 'tool parameters must be an object'
+        if self.input_schema is not None:
+            try:
+                from mcp_discovery import _validate_instance
+                _validate_instance(self.input_schema, params, 'tool input')
+            except Exception:
+                return False, 'tool input failed schema validation'
         for p in self.params:
             if p.required and p.name not in params:
                 return False, f"missing required param: {p.name}"
@@ -485,7 +497,12 @@ class CapabilityRouter:
                         "context_sha256": context_identity(context)}
 
             def invoke(captured_step, _context):
-                data = handler(**captured_step.params)
+                if tool.forwards_execution_control:
+                    if '_execution_control' in captured_step.params:
+                        raise FormationError('TOOL_EXECUTION_CONTROL_INVALID')
+                    data = handler(_execution_control=_context.get('execution_control'), **captured_step.params)
+                else:
+                    data = handler(**captured_step.params)
                 # A real handler error remains an error, including uncertain
                 # effects; dictionary truthiness is not completion evidence.
                 return _normalize_handler_result(data)

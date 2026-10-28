@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:file_selector/file_selector.dart';
 
 import '../../../core/lumenis_core_client.dart';
+import '../../../core/transport/lumenis_http_transport.dart';
 import 'media_project_snapshot.dart';
 
 abstract interface class MediaProjectRepository {
@@ -45,6 +48,7 @@ abstract interface class MediaProjectRepository {
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
+    List<String>? sourceProjectArtifactRefs,
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
@@ -53,9 +57,112 @@ abstract interface class MediaProjectRepository {
   Future<Map<String, dynamic>> reopen(String? domain, String artifactId);
 }
 
-final class CoreMediaProjectRepository implements MediaProjectRepository {
+abstract interface class MediaProjectTaskRepository {
+  Future<Map<String, dynamic>> startExportTask(
+    String? domain,
+    String requestId,
+    Map<String, dynamic> input,
+  );
+  Future<Map<String, dynamic>> readExportTask(
+    String? domain,
+    int taskId, {
+    String? action,
+  });
+}
+
+abstract interface class MediaProjectStreamRepository {
+  Future<Map<String, dynamic>> importPicked(
+    String? domain,
+    XFile file,
+    int length,
+  );
+}
+
+abstract interface class MediaProjectTranscriptRepository {
+  Future<Map<String, dynamic>> readTranscripts(
+    String? domain,
+    List<String> refs,
+    String projectId,
+    int offset,
+  );
+  Future<Map<String, dynamic>> previewWordCut(
+    String? domain,
+    List<String> refs,
+    String projectId,
+    List<Map<String, dynamic>> selections,
+  );
+}
+
+final class CoreMediaProjectRepository
+    implements
+        MediaProjectRepository,
+        MediaProjectStreamRepository,
+        MediaProjectTaskRepository,
+        MediaProjectTranscriptRepository {
   const CoreMediaProjectRepository(this.client);
   final LumenisCoreClient client;
+
+  @override
+  Future<Map<String, dynamic>> startExportTask(
+    String? domain,
+    String requestId,
+    Map<String, dynamic> input,
+  ) => client.startContentExportTask(
+    domainId: domain,
+    requestId: requestId,
+    input: input,
+  );
+  @override
+  Future<Map<String, dynamic>> readExportTask(
+    String? domain,
+    int taskId, {
+    String? action,
+  }) => client.contentExportTask(
+    domainId: domain,
+    taskId: taskId,
+    action: action,
+  );
+
+  @override
+  Future<Map<String, dynamic>> readTranscripts(
+    String? domain,
+    List<String> refs,
+    String projectId,
+    int offset,
+  ) => client.readContentProjectTranscripts(
+    domainId: domain,
+    assetRefs: refs,
+    projectId: projectId,
+    offset: offset,
+  );
+
+  @override
+  Future<Map<String, dynamic>> previewWordCut(
+    String? domain,
+    List<String> refs,
+    String projectId,
+    List<Map<String, dynamic>> selections,
+  ) => client.previewContentWordCut(
+    domainId: domain,
+    assetRefs: refs,
+    projectId: projectId,
+    selections: selections,
+  );
+
+  @override
+  Future<Map<String, dynamic>> importPicked(
+    String? domain,
+    XFile file,
+    int length,
+  ) => client.importContentSourceStream(
+    domainId: domain,
+    filename: file.name,
+    upload: LumenisUploadBody(
+      length: length,
+      openRead: file.openRead,
+      browserBlobUri: kIsWeb ? Uri.parse(file.path) : null,
+    ),
+  );
 
   @override
   String get contextKey => jsonEncode(client.currentContextEnvelope);
@@ -85,6 +192,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     required String outputKind,
     List<String>? refs,
     String? previousArtifactId,
+    List<String>? sourceProjectArtifactRefs,
     String? title,
     bool renderMedia = true,
     Map<String, double> renderOptions = const {},
@@ -96,6 +204,7 @@ final class CoreMediaProjectRepository implements MediaProjectRepository {
     timeline: timeline.toJson(),
     outputKind: outputKind,
     previousArtifactId: previousArtifactId,
+    sourceProjectArtifactRefs: sourceProjectArtifactRefs,
     title: title,
     renderMedia: renderMedia,
     renderOptions: renderOptions,
@@ -200,8 +309,10 @@ final class MediaProjectVersion {
     required this.timelineVersion,
     required this.evidenceRecorded,
     required this.sourceRefs,
+    required this.sourceProjectArtifactRefs,
     required this.title,
     required this.projectRevision,
+    required this.parentArtifactId,
     required this.rendered,
     required this.renderOptions,
     required this.deliveryOptions,
@@ -218,6 +329,7 @@ final class MediaProjectVersion {
   final double? durationSec;
   final String? title;
   final int? projectRevision;
+  final String? parentArtifactId;
   final bool rendered;
   final Map<String, double> renderOptions;
   final Map<String, dynamic> deliveryOptions;
@@ -229,6 +341,7 @@ final class MediaProjectVersion {
   final int timelineVersion;
   final bool? evidenceRecorded;
   final List<String> sourceRefs;
+  final List<String> sourceProjectArtifactRefs;
 
   factory MediaProjectVersion.read(
     String artifactId,
@@ -252,9 +365,12 @@ final class MediaProjectVersion {
         : null;
     final size = render['size_bytes'];
     final refs = project['source_artifact_refs'] ?? const <String>[];
+    final projectRefs =
+        project['source_project_artifact_refs'] ?? const <String>[];
     final rendered = render['state'] == 'rendered_verified';
     final title = project['title'];
     final revision = project['project_revision'];
+    final parent = project['parent_artifact_id'];
     if (!const [1, 2].contains(project['schema_version']) ||
         (project['schema_version'] == 2 &&
             (title is! String ||
@@ -262,6 +378,10 @@ final class MediaProjectVersion {
                 title.length > 200 ||
                 revision is! int ||
                 revision < 1)) ||
+        (parent != null &&
+            (parent is! String ||
+                !RegExp(r'^ART-[A-Za-z0-9_-]{1,70}$').hasMatch(parent) ||
+                parent == artifactId)) ||
         !const ['video', 'audio'].contains(kind) ||
         timeline is! Map ||
         timeline['version'] is! int ||
@@ -284,6 +404,16 @@ final class MediaProjectVersion {
                   render['state'] != 'not_rendered' ||
                   render.length != 3 ||
                   render['timeline_version'] != timeline['version'])) ||
+        projectRefs is! List ||
+        projectRefs.length > 64 ||
+        projectRefs.toSet().length != projectRefs.length ||
+        projectRefs.any(
+          (r) =>
+              r is! String ||
+              !RegExp(r'^ART-[A-Za-z0-9_-]{1,70}$').hasMatch(r) ||
+              r == artifactId ||
+              r == parent,
+        ) ||
         refs is! List ||
         refs.length > 64 ||
         refs.any(
@@ -313,6 +443,7 @@ final class MediaProjectVersion {
       durationSec: rendered ? (duration as num).toDouble() : null,
       title: title as String?,
       projectRevision: revision as int?,
+      parentArtifactId: parent as String?,
       rendered: rendered,
       renderOptions: _readRenderOptions(project['render_options']),
       deliveryOptions: _readDeliveryOptions(project['delivery_options']),
@@ -328,6 +459,9 @@ final class MediaProjectVersion {
       timelineVersion: timeline['version'] as int,
       evidenceRecorded: evidenceRecorded,
       sourceRefs: List<String>.unmodifiable(refs.cast<String>()),
+      sourceProjectArtifactRefs: List<String>.unmodifiable(
+        projectRefs.cast<String>(),
+      ),
     );
   }
 }
@@ -469,6 +603,11 @@ final class MediaProjectController extends ChangeNotifier {
   String? _selectedClipId;
   bool _disposed = false;
   bool _completionUnknown = false;
+  Map<String, dynamic>? _exportTask;
+  Map<String, dynamic>? get exportTask => contextMatches ? _exportTask : null;
+  bool _taskActionPending = false;
+  bool get taskActionPending => _taskActionPending;
+
   int _scopeGeneration = 0;
   int _operationScopeGeneration = 0;
   MediaProjectOperation _operation = MediaProjectOperation.idle;
@@ -504,6 +643,106 @@ final class MediaProjectController extends ChangeNotifier {
 
   String get _contextKey =>
       '${domain ?? 'shared_workspace:v1'}:${repository.contextKey}';
+
+  bool get canReadTranscripts =>
+      repository is MediaProjectTranscriptRepository &&
+      contextMatches &&
+      _timeline != null &&
+      _version != null &&
+      !hasUnsavedChanges &&
+      sourceRefs.isNotEmpty;
+
+  Future<Map<String, dynamic>?> readTranscripts({int offset = 0}) async {
+    if (!canReadTranscripts || busy || _disposed) return null;
+    final base = _timeline!;
+    final version = _version!;
+    final context = _contextKey;
+    if (!_begin(MediaProjectOperation.inspecting)) return null;
+    try {
+      final response = await (repository as MediaProjectTranscriptRepository)
+          .readTranscripts(domain, sourceRefs, version.artifactId, offset);
+      if (!_acceptContext(context) ||
+          !identical(base, _timeline) ||
+          !identical(version, _version)) {
+        return null;
+      }
+      final result = response['transcripts'];
+      if (response['ok'] != true ||
+          response['external_fetch'] != false ||
+          jsonEncode(response['source_artifact_refs']) !=
+              jsonEncode(sourceRefs) ||
+          result is! Map ||
+          result['project_artifact_id'] != version.artifactId ||
+          result['timeline_version'] != base.version ||
+          result['words'] is! List ||
+          !RegExp(r'^[0-9a-f]{64}$').hasMatch('${result['project_sha256']}')) {
+        throw const FormatException('Invalid project transcript response.');
+      }
+      return Map<String, dynamic>.from(result);
+    } catch (error) {
+      if (_acceptContext(context)) _capture(error);
+      return null;
+    } finally {
+      _end();
+    }
+  }
+
+  Future<MediaProjectBatchPreview?> previewWordCut({
+    required String projectSha256,
+    required List<Map<String, dynamic>> selections,
+  }) async {
+    if (!canReadTranscripts || busy || _disposed || selections.isEmpty) {
+      return null;
+    }
+    final base = _timeline!;
+    final version = _version!;
+    final context = _contextKey;
+    final refs = sourceRefs;
+    if (!_begin(MediaProjectOperation.inspecting)) return null;
+    try {
+      final frozen = (jsonDecode(jsonEncode(selections)) as List)
+          .map((value) => Map<String, dynamic>.from(value as Map))
+          .toList();
+      final response = await (repository as MediaProjectTranscriptRepository)
+          .previewWordCut(domain, refs, version.artifactId, frozen);
+      if (!_acceptContext(context) ||
+          !identical(base, _timeline) ||
+          !identical(version, _version)) {
+        return null;
+      }
+      final edit = response['transcript_edit'];
+      if (response['ok'] != true ||
+          response['assets'] is! List ||
+          response['external_fetch'] != false ||
+          jsonEncode(response['source_artifact_refs']) != jsonEncode(refs) ||
+          edit is! Map ||
+          edit['state'] != 'candidate' ||
+          edit['edit_kind'] != 'cut_original' ||
+          edit['parent_artifact_id'] != version.artifactId ||
+          edit['parent_sha256'] != projectSha256 ||
+          edit['parent_timeline_version'] != base.version ||
+          edit['automatic_application'] != false) {
+        throw const FormatException('Invalid word edit response.');
+      }
+      final assets = (response['assets'] as List)
+          .map(MediaProjectAsset.fromJson)
+          .toList(growable: false);
+      MediaProjectSnapshot.fromJson(base.toJson(), inspectedAssets: assets);
+      final candidate = MediaProjectSnapshot.fromJson(
+        edit['preview_timeline'],
+        inspectedAssets: assets,
+      );
+      if (candidate.version <= base.version) {
+        throw const FormatException('Word edit did not advance the draft.');
+      }
+      return MediaProjectBatchPreview._(this, base, context, candidate, 1);
+    } catch (error) {
+      if (_acceptContext(context)) _capture(error);
+      return null;
+    } finally {
+      _end();
+    }
+  }
 
   Future<MediaAudioComparison> previewAudioProcessing(
     Map<String, double> options, {
@@ -854,6 +1093,46 @@ final class MediaProjectController extends ChangeNotifier {
     Uint8List bytes, {
     Future<bool?> Function(ContentSourceConfirmation confirmation)?
     requestApproval,
+  }) => _importFile(
+    filename,
+    bytes.length,
+    () => repository.importFile(domain, filename, bytes),
+    requestApproval: requestApproval,
+  );
+
+  Future<void> importPickedFile(
+    XFile file, {
+    Future<bool?> Function(ContentSourceConfirmation confirmation)?
+    requestApproval,
+  }) async {
+    final streamRepository = repository;
+    if (streamRepository is! MediaProjectStreamRepository) {
+      _fail('CONTENT_STREAM_UPLOAD_UNAVAILABLE');
+      return;
+    }
+    final length = await file.length();
+    if (length <= 0) {
+      _fail('CONTENT_MEDIA_FILE_EMPTY');
+      return;
+    }
+    return _importFile(
+      file.name,
+      length,
+      () => (streamRepository as MediaProjectStreamRepository).importPicked(
+        domain,
+        file,
+        length,
+      ),
+      requestApproval: requestApproval,
+    );
+  }
+
+  Future<void> _importFile(
+    String filename,
+    int length,
+    Future<Map<String, dynamic>> Function() upload, {
+    Future<bool?> Function(ContentSourceConfirmation confirmation)?
+    requestApproval,
   }) async {
     if (_disposed || busy) return;
     if (!contextMatches) {
@@ -869,14 +1148,14 @@ final class MediaProjectController extends ChangeNotifier {
     try {
       Map<String, dynamic> response;
       try {
-        response = await repository.importFile(domain, filename, bytes);
+        response = await upload();
       } on LumenisCoreException catch (error) {
         final confirmation = error.sourceConfirmation;
         if (error.statusCode != 403 ||
             error.errorCode != 'CONTENT_SOURCE_APPROVAL_REQUIRED' ||
             confirmation == null ||
             confirmation.filename != filename ||
-            confirmation.sizeBytes != bytes.length) {
+            confirmation.sizeBytes != length) {
           rethrow;
         }
         if (requestApproval == null) {
@@ -907,7 +1186,7 @@ final class MediaProjectController extends ChangeNotifier {
           );
         }
         if (!_acceptContext(context)) return;
-        response = await repository.importFile(domain, filename, bytes);
+        response = await upload();
       }
       final responseCode = response['code'] ?? response['error_code'];
       final approvalStatus = response['approval_status'] ?? response['status'];
@@ -968,7 +1247,9 @@ final class MediaProjectController extends ChangeNotifier {
       _fail('CONTENT_EXPORT_COMPLETION_UNKNOWN');
       return;
     }
-    if (_version != null &&
+    final derived = _version != null && _version!.outputKind != outputKind;
+    if (!derived &&
+        _version != null &&
         !hasUnsavedChanges &&
         (!renderMedia || _version!.rendered)) {
       _fail('CONTENT_PROJECT_NO_CHANGES');
@@ -979,24 +1260,44 @@ final class MediaProjectController extends ChangeNotifier {
           ? MediaProjectOperation.exporting
           : MediaProjectOperation.saving,
     );
+    if (renderMedia) _exportTask = null;
     final title = _title;
     final renderOptions = _renderOptions;
     final deliveryOptions = _deliveryOptions;
     final snapshot = _timeline!;
     final context = _contextKey;
+    final parent = derived ? null : _version?.artifactId;
+    final projectRefs = derived
+        ? <String>[_version!.artifactId]
+        : _version?.sourceProjectArtifactRefs ?? const <String>[];
     try {
-      final response = await repository.export(
-        domain: domain,
-        paths: _paths,
-        refs: _sourceRefs,
-        timeline: snapshot,
-        outputKind: outputKind,
-        previousArtifactId: _version?.artifactId,
-        title: title,
-        renderMedia: renderMedia,
-        renderOptions: renderOptions,
-        deliveryOptions: deliveryOptions,
-      );
+      final response =
+          renderMedia &&
+              _sourceRefs != null &&
+              repository is MediaProjectTaskRepository
+          ? await _runExportTask({
+              'asset_refs': _sourceRefs,
+              'timeline': snapshot.toJson(),
+              'output_kind': outputKind,
+              'previous_artifact_id': parent,
+              'source_project_artifact_refs': projectRefs,
+              'title': ?title,
+              'render_options': renderOptions,
+              'delivery_options': deliveryOptions,
+            }, context)
+          : await repository.export(
+              domain: domain,
+              paths: _paths,
+              refs: _sourceRefs,
+              timeline: snapshot,
+              outputKind: outputKind,
+              previousArtifactId: parent,
+              sourceProjectArtifactRefs: projectRefs,
+              title: title,
+              renderMedia: renderMedia,
+              renderOptions: renderOptions,
+              deliveryOptions: deliveryOptions,
+            );
       final result = response['result'];
       if (response['ok'] != true ||
           response['publish_status'] != 'not_performed' ||
@@ -1019,6 +1320,8 @@ final class MediaProjectController extends ChangeNotifier {
         inspectedAssets: snapshot.assets,
       );
       if (version.outputKind != outputKind ||
+          version.parentArtifactId != parent ||
+          !listEquals(version.sourceProjectArtifactRefs, projectRefs) ||
           version.title != title ||
           version.rendered != renderMedia ||
           !mapEquals(version.renderOptions, renderOptions) ||
@@ -1043,6 +1346,90 @@ final class MediaProjectController extends ChangeNotifier {
                   error.statusCode == null);
     } finally {
       _end();
+    }
+  }
+
+  Future<Map<String, dynamic>> _runExportTask(
+    Map<String, dynamic> input,
+    String context,
+  ) async {
+    final tasks = repository as MediaProjectTaskRepository;
+    final random = math.Random.secure();
+    final requestId = List.generate(
+      16,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    var response = await tasks.startExportTask(domain, requestId, input);
+    while (_acceptContext(context)) {
+      final task = response['task'];
+      if (response['ok'] != true || task is! Map || task['task_id'] is! int) {
+        throw const FormatException('Export task was not registered.');
+      }
+      _exportTask = Map<String, dynamic>.from(task);
+      notifyListeners();
+      if (task['status'] == 'completed') {
+        final result = task['result'];
+        if (result is! Map) {
+          throw const FormatException('Export task has no result.');
+        }
+        return {
+          'ok': true,
+          'publish_status': result['publish_status'],
+          'result': result,
+          'evidence_recorded': result['evidence_recorded'],
+        };
+      }
+      if (const [
+        'cancelled',
+        'interrupted',
+        'failed',
+      ].contains(task['status'])) {
+        throw LumenisCoreException(
+          'Export task did not complete.',
+          errorCode: task['status'] == 'cancelled'
+              ? 'CONTENT_EXPORT_CANCELLED'
+              : task['status'] == 'interrupted'
+              ? 'CONTENT_EXPORT_INTERRUPTED'
+              : 'CONTENT_EXPORT_FAILED',
+        );
+      }
+      if (!const ['pending', 'running', 'canceling'].contains(task['status'])) {
+        throw const FormatException('Unknown export task state.');
+      }
+      await Future<void>.delayed(const Duration(seconds: 1));
+      if (!_acceptContext(context)) break;
+      response = await tasks.readExportTask(domain, task['task_id'] as int);
+    }
+    throw const LumenisCoreException(
+      'Export context changed.',
+      errorCode: 'CONTENT_CONTEXT_CHANGED',
+    );
+  }
+
+  Future<void> cancelExportTask() async {
+    final task = exportTask;
+    if (_disposed ||
+        _taskActionPending ||
+        repository is! MediaProjectTaskRepository ||
+        task == null ||
+        task['can_cancel'] != true ||
+        task['task_id'] is! int) {
+      return;
+    }
+    final context = _contextKey;
+    _taskActionPending = true;
+    notifyListeners();
+    try {
+      final response = await (repository as MediaProjectTaskRepository)
+          .readExportTask(domain, task['task_id'] as int, action: 'cancel');
+      if (_acceptContext(context) && response['task'] is Map) {
+        _exportTask = Map<String, dynamic>.from(response['task'] as Map);
+      }
+    } catch (error) {
+      if (_acceptContext(context)) _capture(error);
+    } finally {
+      _taskActionPending = false;
+      if (!_disposed) notifyListeners();
     }
   }
 

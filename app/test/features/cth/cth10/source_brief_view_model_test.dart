@@ -552,20 +552,110 @@ void main() {
   );
 
   test(
-    'an unsupported business-analysis route is not called or implied',
+    'question uses the existing source brief route without external analysis',
     () async {
       final client = _SourceBriefClient();
       final model = SourceBriefViewModel(client: client);
 
-      await model.start(businessQuestion: '请分析这些来源');
+      await model.start(businessQuestion: '  请分析这些来源  ');
 
-      expect(client.startCalls, 0);
+      expect(client.startCalls, 1);
+      expect(client.startQuestion, '请分析这些来源');
       expect(client.jobCalls, 0);
-      expect(model.phase, SourceBriefPhase.failed);
-      expect(model.errorKind, SourceBriefErrorKind.analysisUnavailable);
-      expect(model.taskId, isNull);
+      expect(model.errorKind, isNull);
+      expect(model.taskId, isNotNull);
       expect(model.result, isNull);
 
+      model.dispose();
+    },
+  );
+
+  for (final question in ['abc', 'a' * 1501, 'abcd\u0001']) {
+    test('invalid question is rejected before task submission', () async {
+      final client = _SourceBriefClient();
+      final model = SourceBriefViewModel(client: client);
+      await model.start(businessQuestion: question);
+      expect(client.startCalls, 0);
+      expect(model.errorKind, SourceBriefErrorKind.invalidResponse);
+      model.dispose();
+    });
+  }
+
+  test(
+    'real source-bound research preserves excerpts, questions and unknown numbers',
+    () async {
+      final client = _SourceBriefClient()
+        ..jobResponse = _jobResponse(
+          jobId: 'JOB-1',
+          researchAnalysis: _researchAnalysis(),
+        );
+      final model = SourceBriefViewModel(client: client);
+      await model.reopenJob('JOB-1');
+      expect(model.errorKind, isNull);
+      final research = model.result!.researchAnalysis!;
+      expect(
+        research.findings.single.content,
+        'A secondary report mentioned 18% growth.',
+      );
+      expect(research.findings.single.evidenceRef, 'EVIDENCE-1');
+      expect(research.questions.single.status, 'proposed');
+      expect(research.numberChecks.single.literals, ['18%']);
+      expect(model.result!.analysis, isNull);
+      model.dispose();
+    },
+  );
+
+  final corruptions = <String, void Function(Map<String, dynamic>)>{
+    'foreign source': (r) =>
+        (r['ranked_findings'] as List).first['source_id'] = 'OTHER',
+    'foreign citation': (r) =>
+        (r['ranked_findings'] as List).first['evidence_refs'] = ['OTHER'],
+    'verified claim': (r) =>
+        (r['ranked_findings'] as List).first['fact_verified'] = true,
+    'foreign lineage': (r) =>
+        (r['evidence_lineage'] as List).first['source'] = 'OTHER',
+    'foreign hypothesis': (r) =>
+        (r['hypotheses'] as List).first['source_set_sha256'] = 'e' * 64,
+    'invented numeric unit': (r) =>
+        (r['comparisons'] as List).first['unit'] = 'verified growth',
+    'permission promotion': (r) => r['permission_granted'] = true,
+    'foreign scope': (r) => (r['scope'] as Map)['scope_key'] = 'e' * 64,
+    'question mismatch': (r) => r['goal'] = 'Different question',
+  };
+  for (final corruption in corruptions.entries) {
+    test('withholds research with ${corruption.key}', () async {
+      final research = _researchAnalysis();
+      corruption.value(research);
+      final client = _SourceBriefClient()
+        ..jobResponse = _jobResponse(
+          jobId: 'JOB-1',
+          researchAnalysis: research,
+        );
+      final model = SourceBriefViewModel(client: client);
+      await model.reopenJob('JOB-1');
+      expect(model.result, isNull);
+      expect(model.errorKind, isNotNull);
+      model.dispose();
+    });
+  }
+
+  test(
+    'unavailable original source use exposes no stale research body',
+    () async {
+      final client = _SourceBriefClient()
+        ..jobResponse = _jobResponse(
+          jobId: 'JOB-1',
+          researchAnalysis: {
+            'status': 'source_use_unavailable',
+            'ranked_findings': [],
+            'fact_verified': false,
+            'limitations': ['Original content use could not be verified.'],
+          },
+        );
+      final model = SourceBriefViewModel(client: client);
+      await model.reopenJob('JOB-1');
+      expect(model.result!.researchAnalysis!.findings, isEmpty);
+      expect(model.result!.researchAnalysis!.status, 'source_use_unavailable');
       model.dispose();
     },
   );
@@ -1267,6 +1357,7 @@ Map<String, dynamic> _jobResponse({
   required String jobId,
   Map<String, dynamic>? scope,
   Map<String, dynamic>? businessAnalysis,
+  Map<String, dynamic>? researchAnalysis,
 }) => {
   'ok': true,
   'result': {
@@ -1283,9 +1374,71 @@ Map<String, dynamic> _jobResponse({
       'records': [_sourceRecord()],
     },
     'business_analysis': businessAnalysis ?? {'state': 'not_requested'},
-    'business_question': businessAnalysis == null ? null : '检查本周运营变化',
+    'business_question': businessAnalysis == null && researchAnalysis == null
+        ? null
+        : '检查本周运营变化',
+    'research_analysis': ?researchAnalysis,
     'review_status': 'HUMAN_PENDING',
   },
+};
+
+Map<String, dynamic> _researchAnalysis() => {
+  'schema': 'source_bound_research.v1',
+  'status': 'research_draft',
+  'scope': _globalScope(),
+  'goal': '检查本周运营变化',
+  'summary': 'Source excerpts and questions for further verification.',
+  'source_set_sha256': 'd' * 64,
+  'permission_granted': false,
+  'canonical_promotion': false,
+  'ranked_findings': [
+    {
+      'finding_id': 'finding_1',
+      'source_id': 'SRC-1',
+      'lineage_id': 'lineage_1',
+      'content': 'A secondary report mentioned 18% growth.',
+      'title': '可核验来源',
+      'evidence_refs': ['EVIDENCE-1'],
+      'claim_type': 'source_statement',
+      'validated': false,
+      'fact_verified': false,
+      'confidence': null,
+      'excerpt_truncated': true,
+    },
+  ],
+  'evidence_lineage': [
+    {
+      'lineage_id': 'lineage_1',
+      'source': 'SRC-1',
+      'evidence_id': 'EVIDENCE-1',
+      'provenance': {'fact_verified': false},
+    },
+  ],
+  'hypotheses': [
+    {
+      'statement': 'Does the full report support the question?',
+      'status': 'proposed',
+      'finding_ids': ['finding_1'],
+      'evidence_refs': ['EVIDENCE-1'],
+      'claim_type': 'hypothesis',
+      'confidence': null,
+      'source_set_sha256': 'd' * 64,
+      'validation_needed': ['Check time, scope and independent evidence.'],
+    },
+  ],
+  'comparisons': [
+    {
+      'source_id': 'SRC-1',
+      'evidence_refs': ['EVIDENCE-1'],
+      'numeric_literals': ['18%'],
+      'comparison_status': 'NOT_COMPARABLE_WITHOUT_MEASURE_DEFINITIONS',
+      'unit': null,
+      'currency': null,
+      'period': null,
+      'denominator': null,
+    },
+  ],
+  'limitations': ['Source statements are not verified effects.'],
 };
 
 Map<String, dynamic> _draftAnalysis() => {

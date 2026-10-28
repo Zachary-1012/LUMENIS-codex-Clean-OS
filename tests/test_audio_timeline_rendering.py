@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import array
 import hashlib
+import json
 import math
 from pathlib import Path
 import subprocess
@@ -20,6 +21,17 @@ SAMPLE_RATE = 48000
 
 def _run(command: list[str]) -> subprocess.CompletedProcess[bytes]:
     return subprocess.run(command, capture_output=True, check=True, timeout=15, shell=False)
+
+
+def _assert_no_demo_comment(path: Path) -> None:
+    ffprobe = video_editing._ffprobe_path()
+    assert ffprobe and Path(ffprobe).is_file()
+    result = _run([
+        ffprobe, "-v", "error", "-show_entries", "format_tags=comment",
+        "-of", "json", str(path),
+    ])
+    tags = json.loads(result.stdout).get("format", {}).get("tags", {})
+    assert not any("demo" in str(value).casefold() for value in tags.values())
 
 
 @pytest.fixture
@@ -90,6 +102,7 @@ def test_multiple_video_clips_render_with_real_ffmpeg(generated_media, tmp_path:
     assert result["measurement"]["audio_streams"] == 0
     assert source_hash == final_source_hash
     assert output.is_file() and output.stat().st_size > 0
+    _assert_no_demo_comment(output)
 
 
 @pytest.mark.parametrize("music_tracks", [1, 2])
@@ -204,6 +217,7 @@ def test_actual_aac_peak_correction_preserves_frames_and_audio_placement(generat
     assert max(abs(value) for value in samples[:round(.15 * SAMPLE_RATE)]) < 100
     assert max(abs(value) for value in samples[round(.25 * SAMPLE_RATE):round(.8 * SAMPLE_RATE)]) > 1000
     assert hashlib.sha256(source.read_bytes()).hexdigest() == before
+    _assert_no_demo_comment(output)
 
 
 def test_ducking_without_explicit_voiceover_is_rejected(generated_media, tmp_path):

@@ -620,6 +620,7 @@ class _CatalogOnlyClient extends LumenisCoreClient {
     required InternalPitchManuscript manuscript,
     required String requestId,
     InternalPitchRevision? revision,
+    List<Map<String, dynamic>> citations = const [],
   }) async {
     manuscriptScope = scope;
     throw const LumenisCoreException('Save response unavailable');

@@ -2,7 +2,7 @@
 import dataclasses,hashlib,json,wave
 from pathlib import Path
 import pytest
-from tests.test_content_project_storage import media_store
+from tests.test_content_project_storage import media_store as media_store
 from lumenis.shared.content_creation import speech_transcription as adapter
 from lumenis.shared.content_creation.video_editing import VideoEditingError,fingerprint_local_media
 from lumenis.system.ai_gateway import owned_speech
@@ -28,10 +28,21 @@ def decoder_contract(media_store,monkeypatch):
     calls=[]
     def decode(path,**kw):
         data=Path(path).read_bytes();assert hashlib.sha256(data).hexdigest()==kw['expected_audio_sha256']
-        with wave.open(path) as wav:assert wav.getframerate()==16000 and wav.getnchannels()==1
+        with wave.open(path) as wav:
+            frames,rate=wav.getnframes(),wav.getframerate()
+            assert rate==16000 and wav.getnchannels()==1
         kw['is_cancelled']();calls.append(kw)
         raw={'text':' 测试','language':'zh','segments':[{'id':0,'start':0,'end':.2,'text':' 测试','avg_logprob':-.1,'compression_ratio':1,'no_speech_prob':.01,'words':[{'word':'测试','start':0,'end':.2,'probability':.9}]}]}
-        return {'schema':'test_decoder_contract_not_actual_inference',**owned_speech.validate_transcript(raw,duration_seconds=1),'source_sha256':kw['expected_audio_sha256']}
+        return {'schema':'owned-speech-derivative:v1','owner':'SYSTEM AI Gateway',
+            **owned_speech.validate_transcript(raw,duration_seconds=frames/rate),
+            'source_sha256':kw['expected_audio_sha256'],'source_ref':kw['source_ref'],
+            'source_ref_authenticated_by_adapter':False,'duration_seconds':frames/rate,
+            'model_id':runtime.model_id,'model_revision':owned_speech.MODEL_REVISION,
+            'weight_sha256':owned_speech.model_weight_sha256(runtime.model_id),
+            'runtime_manifest_sha256':runtime.manifest_sha256,'adapter_sha256':'d'*64,
+            'ffmpeg_sha256':runtime.ffmpeg_sha256,'fallback_allowed':False,'offline':True,
+            'declared_language':kw['language_hint'],'rights_state':'UNKNOWN',
+            'product_acceptance':False,'warnings':[]}
     monkeypatch.setattr(owned_speech,'transcribe_audio',decode)
     return calls
 
@@ -53,7 +64,8 @@ def test_callback_denial_prevents_decoder(media_store,decoder_contract):
 
 
 def test_operator_configuration_status_never_claims_inference(tmp_path,monkeypatch):
-    runtime=owned_speech.SpeechRuntime('/missing/python','a'*64,'/missing/manifest','b'*64,'/missing/weight','/missing/ffmpeg','c'*64)
+    runtime=owned_speech.SpeechRuntime(str(tmp_path/'missing-python'),'a'*64,str(tmp_path/'missing-manifest'),
+        'b'*64,str(tmp_path/'missing-weight'),str(tmp_path/'missing-ffmpeg'),'c'*64)
     path=tmp_path/'config.json';path.write_text(json.dumps(dataclasses.asdict(runtime)));monkeypatch.setenv(adapter.CONFIG_ENV,str(path))
     state=adapter.speech_runtime_status();assert state['state']=='missing_local_files' and len(state['missing_fields'])==4
     assert not state['inference_verified'] and not state['automatic_download']
@@ -73,8 +85,20 @@ def test_invalid_language_fails_before_runtime(media_store,hint):
 
 
 def test_no_recognized_speech_never_fabricates_subtitle_files(media_store,decoder_contract,monkeypatch):
-    def empty(*args,**kwargs):
-        return owned_speech.validate_transcript({'text':'','language':'ko','segments':[]},duration_seconds=.5)
+    runtime=owned_speech.SpeechRuntime('/missing/python','a'*64,'/missing/manifest','b'*64,
+        '/missing/weight','/missing/ffmpeg','c'*64)
+    def empty(path,**kwargs):
+        with wave.open(path) as wav:duration=wav.getnframes()/wav.getframerate()
+        return {'schema':'owned-speech-derivative:v1','owner':'SYSTEM AI Gateway',
+            **owned_speech.validate_transcript({'text':'','language':'ko','segments':[]},duration_seconds=duration),
+            'source_sha256':kwargs['expected_audio_sha256'],'source_ref':kwargs['source_ref'],
+            'source_ref_authenticated_by_adapter':False,'duration_seconds':duration,
+            'model_id':runtime.model_id,'model_revision':owned_speech.MODEL_REVISION,
+            'weight_sha256':owned_speech.model_weight_sha256(runtime.model_id),
+            'runtime_manifest_sha256':runtime.manifest_sha256,'adapter_sha256':'d'*64,
+            'ffmpeg_sha256':runtime.ffmpeg_sha256,'fallback_allowed':False,'offline':True,
+            'declared_language':kwargs['language_hint'],'rights_state':'UNKNOWN',
+            'product_acceptance':False,'warnings':[]}
     monkeypatch.setattr(owned_speech,'transcribe_audio',empty)
     asset=fingerprint_local_media(str(media_store['source']))
     result=adapter.build_transcription_files(asset,language_hint='ko')
@@ -125,18 +149,23 @@ def test_cut_word_is_omitted_not_proportionally_rescaled(media_store,decoder_con
     assert set(result['files'])=={'transcript-timeline.json'}
 
 
-def test_mapping_rejects_overlapping_selected_audio(media_store,decoder_contract):
+def test_mapping_retains_overlapping_selected_audio_for_listening_review(media_store,decoder_contract):
     timeline,item=mapped_fixture(media_store,decoder_contract,ranges=((0,.3,0),))
     asset=timeline.assets[0]
     timeline=timeline.add_audio_track('voice2',audio_role='voiceover').add_clip(asset.asset_id,track_id='voice2',audio_role='voiceover',source_out=.3)
-    with pytest.raises(VideoEditingError,match='OVERLAP_REQUIRES_REVIEW'):
-        adapter.build_timeline_transcription_files(timeline,item,rendered_sha256='a'*64)
+    mapped=adapter.build_timeline_transcription_files(timeline,item,rendered_sha256='a'*64)['report']
+    assert len(mapped['words'])==2 and len(mapped['cues'])==2 and mapped['overlapping_cues']
+    assert len({word['track_id'] for word in mapped['words']})==2
+    assert any(warning['reason']=='overlapping_source_cues_retained_requires_listening_review' for warning in mapped['warnings'])
 
 
 def test_mapping_unknown_rate_and_cancel_fail_without_result(media_store,decoder_contract):
     timeline,item=mapped_fixture(media_store,decoder_contract)
     clip=next(c for t in timeline.tracks for c in t.clips)
     object.__setattr__(clip,'playback_rate',2)
+    mapped=adapter.build_timeline_transcription_files(timeline,item,rendered_sha256='a'*64)['report']
+    assert mapped['words'][0]['end']==pytest.approx(.1)
+    object.__setattr__(clip,'unknown_time_warp',{})
     with pytest.raises(VideoEditingError,match='RATE_UNSUPPORTED'):
         adapter.build_timeline_transcription_files(timeline,item,rendered_sha256='a'*64)
     def cancel():raise PermissionError('cancelled')
@@ -155,7 +184,8 @@ def test_mapping_rejects_report_or_output_hash_mismatch(media_store,decoder_cont
 
 @pytest.mark.parametrize('model_id',[None,'openai/whisper-base','openai/whisper-small'])
 def test_operator_config_legacy_and_explicit_model(tmp_path,monkeypatch,model_id):
-    raw=dict(python_path='/p',python_sha256='a'*64,manifest_path='/m',manifest_sha256='b'*64,weight_path='/w',ffmpeg_path='/f',ffmpeg_sha256='c'*64)
+    raw=dict(python_path=str(tmp_path/'p'),python_sha256='a'*64,manifest_path=str(tmp_path/'m'),
+        manifest_sha256='b'*64,weight_path=str(tmp_path/'w'),ffmpeg_path=str(tmp_path/'f'),ffmpeg_sha256='c'*64)
     if model_id:raw['model_id']=model_id
     p=tmp_path/'config.json';p.write_text(json.dumps(raw));monkeypatch.setenv(adapter.CONFIG_ENV,str(p))
     assert adapter.configured_speech_runtime().model_id==(model_id or owned_speech.MODEL_ID)
@@ -173,13 +203,17 @@ def test_mapping_delivery_real_package_revision_and_cold_reopen(media_store,deco
         timeline=timeline.add_clip(asset.asset_id,track_id='voice',audio_role='voiceover',source_out=.4)
         args=dict(actor=ACTOR,**SCOPE,source_execution_id='mapping-fixture-real-package',output_kind='audio',source_artifact_refs=[source_id],delivery_options={'transcription':{'asset_id':asset.asset_id,'language_hint':'zh'}})
         first=owner.stage_timeline_artifact(timeline,**args);ids.append(first['artifact']['artifact_id'])
+        recognition_calls_after_first=len(decoder_contract)
+        assert recognition_calls_after_first==1
         clip=next(c for t in timeline.tracks for c in t.clips)
         second=owner.stage_timeline_artifact(timeline.trim(clip.clip_id,source_in=.1,source_out=.4),previous_artifact_id=ids[0],**args);ids.append(second['artifact']['artifact_id'])
+        assert len(decoder_contract)==recognition_calls_after_first
     for i,project_id in enumerate(ids):
         owner.read_content_project(project_id,actor=ACTOR,**SCOPE)
         with zipfile.ZipFile(media_store['root']/f'{project_id}.zip') as z:
             names=z.namelist();name=next(n for n in names if n.endswith('transcript-timeline.json'))
-            mapped=json.loads(z.read(name));assert mapped['state']==('available' if i==0 else 'no_retained_words')
+            mapped=json.loads(z.read(name));assert mapped['schema']=='timeline-transcription:v2'
+            assert mapped['state']==('available' if i==0 else 'no_retained_cues')
             assert any(n.endswith('transcript-asr.srt') for n in names)
     code='import shared_artifacts as a; import json; print(json.dumps([a.read_content_project(i,actor={"id":1,"role":"admin"},domain_id="bmp",global_scope=True)["project"]["output_kind"] for i in '+repr(ids)+']))'
     result=subprocess.run([sys.executable,'-c',code],env=os.environ.copy(),cwd=Path(__file__).resolve().parents[1],capture_output=True,text=True)

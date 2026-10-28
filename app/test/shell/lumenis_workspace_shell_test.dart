@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lumenis_app/core/lumenis_core_client.dart';
 import 'package:lumenis_app/core/lumenis_theme.dart';
 import 'package:lumenis_app/features/account/acc03/acc03_screen.dart';
+import 'package:lumenis_app/features/account/acc02/acc02_screen.dart';
 import 'package:lumenis_app/features/cth/cth01/cth01_screen.dart';
 import 'package:lumenis_app/features/ai04/ai04_screen.dart';
 import 'package:lumenis_app/features/ai01/ai01_screen.dart';
@@ -15,6 +16,28 @@ import 'package:lumenis_app/navigation/lumenis_workspace_routes.dart';
 import 'package:lumenis_app/shell/lumenis_workspace_shell.dart';
 
 void main() {
+  testWidgets('settings opens existing subject directory without selection', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 960));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final selected = <String>[];
+    final client = _ShellClient();
+    await tester.pumpWidget(
+      _app(client, initialScreenId: 'SYS-05', onScreenSelected: selected.add),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('sys05/open-subject-directory')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(selected, ['ACC-02']);
+    expect(find.byType(Acc02Screen), findsOneWidget);
+    expect(client.lastSelectedSubject, isNull);
+    expect(tester.takeException(), isNull);
+  });
+
   test('all canonical Screen IDs have one unique concrete screen widget', () {
     final client = _ShellClient();
     final widgets = {

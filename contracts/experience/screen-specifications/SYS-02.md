@@ -3,7 +3,7 @@
 ```yaml
 screen_id: SYS-02
 status: DESIGN_EXPLORATION
-revision: 3
+revision: 4
 owner_domain: SYSTEM Collector
 binding_ids:
   - BACKEND-GAP-037
@@ -67,6 +67,8 @@ Final actions may include explicit manual run, an already-authorized schedule, p
 - Return state: load authorized task history from the original durable queue; open the saved task and its exact Source/Evidence page versions without refetching.
 
 ## 3. Verified data and callable bindings
+
+采集只从带明确来源、问题、范围与日期的持久任务入口发起。连接面板只读取连接状态与汇总；不再保留无任务范围的旧 `/api/collect` 操作。连接概览与真实采集历史分开，历史项重开不会重新抓取。发布时间未知的已保存原文单独可读，不计入所选日期范围，也不补造时间。
 
 | Priority | UI field | Owner / source | Missing-data behavior | Binding / evidence |
 | --- | --- | --- | --- | --- |

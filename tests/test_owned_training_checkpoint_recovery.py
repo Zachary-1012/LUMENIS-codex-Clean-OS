@@ -870,7 +870,7 @@ def test_recovery_preflight_keeps_exact_extended_recipe_and_derivative(tmp_path,
     assert result["checkpoint_policy_sha256"] == policy.sha256
     assert result["execution_state"] == "PREFLIGHT_ONLY"
     assert not output.exists()
-    with pytest.raises(training.TrainingBlocked, match="CHECKPOINT_CONTRACT_NOT_BOUND"):
+    with pytest.raises(training.TrainingBlocked, match="GPU_TRAINING_WITHDRAWN_BY_PO"):
         training.run_owned_lora_training(model, train, heldout, output,
             manifest_path=manifest, recipe=policy.recipe, execute=True,
             approval_verifier=lambda request: True, checkpoint_adapter={"authorized": True})

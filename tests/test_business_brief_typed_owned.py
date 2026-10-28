@@ -34,6 +34,9 @@ def _wire_repositories(workspace, monkeypatch):
     monkeypatch.delenv("PERMISSION_GATE_TESTING", raising=False)
     monkeypatch.setattr(brief, "get_repository", lambda: workspace["repo"])
     monkeypatch.setattr(media_brief, "get_repository", lambda: workspace["repo"])
+    from lumenis.shared.evaluation import ai as evaluation
+    monkeypatch.setattr(evaluation, "get_repository", lambda: workspace["repo"])
+    monkeypatch.setattr(evaluation.acl, "get_repository", lambda: workspace["repo"])
 
 
 def _seed_source(workspace, *, filename="owned-business-source.txt"):
@@ -125,6 +128,10 @@ def _owned_result(request, *, actor, analysis=None):
         "status": "COMPLETED",
         "code": "OWNED_INFERENCE_COMPLETED",
         "provider": "owned",
+        "operation": request.operation,
+        "domain_id": request.domain_id,
+        "scope": request.scope,
+        "attempt_id": "attempt_" + "1" * 32,
         "request_id": request.request_id,
         "request_digest": request_digest,
         "run_id": "fixture-owned-run-0001",
@@ -240,6 +247,8 @@ def _signed_source_variant(workspace, source, *, suffix, rights=None, artifact_r
 
 
 def test_typed_owned_business_brief_saves_and_reopens_complete_lineage(workspace, monkeypatch):
+    from lumenis.shared.evaluation import ai as evaluation
+
     _wire_repositories(workspace, monkeypatch)
     source, _ = _seed_source(workspace)
     actor_ref = media_brief._actor_ref(workspace["actor"])
@@ -274,7 +283,16 @@ def test_typed_owned_business_brief_saves_and_reopens_complete_lineage(workspace
                for item in result["analysis"]["proposed_actions"])
     assert len(calls) == 1
     provenance = result["owned_provenance"]
+    assert provenance["evaluation_call_ref"].startswith("ai-call:v1:")
+    assert provenance["evaluation_link_state"] == "VERIFIED"
+    evaluation_rows = evaluation.acl.query_calls(provider="owned")
+    assert len(evaluation_rows) == 1
+    assert evaluation_rows[0]["success"] == 1
+    assert evaluation_rows[0]["input_text"] == evaluation_rows[0]["output"] == ""
+    assert source["text"] not in evaluation_rows[0]["system_result"]
+    provenance = result["owned_provenance"]
     assert provenance["run_id"] == "fixture-owned-run-0001"
+    assert provenance["attempt_id"] == "attempt_" + "1" * 32
     assert provenance["model_id"] == result["model"] == "fixture-owned-model"
     assert provenance["model_revision"] == "fixture-owned-revision-1"
     assert provenance["recipe"] == "fixture-owned-recipe-1"
@@ -290,6 +308,15 @@ def test_typed_owned_business_brief_saves_and_reopens_complete_lineage(workspace
     assert reopened["provider"] == "owned"
     assert reopened["analysis"] == result["analysis"]
     assert reopened["owned_provenance"] == provenance
+    monkeypatch.setattr(evaluation, "verify_owned_gateway_execution_ref",
+                        lambda *_args, **_kwargs: "UNAVAILABLE")
+    unavailable_reopen = brief.read_business_brief(
+        result["evidence_ref"], job_id=JOB_ID, actor_ref=actor_ref,
+        scope=workspace["scope"], actor=workspace["actor"],
+    )
+    assert unavailable_reopen["analysis"] == result["analysis"]
+    assert unavailable_reopen["owned_provenance"]["evaluation_link_state"] == "UNAVAILABLE"
+    assert "evaluation_call_ref" not in unavailable_reopen["owned_provenance"]
 
 
 def test_original_document_projects_into_saved_source_brief_job(workspace, monkeypatch):
@@ -485,7 +512,9 @@ def test_permission_revoked_during_execution_or_before_evidence_prevents_save(
     _assert_no_business_evidence(workspace)
 
 
-@pytest.mark.parametrize("mismatch", ["source_binding", "output_budget"])
+@pytest.mark.parametrize("mismatch", [
+    "source_binding", "output_budget", "attempt_receipt", "scope", "request_digest",
+])
 def test_owned_result_binding_mismatch_or_budget_overrun_is_not_saved(
     workspace, monkeypatch, mismatch,
 ):
@@ -498,9 +527,15 @@ def test_owned_result_binding_mismatch_or_budget_overrun_is_not_saved(
         result = _owned_result(request, actor=workspace["actor"])
         if mismatch == "source_binding":
             result["source_binding_sha256"] = _sha("different-source-binding")
-        else:
+        elif mismatch == "output_budget":
             result["completion_tokens"] = request.max_output_tokens + 1
             result["total_tokens"] = result["prompt_tokens"] + result["completion_tokens"]
+        elif mismatch == "scope":
+            result["scope"] = "other-scope"
+        elif mismatch == "request_digest":
+            result["request_digest"] = _sha("other-actor-or-request")
+        else:
+            result.pop("attempt_id")
         return result
 
     monkeypatch.setattr(brief.gateway, "run_owned_request", run)

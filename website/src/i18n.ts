@@ -15,7 +15,7 @@ export const copy = {
       { href: "#structure", label: "产品结构" },
       { href: "#creation", label: "独立创作" },
       { href: "#scenarios", label: "使用情境" },
-      { href: "#demo", label: "示意体验" },
+      { href: "#demo", label: "操作指南" },
       { href: "#access", label: "访问方式" },
     ],
     languageNavigationLabel: "选择语言",
@@ -26,7 +26,7 @@ export const copy = {
       eyebrow: "An Open Space for Thought and Creation.",
       title: "沿着变化，看见来处与去向。",
       description:
-        "从使用产品的人出发，为商业运营、品牌市场与独立研究创作建立可靠的工作空间。服务专业工作的需要，也希望逐步回应大众的个人喜好；面向大众的体验是发展愿景，不代表已上线能力。",
+        "商业运营、品牌市场，或一次独立创作。从资料与想法出发，继续你的工作。",
       primary: "进入工作空间",
       primaryUnavailable: "工作空间入口尚未配置",
       secondary: "选择一个业务问题",
@@ -210,7 +210,7 @@ export const copy = {
       public: {
         title: "Public Website",
         label: "当前页面",
-        description: "介绍产品、展示虚构示意，并提供已配置的联系与入口。",
+        description: "介绍产品与操作方法，提供三语指南和已配置的工作入口。",
       },
       web: {
         title: "Web Workspace",
@@ -220,7 +220,7 @@ export const copy = {
       desktop: {
         title: "Desktop App",
         label: "桌面应用",
-        description: "浏览器自动化与本机文件任务需要桌面环境支持。",
+        description: "以独立窗口、原生文件操作和当前可用的设备能力承接同一工作。安装与支持状态按实际发行包说明。",
       },
       mobile: {
         title: "Mobile Companion",
@@ -246,7 +246,7 @@ export const copy = {
     },
     footer: {
       product: "寰意 OEVIRA",
-      note: "公开介绍页面。示意内容为虚构；本页面不持有或改变产品事实。",
+      note: "产品说明与操作指南。本页不读取你的工作资料或改变工作区记录。",
       navigationLabel: "页脚导航",
     },
     status: {
@@ -266,7 +266,7 @@ export const copy = {
       { href: "#structure", label: "Product structure" },
       { href: "#creation", label: "Create independently" },
       { href: "#scenarios", label: "Use cases" },
-      { href: "#demo", label: "Illustrative demo" },
+      { href: "#demo", label: "Working guides" },
       { href: "#access", label: "Ways to access" },
     ],
     languageNavigationLabel: "Choose a language",
@@ -277,7 +277,7 @@ export const copy = {
       eyebrow: "An Open Space for Thought and Creation.",
       title: "Follow change. See where it came from and where it leads.",
       description:
-        "Built around the people using it, OEVIRA is developing a trusted space for commercial operations, brand-market work, and independent research and creation. Supporting personal interests alongside professional needs is our direction, not a claim that future public-facing features are already available.",
+        "Commerce, brands, or an independent creation. Start with your material and ideas. Continue your work.",
       primary: "Open the workspace",
       primaryUnavailable: "Workspace destination not configured",
       secondary: "Choose a business question",
@@ -461,7 +461,7 @@ export const copy = {
       public: {
         title: "Public Website",
         label: "This page",
-        description: "Explains the product, shows fictional examples, and offers configured public destinations.",
+        description: "Explains the product and its working paths, with guides in three languages and configured workspace entries.",
       },
       web: {
         title: "Web Workspace",
@@ -472,7 +472,7 @@ export const copy = {
         title: "Desktop App",
         label: "Desktop application",
         description:
-          "Browser automation and local-file work require a desktop environment.",
+          "Continue the same work in an independent window with native file actions and available device capabilities. Package availability is listed separately.",
       },
       mobile: {
         title: "Mobile Companion",
@@ -498,7 +498,7 @@ export const copy = {
     },
     footer: {
       product: "OEVIRA",
-      note: "Public product introduction. The example is fictional; this page does not own or change product truth.",
+      note: "Product information and working guides. This site does not read your work material or change workspace records.",
       navigationLabel: "Footer navigation",
     },
     status: {
@@ -518,7 +518,7 @@ export const copy = {
       { href: "#structure", label: "제품 구조" },
       { href: "#creation", label: "독립 창작" },
       { href: "#scenarios", label: "사용 맥락" },
-      { href: "#demo", label: "예시 보기" },
+      { href: "#demo", label: "사용 안내" },
       { href: "#access", label: "이용 방법" },
     ],
     languageNavigationLabel: "언어 선택",
@@ -529,7 +529,7 @@ export const copy = {
       eyebrow: "An Open Space for Thought and Creation.",
       title: "변화를 따라가며, 시작과 다음을 봅니다.",
       description:
-        "사용하는 사람에서 출발합니다. OEVIRA는 상업 운영, 브랜드·시장 업무와 독립적인 연구·창작을 위한 신뢰할 수 있는 공간을 만들어 갑니다. 전문 업무와 개인의 관심을 함께 지원하는 것은 발전 방향이며, 아직 구현되지 않은 대중용 기능이 이미 제공된다는 뜻은 아닙니다.",
+        "상업 운영, 브랜드·시장, 또는 독립적인 창작. 자료와 아이디어에서 시작해 작업을 이어 가세요.",
       primary: "작업 공간 열기",
       primaryUnavailable: "작업 공간 주소가 설정되지 않았습니다",
       secondary: "업무 질문 선택하기",
@@ -713,7 +713,7 @@ export const copy = {
       public: {
         title: "Public Website",
         label: "현재 페이지",
-        description: "제품을 소개하고 허구의 예시를 보여주며 설정된 공개 경로를 제공합니다.",
+        description: "제품과 작업 경로, 3개 언어 안내와 설정된 작업 공간 입구를 제공합니다.",
       },
       web: {
         title: "Web Workspace",
@@ -724,7 +724,7 @@ export const copy = {
         title: "Desktop App",
         label: "데스크톱 앱",
         description:
-          "브라우저 자동화와 로컬 파일 작업에는 데스크톱 환경이 필요합니다.",
+          "독립 창, 네이티브 파일 작업과 사용 가능한 기기 기능으로 같은 일을 이어갑니다. 설치 파일 상태는 별도로 안내합니다.",
       },
       mobile: {
         title: "Mobile Companion",
@@ -750,7 +750,7 @@ export const copy = {
     },
     footer: {
       product: "OEVIRA",
-      note: "공개 제품 소개 페이지입니다. 예시는 허구이며, 이 페이지는 제품의 사실을 소유하거나 변경하지 않습니다.",
+      note: "제품 설명과 작업 안내입니다. 작업 자료를 읽거나 작업 공간 기록을 바꾸지 않습니다.",
       navigationLabel: "바닥글 탐색",
     },
     status: {

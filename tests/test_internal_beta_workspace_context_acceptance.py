@@ -61,6 +61,36 @@ def _run_python(code, tmp_path, *, args, outside_db=False, existing_data=False):
     return result, data_dir, db_path
 
 
+@pytest.mark.parametrize("target", [
+    "app.tool",
+    "app.tool.test_build_windows.WindowsPortableBundleTests.test_example",
+])
+def test_unittest_app_tool_target_rejected_before_product_imports(target, monkeypatch):
+    source_path = REPO_ROOT / "app.py"
+    source = source_path.read_text(encoding="utf-8-sig")
+    guard_call = "_reject_unittest_app_tool_package_collision(__name__, sys.argv[1:])"
+    guard_position = source.index(guard_call)
+    prefix_end = source.index("_CORE_SERVER_KIND = 'not_started'")
+    prefix = source[:prefix_end]
+
+    for later_import in ("def _load_dotenv", "import database as db", "from flask import Flask"):
+        assert guard_position < source.index(later_import)
+
+    monkeypatch.setattr(sys, "argv", ["python", target])
+    with pytest.raises(ImportError, match="python app/tool/test_build_windows.py"):
+        exec(compile(prefix, str(source_path), "exec"), {
+            "__name__": "app",
+            "__file__": str(source_path),
+        })
+
+    # Ordinary Core imports used by product tests keep passing this early gate.
+    monkeypatch.setattr(sys, "argv", ["pytest", "tests/test_api_smoke.py"])
+    exec(compile(prefix, str(source_path), "exec"), {
+        "__name__": "app",
+        "__file__": str(source_path),
+    })
+
+
 @pytest.mark.parametrize(
     ("args", "outside_db", "expected"),
     [

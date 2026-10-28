@@ -2104,20 +2104,48 @@ def save_collector_quality(note_id, quality):
             quality.get('reason','') or ''))
 
 
-def upsert_note_comments(note_id, comments):
-    """增量保存评论快照；comment_id 唯一，保留最新抓取信息。"""
-    with get_db() as conn:
-        for c in comments or []:
+def upsert_note_comments(note_id, comments, *, connection=None):
+    """Update the existing comment projection in the caller's transaction.
+
+    Collector owns scope, native identity, Evidence and immutable observations.
+    This storage compatibility helper never infers a missing count or commits a
+    supplied connection. Legacy callers retain their managed connection scope.
+    """
+    material = list(comments or [])
+    for c in material:
+        if not isinstance(c, dict):
+            raise ValueError('comment must be an object')
+        likes = c.get('likes')
+        if likes is not None and (type(likes) is not int or likes < 0):
+            raise ValueError('comment likes must be an observed nonnegative integer or null')
+    result = {'inserted': 0, 'updated': 0, 'unchanged': 0, 'unidentified': 0}
+    with (nullcontext(connection) if connection is not None else get_db()) as conn:
+        for c in material:
             cid = str(c.get('comment_id') or '').strip()
             if not cid:
+                result['unidentified'] += 1
                 continue
+            parent = c.get('parent_comment_id', c.get('parent_id'))
+            raw = c.get('raw_data', c.get('raw', {}))
+            values = (str(note_id), c.get('content') or '', c.get('author_id') or '',
+                      c.get('author_nickname') or '', c.get('likes'),
+                      c.get('publish_time', c.get('publish_datetime')) or '', parent,
+                      json.dumps(raw, ensure_ascii=False, sort_keys=True, allow_nan=False))
+            existing = conn.execute('SELECT note_id,content,author_id,author_nickname,likes,publish_time,parent_id,raw_json '
+                                    'FROM note_comments WHERE comment_id=?', (cid,)).fetchone()
+            if existing is not None:
+                if str(existing[0]) != str(note_id):
+                    raise ValueError('comment identity belongs to another source')
+                if tuple(existing) == values:
+                    result['unchanged'] += 1
+                    continue
             conn.execute("""INSERT INTO note_comments
                 (comment_id,note_id,content,author_id,author_nickname,likes,publish_time,parent_id,raw_json,fetched_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(comment_id) DO UPDATE SET
-                  content=excluded.content, likes=excluded.likes, publish_time=excluded.publish_time,
+                  content=excluded.content, author_id=excluded.author_id, author_nickname=excluded.author_nickname,
+                  likes=excluded.likes, publish_time=excluded.publish_time, parent_id=excluded.parent_id,
                   raw_json=excluded.raw_json, fetched_at=excluded.fetched_at""", (
-                cid, str(note_id), c.get('content','') or '', c.get('author_id','') or '',
-                c.get('author_nickname','') or '', int(c.get('likes',0) or 0), c.get('publish_time','') or '',
-                c.get('parent_id','') or '', json.dumps(c.get('raw_data',{}), ensure_ascii=False),
-                datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                cid, *values, c.get('fetched_at') or datetime.now().astimezone().isoformat()))
+            result['inserted' if existing is None else 'updated'] += 1
+    return result

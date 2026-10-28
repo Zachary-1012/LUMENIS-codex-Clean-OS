@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lumenis_app/core/lumenis_theme.dart';
@@ -111,6 +112,70 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
   });
+
+  testWidgets(
+    'material controls retain keyboard actions disabled state and reduced motion',
+    (tester) async {
+      final focus = FocusNode();
+      var primary = 0;
+      var secondary = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: LumenisTheme.light,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Column(
+              children: [
+                FilledButton(
+                  onPressed: () => primary++,
+                  child: const Text('Save'),
+                ),
+                ElevatedButton(
+                  focusNode: focus,
+                  onPressed: () => secondary++,
+                  child: const Text('Choose material'),
+                ),
+                const ElevatedButton(
+                  onPressed: null,
+                  child: Text('Unavailable'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      final save = find.widgetWithText(FilledButton, 'Save');
+      await tester.tap(save);
+      await tester.pumpAndSettle();
+      expect(primary, 1);
+      focus.requestFocus();
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
+      expect(secondary, 1);
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.widgetWithText(ElevatedButton, 'Unavailable'),
+            )
+            .onPressed,
+        isNull,
+      );
+      final faces = tester.widgetList<AnimatedContainer>(
+        find.descendant(of: save, matching: find.byType(AnimatedContainer)),
+      );
+      expect(faces, isNotEmpty);
+      for (final face in faces) {
+        expect(face.duration, Duration.zero);
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      focus.dispose();
+    },
+  );
 }
 
 double _contrastRatio(Color foreground, Color background) {

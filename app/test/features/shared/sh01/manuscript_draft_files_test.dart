@@ -99,7 +99,7 @@ void main() {
         throwsFormatException,
       );
 
-      final invalidLanguage = _validManuscript()..['language'] = 'fr';
+      final invalidLanguage = _validManuscript()..['language'] = 'xx';
       expect(
         () => ManuscriptDraftFiles.encode(invalidLanguage),
         throwsFormatException,

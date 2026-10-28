@@ -27,7 +27,20 @@ class ManuscriptDraftFiles {
     'authorship',
   };
   static const _sectionKeys = {'heading', 'body'};
-  static const _languages = {'zh', 'en', 'ko'};
+  static const _languages = {
+    'zh',
+    'en',
+    'ko',
+    'ja',
+    'fr',
+    'de',
+    'es',
+    'pt',
+    'ru',
+    'ar',
+    'hi',
+    'id',
+  };
   static const _authorshipValues = {'user_supplied', 'assisted'};
   static final _disallowedControls = RegExp(
     r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]',

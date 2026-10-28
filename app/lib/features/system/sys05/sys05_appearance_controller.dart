@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 enum WaitingTone { playful, simple, off }
 
 enum WorkspaceBackdrop { frosted, wallpaper, desktop, white, black, solid }
@@ -24,10 +25,12 @@ class Sys05AppearanceController extends ChangeNotifier {
   late final SharedPreferencesAsync _storage =
       _providedStorage ?? SharedPreferencesAsync();
   WorkspaceBackdrop mode = WorkspaceBackdrop.frosted;
-  Color solidColor = const Color(0xFFE8E4EC);
+  Color solidColor = const Color(0xFFF0F1E7);
+  String localeTag = 'system';
   bool darkGlass = false;
   bool compact = false;
   bool reducedMotion = false;
+  bool botanicalRoles = true;
   WaitingTone waitingTone = WaitingTone.simple;
   double blur = 24;
   double panelOpacity = .9;
@@ -60,7 +63,7 @@ class Sys05AppearanceController extends ChangeNotifier {
     WorkspaceBackdrop.black => Colors.black,
     WorkspaceBackdrop.solid => solidColor,
     WorkspaceBackdrop.desktop => Colors.transparent,
-    _ => isDark ? const Color(0xFF15151B) : const Color(0xFFF1EDF4),
+    _ => isDark ? Colors.black : Colors.white,
   };
 
   Future<void> restore() async {
@@ -73,12 +76,21 @@ class Sys05AppearanceController extends ChangeNotifier {
           (entry) => entry.name == value['mode'],
           orElse: () => WorkspaceBackdrop.frosted,
         );
+        if (const [
+          'system',
+          'zh-CN',
+          'en',
+          'ko',
+        ].contains(value['localeTag'])) {
+          localeTag = value['localeTag'] as String;
+        }
         if (value['solidColor'] is int) {
           solidColor = Color(value['solidColor'] as int).withValues(alpha: 1);
         }
         darkGlass = value['darkGlass'] == true;
         compact = value['compact'] == true;
         reducedMotion = value['reducedMotion'] == true;
+        botanicalRoles = value['botanicalRoles'] != false;
         waitingTone = WaitingTone.values.firstWhere(
           (tone) => tone.name == value['waitingTone'],
           orElse: () => WaitingTone.simple,
@@ -105,10 +117,12 @@ class Sys05AppearanceController extends ChangeNotifier {
       }
     } catch (_) {
       mode = WorkspaceBackdrop.frosted;
-      solidColor = const Color(0xFFE8E4EC);
+      solidColor = const Color(0xFFF0F1E7);
+      localeTag = 'system';
       darkGlass = false;
       compact = false;
       reducedMotion = false;
+      botanicalRoles = true;
       waitingTone = WaitingTone.simple;
       blur = 24;
       panelOpacity = .9;
@@ -121,22 +135,29 @@ class Sys05AppearanceController extends ChangeNotifier {
   }
 
   Future<void> update({
+    String? localeTag,
     WorkspaceBackdrop? mode,
     Color? solidColor,
     bool? darkGlass,
     bool? compact,
     bool? reducedMotion,
+    bool? botanicalRoles,
     WaitingTone? waitingTone,
     double? blur,
     double? panelOpacity,
     double? uiFontSize,
   }) {
     if (resetting) return Future<void>.value();
+    if (localeTag != null &&
+        const ['system', 'zh-CN', 'en', 'ko'].contains(localeTag)) {
+      this.localeTag = localeTag;
+    }
     this.mode = mode ?? this.mode;
     this.solidColor = solidColor ?? this.solidColor;
     this.darkGlass = darkGlass ?? this.darkGlass;
     this.compact = compact ?? this.compact;
     this.reducedMotion = reducedMotion ?? this.reducedMotion;
+    this.botanicalRoles = botanicalRoles ?? this.botanicalRoles;
     this.waitingTone = waitingTone ?? this.waitingTone;
     this.blur = (blur ?? this.blur).clamp(0, 48);
     this.panelOpacity = (panelOpacity ?? this.panelOpacity).clamp(.65, 1);
@@ -147,11 +168,13 @@ class Sys05AppearanceController extends ChangeNotifier {
     _clearNonNativeError();
     final encoded = jsonEncode({
       'version': 1,
+      'localeTag': this.localeTag,
       'mode': this.mode.name,
       'solidColor': this.solidColor.toARGB32(),
       'darkGlass': this.darkGlass,
       'compact': this.compact,
       'reducedMotion': this.reducedMotion,
+      'botanicalRoles': this.botanicalRoles,
       'waitingTone': this.waitingTone.name,
       'blur': this.blur,
       'panelOpacity': this.panelOpacity,
@@ -205,16 +228,25 @@ class Sys05AppearanceController extends ChangeNotifier {
           failure ??= error;
         }
       }
+      try {
+        await _storage.setString(
+          preferenceKey,
+          jsonEncode({'version': 1, 'localeTag': localeTag}),
+        );
+      } on Object catch (error) {
+        failure ??= error;
+      }
 
       if (revision == _preferenceRevision) {
         succeeded = failure == null;
         if (succeeded) {
           mode = WorkspaceBackdrop.frosted;
-          solidColor = const Color(0xFFE8E4EC);
+          solidColor = const Color(0xFFF0F1E7);
           darkGlass = false;
           compact = false;
           reducedMotion = false;
-      waitingTone = WaitingTone.simple;
+          botanicalRoles = true;
+          waitingTone = WaitingTone.simple;
           blur = 24;
           panelOpacity = .9;
           uiFontSize = defaultUiFontSize;

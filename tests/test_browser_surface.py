@@ -104,6 +104,23 @@ def test_empty_and_bad_url():
     assert bs.evaluate_navigation("ftp://example.com/x", mode="open")["allowed"] is False
 
 
+def test_single_navigation_confirmation_does_not_change_policy_or_allow_blocked_urls(monkeypatch):
+    monkeypatch.setattr(bs, "_is_internal_host", lambda _host: False)
+    url = "https://unlisted.example/research?token=private"
+    pending = bs.evaluate_navigation_for_action(url, mode="strict")
+    assert pending["allowed"] is False
+    assert pending["status"] == "need_confirmation"
+
+    confirmed = bs.evaluate_navigation_for_action(url, mode="strict", confirmed=True)
+    assert confirmed["allowed"] is True
+    assert confirmed["status"] == "confirmed"
+    assert bs.evaluate_navigation(url, mode="strict")["allowed"] is False
+
+    blocked = bs.evaluate_navigation_for_action("file:///C:/private", mode="strict", confirmed=True)
+    assert blocked["allowed"] is False
+    assert blocked["status"] == "blocked"
+
+
 def test_domain_suffix_match():
     assert bs._domain_allowed("www.xiaohongshu.com", ["xiaohongshu.com"])
     assert bs._domain_allowed("xiaohongshu.com", ["xiaohongshu.com"])

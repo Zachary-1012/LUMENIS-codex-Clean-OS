@@ -50,6 +50,7 @@ class SkillExecutionContext:
     request_context: Any = field(default=None, repr=False)
     # Sealed server principal for account-free local Content operations.
     workspace_principal: Any = field(default=None, repr=False)
+    execution_control: Any = field(default=None, repr=False)
     action_type: ActionType = ActionType.ANALYZE
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     permission_result: Optional[Dict[str, Any]] = None
@@ -63,7 +64,7 @@ class SkillExecutionContext:
     def to_dict(self):
         # Exclude opaque server objects before asdict traverses/deep-copies them.
         public_context = replace(
-            self, content_source_import=None, request_context=None, workspace_principal=None,
+            self, content_source_import=None, request_context=None, workspace_principal=None, execution_control=None,
         )
         d = asdict(public_context)
         d["action_type"] = self.action_type.value
@@ -71,6 +72,7 @@ class SkillExecutionContext:
         d.pop("content_source_import", None)
         d.pop("request_context", None)
         d.pop("workspace_principal", None)
+        d.pop('execution_control', None)
         return d
 
 @dataclass
@@ -210,6 +212,16 @@ def check_permission(ctx, user_role="user", skill_info=None):
         return payload
 
     target = str(ctx.input_payload.get("target") or f"skill:{ctx.skill_id}")
+    if 'shared_agent_task_id' in request_context:
+        try:
+            binding = _shared_agent_binding(ctx)
+            return {'allowed': True, 'reason': 'Authorized input-only Shared task helper',
+                    'code': 'PERMISSION_GRANTED', 'operation_type': 'read',
+                    'resource': 'skill:' + ctx.skill_id, 'caller': binding['actor_ref'],
+                    'audit_id': binding['scope_audit_id'], 'requires_approval': False}
+        except (PermissionError, ValueError, TypeError, KeyError):
+            return {'allowed': False, 'reason': 'Shared task or content permission unavailable',
+                    'code': 'SHARED_AGENT_SCOPE_DENIED'}
     if (ctx.workspace_principal is not None and isinstance(request_context, dict)
             and set(request_context) == {'agent_task_id'}):
         try:
@@ -459,7 +471,11 @@ def _product_result_error(value: Any) -> str:
 def execute_skill(ctx, handler=None, skill_info=None):
     if handler is not None:
         try:
+            if ctx.execution_control is not None:
+                ctx.execution_control.check()
             result = handler(ctx)
+            if ctx.execution_control is not None:
+                ctx.execution_control.check()
             success = _product_result_is_success(result)
             return {
                 "success": success,
@@ -622,9 +638,11 @@ def _trace_json(value, limit=8 * 1024 * 1024):
     return text
 
 
-def _agent_scope_binding(ctx, *, connection=None):
+def _agent_scope_binding(ctx, *, connection=None, committed_result_read=False):
     """Bind an account Skill invocation to its current server-owned Agent task."""
     request = ctx.request_context if isinstance(ctx.request_context, dict) else {}
+    if 'shared_agent_task_id' in request:
+        return _shared_agent_binding(ctx, connection=connection, committed_result_read=committed_result_read)
     if 'agent_task_id' not in request:
         if str(ctx.execution_id).startswith('skillscope_agentstep_'):
             raise PermissionError('AGENT_SKILL_TASK_BINDING_REQUIRED')
@@ -641,7 +659,7 @@ def _agent_scope_binding(ctx, *, connection=None):
     if (type(ctx.user_id) is not int or context['actor_id'] != ctx.user_id
             or ctx.workspace_principal is not None or ctx.action_type is not ActionType.READ
             or ctx.skill_id not in _BACKGROUND_INPUTS or set(ctx.input_payload) - _BACKGROUND_INPUTS[ctx.skill_id]
-            or ctx.execution_id != expected or task['status'] == 'cancelled'
+            or ctx.execution_id != expected or (task['status'] == 'cancelled' and committed_result_read is not True)
             or ctx.domain != context['domain_id'] or ctx.product != context['product']
             or ctx.task != task['user_input'] or request.get('skill_scope') != context['scope']):
         raise PermissionError('AGENT_SKILL_BINDING_INVALID')
@@ -829,7 +847,9 @@ def verified_execution_scope(row, actor):
                 input_payload=json.loads(row['input_json']), action_type=ActionType(row['action_type']),
                 request_context={'agent_task_id': agent_binding['task_id'],
                     'skill_scope': {key: scope[key] for key in ('subject_id', 'brand_focus_id', 'global_scope')}})
-            if _agent_scope_binding(ctx) != agent_binding:
+            # A completed signed child remains readable after its parent is
+            # cancelled. This read-only proof path cannot admit new execution.
+            if _agent_scope_binding(ctx, committed_result_read=True) != agent_binding:
                 return None
         decision = check_actor_scope_permission(actor, module=row["skill_id"], action="read", **scope)
         if not decision.allowed or decision.verification_state != "verified":
@@ -1044,7 +1064,7 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                         user_id=None, user_role="user", product="SYSTEM", domain="system",
                         permission_role=None,
                         skill_info=None, handler=None, content_source_import=None,
-                        request_context=None, workspace_principal=None, execution_id=None):
+                        request_context=None, workspace_principal=None, execution_id=None, execution_control=None):
     import time
     start = time.time()
     ctx = SkillExecutionContext(skill_id=skill_id, task=task, input_payload=input_payload or {},
@@ -1052,7 +1072,12 @@ def run_execution_chain(skill_id, task="", input_payload=None, action_type=Actio
                                  permission_role=permission_role,
                                  content_source_import=content_source_import,
                                  request_context=request_context,
-                                 workspace_principal=workspace_principal)
+                                 workspace_principal=workspace_principal, execution_control=execution_control)
+    if execution_control is not None:
+        from agent_runtime.loop import StepExecutionControl
+        if type(execution_control) is not StepExecutionControl:
+            raise PermissionError('TOOL_EXECUTION_CONTROL_INVALID')
+        execution_control.check()
     if execution_id is not None:
         ctx.execution_id = execution_id
     elif isinstance(request_context, dict) and "skill_scope" in request_context:
@@ -1252,10 +1277,17 @@ def enqueue_registered_skill(*, skill_id, task, input_payload, action_type,
         request_context={'skill_scope': scope} if scope is not None else None)
     try:
         ctx._scope_admission = _direct_scope_admission(ctx)
+        from mcp_discovery import _validate_instance
+        validate_source_free_input(skill_id, input_payload)
+        _validate_instance(registered_background_contract(skill_info)['input_schema'], input_payload, 'registered local input')
+        handler_identity = registered_handler_identity(skill_id)
     except PermissionError as exc:
         return {'success': False, 'code': str(exc)}
+    except (ValueError, TypeError):
+        return {'success': False, 'code': 'REGISTERED_HANDLER_SCHEMA_INVALID'}
     # Durable server-created binding also recovers submit->enqueue interruptions.
-    ctx.permission_result = {'background_binding': _background_binding(skill_info)}
+    ctx.permission_result = {'background_binding': _background_binding(skill_info),
+                             'background_handler_identity_sha256': handler_identity}
     if not write_trace(ctx):
         return {'success': False, 'code': 'SKILL_EXECUTION_TRACE_FINALIZATION_FAILED'}
     return {'success': True, 'accepted': True, 'execution_id': ctx.execution_id,
@@ -1299,7 +1331,9 @@ def run_registered_skill_job(execution_id):
         finally:
             con.close()
         return query_executions(execution_id=execution_id, limit=1, strict=True)[0]
-    binding = json.loads(row.get('permission_json') or '{}').get('background_binding')
+    admission = json.loads(row.get('permission_json') or '{}')
+    binding = admission.get('background_binding')
+    handler_identity = admission.get('background_handler_identity_sha256')
     if not binding and row['status'] in ('pending', 'running'):
         raise ValueError('background binding missing')
     queue = TaskQueue()
@@ -1307,6 +1341,7 @@ def run_registered_skill_job(execution_id):
         queue_id = queue.enqueue_once('registered_skill', {
             'execution_id': execution_id, 'actor_id': row['user_id'],
             'product': row['product'], 'binding': binding,
+            'handler_identity_sha256': handler_identity,
         }, execution_id)
         operational = queue.get(queue_id)
         if row['status'] not in ('pending', 'running') and operational['status'] == 'running':
@@ -1351,7 +1386,10 @@ def run_registered_skill_job(execution_id):
                 expected = job['payload']
                 if (live['user_id'] != expected['actor_id'] or live['product'] != expected['product']
                         or not info or _background_binding(info) != expected['binding']
-                        or live['skill_id'] not in _BACKGROUND_INPUTS):
+                        or live['skill_id'] not in _BACKGROUND_INPUTS
+                        or not handler_identity
+                        or expected.get('handler_identity_sha256') != handler_identity
+                        or registered_handler_identity(live['skill_id']) != handler_identity):
                     from account.models import get_db
                     con = get_db()
                     try:
@@ -1371,10 +1409,16 @@ def run_registered_skill_job(execution_id):
                     con.close()
                 if not changed:
                     return True
+                from agent_runtime.loop import StepExecutionControl
+                def cancelled():
+                    current_rows = query_executions(execution_id=execution_id, limit=1, strict=True)
+                    return not current_rows or current_rows[0]['status'] != 'running'
+                control = StepExecutionControl(cancelled, 60.0)
                 result = execute_skill_api(live['skill_id'], task=live['task'],
                     input_payload=json.loads(live['input_json'] or '{}'),
                     action_type=live['action_type'], user_id=live['user_id'],
-                    product=live['product'], _execution_id=execution_id, scope=current_scope)
+                    product=live['product'], _execution_id=execution_id, scope=current_scope,
+                    _execution_control=control)
                 persisted = query_executions(execution_id=execution_id, limit=1, strict=True)[0]
                 if persisted['status'] in ('pending', 'running') and not result.get('success'):
                     # Account/registry rejection can occur before the chain starts.
@@ -1414,11 +1458,107 @@ def registered_background_handler(skill_id):
         raise ValueError('BACKGROUND_HANDLER_NOT_ALLOWED')
     # Explicit local dispatch prevents installed OSAI/MCP adapters from changing
     # the execution effects of a queued deterministic request.
+    handler_identity = registered_handler_identity(skill_id)
     def run(ctx):
         if ctx.skill_id != skill_id:
             raise PermissionError('REGISTERED_HANDLER_BINDING_MISMATCH')
-        return _execute_builtin_local(ctx, None)
+        shared_agent = 'shared_agent_task_id' in (ctx.request_context or {})
+        if shared_agent:
+            _shared_agent_binding(ctx)
+        if ctx.execution_id.startswith('skilljob_'):
+            rows = query_executions(execution_id=ctx.execution_id, limit=1, strict=True)
+            admitted = json.loads(rows[0].get('permission_json') or '{}') if rows else {}
+            if admitted.get('background_handler_identity_sha256') != handler_identity:
+                raise PermissionError('BACKGROUND_BINDING_CHANGED')
+        if registered_handler_identity(skill_id) != handler_identity:
+            raise PermissionError('BACKGROUND_BINDING_CHANGED')
+        from account.skills import get_skill_info
+        from mcp_discovery import _validate_instance
+        contract = registered_background_contract(get_skill_info(skill_id))
+        validate_source_free_input(skill_id, ctx.input_payload)
+        _validate_instance(contract['input_schema'], ctx.input_payload, 'registered local input')
+        if ctx.execution_control is not None:
+            ctx.execution_control.check()
+        result = _execute_builtin_local(ctx, None)
+        if ctx.execution_control is not None:
+            ctx.execution_control.check()
+        if registered_handler_identity(skill_id) != handler_identity:
+            raise PermissionError('BACKGROUND_BINDING_CHANGED')
+        if _product_result_is_success(result):
+            _validate_instance(contract['output_schema'], result, 'registered local output')
+        if shared_agent:
+            _shared_agent_binding(ctx)
+        return result
     return run
+
+
+def registered_background_contract(info):
+    """Exact input/output shape of the existing bounded local Task adapter.
+
+    Its Task already carries user writing; optional title/brief fallback is
+    existing behavior. An explicitly registered schema takes precedence and
+    is enforced. The registered result schema describes the raw Skill result,
+    before Task/trace/proof envelopes are added by their existing owners.
+    """
+    sid = info.get('skill_id')
+    if sid not in _BACKGROUND_INPUTS:
+        raise ValueError('BACKGROUND_HANDLER_NOT_ALLOWED')
+    from mcp_discovery import _schema_validator
+    from .registry import get_skill_registry
+    metadata = get_skill_registry().get(sid)
+    fallback = {'type': 'object', 'properties': {key: {'type': 'integer' if key in {'width', 'height'} else 'string'}
+                for key in sorted(_BACKGROUND_INPUTS[sid])}, 'additionalProperties': False}
+    result = {}
+    for name, default in (('input_schema', fallback), ('output_schema', metadata.output_schema if metadata else {'type': 'object'})):
+        raw = info.get(name + '_json')
+        value = json.loads(raw) if isinstance(raw, str) and raw.strip() else {}
+        if type(value) is not dict:
+            raise ValueError('REGISTERED_HANDLER_SCHEMA_INVALID')
+        schema = value or default
+        if name == 'input_schema' and value:
+            # A registered schema can narrow this admitted handler, never add
+            # a Source reader, actor selector or execution-control argument.
+            schema = {'type': 'object', 'allOf': [value, fallback]}
+        _schema_validator(schema)
+        result[name] = schema
+        result[name + '_source'] = 'registered' if value else 'bounded_local_task_adapter'
+    return result
+
+
+def registered_handler_identity(skill_id):
+    """Hash actual local handler/caller code and schema, not just a wrapper name."""
+    from agent_capability.formation import implementation_identity, digest
+    from account import skills
+    import mcp_discovery
+    from importlib.metadata import version
+    if skill_id not in _BACKGROUND_INPUTS:
+        raise ValueError('BACKGROUND_HANDLER_NOT_ALLOWED')
+    handlers = {'registered': registered_background_handler, 'builtin': _execute_builtin_local,
+                'execute': execute_skill, 'chain': run_execution_chain,
+                'account': skills.execute_skill_api, 'workspace': skills._execute_local_agent_skill,
+                'schema': mcp_discovery._schema_validator, 'instance': mcp_discovery._validate_instance}
+    from . import registry
+    dependencies = [registry.__file__]
+    metadata = registry.get_skill_registry().get(skill_id)
+    metadata_values = metadata.to_dict() if metadata is not None else {}
+    policy = {key: metadata_values.get(key) for key in ('version', 'permission_level', 'risk_level',
+        'execution_policy', 'product', 'domain', 'cross_domain_allowed', 'prohibited_actions')}
+    if skill_id.startswith('shared.'):
+        import lumenis_shared_skills as shared
+        handlers['shared_dispatch'] = shared.run_shared_skill
+        names = {'shared.social_card': ('_run_social_card', '_render_social_card'),
+                 'shared.video_shotcraft': ('_run_video_shotcraft', '_shot_plan'),
+                 'shared.huashu': ('_run_huashu',)}[skill_id]
+        handlers.update({name: getattr(shared, name) for name in names})
+        if skill_id == 'shared.huashu':
+            import content_generation
+            handlers['module_status'] = content_generation.get_module_status
+    contract = registered_background_contract(skills.get_skill_info(skill_id))
+    return digest({'handler_schema': 'registered-local-handler/v1', 'contract': contract,
+                   'runtime_metadata_policy': policy,
+                   'libraries': {'jsonschema': version('jsonschema'), 'referencing': version('referencing')},
+                   'implementations': {name: implementation_identity(handler, dependencies)
+                                       for name, handler in handlers.items()}})
 
 
 _SOURCE_FREE_HANDLER_VERSION = 'registered-local-input-only-v1'
@@ -1470,6 +1610,9 @@ def _record_source_free_execution(ctx, *, registry_binding):
             'trace_sha256': _execution_scope_digest(row),
             'agent_task_id': (ctx.request_context or {}).get('agent_task_id'),
             'producer': 'registered_background_handler', 'handler_version': _SOURCE_FREE_HANDLER_VERSION, 'source_use': 'user-input-only'}
+        if 'shared_agent_task_id' in (ctx.request_context or {}):
+            binding = _shared_agent_binding(ctx)
+            material['shared_agent_binding'] = {key: value for key, value in binding.items() if key != 'scope_audit_id'}
         identifier = store.record_evidence(source='skill_execution_local_producer',
             feature_id=ctx.execution_id, product=ctx.product, inputs=material,
             outputs={'result_validation': 'bounded-local-producer'},
@@ -1521,7 +1664,21 @@ def read_source_free_execution(row, actor):
                 or not info or info.get('status') != 'enabled'
                 or material.get('registry_binding') != _background_binding(info)):
             return None
-        if row['user_id'] is not None:
+        if row.get('product') == 'SHARED':
+            binding = material.get('shared_agent_binding')
+            if type(binding) is not dict:
+                return None
+            ctx = SkillExecutionContext(execution_id=row['execution_id'], skill_id=row['skill_id'],
+                user_id=row['user_id'], domain=row['domain'], product=row['product'], task=row['task'],
+                action_type=ActionType(row['action_type']), input_payload=inputs,
+                workspace_principal=actor if row['user_id'] is None else None,
+                request_context={'shared_agent_task_id': binding.get('task_id')})
+            if row['user_id'] is not None and (not isinstance(actor, dict) or actor.get('id') != row['user_id']):
+                return None
+            fresh = _shared_agent_binding(ctx, committed_result_read=True)
+            if {key: value for key, value in fresh.items() if key != 'scope_audit_id'} != binding:
+                return None
+        elif row['user_id'] is not None:
             if (not isinstance(actor, dict) or type(actor.get('id')) is not int
                     or actor['id'] != row['user_id'] or not user or user['status'] != 'active'
                     or not check_dual_domain_permission(actor['id'], row['product'], module=row['skill_id'], action='read')):
@@ -1544,3 +1701,65 @@ def read_source_free_execution(row, actor):
         return row
     except Exception:
         return None
+
+
+def _shared_agent_binding(ctx, *, connection=None, committed_result_read=False):
+    """Recheck the same Task and Shared Permission; it grants no business scope."""
+    from ai_task_engine import get_task_engine
+    from agent_runtime.task_binding import authorized_context, _current_binding, _digest, _shared_registered_skill
+    from account.skills import get_skill_info
+    from lumenis.system.security.permission import authorize_shared_workspace
+    request = ctx.request_context or {}
+    if type(request) is not dict or set(request) != {'shared_agent_task_id'}:
+        raise PermissionError('SHARED_AGENT_BINDING_INVALID')
+    task_id = request['shared_agent_task_id']
+    task = get_task_engine().get_task(task_id)
+    actor = ctx.workspace_principal if ctx.user_id is None else {'id': ctx.user_id}
+    context = authorized_context(task, actor, connection=connection)
+    _current_binding(task_id, ctx.skill_id)
+    expected = ('skillscope_' if ctx.user_id is not None else '') + 'agentstep_' + _digest(
+        {'task': task_id, 'skill': ctx.skill_id, 'inputs': ctx.input_payload})[:32]
+    if (context['domain_id'] != 'shared' or context['product'] != 'SHARED'
+            or context['actor_id'] != ctx.user_id or ctx.product != 'SHARED' or ctx.domain is not None
+            or ctx.action_type is not ActionType.READ or ctx.execution_id != expected
+            or ctx.task != task['user_input'] or not _shared_registered_skill(get_skill_info(ctx.skill_id))
+            or (task['status'] == 'cancelled' and not committed_result_read)):
+        raise PermissionError('SHARED_AGENT_BINDING_INVALID')
+    validate_source_free_input(ctx.skill_id, ctx.input_payload)
+    _, audit_id = authorize_shared_workspace(context['actor'], context['scope'], module='content',
+        action='read', connection=connection, _return_audit=True)
+    return {'task_id': task_id, 'actor_ref': 'workspace:local' if ctx.user_id is None else 'actor:' + str(ctx.user_id),
+        'scope': dict(context['scope']), 'scope_audit_id': audit_id,
+        'binding_sha256': _digest({'task_id': task_id, 'context': task['context'], 'user_input': task['user_input']})}
+
+
+def execute_shared_agent_skill(task_id, skill_id, inputs, *, actor, execution_id, execution_control=None):
+    """Use the original guarded execution chain for an independent Shared task.
+
+    Only admitted local input-only helpers are supported by this adapter. Media,
+    sources, model calls, exports and publishing keep their existing own gates.
+    """
+    from ai_task_engine import get_task_engine
+    from agent_runtime.task_binding import authorized_context, _current_binding
+    from account.skills import get_skill_info
+    task = get_task_engine().get_task(task_id)
+    context = authorized_context(task, actor)
+    _current_binding(task_id, skill_id)
+    info = get_skill_info(skill_id)
+    runtime = SkillRuntimeInfo(skill_id=skill_id, name=info.get('name') or skill_id,
+        product='SHARED', domain=None, enabled=info.get('status') == 'enabled',
+        source=info.get('source') or 'builtin', version=info.get('version') or '1.0.0')
+    ctx = run_execution_chain(skill_id=skill_id, task=task['user_input'], input_payload=inputs,
+        action_type=ActionType.READ, user_id=context['actor_id'], product='SHARED', domain=None,
+        skill_info=runtime, handler=registered_background_handler(skill_id),
+        request_context={'shared_agent_task_id': task_id},
+        workspace_principal=context['actor'] if context['actor_id'] is None else None,
+        execution_id=execution_id, execution_control=execution_control)
+    if ctx.status is ExecutionStatus.COMPLETED:
+        _record_source_free_execution(ctx, registry_binding=_background_binding(info))
+        rows = query_executions(execution_id=execution_id, limit=1, strict=True)
+        if not rows or read_source_free_execution(rows[0], actor) is None:
+            raise PermissionError('SHARED_AGENT_RESULT_UNAVAILABLE')
+        ctx.execute_result = json.loads(rows[0]['output_json'])
+    return {'success': ctx.status is ExecutionStatus.COMPLETED, 'execution_id': execution_id,
+            'status': ctx.status.value, 'result': ctx.execute_result, 'error': ctx.error}

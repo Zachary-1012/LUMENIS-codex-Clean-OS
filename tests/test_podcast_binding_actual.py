@@ -57,6 +57,33 @@ def test_real_plan_binding_mismatch_preserves_parent(media_store,change):
         assert len(rows(media_store))==n
         assert a.read_content_project(aid,actor=ACTOR,**SCOPE)==before
 
+@pytest.mark.parametrize('silence',['muted_track','zero_clip_gain','solo_music'])
+def test_podcast_text_delivery_rejects_silenced_dialogue_before_render(media_store,monkeypatch,silence):
+    sid=prepare(media_store)
+    with a.resolve_content_source_assets([sid],actor=ACTOR,**SCOPE) as src:
+        asset=src[0]['asset'];plan=plan_for(asset);tl=plan.build_timeline((asset,),separate_speakers=True)
+        tracks=list(tl.tracks)
+        voice_index=next(i for i,item in enumerate(tracks) if item.kind=='voiceover' and item.clips)
+        voice=tracks[voice_index]
+        if silence=='muted_track':
+            tracks[voice_index]=replace(voice,muted=True)
+        elif silence=='zero_clip_gain':
+            tracks[voice_index]=replace(voice,clips=(replace(voice.clips[0],audio_mix=AudioMix(volume=0)),*voice.clips[1:]))
+        else:
+            music=replace(tracks[0],track_id='music',kind='bgm',clips=(),solo=True)
+            music=replace(music,clips=(replace(voice.clips[0],clip_id='music-clip',track_id='music',
+                purpose='permitted music bed',audio_role='bgm'),))
+            tracks.append(music)
+        bad=replace(tl,tracks=tuple(tracks),version=tl.version+1)
+        calls=[]
+        monkeypatch.setattr('lumenis.shared.content_creation.rendering.render_timeline',
+            lambda *args,**kwargs:calls.append('render'))
+        count_before=len(rows(media_store))
+        with pytest.raises(a.LocalArtifactError,match='PODCAST_PLAN_DIALOGUE_NOT_AUDIBLE'):
+            stage(bad,plan,sid)
+        assert calls==[]
+        assert len(rows(media_store))==count_before
+
 @pytest.mark.parametrize('denial',['wrong_actor','unknown_source_ref','revoked_account'])
 def test_real_auxiliary_does_not_bypass_source_or_actor_permissions(media_store,denial):
     sid=prepare(media_store)

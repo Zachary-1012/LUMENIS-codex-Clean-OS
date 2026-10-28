@@ -1,12 +1,10 @@
-"""Local-only, approval-gated LoRA training owned by the SYSTEM AI Gateway."""
+"""Historical LoRA training metadata and preflight; execution withdrawn by PO."""
 from __future__ import annotations
 
 import hashlib
 import json
-import math
 import os
 import re
-import time
 import unicodedata
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -35,7 +33,7 @@ ADA_RECIPE_POLICY = {
     "max_sequence_length": 4096,
     "gradient_accumulation_steps": 1,
     "quantization": "bitsandbytes_nf4",
-    "status": "APPROVED_COMPATIBILITY_NOT_LIVE_VERIFIED",
+    "status": "WITHDRAWN_BY_PO",
 }
 BLACKWELL_RECIPE_POLICY = {
     "foundation_variant": T4_RECIPE,
@@ -49,7 +47,7 @@ BLACKWELL_RECIPE_POLICY = {
     "max_sequence_length": 16384,
     "gradient_accumulation_steps": 1,
     "quantization": "bitsandbytes_nf4",
-    "status": "APPROVED_COMPATIBILITY_NOT_LIVE_VERIFIED",
+    "status": "WITHDRAWN_BY_PO",
 }
 _MIN_CUDA_MEMORY = 75 * 1024**3
 _MODEL_FILES = frozenset({
@@ -229,8 +227,10 @@ def _validate_record(record: object) -> tuple[dict, str]:
     domain_id = record["domain"].strip().lower()
     if domain_id == "zbmp":
         domain_id = "bmp"
-    if domain_id not in {"cth", "bmp"}:
-        raise ValueError("Training records must identify the canonical CTH or BMP domain")
+    if domain_id not in {"cth", "bmp", "shared"}:
+        raise ValueError("Training records must identify the canonical CTH, BMP or Shared scope")
+    if domain_id == "shared" and record["scope"] != "shared_workspace:v1":
+        raise ValueError("Shared records require their explicit independent workspace scope")
     refs = record["source_evidence_refs"]
     if not isinstance(refs, list) or not refs or any(not isinstance(ref, str) or not ref.strip() or ref.strip().upper() in _UNKNOWN for ref in refs):
         raise ValueError("Source Evidence references must be explicit")
@@ -408,9 +408,11 @@ def run_owned_lora_training(
     recovery_phase_transport=None,
     stop_after_checkpoint_step: int | None = None,
 ) -> dict[str, object]:
-    """Validate explicit local inputs; train only after Learning approval and CUDA gates."""
+    """Preflight historical local inputs; GPU training is withdrawn by the PO."""
     if type(execute) is not bool:
         raise ValueError("execute must be an explicit boolean")
+    if execute:
+        raise TrainingBlocked("GPU_TRAINING_WITHDRAWN_BY_PO")
     if resume_request is not None:
         _validate_resume_request(resume_request)
         if phase_client is not None or not callable(recovery_phase_transport):
@@ -453,7 +455,7 @@ def run_owned_lora_training(
     domain_id = next(iter(domains))
     db_value = os.environ.get("ZBC_DB_PATH", str(REPO_ROOT / "data" / "monitor.db"))
     db_path = Path(db_value) if Path(db_value).is_absolute() else Path.cwd() / db_value
-    output = _output_path(output_dir, [model_dir, train_path, heldout_path, manifest_file, REPO_ROOT, db_path])
+    _output_path(output_dir, [model_dir, train_path, heldout_path, manifest_file, REPO_ROOT, db_path])
     scopes = tuple(sorted({record["scope"] for record, _ in train + heldout}))
     result: dict[str, object] = {
         "status": "VALIDATED_LOCAL_INPUTS_NOT_PRODUCTION_ACCEPTANCE",
@@ -484,222 +486,7 @@ def run_owned_lora_training(
                 stop_after_checkpoint_step >= total_steps
                 or stop_after_checkpoint_step % checkpoint_policy.document["checkpoint_interval_steps"]):
             raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
-    if not execute:
-        return result
-    request = TrainingApprovalRequest(model_id, revision, train_hash, heldout_hash, scopes, recipe, manifest_hash, domain_id)
-    if checkpoint_policy is not None:
-        from .owned_training_checkpoints import TrainingCheckpointAdapter
-        if type(checkpoint_adapter) is not TrainingCheckpointAdapter:
-            raise TrainingBlocked("CHECKPOINT_CONTRACT_NOT_BOUND")
-        if checkpoint_adapter.policy != checkpoint_policy:
-            raise TrainingBlocked("CHECKPOINT_SCOPE_MISMATCH")
-        checkpoint_adapter.bind_request(request, approval_verifier)
-    if resume_request is None:
-        _verify_training_boundary(approval_verifier, phase_client, request, "initial")
-    else:
-        # v1.3 allows preparation under the original current MODEL_TRAIN check.
-        # Physical load and resumed training still require the separate owner
-        # admission and sealed recovery handoff; never replay the old initial.
-        _verify_approval(approval_verifier, request)
-    torch, device_name, memory_bytes = _require_cuda(base_recipe) if base_recipe in NF4_RECIPES else _require_cuda()
-    with _offline_hf(base_recipe):
-        try:
-            low_memory = base_recipe in NF4_RECIPES
-            if low_memory:
-                from importlib.metadata import version
-                pins = {"unsloth": "2026.9.12", "unsloth_zoo": "2026.9.8", "transformers": "4.56.2", "trl": "0.22.2",
-                        "torch": "2.11.0+cu128", "bitsandbytes": "0.50.2", "tokenizers": "0.22.2", "triton": "3.6.0"}
-                installed = {name: version(name) for name in pins}
-                if installed != pins:
-                    raise TrainingBlocked("T4_TRAINING_STACK_VERSION_MISMATCH")
-                result["training_packages"] = installed
-                from unsloth import FastLanguageModel
-                model, tokenizer = FastLanguageModel.from_pretrained(
-                    model_name=str(model_dir), max_seq_length=recipe_sequence_length(base_recipe),
-                    dtype=torch.bfloat16 if base_recipe in NATIVE_BF16_NF4_RECIPES else None,
-                    load_in_4bit=True, full_finetuning=False, local_files_only=True,
-                    trust_remote_code=False, token=False,
-                )
-                if Path(str(getattr(model.config, "_name_or_path", ""))).resolve() != model_dir:
-                    raise TrainingBlocked("T4_LOADER_CHANGED_PINNED_MODEL_PATH")
-                quantization = getattr(model.config, "quantization_config", {})
-                if not isinstance(quantization, dict) or quantization.get("bnb_4bit_quant_type") != "nf4":
-                    raise TrainingBlocked("T4_LOADER_QUANTIZATION_MISMATCH")
-            from datasets import Dataset
-            from peft import LoraConfig, get_peft_model
-            from transformers import AutoModelForCausalLM, AutoTokenizer, Mxfp4Config, TrainerCallback
-            from trl import SFTConfig, SFTTrainer
-            if not low_memory:
-                tokenizer = AutoTokenizer.from_pretrained(str(model_dir), revision=revision, local_files_only=True, trust_remote_code=False)
-            max_length = recipe_sequence_length(base_recipe)
-            rows = []
-            for record, _ in train:
-                text = tokenizer.apply_chat_template(record["messages"], tokenize=False)
-                if len(tokenizer(text, add_special_tokens=False, truncation=False)["input_ids"]) > max_length:
-                    raise TrainingBlocked("TRAINING_EXAMPLE_EXCEEDS_MAX_LENGTH")
-                rows.append({"text": text})
-            dataset = Dataset.from_list(rows)
-            if low_memory:
-                model = FastLanguageModel.get_peft_model(
-                    model, r=8, lora_alpha=16, lora_dropout=0, bias="none",
-                    target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-                    use_gradient_checkpointing="unsloth", random_state=3407,
-                )
-            else:
-                model = AutoModelForCausalLM.from_pretrained(
-                    str(model_dir), revision=revision, local_files_only=True, trust_remote_code=False,
-                    attn_implementation="eager", torch_dtype=torch.bfloat16,
-                    quantization_config=Mxfp4Config(dequantize=True), use_cache=False, device_map="auto", use_safetensors=True,
-                )
-                config = LoraConfig(
-                    r=8, lora_alpha=16, target_modules="all-linear",
-                    target_parameters=[f"{layer}.mlp.experts.{projection}" for layer in (7, 15, 23) for projection in ("gate_up_proj", "down_proj")],
-                )
-                model = get_peft_model(model, config)
-
-            active_phase_client = phase_client
-            interrupted_at_checkpoint = False
-
-            class ApprovalCallback(TrainerCallback):
-                def on_step_begin(self, args, state, control, **kwargs):
-                    nonlocal active_phase_client
-                    if resume_request is not None and active_phase_client is None:
-                        # Pinned Trainer restores RNG before its first step_begin.
-                        # The adapter must already have committed the measured
-                        # load; this admits before_train once, then this step.
-                        active_phase_client = checkpoint_adapter.recovered_phase_client(
-                            transport=recovery_phase_transport)
-                    _verify_training_boundary(approval_verifier, active_phase_client, request, "step_begin")
-                    return control
-
-                def on_substep_end(self, args, state, control, **kwargs):
-                    _verify_training_boundary(approval_verifier, active_phase_client, request, "substep_end")
-                    return control
-
-                def on_pre_optimizer_step(self, args, state, control, **kwargs):
-                    _verify_training_boundary(approval_verifier, active_phase_client, request, "pre_optimizer_step")
-                    return control
-
-                def on_step_end(self, args, state, control, **kwargs):
-                    if checkpoint_adapter is not None:
-                        return checkpoint_adapter.complete_optimizer_step(trainer, control)
-                    return control
-
-                def on_save(self, args, state, control, **kwargs):
-                    nonlocal interrupted_at_checkpoint
-                    if stop_after_checkpoint_step is not None and state.global_step == stop_after_checkpoint_step:
-                        committed = checkpoint_adapter.last_committed_checkpoint
-                        if committed is None or committed["completed_step"] != state.global_step:
-                            raise TrainingBlocked("CHECKPOINT_NOT_COMMITTED")
-                        interrupted_at_checkpoint = True
-                        control.should_training_stop = True
-                    return control
-
-            checkpoint_settings = {}
-            if checkpoint_policy is not None:
-                checkpoint_settings = {
-                    "save_steps": checkpoint_policy.document["checkpoint_interval_steps"],
-                    "save_total_limit": None, "save_only_model": False,
-                    "restore_callback_states_from_checkpoint": True, "ignore_data_skip": False,
-                    "dataloader_num_workers": 0, "dataloader_drop_last": False,
-                    "remove_unused_columns": False, "packing": False, "seed": 3407, "data_seed": 3407,
-                }
-
-            args = SFTConfig(
-                learning_rate=2e-4, gradient_checkpointing=True, num_train_epochs=training_epochs,
-                logging_steps=1, per_device_train_batch_size=1 if low_memory else 4,
-                gradient_accumulation_steps=recipe_gradient_accumulation_steps(base_recipe),
-                max_length=max_length, warmup_ratio=0.03, lr_scheduler_type="cosine_with_min_lr",
-                lr_scheduler_kwargs={"min_lr_rate": 0.1}, output_dir=str(output),
-                report_to="none", push_to_hub=False,
-                save_strategy="steps" if checkpoint_policy is not None else "no", bf16=base_recipe != T4_RECIPE,
-                fp16=False, optim="adamw_8bit" if low_memory else "adamw_torch",
-                **checkpoint_settings,
-            )
-            if resume_request is None:
-                _verify_training_boundary(approval_verifier, active_phase_client, request, "before_output_dir")
-            else:
-                _verify_approval(approval_verifier, request)
-            output.mkdir(exist_ok=False)
-            result.update({"execution_state": "TRAINING_IN_PROGRESS", "cuda_device": device_name, "cuda_memory_bytes": memory_bytes})
-            _write_status(output, result)
-            try:
-                trainer_class = SFTTrainer if checkpoint_adapter is None else checkpoint_adapter.trainer_type(SFTTrainer)
-                trainer = trainer_class(model=model, args=args, train_dataset=dataset, processing_class=tokenizer,
-                                        callbacks=[ApprovalCallback()])
-                resume_path, previous_steps = None, 0
-                if resume_request is None:
-                    _verify_training_boundary(approval_verifier, active_phase_client, request, "before_train")
-                else:
-                    resume_path = checkpoint_adapter.prepare_load(
-                        operation_id=resume_request.operation_id, checkpoint_ref=resume_request.checkpoint_ref,
-                        expected_checkpoint_sha256=resume_request.expected_checkpoint_sha256,
-                        replay_through_step=resume_request.replay_through_step)
-                    if _overlaps(output, resume_path):
-                        raise TrainingBlocked("CHECKPOINT_SCOPE_MISMATCH")
-                    previous_steps = checkpoint_adapter.resume_completed_step
-                    if stop_after_checkpoint_step is not None and stop_after_checkpoint_step <= previous_steps:
-                        raise TrainingBlocked("CHECKPOINT_REQUEST_INVALID")
-                if base_recipe in NATIVE_BF16_NF4_RECIPES:
-                    torch.cuda.synchronize(0)
-                    torch.cuda.reset_peak_memory_stats(0)
-                started = time.monotonic()
-                train_result = trainer.train() if resume_path is None else trainer.train(resume_from_checkpoint=str(resume_path))
-                if base_recipe in NATIVE_BF16_NF4_RECIPES:
-                    torch.cuda.synchronize(0)
-                    allocated = torch.cuda.max_memory_allocated(0)
-                    reserved = torch.cuda.max_memory_reserved(0)
-                    if (type(allocated) is not int or type(reserved) is not int
-                            or not 0 < allocated <= reserved <= memory_bytes):
-                        raise TrainingBlocked("CUDA_TRAINING_MEMORY_MEASUREMENT_INVALID")
-                    result.update({"training_peak_allocated_bytes": allocated,
-                                   "training_peak_reserved_bytes": reserved})
-                completed_steps = getattr(train_result, "global_step", None)
-                if type(completed_steps) is not int or completed_steps <= previous_steps:
-                    raise TrainingBlocked("TRAINING_COMPLETED_WITHOUT_OPTIMIZER_STEPS")
-                if low_memory and not math.isfinite(float(getattr(train_result, "metrics", {}).get("train_loss", float("nan")))):
-                    raise TrainingBlocked("TRAINING_LOSS_UNAVAILABLE_OR_NONFINITE")
-                result.update({"optimizer_steps": completed_steps, "optimizer_steps_this_attempt": completed_steps - previous_steps,
-                    "resume_completed_step": previous_steps, "training_wall_seconds": time.monotonic() - started,
-                    "reported_train_loss": getattr(train_result, "metrics", {}).get("train_loss"),
-                    "checkpoint": checkpoint_adapter.last_committed_checkpoint if checkpoint_adapter is not None else None})
-                result["training_loss_history"] = [
-                    {"optimizer_step": row["step"], "loss": float(row["loss"])}
-                    for row in getattr(getattr(trainer, "state", None), "log_history", [])
-                    if type(row) is dict and type(row.get("step")) is int
-                    and type(row.get("loss")) in {int, float} and math.isfinite(row["loss"])
-                ]
-                if interrupted_at_checkpoint:
-                    result["execution_state"] = "CHECKPOINT_SAVED_TRAINING_INTERRUPTED"
-                    result["worker_stop_state"] = "OWNER_STOP_AND_REAP_REQUIRED"
-                    _write_status(output, result)
-                    return result
-                if resume_request is not None and active_phase_client is None:
-                    raise TrainingBlocked("CHECKPOINT_NOT_COMMITTED")
-                _verify_training_boundary(approval_verifier, active_phase_client, request, "before_adapter_save")
-                trainer.save_model(str(output))
-                _verify_training_boundary(approval_verifier, active_phase_client, request, "before_tokenizer_save")
-                tokenizer.save_pretrained(str(output))
-                for artifact in ("adapter_config.json", "adapter_model.safetensors"):
-                    path = output / artifact
-                    if path.is_symlink() or not path.is_file() or path.stat().st_size <= 0:
-                        raise TrainingBlocked("TRAINED_ADAPTER_ARTIFACT_MISSING_OR_EMPTY")
-                _verify_training_boundary(approval_verifier, active_phase_client, request, "after_saved_artifact_check")
-                result["adapter_sha256"] = _sha256(output / "adapter_model.safetensors")
-                result["adapter_config_sha256"] = _sha256(output / "adapter_config.json")
-            except TrainingBlocked as exc:
-                result["execution_state"] = str(exc)
-                _write_status(output, result)
-                raise
-            except Exception:
-                result["execution_state"] = "TRAINING_FAILED"
-                _write_status(output, result)
-                raise
-            result["execution_state"] = "TRAINED_NOT_EVALUATED"
-            _write_status(output, result)
-            return result
-        except ImportError as exc:
-            raise TrainingBlocked("LOCAL_TRAINING_DEPENDENCIES_UNAVAILABLE") from exc
+    return result
 
 
 def _write_status(output: Path, result: dict[str, object]) -> None:

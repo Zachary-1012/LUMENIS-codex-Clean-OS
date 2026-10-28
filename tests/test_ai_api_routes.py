@@ -178,8 +178,16 @@ def test_ai_chat_uses_owned_gateway_and_exposes_retrieval_separately_when_unavai
 
 def test_ai_provider_status_exposes_only_owned_gateway_without_local_discovery(ai_client, monkeypatch):
     monkeypatch.setattr(
+        ai_api.intelligence, "owned_service_observation",
+        lambda: {"available": False, "service_binding": "NOT_BOUND", "state": "UNAVAILABLE",
+                 "reason": "OWNED_SERVICE_EXECUTOR_NOT_BOUND", "domains": {}},
+    )
+    monkeypatch.setattr(
         ai_api.intelligence, "owned_inference_status",
-        lambda: {"available": False, "service_binding": "NOT_BOUND", "state": "UNAVAILABLE"},
+        lambda: {"available": True, "service_binding": "EVALUATION_ONLY",
+                 "state": "LOADED_EVALUATION_CANDIDATE", "candidate_loaded": True,
+                 "evaluation_callable": True, "promotion_status": "NOT_PROMOTED",
+                 "generation_probe_performed": False},
     )
     monkeypatch.setattr(ai_api.intelligence, "ai_status", lambda: pytest.fail("retired provider discovery"))
 
@@ -189,6 +197,10 @@ def test_ai_provider_status_exposes_only_owned_gateway_without_local_discovery(a
     assert status["providers"] == ["owned_gateway"]
     assert status["fallback_allowed"] is False
     assert status["enabled"] is False
+    assert status["runtime"]["service_binding"] == "NOT_BOUND"
+    assert status["evaluation_candidate"]["classification"] == "EVALUATION_ONLY"
+    assert status["evaluation_candidate"]["candidate_loaded"] is True
+    assert status["evaluation_candidate"]["fallback_allowed"] is False
     assert providers["remote"] == []
     assert providers["owned"]["service_binding"] == "NOT_BOUND"
 
@@ -251,7 +263,8 @@ def test_ai_analyze_rejects_unknown_analysis_type(ai_client, monkeypatch):
 def test_ai_tasks_shared_route_preserves_task_engine_and_skill_execution(ai_client, monkeypatch):
     class FakeEngine:
         def create_task(self, user_input, *, context, created_by):
-            return {"task_id": "task-1", "input": user_input, "context": context, "created_by": created_by}
+            return {"task_id": "task-1", "user_input": user_input,
+                    "context": context, "created_by": created_by}
 
     monkeypatch.setattr(ai_api, "_get_engine", lambda: FakeEngine())
     import lumenis.auth.service
@@ -274,6 +287,8 @@ def test_ai_tasks_shared_route_preserves_task_engine_and_skill_execution(ai_clie
 
     assert task_response.status_code == 200
     assert task_response.get_json()["task"]["task_id"] == "task-1"
+    assert task_response.get_json()["task"]["task_kind"] == "TASK_ENGINE"
+    assert task_response.get_json()["task"]["workspace_view"]["input"] == "Create a task"
     assert skill_response.status_code == 200
     assert skill_response.get_json() == {
         "ok": True, "success": True, "execution_id": "exec-1", "status": "completed",
@@ -281,8 +296,8 @@ def test_ai_tasks_shared_route_preserves_task_engine_and_skill_execution(ai_clie
     assert seen[0]["skill_id"] == "shared.content_project"
     assert seen[0]["input_payload"] == {"brief": "b1"}
 
-    assert task_response.get_json()["task"]["created_by"] == "actor:7"
-    assert task_response.get_json()["task"]["context"]["actor_id"] == 7
+    assert "created_by" not in task_response.get_json()["task"]
+    assert "context" not in task_response.get_json()["task"]
     assert seen[0]["user_id"] == 7
 
 def test_ai_tasks_list_combines_owners_and_surfaces_storage_failures(ai_client, monkeypatch):
@@ -298,8 +313,14 @@ def test_ai_tasks_list_combines_owners_and_surfaces_storage_failures(ai_client, 
     monkeypatch.setattr(ai_api, "_get_engine", lambda: FakeEngine())
     monkeypatch.setattr(
         skill_execution, "query_executions",
-        lambda **kwargs: [{"execution_id": "exec-1", "status": kwargs.get("status") or "completed",
-                           "created_at": "2026-10-06T02:00:00Z"}],
+        lambda **kwargs: [
+            {"execution_id": "skilljob_" + "a" * 32, "status": kwargs.get("status") or "completed",
+             "created_at": "2026-10-06T02:00:00Z"},
+            {"execution_id": "skillscope_agentstep_" + "b" * 32,
+             "status": kwargs.get("status") or "completed", "created_at": "2026-10-06T02:30:00Z"},
+            {"execution_id": "agentstep_" + "c" * 32,
+             "status": kwargs.get("status") or "completed", "created_at": "2026-10-06T02:45:00Z"},
+        ],
     )
 
     response = ai_client.get("/api/ai/tasks?limit=10")
@@ -309,6 +330,7 @@ def test_ai_tasks_list_combines_owners_and_surfaces_storage_failures(ai_client, 
     assert [item["task_kind"] for item in body["tasks"]] == ["SKILL_EXECUTION", "TASK_ENGINE"]
     assert len(body["task_engine_tasks"]) == 1
     assert len(body["skill_executions"]) == 1
+    assert body["skill_executions"][0]["task_id"] == "skilljob_" + "a" * 32
 
     def failed_query(**_kwargs):
         raise OSError("database path detail must not be returned")

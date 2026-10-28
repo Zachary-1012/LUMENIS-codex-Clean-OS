@@ -15,6 +15,16 @@ def _unavailable(**_kwargs):
     }
 
 
+def test_ai_hub_guidance_supports_real_creation_and_does_not_assume_fixed_focus():
+    assert "可修改的有来源答案、分析或原创草稿" in service.SYSTEM_ROLE
+    assert "普通草稿保存、修订与版本" in service.SYSTEM_ROLE
+    assert "影子队列" not in service.SYSTEM_ROLE
+    assert "广州太古汇15周年" not in service.MODULE_HINTS["topics"]
+    assert "默认任何参考主体" in service.MODULE_HINTS["topics"]
+    assert "三级角色" not in service.MODULE_HINTS["account"]
+    assert "安全问答" not in service.MODULE_HINTS["account"]
+
+
 def test_ai_hub_status_reports_owned_runtime_without_provider_discovery(monkeypatch):
     monkeypatch.setattr(
         service.intelligence,
@@ -134,7 +144,7 @@ def test_owned_followup_preserves_supplied_history_without_retrieving_sources(mo
                for record in operational_records)
 
 
-def test_owned_followup_keeps_existing_history_budget_and_rejects_system_roles(monkeypatch):
+def test_owned_followup_preserves_full_valid_history_and_rejects_system_roles(monkeypatch):
     from lumenis.system.ai_gateway import user_api_adapter
 
     calls = []
@@ -152,10 +162,14 @@ def test_owned_followup_keeps_existing_history_budget_and_rejects_system_roles(m
         {"role": "user", "content": None}, "invalid turn",
         {"role": "assistant", "content": "保留的回答"},
     ]
-    service.chat("继续", history=history)
+    rejected = service.chat("继续", history=history)
+    assert rejected['code'] == 'CONVERSATION_HISTORY_INVALID'
+    assert calls == []
+    service.chat("继续", history=[history[0], history[1], history[-1]])
     prompt = calls[0]["text"]
     assert "保" * 800 in prompt and "保留的回答" in prompt
-    for excluded in ("old excluded turn", "excluded tail", "untrusted system override", "untrusted tool assertion"):
+    assert "old excluded turn" in prompt and "excluded tail" in prompt
+    for excluded in ("untrusted system override", "untrusted tool assertion"):
         assert excluded not in prompt
 
 
