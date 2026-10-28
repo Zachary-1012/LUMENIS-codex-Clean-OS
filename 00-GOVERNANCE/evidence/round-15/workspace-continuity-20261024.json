@@ -1970,21 +1970,36 @@
       "retained nonvisual Flutter clients"
     ],
     "frontend": "REMOVED_PENDING_REBUILD; no retired presentation or route restored.",
-    "runtime": "NOT_LOADED_OR_NOT_VERIFIED; no production service or data change in this reconciliation.",
+    "runtime": "NOT_LOADED_OR_NOT_VERIFIED; no production switch. An unintended root app import ran initialization against the default database; see runtime_incident.",
     "release": "BLOCKED; source integration is not full product delivery.",
     "checks": {
-      "windows_build_contracts": "39 passed in isolated synthetic file bundles; not a product package or native acceptance.",
+      "windows_build_contracts": "39 Windows helper contracts passed in isolated synthetic bundles after declaring packaging/PyYAML and removing untracked license-fixture dependencies; not a product build.",
       "retained_flutter_static": "flutter analyze lib --no-pub passed.",
       "boundaries": "146 isolated source-retirement, signing, protected-identity, navigation and runtime-preflight cases passed; no live collection or production data.",
       "governance": "Constitution, machine contract, current configuration, single product, database authority, Experience authority and blueprint gates passed.",
       "required_ci": "Exact PR head and merge status are authoritative; historical PR checks do not transfer to this source.",
       "python_static": "239 changed Python sources parsed; Ruff F821/F822/F823 found no undefined-name defects.",
       "retained_flutter_clients": "Initial retained-client run:191 pass/2 fail; existing fr locale and valid audio response made two malformed-input fixtures stale. Corrected invalid inputs retain rejection assertions; both affected files rerun:49 passed.",
-      "developer_hooks": "Initial193-case tool regression had6 errors in5 pause methods. Corrected optional execution-binding compatibility and pause evidence flow;9 affected/new cases passed. Global workstation hooks were not installed or modified."
+      "developer_hooks": "Initial193-case tool regression had6 errors in5 pause methods. Corrected optional execution-binding compatibility and pause evidence flow;9 affected/new cases passed. Global workstation hooks were not installed or modified.",
+      "signing_and_backup_repair": "Workspace signing and cold-start checks passed; all 37 backup contracts passed including tampered/unowned companion retention. Only isolated synthetic databases used for these checks.",
+      "ci_repair_limits": "Exact current-head CI remains required; prior CI failures and unrun downstream steps do not count as passed."
     },
     "remaining": [
       "New frontend and all original professional user-outcome requirements remain unaccepted.",
       "Runtime/DB/model bindings and same-version Web/Windows user work must be verified separately before release."
-    ]
+    ],
+    "runtime_incident": {
+      "observed_at_utc": "2026-10-28T13:48:03.597521+00:00",
+      "cause": "Import app.tool.test_build_windows resolved root app.py, executed initialization and exited with ModuleNotFoundError.",
+      "database_binding": "Canonical default data/monitor.db; no ZBC_DB_PATH override observed.",
+      "current_readback": {
+        "mode": "read-only immutable with empty WAL",
+        "quick_check": "ok",
+        "table_count": 120,
+        "main_file_metadata_unchanged_during_readback": true
+      },
+      "preimport_diff": "NOT_VERIFIED_NO_PREIMPORT_SNAPSHOT",
+      "recovery_actions": "No root repair, rollback, migration, restart or business-content write; do not infer no initialization effects."
+    }
   }
 }

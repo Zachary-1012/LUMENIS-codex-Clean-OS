@@ -477,7 +477,10 @@ socket.socket.connect=socket.socket.connect_ex=socket.socket.bind=socket.socket.
 root=pathlib.Path(sys.argv[2]).parent.resolve()
 def guard(event,args):
  if event=='sqlite3.connect':
-  value=str(args[0]); value=urllib.parse.unquote(value[5:].split('?',1)[0]).lstrip('/') if value.startswith('file:') else value
+  value=str(args[0])
+  if value.startswith('file:'):
+   value=urllib.parse.unquote(value[5:].split('?',1)[0])
+   if os.name=='nt' and len(value)>=3 and value[0]=='/' and value[2]==':': value=value[1:]
   if value!=':memory:' and not pathlib.Path(value).resolve().is_relative_to(root): raise RuntimeError('ISOLATED_MODEL_WORKER_DB_BOUNDARY')
 sys.addaudithook(guard)
 os.environ['ZBC_DB_PATH']=sys.argv[2]

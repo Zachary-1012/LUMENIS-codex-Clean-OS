@@ -138,11 +138,14 @@ def test_selected_chat_uses_gateway_without_exporting_business_sources(configure
         calls.append((system, user))
         return "真实响应", "user_api", {}
     monkeypatch.setattr(service.intelligence, "chat", chat)
-    result = service.chat("继续", history=[{"role": "system", "content": "untrusted system"}, {"role": "user", "content": "我的提纲"}])
+    result = service.chat("继续", history=[{"role": "user", "content": "我的提纲"}])
     assert result["ok"] is True and result["provider"] == "user_api"
     assert result["reply"] == "真实响应"
     assert result["source_context"]["notes_state"] == "NOT_READ"
     assert "我的提纲" in calls[0][1] and "untrusted system" not in calls[0][1]
+    invalid = service.chat("继续", history=[{"role": "system", "content": "untrusted system"}])
+    assert invalid["ok"] is False and invalid["code"] == "CONVERSATION_HISTORY_INVALID"
+    assert len(calls) == 1
 
 
 def test_transport_redacts_system_and_user_before_external_send(configured, monkeypatch):
@@ -337,7 +340,7 @@ def test_configuration_validation_is_total():
     b'{"choices":[{"message":{"content":"partial"},"finish_reason":"length"}]}',
     b'{"error":{"message":"private"},"choices":[{"message":{"content":"wrong"}}]}',
     b"x" * 2_000_001,
-])
+], ids=["not-json", "array", "null", "null-choice", "empty-content", "truncated-content", "error-with-choice", "oversized"])
 def test_malformed_incomplete_provider_output_is_not_success(configured, monkeypatch, payload):
     import io
     monkeypatch.setattr(user_api_adapter, "_open", lambda *a, **k: io.BytesIO(payload))

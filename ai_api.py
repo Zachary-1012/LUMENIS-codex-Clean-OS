@@ -928,7 +928,16 @@ def _task_row_read_allowed(record, *, kind='TASK_ENGINE', include_result=True):
                 # A creator may read the state of and stop their own durable
                 # Skill request after its result scope has been revoked. This
                 # status-only check does not read the result or grant execution.
-                return str(record.get('execution_id') or '').startswith('skilljob_')
+                # Retain only a still-authorized parent Skill or Agent read
+                # binding; losing every current scope hides the task entirely.
+                if not str(record.get('execution_id') or '').startswith('skilljob_'):
+                    return False
+                return (check_dual_domain_permission(
+                            actor['id'], record.get('product'),
+                            module=record.get('skill_id'), action='read')
+                        or check_dual_domain_permission(
+                            actor['id'], record.get('product'),
+                            module='agent_runtime', action='read'))
             if not check_dual_domain_permission(
                     actor['id'], record.get('product'), module=record.get('skill_id'), action='read'):
                 return False
@@ -1002,7 +1011,7 @@ def authorize_local_agent_root_request():
         return False
 
 
-def _task_notification(record, kind):
+def _task_notification(record, kind, *, include_result=True):
     from agent_focus.notification import project_persisted_task_notification
     notification = project_persisted_task_notification(record, task_kind=kind)
     # The notification owner derives its title from the stored user input. Keep
@@ -1011,12 +1020,22 @@ def _task_notification(record, kind):
         from agent_runtime.task_binding import _workspace_text
         event = notification.get('event') if isinstance(notification, dict) else None
         if isinstance(event, dict):
-            event['title'] = _workspace_text(event.get('title'), limit=120) or '任务'
+            event['title'] = ('任务' if not include_result else
+                              _workspace_text(event.get('title'), limit=120) or '任务')
             if not isinstance(event.get('message'), str) or not re.fullmatch(r'[a-z_]{1,64}', event['message']):
                 event['message'] = '状态已更新'
     except Exception:
         return {'task_kind': kind, 'delivery': 'in-product-projection', 'external_delivery': False}
     return notification
+
+
+def _is_reopenable_skill_execution_id(identifier):
+    """Accept durable jobs and direct execution receipts, never Agent children."""
+    return (isinstance(identifier, str) and (
+        identifier.startswith('skilljob_')
+        or re.fullmatch(r'[0-9a-f]{16}', identifier) is not None
+        or re.fullmatch(r'skillscope_[0-9a-f]{16}', identifier) is not None
+    ))
 
 
 def _task_actor_for_projection():
@@ -1045,7 +1064,7 @@ def _task_workspace_record(record, *, kind='TASK_ENGINE', include_result=True):
         }
 
     if kind == 'SKILL_EXECUTION':
-        raw_input = record.get('task') or ''
+        raw_input = (record.get('task') or '') if include_result else ''
         user_input = _workspace_text(raw_input, limit=16000) or ''
         status = record.get('status') if isinstance(record.get('status'), str) else 'unknown'
         match = (re.match(r'^([A-Z][A-Z0-9_]{1,95})(?::|$)', record.get('error') or '')
@@ -1061,13 +1080,16 @@ def _task_workspace_record(record, *, kind='TASK_ENGINE', include_result=True):
         if not include_result:
             view['error_code'] = None
             view['result_access_state'] = 'RESTRICTED'
-        return {
+        projected = {
             'task_id': record.get('execution_id'), 'task_kind': kind,
             'execution_id': record.get('execution_id'),
             'user_input': user_input, 'status': status,
             'created_at': record.get('created_at'), 'updated_at': record.get('updated_at'),
             'workspace_view': view,
         }
+        if include_result and type(record.get('user_id')) is int:
+            projected['user_id'] = record['user_id']
+        return projected
 
     raw_input = record.get('user_input') or ''
     user_input = _workspace_text(raw_input, limit=16000) or ''
@@ -1188,7 +1210,7 @@ def api_ai_tasks_get(task_id):
         task = engine.get_task(task_id)
         kind = 'TASK_ENGINE'
         if not task:
-            if not task_id.startswith('skilljob_'):
+            if not _is_reopenable_skill_execution_id(task_id):
                 return jsonify({'ok': False, 'code': 'TASK_NOT_FOUND'}), 404
             from lumenis.shared.agents.skills.execution import query_executions
             rows = query_executions(execution_id=task_id, limit=1, strict=True)
@@ -1212,7 +1234,7 @@ def api_ai_tasks_get(task_id):
                 conversation_links_state = 'unavailable'  # Ordinary task read stays usable.
         return jsonify({'ok': True, 'task': _task_workspace_record(task, kind=kind,
                             include_result=result_access),
-                        'notification': _task_notification(task, kind),
+                        'notification': _task_notification(task, kind, include_result=result_access),
                         'conversation_refs': conversation_refs, 'conversation_links_state': conversation_links_state})
     except Exception as e:
         return _agent_task_error_response(e, fallback='TASK_READ_UNAVAILABLE')
@@ -1356,9 +1378,10 @@ def api_ai_tasks_list():
                 else:
                     rows = query_executions(status=status, limit=batch_size, offset=raw_offset, strict=True)
                 for raw in rows:
-                    if kind == 'SKILL_EXECUTION' and not str(raw.get('execution_id') or '').startswith('skilljob_'):
-                        # Agent child executions and direct execution receipts are
-                        # represented by their parent task or execution owner.
+                    if kind == 'SKILL_EXECUTION' and not _is_reopenable_skill_execution_id(
+                            raw.get('execution_id')):
+                        # Agent child executions are represented by their parent
+                        # task; direct user Skill receipts keep their own entry.
                         continue
                     row = engine.get_task(raw['task_id']) if kind == 'TASK_ENGINE' else raw
                     if row is not None:
@@ -1557,7 +1580,8 @@ def _registered_skill_mutation(task_id, *, cancel):
         return jsonify({'ok': False, 'code': 'TASK_ACCESS_DENIED'}), 403
     return jsonify({'ok': True, 'task': _task_workspace_record(
                         row, kind='SKILL_EXECUTION', include_result=result_access),
-                    'notification': _task_notification(row, 'SKILL_EXECUTION')})
+                    'notification': _task_notification(
+                        row, 'SKILL_EXECUTION', include_result=result_access)})
 
 
 def _agent_runtime_create(data):

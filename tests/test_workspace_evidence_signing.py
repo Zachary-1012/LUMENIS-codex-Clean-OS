@@ -128,7 +128,9 @@ def test_atomic_publish_preserves_existing_race_winner(tmp_path, monkeypatch):
     winner_path = activate_workspace_signing(str(winner), str(winner / 'monitor.db'), winner_env)
 
     def other_writer_wins(source, destination):
-        Path(destination).write_bytes(winner_path.read_bytes())
+        fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, 'wb') as output:
+            output.write(winner_path.read_bytes())
         original(source, destination)
 
     monkeypatch.setattr(config.os, 'link', other_writer_wins)

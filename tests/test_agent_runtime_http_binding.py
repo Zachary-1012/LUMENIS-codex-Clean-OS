@@ -530,16 +530,25 @@ def test_registered_skilljob_owner_can_cancel_and_read_status_after_result_revoc
     assert cancelled.status_code == 200, cancelled.get_json()
     task = cancelled.get_json()['task']
     assert task['task_id'] == task_id and task['status'] == 'cancelled'
+    assert task['user_input'] == ''
+    assert task['workspace_view']['input'] == ''
+    assert task['workspace_view']['title'] == '任务'
     assert task['workspace_view']['result_access_state'] == 'RESTRICTED'
     assert task['workspace_view']['output_text'] is None
     assert task['workspace_view']['error_code'] is None
     assert 'result' not in task and 'output_json' not in task
+    assert cancelled.get_json()['notification']['event']['title'] == '任务'
 
     reopened = api.get(f'/api/ai/tasks/{task_id}', headers=own)
     assert reopened.status_code == 200, reopened.get_json()
-    assert reopened.get_json()['task']['status'] == 'cancelled'
-    assert reopened.get_json()['task']['workspace_view']['result_access_state'] == 'RESTRICTED'
-    assert reopened.get_json()['task']['workspace_view']['output_text'] is None
+    readback = reopened.get_json()
+    assert readback['task']['status'] == 'cancelled'
+    assert readback['task']['user_input'] == ''
+    assert readback['task']['workspace_view']['input'] == ''
+    assert readback['task']['workspace_view']['title'] == '任务'
+    assert readback['task']['workspace_view']['result_access_state'] == 'RESTRICTED'
+    assert readback['task']['workspace_view']['output_text'] is None
+    assert readback['notification']['event']['title'] == '任务'
 
 
 def test_local_principal_actual_queue_result_and_identity_boundaries(agent_client):

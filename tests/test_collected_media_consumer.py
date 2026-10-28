@@ -11,8 +11,17 @@ from contextlib import nullcontext
 import pytest
 
 from tests.test_collector_comment_pages import comments_case as comments_case
-from tests.test_collector_transaction_truth import collector_case as collector_case
+from tests.test_collector_transaction_truth import (
+    admit_registered_subject_for_isolated_collector,
+    collector_case as collector_case,
+)
 from tests.test_content_image_source import _png
+
+
+@pytest.fixture(autouse=True)
+def _admit_registered_subject_for_scoped_media_cases(request):
+    case = request.getfixturevalue("collector_case")
+    admit_registered_subject_for_isolated_collector(case)
 
 
 @pytest.fixture

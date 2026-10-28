@@ -30,6 +30,16 @@ LOCAL_APP_DATA = Path(os.environ.get("LOCALAPPDATA", ""))
 SCRATCH_PARENT = LOCAL_APP_DATA / "Lumenis" / "build-path-test"
 POWERSHELL = shutil.which("pwsh")
 REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+_SYNTHETIC_LGPL3_TEST_TEXT = (
+    "GNU LESSER GENERAL PUBLIC LICENSE\n"
+    "Version 3, 29 June 2007\n"
+    "Synthetic test fixture only; not legal license terms.\n"
+).encode("utf-8")
+_SYNTHETIC_GPL3_TEST_TEXT = (
+    "GNU GENERAL PUBLIC LICENSE\n"
+    "Version 3, 29 June 2007\n"
+    "Synthetic test fixture only; not legal license terms.\n"
+).encode("utf-8")
 
 
 def _is_reparse_point(path: Path) -> bool:
@@ -964,9 +974,8 @@ class WindowsPortableBundleTests(unittest.TestCase):
         info = self.site / "bundle_fixture-1.0.dist-info"
         text = (info / "METADATA").read_text("utf-8").replace("License: MIT\n", "")
         (info / "METADATA").write_text(text, encoding="utf-8")
-        (info / "LICENSE").write_text("GNU LESSER GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n",
-                                     encoding="utf-8")
-        (self.media / "LICENSE.txt").write_bytes((REPO_ROOT / "tools/LICENSE").read_bytes())
+        (info / "LICENSE").write_text(_SYNTHETIC_LGPL3_TEST_TEXT.decode("utf-8"), encoding="utf-8")
+        (self.media / "LICENSE.txt").write_bytes(_SYNTHETIC_GPL3_TEST_TEXT)
         manifest = self.assemble()
         dependency = manifest["dependencies"][0]
         self.assertEqual(dependency["license_declared"], "UNKNOWN")
@@ -995,10 +1004,9 @@ class WindowsPortableBundleTests(unittest.TestCase):
     def test_full_build_parent_gpl_notice_is_used_without_copying_unselected_media_tree(self):
         info = self.site / "bundle_fixture-1.0.dist-info"
         (info / "METADATA").write_text("Name: bundle-fixture\nVersion: 1.0\n", encoding="utf-8")
-        (info / "LICENSE").write_text("GNU LESSER GENERAL PUBLIC LICENSE\nVersion 3, 29 June 2007\n",
-                                     encoding="utf-8")
+        (info / "LICENSE").write_text(_SYNTHETIC_LGPL3_TEST_TEXT.decode("utf-8"), encoding="utf-8")
         parent_license = self.h.fixture_root / "full-build-LICENSE.txt"
-        parent_license.write_bytes((REPO_ROOT / "tools/LICENSE").read_bytes())
+        parent_license.write_bytes(_SYNTHETIC_GPL3_TEST_TEXT)
         # An explicitly selected original notice can live outside the bin directory.
         notice = self.h.fixture_root / "full-build/LICENSE"
         notice.parent.mkdir()

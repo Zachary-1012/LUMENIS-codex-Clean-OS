@@ -383,13 +383,19 @@ def check_contract_artifact_usage(files: List[Path]) -> List[Violation]:
     return violations
 
 
-# Review identities for the ten ambiguous legacy findings at 79a88b5.
-# Not a directory whitelist, execution grant or semantic proof. Any changed
-# canonical LF source bytes require renewed review; denial regressions still run.
+# Current PR146 source/dependency review identities after caller and denial-case
+# verification. These pins are not grants or semantic proof; changed canonical
+# LF source bytes require renewed review, and denial regressions remain required.
 _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE: execute_skill_api checks dual domain, '
                                          'task binding, then run_execution_chain; local path '
-                                         'authorized_context and readback.',
-                       'sha256': 'cb7a76c667552994a144416aa0e99987ce8a03d1457375b85aaef95a7e7113f6'},
+                                         'authorized_context and readback. ai_api caller reopens an '
+                                         'exact execution ID only after current actor/Permission checks.',
+                       'dependencies': {'account/authorization.py': 'b7111044741a5facdf3c8633f904336bb6c8276d3f1a2139f61b52ca836f8ee9',
+                                        'agent_runtime/task_binding.py': '2c365ee3e41419d9404972fd3d7b70be46bee32cf963df1cf35443ffe546536e',
+                                        'ai_api.py': '62d4e3f047131fb704cf74d98c2c07483b1b6ef5b3175041b8695bc37805efc6',
+                                        'lumenis/shared/agents/skills/execution.py': '161f1a12e4976c6b93753c60c16303e7d73b2a2b2207d0c6a1b641c23f3a6235',
+                                        'lumenis/system/security/permission.py': '4a1d011299aaf1527b9838b3bb25a60b9a70934c9b94a578a57b2f82b39e3079'},
+                       'sha256': '0a93582c0a1e1d8807768b0166f42c62c8c36b2e8c9748939b9d5a0997fe6810'},
  'agent_boundary.py': {'classification': 'LOCAL_GUARD: execute_with_approval calls firewall.check, '
                                          'denies, atomically consumes bound grant; not SYSTEM '
                                          'authority; no production caller found.',
@@ -398,22 +404,26 @@ _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE:
                                                      'asserts current actor/context/implementation '
                                                      'before callback; CapabilityRouter and '
                                                      'AgentLoop own Permission.',
-                                   'dependencies': {'agent_capability/router.py': '332edd66089df095b090d27c41d2adab2244f58fcfa1304568a183ed2f567259',
-                                                    'agent_runtime/loop.py': 'bcbede38ce9b43e792ac4cda379b2d92cd38a342b909fa986010341d9108eec9'},
-                                   'sha256': 'a4fd55b510ec84e3fbed5ad6f3f25c2ca8ad12aa550802e333f57cac3e0f6e51'},
+                                   'dependencies': {'agent_capability/router.py': 'f6a04edffbe8a844afd86643bbe89d2837bca652f8cf7f40a9e329fc35cf3397',
+                                                    'agent_runtime/loop.py': '6d09ce5619448bcb927b00cee91339825954027eb7ec0457817af8c3d5e74959'},
+                                   'sha256': 'e484b4c3cef12580ddf9f0025dc31214dd279269ade5f06b7ec519bde9da6646'},
  'agent_capability/router.py': {'classification': 'CANONICAL_CHAIN: formed invoke callback '
                                                   'executes only via FormedCall/AgentLoop; execute '
                                                   'and resource reader check actor authorization '
                                                   'and canonical Permission/Firewall/Effect Fence.',
-                                'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
-                                'sha256': '332edd66089df095b090d27c41d2adab2244f58fcfa1304568a183ed2f567259'},
+                                'dependencies': {'agent_capability/formation.py': 'e484b4c3cef12580ddf9f0025dc31214dd279269ade5f06b7ec519bde9da6646',
+                                                 'lumenis/system/security/permission.py': '4a1d011299aaf1527b9838b3bb25a60b9a70934c9b94a578a57b2f82b39e3079'},
+                                'sha256': 'f6a04edffbe8a844afd86643bbe89d2837bca652f8cf7f40a9e329fc35cf3397'},
  'agent_memory/semantic.py': {'classification': 'SOURCE_OWNER_DELEGATE: catalog existence reads '
                                                 'SELECT 1, never facts; catalog shortcut excluded; '
                                                 'discover_research_sources/verified_research_source '
                                                 'facts_only=True and independent re-read, '
-                                                'authorize_saved_work and binding checks.',
-                              'dependencies': {'intelligence_library_api.py': '53b1314e81d1d1f9627bcd7c4961fdce62d4064b6836add07b5013f7b29499c0'},
-                              'sha256': '03ddfcac676ee688e135dc0c670c2570c43a20cd760dc46f612a43845a613222'},
+                                                'authorize_saved_work, task actor/scope binding, '
+                                                'and independent canonical/source rechecks.',
+                              'dependencies': {'agent_runtime/task_binding.py': '2c365ee3e41419d9404972fd3d7b70be46bee32cf963df1cf35443ffe546536e',
+                                               'intelligence_library_api.py': '4dd71ac4eb23f5170fc9912f94aefe7077cd324832090508b0e8fac015c89fce',
+                                               'lumenis/shared/reporting/saved_work.py': '60050747ec245f5240f70c59cb32d94df5fa930e25ce301985e1bf2abbad12a5'},
+                              'sha256': '7dcb01e78b898642c28d7cb0a4509adf64e4a0d0e741e4d595ad76dc17be2214'},
  'agent_research/debate.py': {'classification': 'PURE_LEGACY_HELPER: in-memory critique '
                                                 'transformation, no I/O/model/action; current '
                                                 'ResearchRunner no longer uses template debate as '
@@ -434,18 +444,23 @@ _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE:
                                              'gate.check allowed state is required before tool '
                                              'invocation, with task scope and current binding '
                                              'checks.',
-                           'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
-                           'sha256': 'bcbede38ce9b43e792ac4cda379b2d92cd38a342b909fa986010341d9108eec9'},
+                           'dependencies': {'agent_capability/formation.py': 'e484b4c3cef12580ddf9f0025dc31214dd279269ade5f06b7ec519bde9da6646',
+                                            'lumenis/system/security/permission.py': '4a1d011299aaf1527b9838b3bb25a60b9a70934c9b94a578a57b2f82b39e3079'},
+                           'sha256': '6d09ce5619448bcb927b00cee91339825954027eb7ec0457817af8c3d5e74959'},
  'agent_runtime/task_binding.py': {'classification': 'CANONICAL_DELEGATE: authorized_context calls '
                                                      'check_actor_scope_permission/check_local_workspace_scope_permission; '
-                                                     'invocation and result recheck bindings.',
-                                   'sha256': '7c99ef64456794d6d3c9d7fa78ddee038604f173f271ea296a7dc33e5431ae95'},
+                                                     'invocation and result recheck bindings; '
+                                                     'saved work preserves its authorized actor/scope.',
+                                   'dependencies': {'account/authorization.py': 'b7111044741a5facdf3c8633f904336bb6c8276d3f1a2139f61b52ca836f8ee9',
+                                                    'lumenis/shared/reporting/saved_work.py': '60050747ec245f5240f70c59cb32d94df5fa930e25ce301985e1bf2abbad12a5',
+                                                    'lumenis/system/security/permission.py': '4a1d011299aaf1527b9838b3bb25a60b9a70934c9b94a578a57b2f82b39e3079'},
+                                   'sha256': '2c365ee3e41419d9404972fd3d7b70be46bee32cf963df1cf35443ffe546536e'},
  'agent_smart_tool/base.py': {'classification': 'CANONICAL_CHAIN: registry.execute delegates to '
                                                 'registered SmartTool.execute; '
                                                 '_check_security_gates calls canonical '
                                                 'Permission/Firewall/Effect Fence and rejects '
                                                 'before _run.',
-                              'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
+                              'dependencies': {'lumenis/system/security/permission.py': '4a1d011299aaf1527b9838b3bb25a60b9a70934c9b94a578a57b2f82b39e3079'},
                               'sha256': '839e213a3492b90ee5b860be394c4c99d21ce142423c06ce2c1b510ad072758a'},
  'lumenis/shared/agents/skills/execution.py': {'classification': 'CANONICAL_CHAIN: execute_skill '
                                                                  'and bound background handler are '
@@ -454,25 +469,27 @@ _REVIEWED_BOUNDARIES = {'account/skills.py': {'classification': 'OWNER_DELEGATE:
                                                                  'Permission/Firewall/Effect Fence '
                                                                  'first and background owner '
                                                                  'revalidates producer/scope.',
-                                               'dependencies': {'lumenis/system/security/permission.py': '21b720495dcb701dc0306a9df62681df060b98e6cc77ac5c7f63bb60ce52f6df'},
-                                               'sha256': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
+                                               'dependencies': {'account/authorization.py': 'b7111044741a5facdf3c8633f904336bb6c8276d3f1a2139f61b52ca836f8ee9',
+                                                                'agent_runtime/task_binding.py': '2c365ee3e41419d9404972fd3d7b70be46bee32cf963df1cf35443ffe546536e',
+                                                                'lumenis/system/security/permission.py': '4a1d011299aaf1527b9838b3bb25a60b9a70934c9b94a578a57b2f82b39e3079'},
+                                               'sha256': '161f1a12e4976c6b93753c60c16303e7d73b2a2b2207d0c6a1b641c23f3a6235'},
  'lumenis_shared_skills.py': {'classification': 'DELEGATED: run_shared_skill is called by '
                                                 'shared.agents.skills.execution._execute_builtin_local '
                                                 'after canonical Permission/Firewall/Effect Fence; '
                                                 'no independent permission grant.',
-                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
+                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '161f1a12e4976c6b93753c60c16303e7d73b2a2b2207d0c6a1b641c23f3a6235'},
                               'sha256': '16b684ebfc7103da27882a7d254b2d965d4847a61d061a529dc3107138789a89'},
  'lumenis_skill_adapter.py': {'classification': 'DELEGATED: invoked by '
                                                 'shared.agents.skills.execution.execute_skill only '
                                                 'after run_execution_chain '
                                                 'Permission/Firewall/Effect Fence. OSAI missing '
                                                 'remains unavailable.',
-                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
+                              'dependencies': {'lumenis/shared/agents/skills/execution.py': '161f1a12e4976c6b93753c60c16303e7d73b2a2b2207d0c6a1b641c23f3a6235'},
                               'sha256': '9baa31c2da14ca9fa7fc79be778e875f59007548c88baa71f599bc30e394c3fe'},
  'mcp_skill_runtime.py': {'classification': 'DELEGATED: registered MCP invoked by same execution '
                                             'owner; own installation/tool allowlist/human '
                                             'approval/read-only contract checks retained.',
-                          'dependencies': {'lumenis/shared/agents/skills/execution.py': '4144e55cd0913812a312ca357f831133d22a272bdecf5ecf53b65c836e4f9138'},
+                          'dependencies': {'lumenis/shared/agents/skills/execution.py': '161f1a12e4976c6b93753c60c16303e7d73b2a2b2207d0c6a1b641c23f3a6235'},
                           'sha256': '18e178a6e1b1ab9c2ea39df03a2a50be1c243a28e813c78a7e487b32bfdc4769'},
  'migrations/create_intelligence_assets_table.py': {'classification': 'SCHEMA_DIAGNOSTIC: '
                                                                       'controlled migration count '

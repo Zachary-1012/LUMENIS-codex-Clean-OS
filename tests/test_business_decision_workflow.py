@@ -591,7 +591,7 @@ def test_action_contract_continues_legacy_source_outcome_without_rewriting_histo
     assert executed["action_state"] == "EXECUTED" and executed["business_outcome"] == "NOT_OBSERVED"
     reviewed = step(service, inputs, executed, "outcome_unknown", {"limits": "Draft creation performed; no later effect observation."}, "new-effect-review")
     assert reviewed["evaluation"]["evaluation_id"] != legacy["evaluation"]["evaluation_id"]
-    assert "来源原文" in reviewed["usable_result"]["markdown"] and "业务效果：UNKNOWN" in reviewed["usable_result"]["markdown"]
+    assert "来源原文" in reviewed["usable_result"]["markdown"] and "业务效果：未知。" in reviewed["usable_result"]["markdown"]
     with sqlite3.connect(db) as con:
         assert con.execute("SELECT * FROM app_evidence_records WHERE feature_id=? ORDER BY id LIMIT 3", (service.FEATURE,)).fetchall() == old_rows
         assert con.execute("SELECT * FROM evaluation_records WHERE evaluation_id=?", (legacy["evaluation"]["evaluation_id"],)).fetchone() == old_eval
@@ -910,7 +910,8 @@ def test_readable_result_keeps_source_time_rights_and_missing_metrics_visible(wo
     assert "https://example.org/isolated-test" in markdown
     assert "捕获时间：2026-10-02T00:00:00Z" in markdown
     assert "发布时间：未知（不能以捕获时间替代）" in markdown
-    assert "商业使用许可：UNKNOWN" in markdown
+    assert "商业使用许可：未知" in markdown
+    assert all(source["commercial_reuse"] == "UNKNOWN" for source in current["material_review"]["sources"])
     assert "来源互动字段合计：未知（字段未齐）" in markdown
     with sqlite3.connect(db) as con:
         con.execute("UPDATE canonical_data SET engagement_likes=0, engagement_comments=0, "

@@ -60,7 +60,7 @@ def test_capture_or_rejected_display_time_never_becomes_publication():
 def test_document_parent_and_rows_share_one_decision_source(job_db):
     from api_dual_domain import BusinessDecisionWorkflow
     from lumenis.shared.reporting.source_brief_job import create_source_brief_job
-    scope = {'product_id': 'CTH', 'domain_id': 'cth', 'subject_id': 'SUBJECT-A', 'brand_focus_id': None}
+    scope = {'product_id': 'CTH', 'domain_id': 'cth', 'subject_id': 'SUBJECT-A', 'brand_focus_id': None, 'global': False}
     with sqlite3.connect(job_db) as conn:
         conn.row_factory = sqlite3.Row
         evidence = _source(conn, source_id='doc-fixture', source_type='document')
@@ -78,7 +78,7 @@ def test_document_parent_and_rows_share_one_decision_source(job_db):
 @pytest.mark.parametrize('conflict', ['different_evidence', 'duplicate_parent'])
 def test_document_identity_conflicts_are_not_hidden(job_db, conflict):
     from api_dual_domain import BusinessDecisionWorkflow
-    scope = {'product_id': 'CTH', 'domain_id': 'cth', 'subject_id': 'SUBJECT-A', 'brand_focus_id': None}
+    scope = {'product_id': 'CTH', 'domain_id': 'cth', 'subject_id': 'SUBJECT-A', 'brand_focus_id': None, 'global': False}
     with sqlite3.connect(job_db) as conn:
         conn.row_factory = sqlite3.Row
         evidence = _source(conn, source_id='conflict-doc', source_type='document')

@@ -86,6 +86,7 @@ The table records direct manifest entries, not every transitive dependency.
 | python-dotenv | PRODUCTION | Environment configuration loading | Config boundary | VERIFY_BEFORE_RELEASE | Yes |
 | python-dateutil | PRODUCTION | Date/time utilities | Utility boundary | VERIFY_BEFORE_RELEASE | Yes |
 | PyYAML | PRODUCTION | YAML parsing | Config/data adapter | VERIFY_BEFORE_RELEASE | Yes |
+| packaging 26.3 | BUILD TOOLING | Parse dependency requirements, markers and canonical names in `app/tool/build_windows.ps1`; pinned in `requirements.txt` | Existing Windows build/dependency inventory; [PyPA source](https://github.com/pypa/packaging), installed distribution declares Apache-2.0 OR BSD-2-Clause; preserve the selected license and notices when redistributed | VERIFY_BEFORE_RELEASE | Yes |
 | colorama | PRODUCTION/CLI | Terminal output compatibility | CLI only | VERIFY_BEFORE_RELEASE | Yes |
 | tqdm | PRODUCTION/CLI | Progress display | CLI only | VERIFY_BEFORE_RELEASE | Yes |
 | aiohttp | OPTIONAL ENHANCEMENT | Async collector HTTP; manifest notes synchronous fallback | Collector network adapter | VERIFY_BEFORE_RELEASE | Yes |

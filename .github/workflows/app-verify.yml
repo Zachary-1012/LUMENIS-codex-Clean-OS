@@ -41,12 +41,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install manifest parser from product requirements
+      - name: Install packaging parsers from product requirements
         shell: pwsh
         run: |
-          $yamlRequirement = Get-Content requirements.txt | Where-Object { $_ -match '^PyYAML[<=>]' }
-          if (-not $yamlRequirement) { throw 'PyYAML requirement is missing' }
-          python -m pip install $yamlRequirement
+          $parserRequirements = @(Get-Content requirements.txt | Where-Object { $_ -match '^(PyYAML|packaging)[<=>]' })
+          if ($parserRequirements.Count -ne 2) { throw 'Packaging parser requirements are missing or duplicated' }
+          python -m pip install @parserRequirements
       - name: Verify Windows packaging and build identity (BLOCKING)
         shell: pwsh
         env:

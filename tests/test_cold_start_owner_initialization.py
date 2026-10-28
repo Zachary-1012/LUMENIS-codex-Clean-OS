@@ -201,9 +201,11 @@ def test_deferred_desensitizer_keeps_registry_entities_and_restore(monkeypatch):
 
 def test_core_restores_stats_only_after_canonical_migration():
     source = Path('app.py').read_text(encoding='utf-8')
-    assert source.index('db.init_db()') < source.index('if not _dm.migrate():')
-    assert source.index('if not _dm.migrate():') < source.index('xhs_cookie_bridge._load_stats()')
-    assert source.index('xhs_cookie_bridge._load_stats()') < source.index('def _start_app_automations(')
+    migration_index = source.index('if not _dm.migrate():')
+    schema_index = source.index('db.init_db()', migration_index)
+    stats_index = source.index('xhs_cookie_bridge._load_stats()', schema_index)
+    automations_index = source.index('def _start_app_automations(', stats_index)
+    assert migration_index < schema_index < stats_index < automations_index
 
 
 def test_manual_workspace_validates_paths_and_keeps_normal_routes(tmp_path):

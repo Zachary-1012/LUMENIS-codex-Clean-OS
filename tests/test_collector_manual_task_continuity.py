@@ -5,10 +5,22 @@ import time
 
 import pytest
 
-from tests.test_collector_transaction_truth import collector_case as collector_case, URL, REQUEST, GLOBAL_MODE
+from tests.test_collector_transaction_truth import (
+    admit_registered_subject_for_isolated_collector,
+    collector_case as collector_case,
+    URL,
+    REQUEST,
+    GLOBAL_MODE,
+)
 from tests.test_collector_comment_pages import comments_case as comments_case
 from tests.test_collected_media_consumer import media_case as media_case
 from tests.test_collector_request_confirmation import selected_provider_case as selected_provider_case
+
+
+@pytest.fixture(autouse=True)
+def _admit_registered_subject_for_scoped_collector_cases(request):
+    case = request.getfixturevalue("collector_case")
+    admit_registered_subject_for_isolated_collector(case)
 
 
 @pytest.fixture
@@ -587,7 +599,9 @@ def test_provider_over_return_is_rejected_before_source_and_canonical_admission(
     assert failed['result']['saved_sources']['provider_returned_count'] == 2
     assert not failed['continuation_required']
     with sqlite3.connect(case['db_path']) as connection:
-        assert connection.execute('SELECT COUNT(*) FROM notes').fetchone()[0] == 0
+        assert connection.execute('SELECT note_id FROM notes').fetchall() == [
+            (case['subject_operation_note_id'],)
+        ]
         assert connection.execute('SELECT COUNT(*) FROM canonical_data').fetchone()[0] == 0
         assert connection.execute('SELECT COUNT(*) FROM platform_contents').fetchone()[0] == 0
         assert connection.execute('SELECT COUNT(*) FROM metric_snapshots').fetchone()[0] == 0
@@ -628,10 +642,14 @@ def test_provider_over_return_fails_saved_comment_page_without_refetch(comments_
     assert 'Already returned reply' not in json.dumps(payload)
 
 
-def test_saved_provider_transport_stays_fixed_after_server_default_changes(selected_provider_case,queue_owner,monkeypatch):
-    from config import get_config
+def test_saved_provider_transport_stays_fixed_after_server_default_changes(
+        selected_provider_case, queue_owner, monkeypatch, tmp_path):
+    import config
     case=selected_provider_case
-    configured=get_config()
+    if "subject_operation_note_id" not in case:
+        admit_registered_subject_for_isolated_collector(case)
+    monkeypatch.setattr(config, 'ENV_FILE', str(tmp_path / 'isolated-config.env'))
+    configured=config.get_config(force_reload=True)
     current=configured.get
     values={'LUMENIS_YOUTUBE_PROVIDER_MODE':'public','LUMENIS_YOUTUBE_PUBLIC_TRANSPORT':'http'}
     def get(key,default=None):
