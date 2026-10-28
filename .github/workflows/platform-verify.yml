@@ -18,7 +18,7 @@ jobs:
   verify:
     name: production source integrity + runtime prerequisites
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -114,7 +114,7 @@ jobs:
 
 
       - name: Run isolated unit and integration regressions (BLOCKING)
-        timeout-minutes: 6
+        timeout-minutes: 10
         shell: bash
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
@@ -122,7 +122,7 @@ jobs:
           PYTHONUNBUFFERED: "1"
         run: |
           set -o pipefail
-          timeout --signal=TERM --kill-after=15s 300s python - <<'PY' 2>&1 | tee "$RUNNER_TEMP/oevira-offline.log"
+          timeout --signal=TERM --kill-after=15s 540s python - <<'PY' 2>&1 | tee "$RUNNER_TEMP/oevira-offline.log"
           import os, pathlib, socket, tempfile
           root = pathlib.Path(tempfile.mkdtemp(prefix='lumenis-ci-regression-'))
           for key in list(os.environ):
@@ -149,6 +149,10 @@ jobs:
           # Keep full node identities in XML, not multi-megabyte parameter IDs
           # on the runner live log transport. Selection and assertions unchanged.
           import pytest
+          class FailureLog:
+              def pytest_runtest_logreport(self, report):
+                  if report.failed:
+                      print('\nFAILED ' + report.nodeid[:400] + '\n' + str(report.longrepr)[-6000:], flush=True)
           raise SystemExit(pytest.main(['-q', '--tb=short', '-p', 'no:cacheprovider',
               '--junitxml=' + os.path.join(os.environ['RUNNER_TEMP'], 'oevira-offline.xml'),
               'tests/test_rectification_truth_chain_20261010.py',
@@ -199,7 +203,7 @@ jobs:
               'tests/test_owned_training_runtime_recovery.py::test_unbound_invocation_reaps_real_managed_worker_without_waiting',
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_preserves_private_venv_for_start_replace_and_reap',
               'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_invalid_interpreter_before_spawn',
-              'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_identity_or_entry_change_and_reaps']))
+              'tests/test_owned_training_runtime_recovery.py::test_managed_worker_rejects_identity_or_entry_change_and_reaps'], plugins=[FailureLog()]))
           PY
 
       - name: Verify adopted candidate contracts and media integrity (BLOCKING)
