@@ -27,7 +27,7 @@ PR #148 已在两项必需检查通过后合入 main，合并提交为 `5b27421c
 
 | 文件职责 | 唯一入口 |
 | --- | --- |
-| 执行约束 | [AGENTS.md](../AGENTS.md) |
+| 执行约束与编码行为 | [AGENTS.md](../AGENTS.md) |
 | 原则层 | [The Product Owner's lightweight AI-native constitution](AI-NATIVE-PRODUCT-CONSTITUTION.md) |
 | 机器治理、门禁与批准 | [LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json](LUMENIS-GOVERNANCE-MACHINE-CONTRACT-V1.json) |
 | 产品架构与领域边界 | [Product Architecture](LUMENIS-PRODUCT-ARCHITECTURE-CURRENT.md) |
