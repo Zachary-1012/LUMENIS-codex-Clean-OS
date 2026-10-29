@@ -2001,7 +2001,56 @@
         "main_file_metadata_unchanged_during_readback": true
       },
       "preimport_diff": "NOT_VERIFIED_NO_PREIMPORT_SNAPSHOT",
-      "recovery_actions": "No root repair, rollback, migration, restart or business-content write; do not infer no initialization effects."
+      "recovery_actions": "No root repair, rollback, migration, restart or business-content write; do not infer no initialization effects.",
+      "remediation_20261029": {
+        "scope": "Investigate the unintended default-production initialization, prevent recurrence and preserve existing business data; not product release.",
+        "baseline": "372095d4892bb0fb673462d508ecacd1c9289216",
+        "cause_verified": "Root app.py is imported before Python rejects app.tool as a non-package. The previous guard inspected argv targets only and did not cover programmatic imports without that target in argv. The exact prior command was not retained.",
+        "changes": [
+          "Non-__main__ Core import requires an explicitly selected absolute ZBC_DB_PATH before dotenv, product imports, files or SQLite initialization.",
+          "config.load_env retains explicit ZBC_DB_PATH/ZBC_DATA_DIR; ordinary non-path dotenv reload remains available.",
+          "init_swire and init_campaign initialize schema/indexes only; automatic project/event/campaign/topic inserts and project-field upserts were removed. Existing rows are not deleted."
+        ],
+        "source_sha256": {
+          "app.py": "36e2a6c5436ecd975511d9c171bbe1e90e20bce7c1b5a077e17a795afceb2a89",
+          "config.py": "a1243a2e4cbf6cd46f2185318190be0e279121d5d1ed2d9b3ce089095d785652",
+          "swire_group.py": "c264b2cc72c7be70c12bcbac37777c563145e48e019bc30c6076f55b8de27d89",
+          "topic_campaign.py": "eae426ade2b9015b0d7688e0dbbc7a53e4edceab31af25b41af5f6a23dec32ba"
+        },
+        "readonly_database_verification": {
+          "at_utc": "2026-10-29T06:41:22.853882+00:00",
+          "database": "data/monitor.db",
+          "mode": "mode=ro, query_only=ON, consistent read transaction",
+          "integrity_check": [
+            "ok"
+          ],
+          "foreign_key_violations": 0,
+          "tables": 120,
+          "canonical_records": 1089,
+          "evidence_records": 10164,
+          "baseline_comparison": "Counts match the 2026-10-28 16:02+08 completed v21-to-v22 migration receipt; not a full pre-incident row comparison.",
+          "signatures_at_utc": "2026-10-29T06:50:29.469661+00:00",
+          "valid_evidence_signatures": 10164,
+          "invalid_evidence_signatures": 0,
+          "event_dates_differing_from_current_canonical_publish_dates": 0,
+          "database_and_existing_signer_sha256_unchanged_during_verification": true,
+          "schema_version": 22,
+          "legacy_project_seed_last_updates": "All 8 legacy project seeds show 2026-10-29 14:32:23, matching a later Core startup. Startup upserts can overwrite fields; this timestamp does not reconstruct the earlier incident.",
+          "write_or_restore_performed": false,
+          "disposition": "No demonstrated corruption or authentic replacement values justified rewriting business rows. Existing data retained."
+        },
+        "regression": {
+          "initial": "48 affected cases: 46 passed, 2 failed. Preserved original failure log.",
+          "followup": "3 passed: ordinary dotenv cases now verify explicit workspace selection and non-path override; campaign fixture uses a user-created campaign rather than the retained legacy fixed-date route. Unchanged passing cases reused.",
+          "real_process_boundary": "9 subprocess cases import app/app.tool/importlib with absent, blank or relative DB selection; audit hook forbids every SQLite connection, private dotenv read, filesystem write and external effect. All rejected before product imports.",
+          "ci_selection": "Product Gate retains prior cases and adds exact import-boundary nodes plus Swire/topic owner regressions.",
+          "static": "Changed Python compilation, Ruff F821/F822/F823, diff check and AI-native constitution passed.",
+          "evidence": "work/pr146-integration-20261028/core-initialization-repair-20261029.xml; core-initialization-repair-followup-20261029.xml; database-incident-readback-20261029.json; database-incident-signature-readback-20261029.json"
+        },
+        "historical_limit": "No pre-import full-row snapshot survives. Exact historical field changes cannot be reconstructed; current integrity/signatures/counts do not establish zero historical writes.",
+        "runtime_limit": "Production Core was observed healthy with scheduler not_started. This investigation did not restart it, migrate data or claim the running process loaded this source repair.",
+        "acceptance": "Accidental implicit-default import prevented and current DB consistency verified. Full product release remains BLOCKED."
+      }
     }
   }
 }

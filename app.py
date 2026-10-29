@@ -19,6 +19,16 @@ def _reject_unittest_app_tool_package_collision(module_name, arguments):
 
 _reject_unittest_app_tool_package_collision(__name__, sys.argv[1:])
 
+if __name__ != '__main__':
+    _import_database = os.environ.get('ZBC_DB_PATH', '').strip()
+    if not _import_database or not Path(_import_database).is_absolute():
+        raise ImportError(
+            'Importing Product Core requires an explicit absolute ZBC_DB_PATH before import; '
+            'implicit production database initialization is prohibited. '
+            'Run app/tool tools by file path, not by importing app.tool. '
+            'Start Product Core through scripts/start_production.ps1.'
+        )
+
 _CORE_SERVER_KIND = 'not_started'
 
 
