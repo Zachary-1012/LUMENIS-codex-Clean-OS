@@ -1,34 +1,7 @@
-# UI/交互研究源视频体积大（单段最高约 291MB，超过 GitHub 普通文件 100MB 上限），统一走 Git LFS。
-# 仅对专门的源视频目录生效，最小化影响范围；历史已跟踪文件不做 renormalize。
-docs/reference/ui-research/source-videos/**/*.mp4 filter=lfs diff=lfs merge=lfs -text
-docs/reference/ui-research/source-videos/**/*.mov filter=lfs diff=lfs merge=lfs -text
-docs/reference/ui-research/source-videos/**/*.webm filter=lfs diff=lfs merge=lfs -text
-
-# Experience snapshots hash exact bytes. Pin their checkout representation on
-# Windows and Unix; content drift remains a blocking SHA-256 mismatch.
-contracts/experience/screen_meta.json text eol=lf
-contracts/experience/viewmodels/VIEWMODEL_REGISTRY.json text eol=lf
-contracts/experience/unknown-bindings.json text eol=lf
-contracts/experience/BINDING_MATRIX.json text eol=lf
-contracts/experience/BACKEND_GAP.json text eol=lf
-contracts/experience/lumenis_app_binding_registry.json text eol=lf
-
-# Reviewed source inputs retain their exact original-byte hashes on every OS.
-config/collection-topic-seed-20261004.json -text
-vendor/lumenis-reuse-notices/windows-python/*.txt -text
-tests/fixtures/collector/native_public_captures_20261004.json -text whitespace=cr-at-eol
-
-# Codex project-doc budget (project_doc_max_bytes) is measured on checkout bytes;
-# pin AGENTS.md to LF so Windows CRLF checkout cannot exceed it. No content change.
-AGENTS.md text eol=lf
-scripts/data_candidates/*.jsonl text eol=lf
-scripts/data_candidates/*.json text eol=lf
-
-# Recovery admission checks original bytes, including original line endings.
-research/engineering/documentation-evidence/reports/original_research_gap_closure_20261018/historical_requirements_20261017/** -text
-research/engineering/documentation-evidence/reports/product_research_deadline_20261018/frontend_update_recovery_20261018/** -text
-research/engineering/documentation-evidence/reports/product_research_deadline_20261018/interaction_equivalent_20261017/** -text
-research/engineering/documentation-evidence/reports/competitor_research_20261018/01_official_competitor_benchmark.md -text
-00-GOVERNANCE/evidence/round-15/document-delivery-20261018/URL_TOKEN_REDACTIONS.json -text
-00-GOVERNANCE/evidence/round-15/document-delivery-20261018/test-results/lumenis_integrated_backend_20261018T0605Z/results/public-credential-signature-scan.json -text
-00-GOVERNANCE/evidence/round-15/mainline-clearance-20261021/** -text
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.ttf binary
+*.woff2 binary
+*.pdf binary

@@ -1,8 +1,0 @@
-HTTP/1.1 200 OK
-date: Wed, 21 Oct 2026 11:27:06 GMT
-
-HTTP/2 200 
-server: envoy
-date: Wed, 21 Oct 2026 11:27:07 GMT
-x-envoy-upstream-service-time: 309
-

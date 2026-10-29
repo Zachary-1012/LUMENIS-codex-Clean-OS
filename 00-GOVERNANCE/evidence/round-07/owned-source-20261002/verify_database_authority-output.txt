@@ -1,5 +1,0 @@
-Production Python modules AST-audited: 583
-Direct SQLite owners: lumenis/shared/database/connection.py, lumenis/shared/database/migrations.py
-Excluded roots: .git, .pytest_cache, .venv, 00-GOVERNANCE, 02-ARCHITECTURE, 99-ARCHIVE, CHANGELOG, OSAI测试证据, app, audit, build, docs, intelligence_library, logs, node_modules, output, research, scripts, tests, tmp, vendor, venv
-Root test_*.py and root underscore scratch files: explicitly excluded
-PASS: Shared Database direct-connection and path-override authority is exclusive

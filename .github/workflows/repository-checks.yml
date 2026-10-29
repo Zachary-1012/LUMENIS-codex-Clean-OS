@@ -1,0 +1,48 @@
+name: OEVIRA Repository Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: Repository contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Validate actual structure, documents and preserved attribution
+        run: python scripts/verify_repository.py
+      - name: Test admission failures and release boundary
+        run: python -m unittest discover -s tests -v
+
+  windows:
+    name: Cross-platform repository checks
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Validate UTF-8 documents and native paths
+        env:
+          PYTHONUTF8: '1'
+        run: python scripts/verify_repository.py
+      - name: Test native-path admission and failure handling
+        env:
+          PYTHONUTF8: '1'
+        run: python -m unittest discover -s tests -v

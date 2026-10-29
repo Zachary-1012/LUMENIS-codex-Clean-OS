@@ -1,19 +1,39 @@
-# Contributing / 贡献入口
+# 开发与审阅
 
-This is the repository's GitHub contribution entry point. The repository-wide development instructions have one source: [`AGENTS.md`](AGENTS.md). This file is a navigation index and does not restate those rules or assign work.
+## 开始工作
 
-本文件是 GitHub 展示的贡献入口。仓库开发规则唯一来源为 [`AGENTS.md`](AGENTS.md)；本文件只作导航，不复写规则或分派工作。
+使用 `D:\寰意` 和 `Zachary-1012/OEVIRA`。先读 AGENTS、产品定义及本次能力的完整
+功能、设计、架构和验收章节；核对当前 main 与工作树，保护未提交内容。
+旧版职责编号、固定阶段和历史任务不决定新产品如何开发。
 
-## Where to start / 从这里开始
+## 实施单位
 
-- Read [`AGENTS.md`](AGENTS.md) for the repository execution route.
-- Use [Source Owner Index §3](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#3-fixed-source-lookup-map) to locate the existing owner, implementation, and callers.
-- Use [`.codex/README.md`](.codex/README.md) for the existing repository engineering-tool interfaces.
-- Use the package guide for package-specific commands: [`app/README.md`](app/README.md), [`website/README.md`](website/README.md), [`scripts/README.md`](scripts/README.md), or [`deployment/README.md`](deployment/README.md).
-- Dependency entry points: root `requirements*.txt`; Flutter/Dart `app/pubspec.yaml`, `app/pubspec.lock`, and `app/toolchain.json`; website `website/package.json` and `website/package-lock.json`.
+按真实用户成果完成输入、处理、交互、持久化、引用、修改、导出和恢复。
+功能规格写清正常路径、失败与取消、权限、消费者及验收；不可只交一个接口或页面。
+一般业务不能依赖 AI 可用。模型输出不能代替事实或获得授权。
 
-- 通过 [`AGENTS.md`](AGENTS.md) 进入仓库执行规则。
-- 通过[源码 Owner Index §3](00-GOVERNANCE/LUMENIS-SOURCE-OWNER-INDEX-CURRENT.md#3-fixed-source-lookup-map)定位现有 Owner、源码和调用者。
-- 现有工程工具接口见 [`.codex/README.md`](.codex/README.md)。
-- 项目专属命令见对应说明：[`app/README.md`](app/README.md)、[`website/README.md`](website/README.md)、[`scripts/README.md`](scripts/README.md) 或 [`deployment/README.md`](deployment/README.md)。
-- 依赖入口：根目录 `requirements*.txt`；Flutter/Dart 使用 `app/pubspec.yaml`、`app/pubspec.lock`、`app/toolchain.json`；官网使用 `website/package.json`、`website/package-lock.json`。
+研究官方资料或 GitHub 是解决问题的方法，不是接入授权。仅采用已规划、许可明确
+的基础组件，固定版本与来源；不要安装新的产品平台或创建重复运行、数据和权限系统。
+
+## Git 和检查
+
+1. 从新鲜 main 建 `codex/` 分支，按明确范围编辑。
+2. 同步实际消费者和相关规格，删除本次确认被替代的实现及失效引用。
+3. 执行受影响编译、测试、安全和一致性检查。涉及用户操作时验证真实输入到成果，
+   包括保存、重开、恢复和适用导出；测试与用户验收分别记录。
+4. 审阅精确差异，创建 PR；检查必须针对最新提交与当前 main，不允许绕过保护。
+5. 检查通过、讨论解决并审阅后合并；读回线上 main 与本地基线。
+
+不得直接推 main、强推、用全仓暂存覆盖不明工作，或为了绿色删除失败断言。
+新的实现必须同步增加相应构建与运行检查；结构阶段不能继续承载未验收的源码。
+
+## 数据和外部效果
+
+测试只用显式隔离数据根。不得访问旧个人会话、生产数据库或未经授权的来源。
+用户数据、凭据、Cookie、会话状态和运行日志不进入 Git。采集会话按用户与用途授权。
+部署、付费、训练、发布、采购等外部效果遵守其适用授权，不因提交源码获得授权。
+
+## 完成含义
+
+规格通过、源码存在、测试通过、真实操作验证、产品发布是不同事实。
+缺少证据写未验证；部分完成不写全产品可用。仓库不保存开发者忙闲或调度状态。

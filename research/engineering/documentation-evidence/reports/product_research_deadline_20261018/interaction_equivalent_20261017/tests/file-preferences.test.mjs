@@ -1,2 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {filePreferences,FILE_CHUNK_OPTIONS,filePreferenceDefaults} from '../src/file-preferences.mjs';
-test('file preference keeps bounded exact choices and rejects coercion',()=>{for(const chunkBytes of FILE_CHUNK_OPTIONS)assert.equal(filePreferences({chunkBytes}).chunkBytes,chunkBytes);for(const value of [null,{}, {chunkBytes:'65536'},{chunkBytes:0},{chunkBytes:NaN},{chunkBytes:Infinity},{chunkBytes:65537}])assert.deepEqual(filePreferences(value),filePreferenceDefaults)});

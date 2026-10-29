@@ -1,18 +1,9 @@
-LUMENIS / 序境
+寰意 / OEVIRA
 Copyright 2026 Zachary-1012.
 
-Original LUMENIS software and accompanying original technical documentation
-are licensed under the Apache License, Version 2.0. See LICENSE.
+OEVIRA is the new product identity of this repository. Historical LUMENIS / 序境
+attribution and source history remain preserved in Git and docs/reference/NOTICE.
+The original Apache License, Version 2.0 in LICENSE is unchanged.
 
-Third-party components retain their own copyright and license notices.
-See THIRD_PARTY_NOTICES.md and the original notices at the referenced paths.
-
-This NOTICE supplies attribution only. It does not modify the Apache License
-or imply endorsement by OpenAI, the Apache Software Foundation, or any other
-third-party rights holder.
-
-## 2026-10-18 source-origin adoption
-
-Origin: `Zachary-1012/global-growth-intelligence`, commit `e6cde984480cff3176eb39b038c7c0a66e1e2124` (72 files). No LICENSE or NOTICE was present in that source snapshot. The owner explicitly authorized sanitized owned-source/document publication into LUMENIS. Adapted original owned/authorized work falls within the existing LICENSING.md grant; this is not a fabricated upstream third-party license.
-
-The 7 market, 12 platform, 14 policy and 3 scenario references retain original source URLs/dates and historical claims. Third-party reuse rights are UNKNOWN / NOT_DECLARED_IN_SOURCE, not Apache-2.0 by inference. Acquisition, publication and training permission are separate. Preserve effective/observation/capture dates, jurisdiction, uncertainty and provenance; no current legal/market fact or legal clearance is established. Full source file/rights mappings: `00-GOVERNANCE/LUMENIS-SOURCE-ADOPTION-V1.json`. Original example configuration, old provider defaults and passwords are not production configuration. No source runtime DB, credentials or standalone dependency stack is imported by this adoption record.
+Third-party works retain their own licenses and attribution. See
+THIRD_PARTY_NOTICES.md. This notice grants no third-party rights or endorsement.

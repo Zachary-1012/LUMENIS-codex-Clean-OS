@@ -1,9 +1,0 @@
-GOVERNANCE MACHINE CONTRACT: PASS
- - current semantic governance is JSON-backed
- - model routing is validated from structured TOML, not prose markers
- - delivery commits co-publish CURRENT through machine policy
- - live dispatch stays local/untracked
- - PO approvals require receipts; agents cannot self-approve
- - Change / Owner Closure / Release gates remain distinct
- - main protection is required by explicit PO approval; GitHub enforcement needs readback
-PASS full packaged candidate paths supplied; original rules unchanged

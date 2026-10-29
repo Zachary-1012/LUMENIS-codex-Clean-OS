@@ -1,8 +1,0 @@
-{
-  "ok": true,
-  "mode": "baseline",
-  "canonical_experience": "public-website + app/web-desktop-mobile",
-  "experience_authority": "00-GOVERNANCE/LUMENIS-EXPERIENCE-CONSTITUTION.md",
-  "dart_file_count": 228,
-  "legacy_web_authority": false
-}

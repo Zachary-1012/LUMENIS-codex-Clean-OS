@@ -1,5 +1,0 @@
-# Exact pytest nodeids temporarily removed from the clean-checkout blocking gate.
-# This is narrower than excluding an entire module. Each entry must have a reason.
-# Quarantine is not PASS and should be removed once the test is made hermetic/correctly scoped.
-
-tests/test_repository_registry.py::TestNoHardcodedPathsInProduction::test_no_hardcoded_paths_in_production_py | scanner currently traverses historical handoff/audit/build evidence; replace with active-source inventory before restoring

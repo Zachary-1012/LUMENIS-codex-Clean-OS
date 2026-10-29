@@ -1,2 +1,0 @@
-COMPILE PASS experience_runtime.py
-COMPILE PASS tests/test_bmp_local_read_transport.py

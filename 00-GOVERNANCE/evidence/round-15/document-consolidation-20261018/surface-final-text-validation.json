@@ -1,9 +1,0 @@
-{
-  "source_lines": 7983,
-  "approved_revisions": 17,
-  "missing_source_lines": [],
-  "status": "PASS",
-  "method": "every nonempty original source line, except retitled heading and explicitly revised lines, occurs in unique full plan after whitespace/Markdown delimiter normalization; exact figure bytes separately hashed",
-  "source_sha256": "9d9db9c1f205fc7d206ded88784d9fd6b2aff053b3222ca61bad4fa096f4d63a",
-  "published_sha256": "381968d2d6dcf6ca58c40c4e6181857202772f2b1907e68f71d061028569f62a"
-}
