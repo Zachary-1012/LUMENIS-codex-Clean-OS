@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "repository": "Zachary-1012/OEVIRA",
+  "product_name": "寰意 / OEVIRA",
+  "workspace": "D:\\寰意",
+  "stage": "specification",
+  "release_ready": false,
+  "historical_baseline": "2a8b9cefe3571039e04db00e863a6fc4b5dce4bc",
+  "historical_tracked_files": 4722,
+  "canonical_documents": {
+    "product": "PRODUCT.md",
+    "functionality": "docs/PRODUCT-SPEC.md",
+    "experience": "DESIGN.md",
+    "architecture": "docs/ARCHITECTURE.md",
+    "acceptance": "docs/ACCEPTANCE.md"
+  },
+  "source_roots": ["app", "server", "website", "assets"],
+  "required_checks": ["Repository contracts", "Cross-platform repository checks"],
+  "preserved_sha256": {
+    "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "docs/reference/NOTICE": "3fa4ebd8fdd28376eba5eaf5b3ef81e57d60aa2bb119a126be74d76b3bf4aa69",
+    "docs/reference/LICENSING.md": "5a930ace78267354887dfbebeec684366e53d2f58f6ea0292ce552a2bf5250e1",
+    "docs/reference/THIRD_PARTY_NOTICES.md": "6dea307ae7834f1f16361042c99a10332c6f056ef6105ac77f4053be3180c89f"
+  }
+}

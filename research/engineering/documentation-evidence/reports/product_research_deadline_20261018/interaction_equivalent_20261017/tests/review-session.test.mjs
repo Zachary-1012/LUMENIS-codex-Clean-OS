@@ -1,6 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';
-import{createReviewSession,canOpenDialog}from'../src/review-session.mjs';
-import{initialNavigation,navigationReduce}from'../src/navigation.mjs';
-test('navigation draft and selection survive isolated route snapshot',()=>{const store=createReviewSession(['navigation']);let s=navigationReduce(initialNavigation(),{type:'edit',text:'原文 العربية'});s=navigationReduce(s,{type:'capture',start:2,end:5,scroll:20});store.write('navigation',s);s.tasks.research.text='later';const restored=store.read('navigation');assert.equal(restored.tasks.research.text,'原文 العربية');assert.deepEqual(restored.tasks.research.selection,[2,5]);assert.equal(restored.tasks.research.scroll,20);restored.tasks.research.text='changed read';assert.equal(store.read('navigation').tasks.research.text,'原文 العربية')});
-test('unknown routes cannot allocate snapshots; reset is scoped',()=>{const s=createReviewSession(['a','b']);assert.equal(s.write('unknown',{}),false);assert.equal(s.read('unknown'),null);s.write('a',{x:1});s.write('b',{x:2});s.clear('a');assert.deepEqual(s.read('b'),{x:2})});
-test('an existing modal blocks shortcuts to a second modal',()=>{const a={open:true},b={open:false};assert.equal(canOpenDialog(b,[a]),false);assert.equal(canOpenDialog(a,[a]),true);a.open=false;assert.equal(canOpenDialog(b,[a]),true)});

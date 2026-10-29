@@ -1,2 +1,0 @@
-LUMENIS Only-One/multi-surface architecture guard: FAIL
-- obsolete product/archive path token present: frontend-validation-probe.txt

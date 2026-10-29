@@ -1,6 +1,0 @@
-{
-  "verified_at": "2026-10-18T06:09:49Z",
-  "sha": "4dab98ed6357133da9307de846180ed4f7bba5f5",
-  "url": "https://github.com/Zachary-1012/LUMENIS-codex-Clean-OS/commit/4dab98ed6357133da9307de846180ed4f7bba5f5",
-  "message": "Merge pull request #82 from Zachary-1012/zack/readme-engineering-guide-20261017\n\nPrepared and merged by Zack (dot) under Product Owner approval: add the bilingual engineering-guide navigation note to README and co-publish the required CURRENT record. Exact head 96cd8a07 passes Product/App checks; unchanged governance validator and initial failure retained. No product behavior or runtime settings changed."
-}

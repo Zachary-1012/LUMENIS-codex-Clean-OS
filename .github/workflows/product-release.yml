@@ -1,0 +1,22 @@
+name: OEVIRA Product Release Gate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Product implementation and release evidence required
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Block release of a specification-only repository
+        run: python scripts/verify_repository.py --require-product

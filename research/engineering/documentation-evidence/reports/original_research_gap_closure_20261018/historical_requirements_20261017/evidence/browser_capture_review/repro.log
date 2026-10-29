@@ -1,6 +1,0 @@
-AUTHORIZATION Authorization=[REDACTED] opaqueSecret123
-QUEUE 0.405 ok True
-LEASE_INITIAL BrowserHumanControlError BROWSER_HUMAN_CONTROL_ACTIVE
-LEASE_RETRY BrowserExtractionError BROWSER_CAPTURE_UNAVAILABLE
-UNKNOWN_INITIAL BROWSER_EXTRACTION_TIMEOUT {'operation_id': '0c668794-11c1-4217-9bf2-4a340781cae4', 'session_id': 'session-test', 'persistence_outcome': 'COMMITTED', 'retry_safe': False, 'receipt_query': '/api/browser/sessions/session-test/evidence', 'evidence_id': 7}
-UNKNOWN_EXPIRED_REPLAY BROWSER_CAPTURE_EXPIRED {}

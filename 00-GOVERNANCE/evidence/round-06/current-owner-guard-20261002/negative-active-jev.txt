@@ -1,2 +1,0 @@
-LUMENIS Only-One/multi-surface architecture guard: FAIL
-- architecture marker missing: Jev is an inactive historical typed candidate

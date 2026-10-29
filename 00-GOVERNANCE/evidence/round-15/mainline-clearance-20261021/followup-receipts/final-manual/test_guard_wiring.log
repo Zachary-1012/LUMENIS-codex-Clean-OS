@@ -1,8 +1,0 @@
-PASS 健康态ok healthy
-PASS 健康确实调用1次 {'n': 1}
-PASS 验证码->NEED_VERIFY且should_stop need_verify
-PASS 熔断后不再发请求 before=2 after=2
-PASS 熔断后直接返回受控态 need_verify
-PASS 关闭时直通健康 
-
-Guard接入逻辑: 全部通过
