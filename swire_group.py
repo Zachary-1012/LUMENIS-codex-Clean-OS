@@ -29,54 +29,15 @@ DB_PATH = main_db_path()
 _init_lock = threading.Lock()
 _inited = False
 
-# ============ 太古系项目字典（公开事实） ============
-# key, 名称, 城市, 产品线, 开业年, 简介
-PROJECTS = [
-    ('guangzhou_thh', '广州太古汇', '广州', '太古汇', '2011', '天河路商圈高端购物中心，华南标杆，方所文化、艺术展陈与奢侈品牌矩阵'),
-    ('chengdu_tkl', '成都太古里', '成都', '太古里', '2015', '毗邻大慈寺的开放式低密度街区商业，历史片区与现代商业融合，裸眼3D大屏城市地标'),
-    ('sanlitun_tkl', '三里屯太古里', '北京', '太古里', '2008', '京城潮流地标，分南/北/西区，品牌快闪与首发首店密集'),
-    ('xingye_thh', '兴业太古汇', '上海', '太古汇', '2017', '静安南京西路，中国首家星巴克臻选烘焙工坊曾入驻'),
-    ('qiantan_tkl', '前滩太古里', '上海', '太古里', '2021', '浦东前滩，Wellbeing 用心好生活理念，天空跑道与开放式里巷'),
-    ('indigo', '颐堤港', '北京', '颐堤港', '2012', '酒仙桥，购物中心+写字楼+酒店综合体，冬季花园与节庆市集'),
-    ('xian_tkl', '西安太古里', '西安', '太古里', '2025', '小雁塔历史文化片区，新旧交融的开放式商业（新开业项目）'),
-    ('group_brand', '集团/跨项目品牌', '全国', '品牌', '-', '太古地产及场内品牌跨项目、全国性营销与品牌事件'),
-]
-
 # 事件类型（全类型，不止舆情）
 EVENT_TYPES = ['营销活动', '展览艺术', '联名快闪', '开业周年', '品牌调整', '服务体验', '公益可持续', '舆情风险']
-
-# ============ 公开事实种子事件（冷启动，持续补全） ============
-# (project_key, brand, event_type, title, summary, event_date, sentiment, source)
-SEED_EVENTS = [
-    ('guangzhou_thh', '', '开业周年', '广州太古汇开业，奠定华南高端商业标杆',
-     '2011 年开业，位于广州天河路商圈，形成奢侈品、美妆、文化艺术与餐饮复合业态。', '2011-09-01', 'positive', '公开资料·种子待补全'),
-    ('guangzhou_thh', '方所', '品牌调整', '方所书店入驻广州太古汇，成为文化地标',
-     '方所将书店、美学、咖啡、服饰与展览结合，强化项目文化标签。', '2011-09-01', 'positive', '公开资料·种子待补全'),
-    ('guangzhou_thh', '', '开业周年', '广州太古汇十五周年系列（一方五境/拾光五境/那年汇相遇）',
-     '2026-08-28 至 2026-10-07 开展十五周年长效主题营销与传播追踪，系统专题监测同步运行。', '2026-08-28', 'positive', '系统专题·种子待补全'),
-    ('chengdu_tkl', '', '开业周年', '成都太古里开业，大慈寺片区古今交融',
-     '2015 年开业，开放式、低密度街区商业与千年古刹大慈寺共生，成为城市更新样本。', '2015-04-24', 'positive', '公开资料·种子待补全'),
-    ('chengdu_tkl', '', '营销活动', '成都太古里裸眼3D曲面大屏成城市地标',
-     '面向红星路的巨型曲面屏以裸眼 3D 内容多次出圈，成为社交媒体打卡与品牌发布阵地。', '2020-10-01', 'positive', '公开资料·种子待补全'),
-    ('sanlitun_tkl', '', '开业周年', '三里屯太古里开业，定义京城潮流地标',
-     '2008 年开业，分南区、北区、西区，首店首发与潮流快闪密集，是品牌年轻化试验场。', '2008-07-19', 'positive', '公开资料·种子待补全'),
-    ('xingye_thh', '星巴克', '联名快闪', '中国首家星巴克臻选烘焙工坊落户兴业太古汇',
-     '2017 年随兴业太古汇开业亮相，超大沉浸式烘焙工坊一度成为南京西路目的地级业态。', '2017-11-01', 'positive', '公开资料·种子待补全'),
-    ('qiantan_tkl', '', '开业周年', '前滩太古里开业，主打 Wellbeing 用心好生活',
-     '2021 年开业，开放式里巷、天空跑道与健康生活方式业态组合，服务浦东前滩国际商务区。', '2021-09-30', 'positive', '公开资料·种子待补全'),
-    ('indigo', '', '营销活动', '颐堤港冬季花园与节庆市集',
-     '2012 年开业，以室内冬季花园、季节性主题展与圣诞市集形成家庭客群心智。', '2012-09-20', 'neutral', '公开资料·种子待补全'),
-    ('xian_tkl', '', '开业周年', '西安太古里开业，小雁塔片区更新',
-     '依托小雁塔历史文化片区打造开放式商业，延续太古里“古今交融”产品线。', '2025-09-01', 'neutral', '公开资料·种子待补全'),
-]
-
 
 def _conn():
     return get_repository().connect(timeout=30)
 
 
 def init_swire():
-    """建表 + 写入项目字典与种子事件（幂等）。"""
+    """确保项目、事件与笔记表及索引存在；用户数据只由显式操作写入。"""
     global _inited
     with _init_lock:
         if _inited:
@@ -119,17 +80,6 @@ def init_swire():
                 collected_at TEXT, UNIQUE(project_key,note_id))""")
             c.execute('CREATE INDEX IF NOT EXISTS idx_swe_proj ON swire_events(project_key,event_date DESC)')
             c.execute('CREATE INDEX IF NOT EXISTS idx_swn_proj ON swire_notes(project_key)')
-            now = _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            for i, (key, name, city, line, opened, intro) in enumerate(PROJECTS):
-                c.execute("""INSERT INTO swire_projects(project_key,name,city,line,opened,intro,sort,kind,is_active,created_at,updated_at)
-                    VALUES(?,?,?,?,?,?,?,'project',1,?,?) ON CONFLICT(project_key) DO UPDATE SET
-                    name=excluded.name,city=excluded.city,line=excluded.line,
-                    opened=excluded.opened,intro=excluded.intro,updated_at=excluded.updated_at""",
-                          (key, name, city, line, opened, intro, i, now, now))
-            for (pk, brand, et, title, summary, ed, sent, src) in SEED_EVENTS:
-                c.execute("""INSERT INTO swire_events(project_key,brand,event_type,title,summary,source,event_date,sentiment,created_at)
-                    VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(project_key,title,event_date) DO NOTHING""",
-                          (pk, brand, et, title, summary, src, ed, sent, now))
             c.commit()
             _inited = True
         finally:

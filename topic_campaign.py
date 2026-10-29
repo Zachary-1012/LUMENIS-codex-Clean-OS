@@ -134,15 +134,6 @@ def _legacy_campaign_route_status(auto_trigger=False):
             'identity': identity}
 
 # ========== 专题配置 ==========
-DEFAULT_TOPICS = [
-    '#广州太古汇十五周年',
-    '#广州太古汇15周年',
-    '#一方五境',
-    '#广州太古汇',
-    '#那年汇相遇',
-    '#拾光五境',
-    '#广州太古汇15周年促销',
-]
 START_DATE = '2026-08-28'
 END_DATE = '2026-10-07'
 MODULE_VERSION = '5.8.11-probe-fix'
@@ -241,19 +232,10 @@ def _db():
     return db
 
 def init_campaign():
-    """初始化专题数据表和默认配置。"""
+    """确保专题数据表和索引存在，不创建或改写用户专题。"""
     db = _db()
     with db.get_db() as conn:
         conn.executescript(SCHEMA)
-        conn.execute(
-            "INSERT OR IGNORE INTO topic_campaigns(campaign_key,name,start_date,end_date,interval_minutes) VALUES(?,?,?,?,?)",
-            (CAMPAIGN_KEY, '广州太古汇十五周年', START_DATE, END_DATE, 240)
-        )
-        for t in DEFAULT_TOPICS:
-            conn.execute(
-                "INSERT OR IGNORE INTO topic_campaign_topics(campaign_key,topic,normalized_topic) VALUES(?,?,?)",
-                (CAMPAIGN_KEY, t, _norm(t))
-            )
 
 def _campaign_active():
     """检查当前日期是否在活动窗口内。"""

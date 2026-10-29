@@ -91,6 +91,58 @@ def test_unittest_app_tool_target_rejected_before_product_imports(target, monkey
     })
 
 
+@pytest.mark.parametrize('database', [None, '', 'data/monitor.db'])
+@pytest.mark.parametrize('statement', [
+    'import app',
+    'import app.tool.test_build_windows',
+    "import importlib; importlib.import_module('app.tool.test_build_windows')",
+])
+def test_programmatic_core_import_requires_explicit_database_before_any_effect(database, statement):
+    env = os.environ.copy()
+    env.pop('ZBC_DB_PATH', None)
+    if database is not None:
+        env['ZBC_DB_PATH'] = database
+    script = '''
+import os, sys
+def forbid_effect(event, args):
+    if event in {'sqlite3.connect', 'socket.connect', 'subprocess.Popen', 'os.mkdir'}:
+        raise AssertionError('Unexpected initialization: ' + event)
+    if event == 'open':
+        path, mode, flags = args
+        if isinstance(path, str) and os.path.basename(path) == '.env':
+            raise AssertionError('Unexpected private configuration read')
+        if (isinstance(mode, str) and any(c in mode for c in 'wax+')) or (
+            isinstance(flags, int) and flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC)):
+            raise AssertionError('Unexpected file write')
+sys.addaudithook(forbid_effect)
+try:
+    exec(sys.argv[1])
+except ImportError as exc:
+    assert 'explicit absolute ZBC_DB_PATH' in str(exc), str(exc)
+else:
+    raise AssertionError('An unselected database was accepted')
+assert not {'database', 'config', 'flask'} & sys.modules.keys()
+'''
+    result = subprocess.run([sys.executable, '-B', '-c', script, statement],
+                            cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_dotenv_does_not_redirect_explicitly_selected_workspace(tmp_path, monkeypatch):
+    import config
+
+    selected = str(tmp_path / 'selected.db')
+    configured = tmp_path / 'local.env'
+    configured.write_text('ZBC_DB_PATH=other.db\nZBC_DATA_DIR=other-data\n', encoding='utf-8')
+    monkeypatch.setattr(config, 'ENV_FILE', str(configured))
+    monkeypatch.setattr(sys, 'argv', ['python'])
+    monkeypatch.setenv('ZBC_DB_PATH', selected)
+    monkeypatch.setenv('ZBC_DATA_DIR', str(tmp_path))
+    config.load_env()
+    assert os.environ['ZBC_DB_PATH'] == selected
+    assert os.environ['ZBC_DATA_DIR'] == str(tmp_path)
+
+
 @pytest.mark.parametrize(
     ("args", "outside_db", "expected"),
     [

@@ -39,7 +39,12 @@ def load_env():
     if isolated_flags.intersection(sys.argv[1:]):
         return
     if os.path.exists(ENV_FILE):
+        selected_workspace = {
+            key: os.environ[key] for key in ('ZBC_DB_PATH', 'ZBC_DATA_DIR')
+            if os.environ.get(key, '').strip()
+        }
         load_dotenv(ENV_FILE, override=True)
+        os.environ.update(selected_workspace)
 
 
 def load_system_config() -> Dict[str, Any]:

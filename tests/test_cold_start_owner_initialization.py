@@ -317,16 +317,23 @@ def test_isolated_profiles_do_not_read_or_override_dotenv(tmp_path, monkeypatch)
         assert 'LUMENIS_CONFIG_SENTINEL' not in os.environ
 
 
-def test_ordinary_profile_retains_existing_dotenv_override(tmp_path, monkeypatch):
+@pytest.mark.parametrize('explicit_database', [False, True])
+def test_ordinary_profile_dotenv_respects_selected_database(tmp_path, monkeypatch, explicit_database):
     import config
     local_env = tmp_path / 'ordinary.env'
     value = str(tmp_path / 'explicit-ordinary-config.db')
-    local_env.write_text('ZBC_DB_PATH=' + value + '\n', encoding='utf-8')
+    local_env.write_text('ZBC_DB_PATH=' + value + '\nLUMENIS_CONFIG_SENTINEL=loaded\n', encoding='utf-8')
     monkeypatch.setattr(config, 'ENV_FILE', str(local_env))
     monkeypatch.setattr(sys, 'argv', ['app.py', '--no-scheduler'])
-    monkeypatch.setenv('ZBC_DB_PATH', str(tmp_path / 'prior.db'))
+    selected = str(tmp_path / 'selected.db')
+    if explicit_database:
+        monkeypatch.setenv('ZBC_DB_PATH', selected)
+    else:
+        monkeypatch.delenv('ZBC_DB_PATH', raising=False)
+    monkeypatch.setenv('LUMENIS_CONFIG_SENTINEL', 'prior')
     config.load_env()
-    assert os.environ['ZBC_DB_PATH'] == value
+    assert os.environ['ZBC_DB_PATH'] == (selected if explicit_database else value)
+    assert os.environ['LUMENIS_CONFIG_SENTINEL'] == 'loaded'
 
 
 def test_guardian_uses_call_time_canonical_path_without_import_side_effect(tmp_path, monkeypatch):

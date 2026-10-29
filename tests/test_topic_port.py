@@ -26,14 +26,18 @@ def test_topic_port_management(tmp_path, monkeypatch):
             conn.execute(f"DELETE FROM {t} WHERE campaign_key=?", (TKEY,)) if TKEY else None
         conn.commit(); conn.close()
 
-    # 1) 任务列表（含内置十五周年）
+    # 1) 初始化只建表，不自动创建活动或话题
     r = c.get('/api/topic-campaign/campaigns'); d = r.get_json()
     keys = [x['campaign_key'] for x in d['campaigns']]
-    print('[列表]', r.status_code, '任务数=', len(d['campaigns']), '含十五周年=', 'taikoo_15th' in keys)
+    assert r.status_code == 200 and keys == []
+    with sqlite3.connect(dbmod.DB_PATH) as conn:
+        assert conn.execute('SELECT COUNT(*) FROM topic_campaigns').fetchone()[0] == 0
+        assert conn.execute('SELECT COUNT(*) FROM topic_campaign_topics').fetchone()[0] == 0
 
     # 2) 新建任务（话题用字符串，测试分隔解析）
     r = c.post('/api/topic-campaign/campaign-save', json={
-        'name': TNAME, 'start_date': str(date.today() - timedelta(days=1)), 'end_date': str(date.today() + timedelta(days=30)),
+        'name': TNAME, 'start_date': str(date.today() - timedelta(days=1)),
+        'end_date': str(date.today() + timedelta(days=30)),
         'interval_minutes': 120, 'topics': '#测试话题X;#测试话题Y\n#测试话题Z'})
     assert r.status_code == 200 and r.json['ok'], r.data
     TKEY = r.json['campaign_key']
@@ -75,6 +79,15 @@ def test_topic_port_management(tmp_path, monkeypatch):
         'topics': ['#只留一个话题']})
     print('[更新]', r.json['action'], '话题数=', r.json['topic_count'], 'key复用=', r.json['campaign_key'] == TKEY)
     assert r.json['action'] == 'updated' and r.json['topic_count'] == 1
+
+    # A later startup schema check preserves user-created and user-edited records.
+    with sqlite3.connect(dbmod.DB_PATH) as conn:
+        campaigns_before = conn.execute('SELECT * FROM topic_campaigns ORDER BY id').fetchall()
+        topics_before = conn.execute('SELECT * FROM topic_campaign_topics ORDER BY id').fetchall()
+    tc.init_campaign()
+    with sqlite3.connect(dbmod.DB_PATH) as conn:
+        assert conn.execute('SELECT * FROM topic_campaigns ORDER BY id').fetchall() == campaigns_before
+        assert conn.execute('SELECT * FROM topic_campaign_topics ORDER BY id').fetchall() == topics_before
 
     # 清理
     cleanup()
