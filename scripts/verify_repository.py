@@ -13,12 +13,12 @@ from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-DIRECTORIES = {".github", ".oevira", "app", "assets", "docs", "scripts", "server", "tests", "website"}
+DIRECTORIES = {".agents", ".github", ".oevira", "app", "assets", "docs", "scripts", "server", "tests", "website"}
 ROOT_FILES = {".editorconfig", ".gitattributes", ".gitignore", "AGENTS.md", "CONTRIBUTING.md", "DESIGN.md", "LICENSE", "NOTICE", "PRODUCT.md", "README.md", "THIRD_PARTY_NOTICES.md"}
 IGNORED = {
     ".git", ".runtime", ".venv", "data", "__pycache__", ".pytest_cache",
     ".ruff_cache", "node_modules", "dist", "build", ".dart_tool", "coverage",
-    "test-results", "ephemeral", ".auth",
+    "test-results", "ephemeral", ".auth", "研究资料",
 }
 DOCUMENTS = {
     "product": "PRODUCT.md", "functionality": "docs/PRODUCT-SPEC.md",
@@ -215,8 +215,10 @@ def validate(
                     url = urlsplit(target)
                     if url.scheme or url.netloc or target.startswith("#"):
                         continue
-                    destination = path.parent / unquote(url.path)
-                    if not destination.exists():
+                    destination = (path.parent / unquote(url.path)).resolve()
+                    if not destination.is_relative_to(root.resolve()):
+                        errors.append(f"Active document link leaves repository in {name}: {target}; use a repository reference and record the historical source as text")
+                    elif not destination.exists():
                         errors.append(f"Broken local link in {name}: {target}")
     tracked, git_error = _tracked_files(root, tracked_paths)
     if git_error:

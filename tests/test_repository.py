@@ -136,5 +136,17 @@ class RepositoryAdmissionTests(unittest.TestCase):
         self.assertTrue(any("own blocking checks" in error for error in self.validate()))
 
 
+    def test_active_link_to_existing_external_file_blocks(self):
+        # A historical-root link once passed on the developer's machine because
+        # the old checkout existed, then broke in an independent checkout.
+        with tempfile.TemporaryDirectory(prefix="oevira-historical-source-", dir=self.root.parent) as outside:
+            original = Path(outside) / "original.md"
+            original.write_text("preserved original", encoding="utf-8")
+            target = f"../{Path(outside).name}/original.md"
+            self.assertTrue((self.root / target).is_file())
+            with (self.root / "README.md").open("a", encoding="utf-8") as document:
+                document.write(f"\n[historical source]({target})\n")
+            self.assertTrue(any("Active document link leaves repository" in error for error in self.validate()))
+
 if __name__ == "__main__":
     unittest.main()

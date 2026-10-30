@@ -24,3 +24,6 @@ app/windows/flutter/ephemeral/
 playwright/.auth/
 test-results/
 *.private.json
+
+# Research originals can contain private or large submitted materials.
+/研究资料/
