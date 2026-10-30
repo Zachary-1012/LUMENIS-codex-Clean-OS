@@ -1,40 +1,43 @@
 # 寰意 / OEVIRA
 
-寰意是自研的信息研究与创作工作平台：持续取得与用户有关的信息，帮助用户形成
-可靠判断，并完成可以修改、交付和继续使用的成果。
+寰意是面向媒体、广告、品牌营销与商业运营行业的专业智能工作平台，完整服务商业运营团队、品牌与代理团队，以及独立研究与创作用户。
 
-商业运营团队、品牌与代理机构、个人研究与创作者共同使用一套工作、资料、成果
-和权限基础。专业差异通过任务、分析口径和编辑工具提供，不通过多个互不相通的产品。
+用户从自己的问题、客户委托、原稿或素材开始，持续取得可靠信息，形成有依据的判断和原创方案，完成可编辑成果，承接客户反馈、精确修订、真实行动与后续变化。减少重复输入、搬运、返工和维护负担，保留专业方法与直接操作深度。
 
-共同工作方式：目标与约束 → 资料获取 → 核对与处理 → 分析或创作 → 修改交付
-→ 按需跟踪。独立研究、写作、视频和播客可以直接开始，不需登记商业主体。
+## 完整产品范围
 
-一级导航：工作、监测、资料、成果。设置、通知、搜索、工作空间切换是全局工具。
-监测是长期关注；工作是一次有目标的活动；资料是可复用输入；成果是可使用输出。
-同一对象在多个视图出现时仍只有一份数据与版本链。
+- 客户与委托；持续扩充的商业主体和品牌目录；商业项目、场内品牌、商户、门店、产品、账号及有来源和期间的关系。
+- 经营、市场与消费者分析；财报、预算与资源情景；品牌定位、策略、原创提案；媒体、公关、广告与整合传播。
+- 创作者和KOS/KOL/KOC/UGC合作；活动、主题、系列、内容、排期、资源执行；实验、归因、增量评价；事件、服务、风险处置与实际反馈。
+- 独立研究、原文核对、反证、专业计算；原创文稿、命名、多语言与跨文化表达。
+- Word、演示、表格、PDF各自完整对象操作、原件保全、精准修订与可编辑交付。
+- 视频从构思和分镜到完整多轨剪辑、合成、声音、色彩、字幕、成片及工程；播客从选题前采到录制、剪辑、混音、章节、声音交付和再次创作。
+- 一个通用采集系统、强受控浏览与上下文、用户自有官方登录、舆情/活动/话题/品牌持续监测。
+- 同一套自研行业AI的通用接口、既有小模型、全业务消费者、可纠正记忆与经验证的学习；未来自有模型训练与蒸馏保留，依赖GPU的训练不阻当前产品交付。
+- 团队和客户协作、对象评论、版本与批准范围、成套交付、跨成果影响和增量重交、备份与实际恢复。
 
-## Decisions approved 2026-10-29
+## 主体与行业
 
-- New product architecture and code, using old source only as optional reference.
-- Keep commercial, brand, research, creative, document and professional media depth.
-- One general acquisition system with HTTP and browser acquisition; platform-specific
-  parsing belongs inside it, never in separate schedulers, stores or identity systems.
-- Platform identities are authorized by each user, not restricted to developer accounts
-  or regions. Product identity and platform identity remain distinct.
-- Maintain self-developed core capabilities and owned AI development. Only planned
-  components may be adopted; research of another product is not permission to integrate it.
-- Basic operations work without AI. AI-specific results require actual inference and
-  separate evaluation. Withdrawn GPU training is not restored.
-- Public observations do not imply sales, market share, conversion or causation.
-- Work/results can be saved before a business decision. Draft preservation is not
-  approval for publishing, spending or another external action.
-- Retain pixel-cyber, botanical ecology and retro-futurist identity, Gypsophila logo,
-  and the five plant characters. No inherited rejected screen skeletons.
-- Web and Windows are primary operational surfaces; Website presents real capabilities
-  and entries; macOS/iOS retain later device-specific acceptance.
-- General OS control, a standalone image editor, duplicate dashboards and user-facing
-  internal governance/algorithm consoles are excluded.
+主体目录只有两类：**品牌主体、商业主体**，可以持续添加增加，收录有据在中国境内营业者，包括国际品牌在中国的经营。商场等商业经营对象归入商业主体，品牌归入品牌主体；客户委托、集团归属、场内关系、商户门店、产品和账号是业务档案或关联对象，不增加并列主体类型。原目录、分类、档案、身份、来源、关系和历史数据必须保全。主体与话题不同，不能混为一个标签。临时工作可不绑定主体，不能据此弱化主体业务。境外资料、案例与比较按任务研究，不自动全球扩库。
 
-The complete functionality, workflows and disposition decisions are in
-`docs/PRODUCT-SPEC.md`; presentation is in `DESIGN.md`, implementation boundaries
-in `docs/ARCHITECTURE.md`, and completion criteria in `docs/ACCEPTANCE.md`.
+高端/社区/街区/奥莱等商业场景，以及母婴、美妆、酒饮、文旅、教育、宠物、咖啡茶饮和原适用行业研究继续服务真实方法、受众、渠道、资源及履约约束；行业不是换标题模板或用户资格限制。
+
+## 工作与产品判断
+
+用户可直接打开文件、开始空白作品、描述目标或继续已有工作。研究、文稿、视频、播客独立完整可用。工作、监测、资料、成果用于组织内容，同一工作内可添加资料、编辑、比较与交付；导航和页面数量不限制能力。客户与主体有完整可发现的经营入口。
+
+基础工作无AI也可完成；AI专属功能须实际运行、单独验证。AI和人工操作同一作品与版本，不让晚到结果覆盖人工修改。算法、采集调度和开发流程在后台；用户控制目标、业务条件、结果、修改范围和适用的外部动作。
+
+## 自研、体验与交付
+
+自研核心，复用验证有效的自有代码及已规划、许可兼容的组件。新研究不自动授权接入新服务。保持一个身份、来源、权限、任务和成果版本体系，保留各专业领域语义与编辑深度。
+
+满天星Logo与Pim兰花、Bram彼岸花、Ness椰子树、Jas葡萄、Aris茉莉花完整保留。原创体验可突破像素、植物、复古未来主义的固定组合；专业工作面依据真实内容和操作设计，不恢复被否定的页面或套通用卡片/表单。
+
+首要交付完整Web与Windows，以及提供真实展示和入口的官网；macOS/iOS按既定设备条件后置并独立验收。基础与AI增强、不同表面、编辑工程与成品分别验收。
+
+合并重复实现和重复操作不删除有效专业能力。只有用户明确撤回的通用OS控制、独立图片编辑产品及内部声音克隆专项不恢复；图片和声音在原文档/媒体消费者中完整使用。GPU训练是保留的未来条件路线，不等于撤回行业AI。
+
+## 唯一职责文件
+
+[完整规格](docs/PRODUCT-SPEC.md)定义全部用户工作；[领域合同](docs/domains/README.md)定义具体操作、对象、异常与结果；[设计](DESIGN.md)负责呈现；[架构](docs/ARCHITECTURE.md)负责实现边界；[验收](docs/ACCEPTANCE.md)负责实际成果与质量。研究与历史只作可追溯依据，不成为第二套活跃指令。规格发布、文件归档、编译或测试通过均不等于产品已交付。

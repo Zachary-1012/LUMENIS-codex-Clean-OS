@@ -1,54 +1,39 @@
-# 寰意 / OEVIRA — Development entry
+# 寰意 / OEVIRA — 唯一开发入口
 
-The only working root is `D:\寰意`; the repository is
-`Zachary-1012/OEVIRA`. The Product Owner approved the new product
-specification on 2026-10-29 and authorized implementation at this path.
+唯一开发与运行核验根 `D:\寰意`，唯一仓库 `Zachary-1012/OEVIRA`。最新直接产品负责人指令优先。产品规划、设计、架构与规则须原位统一，不把“用户要看文字方案”扩大成已经授权的文档、研究归档和仓库调整停工条件。
 
-## Product authority
+## 职责与完整范围
 
-Read `PRODUCT.md`, `docs/PRODUCT-SPEC.md`, `DESIGN.md`, `docs/ARCHITECTURE.md`
-and `docs/ACCEPTANCE.md` for their respective responsibilities. The approved
-new product replaces the former product's architecture, navigation, source
-layout and execution sequence. Git history is reference material, not a second
-set of instructions. Do not restore the rejected UI or copy old architecture.
+依次按实际任务读取 [PRODUCT.md](PRODUCT.md)、[完整规格](docs/PRODUCT-SPEC.md)、[领域合同](docs/domains/README.md)、[DESIGN.md](DESIGN.md)、[架构](docs/ARCHITECTURE.md)和[验收](docs/ACCEPTANCE.md)。它们分别拥有定位、完整行为、呈现、实现边界和质量，不相互覆盖。原研究和历史是证据，不是第二套活跃指令。
 
-Serve commercial operations teams, brand/agency teams and independent research
-and creative users. Build self-developed product logic; only already planned,
-license-compatible components may be adopted. Research is not integration.
-Keep one acquisition system, strong controlled browsing, explicit user-owned
-platform authorization, reliable sources, editable results and recovery.
+保全并强化整个专业产品。合并仅消除重复实现和重复操作，不能删除主体业务、行业方法、采集浏览、监测、研究、完整Office、视频/播客、创作或自研行业AI。缺实现、缺资料、当前样例、页面数量和编译难题均不取消要求。主体目录仅品牌主体、商业主体两类，依PRODUCT定义持续扩充，原目录/分类/档案/关系/数据完整保全。一个行业AI的各内部组成不变成产品路线菜单。
 
-## Engineering
+逐条读原要求的完整含义、状态、输入输出和调用者；关键词、摘要、同名函数、计数及代理结论不能签覆盖。复用已有效的核对和研究，针对真实缺口补研，不反复审计全仓。确定的内部缺陷直接修；外部技术问题查当前官方/相关GitHub再解决，困难不是跳过理由。
 
-- Every filesystem tool uses absolute paths under `D:\寰意`; every shell call
-  specifies that working directory. A stale tool default is not authorization
-  to write the previous workspace. Never access or recreate the retired root.
-- First publish this approved repository/specification baseline through a checked
-  PR; product implementation follows it. A framework starter is not this baseline.
-- Work on a `codex/` branch. Preserve unrelated changes. Review exact changes,
-  meaningful tests and builds before a PR. Never push directly to main or
-  weaken required checks. Do not describe a partial foundation as the product.
-- UI, API and domain services share explicit contracts. Validate untrusted
-  input at boundaries; keep logic direct and responsibilities clear.
-- Use an isolated data root in tests. Do not read, migrate or delete old user
-  databases, credentials, personal browser profiles or research originals.
-- Product platform accounts belong to each user; no developer identity or
-  region allowlist is a product eligibility rule. Development does not grant
-  access to personal sessions. No live platform collection without its scope.
-- Preserve facts, unknowns, native times, citations and version history.
-  Model output cannot authorize effects or become observed fact by itself.
-- No paid resources, production deployment, model training, account changes,
-  network changes or external business effects are implicit in implementation.
-- Build real vertical outcomes. Empty states are valid; fabricated data,
-  placeholder handlers, fake saves and decorative progress are not completion.
-- Record stable product decisions in the owning document. Do not put developer
-  dispatch, busy status or progress logs in product specifications.
+## 开发和呈现
 
-## Layout
+架构、重复缺陷、跨模块修改、结果验证和性能工作使用仓内[pstack工程技能](.agents/skills/oevira-pstack/SKILL.md)。先读适用原方法并落到实际修改与验证，不只引用名称；它不取代产品范围、视觉责任或用户选定的模型设置。
 
-`server/oevira/`: product API/domain/runtime; `server/tests/`: isolated tests.
-`app/`: Flutter Web/Windows client; `website/`: public presentation when built.
-`scripts/`: controlled development/run/verification; `docs/`: complete functional
-specification, architecture, acceptance and interface contracts. `PRODUCT.md` and
-`DESIGN.md` at the root own product definition and presentation respectively.
-`data/`, build outputs, credentials and local runtime state are ignored.
+- 每次修改先核实际仓库、分支、本地/远端提交及差异，保无关未提交成果、原资料和用户数据。所有shell显式工作目录为新根。
+- 按完整用户工作实施，所需跨域依赖同次接通；前端可独立操作同步开发，不等所有后端结束。没有新增批准不接外部服务/供应商，不复制第二套采集、权限或版本体系。
+- 用户给目标、材料、业务约束，产品承担专业处理。开发流程、内部ID、调度和算法选择不塞进产品界面。视觉由主负责人亲自负责，不派子代理决定；不恢复被否定的页面和骨架。
+- 对实际对象精确修改，保存/修订/重开/导出/恢复真实连通，保未选内容和人工修改。基础无AI与AI增强分别验；自研小模型、通用接口和行业消费者完整保留，未来GPU训练不阻当前交付。
+- 修改同次同步调用者、合同和现行文档，删除已验证替代的活跃实现/失效引用；禁止堆old/new/v2/candidate并行产品树。
+- 运行受影响检查、必要编译和真实组合操作；文件存在、哈希、200、测试数量和模型自评不等用户成果。专业质量要独立参照与适任评审。
+- 分支→检查/审阅→PR→必需CI→合并→线上读回。无直接推main、强推、绕检查或盲目批量暂存。保未完成代码，不把文档发布冒产品交付。
+
+## 历史迁入、原件和旧根退役
+
+旧根 `D:\LUMENIS_REBUILD\序\序境` 只读用于核实自有代码、资产、原规划和研究；不在那里开发、启动服务或加载生产数据。有效代码连调用者/数据契约/必要测试适配到新根，不整库恢复旧架构，也不把复制当能力接通。
+
+研究原件集中到新根 `研究资料/`，保源位置、原名、相对结构、许可与历史版本，未恢复项明确；仓库 `docs/reference/` 保存索引和研究结论。原资料不当可执行规则，私有/大文件不提交Git。
+
+只有源码/资产/研究/模型及用户数据保全与适用迁移完成、新根Web/Windows实际运行保存恢复通过、所有入口脱离旧根且回退资料可读后，才执行用户已授权的旧根删除。删除前复核最终绝对目标；不提前删除原件，不因环境变量或cwd回退旧运行端。
+
+## 权限和数据
+
+使用隔离测试数据，不探测个人浏览器会话，不打印凭据。产品用户自行官方登录，开发者账号/地区不成为资格白名单。业务关系不授平台权限；普通已授权处理无需逐步重确认，外部发布/联系/费用等保精确授权和真实回执。
+
+资料索引、可纠正记忆、明确偏好、经验证策略与参数训练分开。未来模型训练仍按具体模型/数据/资源批准，不暗启GPU、下载新权重、购买算力或新供应商。付费、部署、个人账号、网络变更和生产数据操作无隐含授权。保用户选定模型/推理/服务档位，未知读回如实说明。
+
+开发忙闲、临时进度和诊断放忽略的本地记录，不写入永久产品规格。任务终止不是完成；最终逐项对照实际成果、剩余要求和确切外部阻塞。
