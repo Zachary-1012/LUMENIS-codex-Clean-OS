@@ -4,6 +4,8 @@
 
 ## 品牌原研究的承接与更新
 
+新增固定研究库原件`09_Research-Hub/03-RESEARCH/BRAND-LIFE-PHILOSOPHY-RESEARCH-BASELINE.md`及`LANGUAGE-BRAND-LIFE-INTELLIGENCE-RESEARCH-2026-09-04.md`已全文研究，范围与采用见[智能保全矩阵的新归档审阅](intelligence-preservation-matrix.md#new-archive-substantive-adoption)。原件位于新根`研究资料/历史原件/work/m-governance-20261008/verified-source-snapshot/intelligence_library/`。根另直接复核前者13–95、125–176及当前PRODUCT：把有意义的局部放回关系与情境，再用整体认识指导精确修改；实际反馈修正判断并保有效成果。已写入PRODUCT品牌理念，沿DESIGN原有下钻、追溯、返回与局部修订验证，不另造LIFE产品、哲学操作术语或虚构科学能力，也不恢复旧双仓/命名/视觉。
+
 本轮亲自核对新根保全原件：`研究资料/历史原件/00-GOVERNANCE/SEQUENCE-ECOSYSTEM-BRAND-V1.md`全文；`PRODUCT-POSITIONING-CURRENT.md`的2026-10-18品牌陈述与受众段；`LUMENIS-EXPERIENCE-CONSTITUTION.md`§2–4；`LUMENIS-BRAND-ECOSYSTEM-PRODUCT-LANGUAGE-INCREMENT-V1-20260911.md`的品牌机制、图形/空间、领域表达、动效、采用及成功条件。旧命名兼容文档只核命名边界与沿革，不据此宣布全部历史协议或实际资产已审核。
 
 | 原文内涵 | 当前采用与强化 | 调整理由及实际验证 |
