@@ -8,20 +8,38 @@
 
 ## 已核源码复用锚点
 
-旧主路径H=`D:\LUMENIS_REBUILD\序\序境`（只读参考）；当前主路径C=`D:\寰意`。本轮仅精确确认下列文件存在，没有扩大源码审计。
+旧主路径H=`D:\LUMENIS_REBUILD\序\序境`（只读参考）；当前主路径C=`D:\寰意`。下表分别注明已读方法体、有限片段与仅定位入口；源码行号是阅读时的定位快照，以相对路径和方法名为准。没有运行旧库、加载旧生产数据或完成代码迁入。
 
 | 索引 | 精确源码与此前核读范围 | 可复用边界 |
 |---|---|---|
-| R1 | entity_relations.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/lumenis/shared/database/entity_relations.py:15`），15起75行 | 已读关系类型、证据断言、审阅及as-of/interval/unknown规则；未证完整消歧和运行质量 |
+| R1 | H下`lumenis/shared/database/entity_relations.py`，关系类型15–46、证据绑定/时间校验/写入/查询/读取复核236–768；`subject_registry.py`155–214、296–1315、1341–1602 | 已读身份登记、名称维护、境内经营判断、工作集合、移除/重加、批处理及关系主要方法体；保留证据和时效语义，旧域/权限/持久化必须适配，具体消费者与未覆盖部分见下段 |
 | R2 | api_dual_domain.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/api_dual_domain.py:124`），BusinessDecisionWorkflow引用；prepare1684/from_case1693/advance1707、planning_constraints1792起53行、domain_plan1898、reopen3314、save_result3545/3571等有限范围 | 决策接续、约束与保存入口可供适配；不是已迁入新产品的完整业务状态机 |
 | R3 | canonical_metrics.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/canonical_metrics.py:1`），模块头44行；395/436/472/704/779方法仅定位 | 指标定义责任可复用；置信区间/SOV/净情绪/NPS/销售份额具体方法体未本轮全面核验，不可称算法已通过 |
-| R4 | statistics_methods.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/lumenis/shared/reporting/statistics_methods.py:25`），network25起42行已读；decision92/portfolio201/calibration297/experiment411/conformal582/DiD653/Hawkes722/entitymatch852/classifiereval1010/betarank1129/attribution1225/Bass1330/topics1434/syntheticcontrol1653/schedule1896仅定位 | 网络真实边/无边语义已核；其余为确切复用入口，方法体、适用性、数值正确性及新消费者未证明 |
+| R4 | H下`lumenis/shared/reporting/statistics_methods.py`，network25起42行、entity_matching852–1009已读；decision92/portfolio201/calibration297/experiment411/conformal582/DiD653/Hawkes722/classifiereval1010/betarank1129/attribution1225/Bass1330/topics1434/syntheticcontrol1653/schedule1896仅定位 | 网络真实边/无边语义、监督式身份候选算法与其概率未校准边界已核；其余方法体、适用性、数值正确性及新消费者未证明 |
 | R5 | statistics_mmm.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/lumenis/shared/reporting/statistics_mmm.py:41`），41起100行 | 有限CPU MMM输入/币种期间/宏观/诊断责任已读；不等因果ROI成立或完整运行可用 |
 | R6 | financial.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/lumenis/importer/financial.py:115`），SEC115/XBRL183/analyze386/quarterselect524；macro.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/lumenis/importer/macro.py:134`） | 仅定位财务抽取/季度/宏观对齐方法，未全面阅读效果 |
 | R7 | kos_engine.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/kos_engine.py:1472`），1472起65行；kos_metrics.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/kos_metrics.py:919`）、brand_propagation.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/brand_propagation.py:610`）仅定位 | 已读原生账号身份、来源、未知和启发式标签边界；合作、指标与传播不能按名字认定完成 |
 | R8 | kos_execution.py（源码定位：`D:/LUMENIS_REBUILD/序/序境/kos_execution.py:471`），471起65行 | 已读authorize/execute/lookup_receipt/verify_receipt、payload与授权版本、并发保护、中断先查回执；未验任何真实渠道执行 |
-| R9 | store.py（源码定位：`D:/寰意/server/oevira/store.py:52`）52–74；api.py（源码定位：`D:/寰意/server/oevira/api.py:79`）79–124；comparison.py（源码定位：`D:/寰意/server/oevira/comparison.py:170`）1–4/170–194/438–465 | 当前工作/Brief/保存基础及词面数字候选可续用；此前核读范围内没有完整经营、财务、合作生命周期，词面比较不是专业判断 |
-| R10 | monitoring.py（源码定位：`D:/寰意/server/oevira/monitoring.py:947`）947–949、1008–1043 | 已读哈希变化和关键词基础；不能冒充语义事件、指标变化、事实核验或风险处置 |
+| R9 | C下`server/oevira/store.py`基础schema1–260及Store事务方法；`auth.py`1–190；`api.py`79–170、272–291；`comparison.py`44–196、438–465；`worker.py`29–107、475–541、617–674 | 当前工作/Brief/资料/成果版本、权限及任务入队与结果写入片段可续用；词面数字候选不是专业判断，未把主体/关系快照接入比较消费者 |
+| R10 | C下`server/oevira/monitoring.py`1–130、295–342、388–437、449起读模型、735–790、947–949、1008–1043、1134–1158 | 已读URL/关键词配置、配置版本、取消在途与信号抑制、调度片段；当前配置不含正式主体/关系绑定，不能把暂停一个URL监测等同主体全消费者停用 |
+
+### 主体与场内关系的复用准备
+
+本段把已读旧方法落实到现有业务责任及消费者，不增加接口、独立系统或另一套权限/版本。表内“目标”是应接入的现有责任，**不是已接通声明**；正常、失败、恢复列是实施后必须实际完成的验收。正式主体类型始终为`brand`与`company`，商场属于`company`；客户委托、运营方、商户、门店、具体铺位和场内品牌关系丰富业务档案，不另扩主体类型。
+
+| 旧相对路径、实际方法与直接消费者 | 保留价值与现有目标消费者 | 必须适配、不能照搬的部分 | 正常、失败与恢复验收 |
+|---|---|---|---|
+| `subject_registry.py`：`normalize_subject_type`、`_canonical_name`、`list_subjects`、`get_subject_by_id`、`add_subject`、`record_official_name`。直接消费者含同文件`create_subject`/批登记，以及`scripts/import_subject_registry_seed.py::import_official_names`（174–226中已读189–226） | 保两类身份、原ID/分类/别名/行业词、查重与名称更正；用于主体目录、档案维护和工作内选用。共用C下`api.py::_require_write`及Store事务、现有工作区身份 | 旧CTH/BMP为兼容映射，不恢复领域入口；旧名称哈希ID不可随改名重算。旧双语必填不能迫使用户编造翻译；至少有可识别原名，缺名称保待补。旧`record_official_name`只记录用户声明和URL，HTTP(S)格式校验不是官方身份核验。普通已授权登记不复制旧`CONFIG_MODIFY`逐步人工审批；不能复制`ACCOUNT_SYSTEM_ENABLED=off`本地读绕过、旧环境数据库或隐式建库 | 同名不同品牌保分开，别名更正后原关系/成果仍指同ID；并发改名/重复提交不覆盖或新增重复身份；提交超时先读原操作结果，历史名称可核、重开仍有原来源 |
+| `subject_registry.py`：`_country_subject_projection`、`_china_operation_for_subject`、`_subject_working_set_view`、`get_subjects`；调用R1 `query_country_entities`。采集直接消费者为`secondary_collection.py::_subject_directory_decision`（1966–2034） | 保中国经营准入与来源国/总部/经营地的区别、观察时间/有效期、明确不存在/未采/冲突/不可用；供目录选用、采集范围、关系与比较期间解析 | 当前中国经营须有可用证据，国际品牌境内经营可收录；待核档案不冒已确认正式条目。查询失败不能变空库/零覆盖；某日采集不能自动证明持续营业。旧个人工作集合不直接替代当前工作区、客户委托和对象权限，境外任务研究不自动扩全球目录 | 有效/过期/冲突/仅采集日证据分别呈现，观测条数不冒全市场覆盖；证据不可读仍保合法档案与历史结果；补证恢复使用须重新核时效与权限 |
+| `subject_registry.py::update_subject_working_set`（1070–1315）→`lumenis/system/collector/adapters/secondary_collection.py::cancel_subject_collection_requests`（2380–2486）；`operate_collection_request`的开始/续接/attempt guard片段（2561–2677） | 保移除只停新使用、不删身份/旧成果；偏好版本、保存读回、重复移除可继续核取消结果。当前应接入的消费者为C下`monitoring.py::_cancel_pending`、调度与既有jobs、工作/比较/资料和成果读回，尚未形成主体联动 | 旧取消只处理同actor、精确主体的手动任务，明确不含GLOBAL/discovery及无actor定时任务，不能冒完整监测停止。旧偏好保存成功、取消请求送达和实际停止是不同结果；目录服务失败时仍允许明确移除。新根必须按同一主体/关系版本关联现有任务和监测，不靠关键词猜归属 | 移除后新采集/分析引用和定时监测受影响部分停止；排队取消、在途取消待完成与失败分别可读。中断重开继续核回执，不重发；重加沿原ID且不自动恢复监测/撤销权限/旧批准；无关用户、客户及主体工作不变 |
+| `subject_registry.py::prepare_subject_batch`、`subject_batch_workflow`（1341–1602）；`lumenis/shared/reporting/entity_candidate_review.py::_material`消费`prepare_subject_batch`，`registration_proposal`返回的建议由`subject_batch_workflow`消费 | 保逐项身份冲突、准确输入绑定、部分完成、原结果与续接位置；用于用户批量整理主体及有来源的注册建议，继续使用现有任务/成果版本 | 原`1..1000`、双语必填和五分钟token是旧实现约束，不作为完整产品范围；保精确操作对象、当前权限、逐项来源和再次核对，不搬旧总配置批准流程。候选审阅≠注册≠事实已确认，批次成功不自动建立境内经营证据 | 一批含重复、同名冲突、缺证和有效项，逐项显示结果；权限中途撤销停后续写入，已保存项保留；重开凭同输入和已持久结果续接，输入变更不能借旧确认继续 |
+| `lumenis/shared/database/entity_relations.py`：`_load_evidence_and_note`、`record_country_relation`、`record_venue_tenant_claim`、`query_country_entities`、`query_venue_tenant_claims`、`_evidence_read_status`、`_claim_matches_as_of`（236–768）。已读直接写入消费者`scripts/import_tkh_directory_relations.py`96–230的`tenant_claims`/`resolve_venue`/`resolve_brand`/`import_directory` | 保逐条来源、原文、场内名称、楼层/类别/详情/列表地址、可未匹配品牌与时间断言；用于商业主体看场内品牌门店、品牌看跨商场网点，以及经营、监测、合作和可比集 | 旧写入固定`AS_OF_CAPTURE`、`UNREVIEWED`，不是当前有效租约/门店身份。旧`tenant_claims`把units写入floor，须分清铺位号和实际楼层并保原字段；`resolve_brand`的英文名单匹配只作候选，不能证明同品牌。既有品牌目标不证明经营者/授权。旧Evidence数字ID、CTH/BrandFocus和notes绑定适配现有资料/引用/权限，保原定位而不复制旧库；需补关系更正、有效期、冲突处理及双向消费者 | 商场company与品牌brand可关联多门店/铺位；同名、多品牌集合店、开闭店/迁址/换租保正确期间。原文缺失、来源不匹配、撤回、冲突或过期不得显示为确认入驻；修订只更新受影响新分析，旧报告/关系版本可重开，误归属可纠正且不污染全国品牌 |
+| `lumenis/shared/reporting/statistics_methods.py::_statistics_entity_matching`（852–1009）→`business_brief.py::analyze_statistics_source`分派/引文复核（1515–1591）→`entity_candidate_review.py::read_candidates/save_review/registration_proposal`（1–175）；`api_dual_domain.py`1859–1894为统计结果采用消费者片段 | 保监督式Fellegi–Sunter候选、独立标签分区、精确来源引文、人工保留分开/待补证/注册建议及保存前重读；目标是主体消歧和比较准备，同一资料/成果链消费 | 算法假设字段条件独立，先验取训练类别比例；源码明确概率未校准。逐行ID不同不证明实体/来源级训练测试无泄漏；须准备有代表性的独立评价。旧候选复核`merge_supported=False`，不能冒合并/拆分/撤销已存在。模型分数不建身份真相，不把用户变成手填agreement位的算法操作员；无AI仍可逐来源人工核对 | 同名不同对象、别名同对象和难负例分别评价精确率/召回与校准；缺标签/依赖/足够样本如实保候选或人工核对；来源/报告版变化使旧建议待复核，保存失败不登记，重开恢复原引文和人工意见 |
+| C下`api.py`比较入口→`worker.py::enqueue_comparison/_process_comparison`（29–107、475–541、617–674）→`comparison.py::build_comparison`（44–196）与现有`artifact_versions` | 保资料快照、原件复核、可定位引文、任务幂等/租约、写入前成员权限复核与保存；目标为主体/场内关系、同品牌异城商场和高端对标的专业比较，接经营报告/工作簿/地图/客户交付 | 当前比较只收资料ID/准则，不含正式主体、关系、指标口径与可比集版本；词面/数字候选不冒专业可比或身份匹配。应由主体业务提供采用对象、城市/期间/纳排理由及关系版本，接既有输入快照；源/口径不足仍交成立部分与限制，不新增另一比较系统 | 从真实商场与品牌关系选可比集，调整城市/期间/纳排重算同一工作；面积/币种/期间/指标不同不得直接排名，缺值不补零。关系更正或撤权使受影响运行重新核对，保存/重开/导出保当时比较集和未修改的客户内容 |
+
+移除作用于有权操作的工作区目录选用或明确归档范围，不是删除公共事实或全体用户的主体身份。现有`monitoring.py`的`scope`为文本、`sources`为URL，尚不能表达正式主体及场内关系依赖；实施时补入既有配置/版本对象，使调度、恢复、结果提交及通知均核同一当前资格与版本。一个规则涉及多个主体时只停止受影响且可分离的部分；不能安全拆分时暂停该规则并说明影响，保其他规则。不能自动拿掉被移除主体、扩大或缩小比较范围后继续输出原结论。历史来源/已交付结果在当前读取权限内保留；撤权材料受访问边界约束，历史保留不等继续向已撤权用户公开。
+
+**尚未证明的边界。** 上述读取没有运行任何正常、失败或恢复用例；场内关系查询在已检索的旧`lumenis/`非测试Python、`api_dual_domain.py`与`lumenis_app_api.py`中未找到查询消费者，不能因此声称全仓不存在。旧定时监测消费者、任务队列内部取消落实与所有写入/通知回调、候选审阅外部路由、旧档案合并/拆分/撤销实现及历史数据内容尚未逐体核读；新比较worker中间结果转换片段及其余监测结果提交路径也未在本段签收。它们是后续定向适配与验收的明确对象，不是减少主体、关系或专业分析能力的理由。当前不承诺整库可迁，也不以源码保存证明原数据已迁回。
 
 ## 1. 客户、商业主体、品牌、场内经营与可比关系
 
@@ -91,8 +109,8 @@
 ### 本域原条的处理与验收细化
 
 - **G103/G104，三方与完整提案。** 上述第2/3/5项先核甲方、代理、具体资源/执行方职责；同一事实分别解释利益、KPI、下一动作、决策责任和可见成本，切角色不改事实/权限。STP、4P/4C/4R、CDV、品牌资产与Marketing 5.0等原研究方法保出处、业务定义、适用/不适用条件和本案实际推导；不得仅往章节贴术语。十章提案、4A叙事和One Slide One Job供可编辑结构选择，非所有任务硬模板。低/中/高三档预算必须基于真实资源、报价/估计与明确取舍，缺价格保持待询，不凑三组数字。已有txt/md/json/csv/docx/pptx提案可理解后在相应可编辑对象继续，复杂原稿不降为纯文本重建；输出含可编辑Word/PPT及关联预算。
-- **G77，Persona与回复约束。** 受众、内容支柱、口吻、禁区、商业边界、CTA风格六项保原值、来源/假设、人工修改及版本，每条Brief记录实际采用版。KOS/KOL/KOC/UGC是本次任务角色，不凭昵称或粉丝数赋类；改Persona先列受影响未交付作品及已批准回复，用户选采用范围，已发历史不改。创作合同§2编辑相同对象，第8域消费回复风险与人工审核；四类回复须查到原定义/版本和对应原评论才能称完整，原P2079本身未给类名，此缺口不得临时造四类掩盖。缺定义不阻自由写稿，风险定位原句、转人工，不暗发或跳过必要审阅。
-- **G99–101/G121，方法的商业语义。** 创作合同§2负责同一L0原子技巧、L1单线、L2战役、L3品牌世界观及对象/版本；本域给L2人群、内容、渠道、节奏、场域、预算六维的真实约束、品牌理由与反证。下钻生成方案预览、上抽仅产生方法候选，实际依赖之外不重算。mass/premium/luxury提供同事实不同表达/接触方式比较，但替换旧“强制调性”和“品类决定风格”为可编辑任务选择；保高级表达研究，不复制社会身份刻板结论。机制/张力/角度/语义角色/预算组合要有真实作用差异，可复现批次与重复检查不能证明原创。SIT六模板、文化连接、UGC产品反馈、世界观等按已核方法定义调用；缺准确定义列待核，禁止随造名称补数。4–8词、N>10等旧偏好/学习门槛不得直接当跨语言或晋升通用证明，学习另按第9域独立评价。
+- **G77，Persona与回复约束。** 受众、内容支柱、口吻、禁区、商业边界、CTA风格六项保原值、来源/假设、人工修改及版本，每条Brief记录实际采用版。KOS/KOL/KOC/UGC是本次任务角色，不凭昵称或粉丝数赋类；改Persona先列受影响未交付作品及已批准回复，用户选采用范围，已发历史不改。创作合同§2编辑相同对象，第8域消费回复风险与人工审核。原P2079未给四类回复准确类名是历史事实，不再以寻找旧标签为完整交付前提；依据现有研究在同一创作方法资产明确任务分类、适用情形、输入、输出和版本，标明新定义并以真实原评论验质量。保全部回复任务、风险原句定位和必要人工处理，不暗发、不减少专业操作。
+- **G99–101/G121，方法的商业语义。** 创作合同§2负责同一L0原子技巧、L1单线、L2战役、L3品牌世界观及对象/版本；本域给L2人群、内容、渠道、节奏、场域、预算六维的真实约束、品牌理由与反证。下钻生成方案预览、上抽仅产生方法候选，实际依赖之外不重算。mass/premium/luxury提供同事实不同表达/接触方式比较，但替换旧“强制调性”和“品类决定风格”为可编辑任务选择；保高级表达研究，不复制社会身份刻板结论。机制/张力/角度/语义角色/预算组合要有真实作用差异，可复现批次与重复检查不能证明原创。SIT沿创作合同§2已核一手五工具纠正旧“六模板”误称，文化连接、UGC产品反馈、世界观等按有来源的方法与新明确定义调用；保旧名称未复原事实，不继续追第六名、不以补数冒原研究。专业创意不限五工具，方法资产按任务持续扩展并独立评价。4–8词、N>10等旧偏好/学习门槛不得直接当跨语言或晋升通用证明，学习另按第9域独立评价。
 - **G122/G135/G181/G182/G136，跨文化与事实约束。** 创作合同主责命名音义、韩语分词/空格/实体/情感主题、官方词典与获准词头资产及韩剧式审校；本域消费目标市场、品牌事实与禁用主张，保名称候选的来源、未知、负面联想及待人工核项。词头不冒完整释义，缺音频不称已听；不恢复旧供应商或自动新接入。安全、隐私、独家、库存、认证等逐项对应具体依据、适用范围、确认人和获准使用版本；文字优美或人工接受不使主张成为事实。验改市场/语言后只复核相关部分，原稿、未选语言与客户批准版本保全。
 
 ## 5. 创作者、KOS合作与传播资产价值
@@ -194,6 +212,7 @@
 
 ## 组合开发与交付约束
 
+- 原件追索依[阅读边界](../reference/reconstruction/reading-boundaries.md)：四份业务DOCX及`mobile_voice/report.md`、`postproduction/REVIEW_PLAN_ZH.md`已由用户明确停止追索。旧“未找到/未恢复”只保当时事实，不冒找回、不再列开发阻塞；运营、内容、传播、声音及相应专业操作完整保留，由现有研究、明确方法和独立评价承接。
 - 每域六项是同一能力的完整要求。依赖是接通工作所需条件，不能变成用户逐屏调度内部步骤，或成为将未做能力永远推迟的理由。前端可独立的操作由根安排，本文不设计视觉。
 - 先续用R9/R10有效基础，再把业务对象、状态、专业计算和消费者同时接通；不是先注册所有模块或生成空接口。R1–R8按明确合同吸收，适配时同步调用者及权限/版本，替代实现只在确认真实覆盖后退役。
 - 受影响的编译/单元/集成检查保障普通错误；完整验收必须使用真实可获准输入，实际处理、可编辑交付、未受影响内容保全、重开/修订/恢复。复杂公式/Office/媒体/权限/恢复的外部参照见engineering-acceptance-reference.md；基线/负例不能由同一生成结果反向定义。
