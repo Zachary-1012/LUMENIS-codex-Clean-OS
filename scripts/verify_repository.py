@@ -13,7 +13,7 @@ from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-DIRECTORIES = {".agents", ".github", ".oevira", "app", "assets", "docs", "scripts", "server", "tests", "website"}
+DIRECTORIES = {".agents", ".codex", ".github", ".oevira", "app", "assets", "docs", "scripts", "server", "tests", "website"}
 ROOT_FILES = {".editorconfig", ".gitattributes", ".gitignore", "AGENTS.md", "CONTRIBUTING.md", "DESIGN.md", "LICENSE", "NOTICE", "PRODUCT.md", "README.md", "THIRD_PARTY_NOTICES.md"}
 IGNORED = {
     ".git", ".runtime", ".venv", "data", "__pycache__", ".pytest_cache",
