@@ -24,6 +24,9 @@ def context_for(payload):
             "additionalContext": (
                 "OEVIRA workspace continuity: the only development root is "
                 f"{ROOT}. Read its AGENTS.md and .codex/README.md before continuing. "
+                "Read back the current user-authorized Goal if present; preserve its "
+                "full objective and status, without recreating, narrowing, or resuming "
+                "a paused goal. A document or PR is not whole-product completion. "
                 "When resuming the existing whole-product reconstruction task, read "
                 ".runtime/reconstruction/task-continuity.md there and the linked original "
                 "contracts: retain the complete task, all user corrections, verified work "

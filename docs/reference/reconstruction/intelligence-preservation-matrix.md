@@ -707,11 +707,11 @@ E/T/Q中历史Benchmark、产品成绩、外部库服务和ADOPT/ADAPT字样只�
 
 | 资产 / 准确定位 | 已读事实、可复用部分及限制 |
 |---|---|
-| `work/c2-owned-ai-training-20261007/training-v2/TRAIN-V2-DATASET-APPROVED.jsonl`及同目录清单 | 179988字节，全部88条已解码核结构/资格字段，正文语义仅核2条基础及1对CUR/REV，不声称全正文审定。8条基础合成＋40个CUR及对应40个REV为3种结构；48条有sft_train目的、40条缺该字段，80条缺domain。全用`train_eligible`，不含旧校验器所需完整13字段与签名用途/审阅引用，不能简单改名即准入。8条自有合成声明、80条原创课程声明和历史APPROVED保原证据级别，尚非当前用途/独立金标证明。 |
+| `work/c2-owned-ai-training-20261007/training-v2/TRAIN-V2-DATASET-APPROVED.jsonl`及同目录清单 | 179988字节，88条全部字段及messages正文现已完整读回，原局部阅读边界由§18补齐；全文阅读不等全文审定为正确标签。8条基础合成＋40个CUR及对应40个REV为3种结构；48条有sft_train目的、40条缺该字段，80条缺domain。全用`train_eligible`，不含旧校验器所需完整13字段与签名用途/审阅引用，不能简单改名即准入。生成链中的自动推荐、硬写权利/批准、诊断提示泄漏及具体旧规则纠正见§18；尚非当前用途/独立金标证明。 |
 | `work/c2-owned-ai-training-20261007/creative-curriculum-v3/REVIEW-DECISIONS.csv` | 6426字节，158条决策元数据均已读：40 APPROVE、118 HOLD，40项批准记录的备注均为`auto-recommended batch 1`。这份CSV本身不能证明独立人工审定；不据自动建议生成专业金标或否认尚需另外核验的历史用户批准。 |
 | `work/c2-owned-ai-training-20261007/training-v2/BUSINESS-TASK-ACCEPTANCE-SET.jsonl` | 4737字节，6条题目全文已读，全部`eval_only:true`、`train_eligible:false`。涵盖门店身份/营业信息、计划与实际、跨城品牌、太古汇历史与现况、活动规则专业审查、相关与因果；题目不含已独立核定答案或最新法规验证。保回归及新题设计用途；历史开发已接触，不能冒未接触最终留出，更不能改成训练材料以适配旧入口。 |
-| `work/w2-owned-ai-20261002/semantic-heldout-public-v1/manifest.json` | 已读清单：14请求、5来源、7风险类别，含改写；`HUMAN_PENDING`、未准入训练，原文版本/取得与权利证据仍需补全。只可视为候选评价结构，不当独立留出已合格或行业数据充分。 |
-| `work/c2-owned-ai-training-20261007/kaggle-run1/output/out/adapter/adapter_config.json` | 文件定位只证明配置存在；权重、基座、许可、完整模型包及重载未由本次调查证明。不能用配置文件代参数迁移。 |
+| `work/w2-owned-ai-20261002/semantic-heldout-public-v1/` | README 1–24、manifest 1–49、material-inputs 1–522、reviewer-assertions 1–279均已完整读回，含5来源全部字段、14请求与14组断言及尾部范围说明，补齐此前仅清单读取。原文版本/字节、取得、权利及独立审定仍未被该包证明；开发已接触，不当新最终留出，更不能转训练。具体采用见§18。 |
+| `work/c2-owned-ai-training-20261007/kaggle-run1/output/out/adapter/adapter_config.json` | 配置全部字段已在§18读回，保基座声明、LoRA参数及revision为空的事实；权重、基座、许可、完整模型包及重载未由本次调查证明。不能用配置文件代参数迁移。 |
 | Jev历史CPU原型及报告 | 历史记录为合成英文三分类实验，低质量成绩不能背书中文专业泛化。原模型包未定位、未重载，不能作为当前重跑基线；对应专业能力仍保留，由新身份替代资产承接。 |
 | `lumenis/shared/learning/training_cases.py`、`training_review.py` | 两文件完整方法已读；前者1–276、后者1–272，以及`experience_runtime.py:1562–1759`调用链。保真实来源/目标/用途、当前actor、精确批准、幂等事务与导出前后完整性复核；CTH/BMP限定与Shared任务错配详§15，尚未移植或实际准入。 |
 | `lumenis/system/ai_gateway/owned_training_runtime.py` | 除前200行，已读468–842的TrainingProcessFence、1587–1810及1829–2303的本地检查点/恢复方法；未读完整2306行，843–1586、远端分配段不当已核。实际保存、停旧worker、加载观察与权限复核可复用，历史SSH/GPU不整体搬入。 |
@@ -745,7 +745,7 @@ E/T/Q中历史Benchmark、产品成绩、外部库服务和ADOPT/ADAPT字样只�
 | `lumenis/ai_hub/context_pack.py:1–158`全文；`conversations.py:697–746`实际回到任务的调用；另定位`service.py:287–289`、`ai_gateway/core.py:187–188` | conversation_pack保完整原文、人工状态及排除依赖传播，带源回答不重核就不注入；budget_owned_request用实际tokenizer只逐个去可选整段，run_budgeted绑定同一运行。Task重开仍前后核授权，不把任务投影当可发送正文。可用于防上下文压缩丢要求，不能代来源再授权或承诺无限窗口。[上下文适配](../../domains/intelligence.md#context-and-learning-adaptation)。 |
 | `lumenis/shared/learning/memory.py:1–577`全文；调用定位`learning/loop.py:91` | 保任务绑定后清cache、持久状态机/事务CAS、晋升与active版双查、存储失败不回旧cache。旧未绑定Owner时_scoped_check返回None且_row_visible可见全部，feedback/correction固定0.8/0.9不能进新多用户权限/事实可信度。持久查询失败返回[]不能在产品冒无记录；沿既有Store分型真实错误。[记忆适配](../../domains/intelligence.md#context-and-learning-adaptation)。 |
 
-88条课程覆盖audio、audio_video_judgement、brand_campaign、business_outcome、creative_strategy、douyin_shortform、korean_global、video八track，每track五个CUR案例及对应REV；这些是文本课程范围，不是八个已训练/运行模型。已核音频一对案例描述3分钟中英韩素材的转写、词时码和匿名说话人，但没有对应音频或逐词金标；保专业音频要求，由合法真实素材与独立标签补评价，不以文本改写替代。
+88条材料中，80条课程覆盖audio、audio_video_judgement、brand_campaign、business_outcome、creative_strategy、douyin_shortform、korean_global、video八track，每track五个CUR案例及对应REV，另有8条基础合成。全部正文补读及具体处置见§18；这些是文本课程范围，不是八个已训练/运行模型。音频案例描述中英韩转写、词时码、匿名说话人、听觉/解释分离和技术测量，但没有对应音频或逐词金标；保专业音频要求，由合法真实素材与独立标签补评价，不以文本改写替代。
 
 该音频案例引用旧根`work/m-controller-20261002/audio-understanding-supplement-20261003/INPUT.original.md`；另有`work/w4-creation-20261002/audio-understanding-supplement-adaptation-20261003/INPUT.original.md`。两位置的原字节均已进入新根`研究资料/历史原件/`下同相对路径，并由[归档范围记录](reading-boundaries.md)确认逐件校验；它们内容相同，各102142字节。[创作保全矩阵§10](creative-preservation-matrix.md)已记录连续全文1194行审阅及逐段采用，智能侧仅另核课程引用、原件部分段和相关源码，不能冒本人重复全文核验。历史云机tiny性能和模型候选不等当前本机能力，不据其安装示例新增供应商。这不是重启用户放弃的六份缺失文件追索。其他历史研究的整包清单、未读源码段、权重/许可和完整消费者仍按原阅读记录保未知，不以局部深读声称七域源码全读或全产品开发前置已全部完成。
 
@@ -851,3 +851,50 @@ E/T/Q中历史Benchmark、产品成绩、外部库服务和ADOPT/ADAPT字样只�
 Swarmclaw附件未核只限制对该原件及其独有细节的采用声称，不删除上述已读取研究中有据的任务、权限、记忆、调度与恢复要求，也不将“曾深读103KB”当实现依据；若恢复同版附件，再按实际全文处理差异。不存在从当前网络README回填历史版本或以标题相同认定内容相同的替代。
 
 新集合内同内容副本可共用一次确切版本的正文审阅，但保各自出处；例如两声音原件采用见[创作矩阵§10](creative-preservation-matrix.md)。该1194行结论来自其明确的逐段原件读证及创作责任核验，本节作者未重新读完该声音原件，不能将其写成本人全文实读。清单/摘要/哈希只能证明定位与运输保全。旧交接回执、构建校验脚本、索引以及库内未实际读到的正文，不能因为所在包已经读过一部分而签采用；本节对传播/Inference增补的完整读取不覆盖其余行业包，对雷达与v2/v3的完整读取不覆盖整个固定库。本节没有运行历史脚本、产品、训练、推理或验证题，也没有修改原件。指向消费者表示应由该现有专业责任实现并验收；研究条目明确不等当前源码、运行或全产品采用完成。
+
+<a id="training-data-semantic-audit"></a>
+
+## 18. 旧训练材料全文、标签生成链与独立评价的实际处置
+
+本节补§14–16的具体未读范围。以下`T`指旧根只读`work/c2-owned-ai-training-20261007/`，`E`指旧根只读`work/w2-owned-ai-20261002/semantic-heldout-public-v1/`，`S`指旧根只读源码；新正式行为统一到[智能§4.10](../../domains/intelligence.md#training-admission-and-evaluation-design)。没有运行这些脚本、训练、推理、产品测试、数据迁入或权重加载。全文读取范围是下面列出的确切文件，不延伸为全部原训练包、课程引用的所有外部正文或模型资产已核。
+
+### 数据及生成方法的全文证据
+
+| 确切原件与完整读取范围 | 事实及对开发准备的影响 |
+|---|---|
+| `T/training-v2/TRAIN-V2-DATASET-APPROVED.jsonl` 1–88行，全部记录及完整messages | 每行一条，8条基础合成＋40个课程原例和40个改写修订；38–39行输出曾截断，已单独补齐。合成工作、课程描述、旧工程边界和实际历史观察混合，不能按文件名整体作为行业金标。全文发现的有效方法/具体冲突逐行组列于下表 |
+| `T/training-v2/TRAIN-V2-DATASET-APPROVED.manifest.json`及`TRAIN-V2-MANIFEST.json`全文全部字段 | 前者声明88条及40案例，后者原包声明8条训练/80 heldout/158课程；是不同构建身份，不能混用旧计数/清单。批准清单只列身份及重叠声明，不证明底层权利或专业答案。当前导出必须钉住实际样本/标签/分组/用途与消费者版本 |
+| `T/creative-curriculum-v3/REVIEW-DECISIONS.csv`全158行决策；`REVIEW-DECISIONS-LOG.json`全文全部字段 | 40 APPROVE均注`auto-recommended batch 1`，118 HOLD；日志按CSV产生80课程记录和合计88。不能据自动推荐推独立人工审定，也不能据此否定尚未找到的另行历史用户授权。对权利、目的和审定各保确切依据，旧批准标签不自行授新用途 |
+| `T/creative-curriculum-v3/build_review_recommendations.py` 1–121全文 | `score`依据失败模式个数、output/evaluation长度、source_refs等加分，再按track取40；只是挑选建议，无法核正文真伪、许可或方法正确。开发不能沿长度评分签质量 |
+| `T/creative-curriculum-v3/apply_review_decisions.py` 1–173全文 | `to_sft`将课程output/evaluation/critique/revision串成答案并硬写PO_APPROVED、原创权利、train/rag=true；main只按CSV APPROVE转换且以case_id检查训练/heldout交集。采用精确版本导出的思想，替换资格继承和分组语义；不能把固定写入字符串当审定事件 |
+| `T/creative-curriculum-v3/build_revision_pairs.py` 1–103全文 | 26–35将critique改成“初稿”并附失败类别；53–64在输入保reasoning_target，同时将同失败类别及revision复制为答案。原开发题显著提示诊断答案，不能据其得分证明发现错误能力；新版本分开用户实际约束、错误稿与仅评审可见答案，并补完整修订作品 |
+| `E/README.md` 1–24、`manifest.json` 1–49、`material-inputs.json` 1–522、`reviewer-assertions.json` 1–279 | 全文含5源、14请求、14组断言和全部末尾范围。明确W2释义、原字节/hash未采集、权利HUMAN_PENDING、training_eligible=false，非真实用户E2E。保风险覆盖及新题设计，当前已接触只作回归候选；不升级为独立最终集或已核市场事实 |
+
+### 88条正文逐组采用与必须纠正的标签
+
+| 原件行与case定位 | 可采用的实际专业行为 | 纠正或不作为当前训练目标的部分 |
+|---|---|---|
+| 1–8，基础8情景 | 预约/到场/容量与增长分开；投诉事实待核仍给可执行回应；预算/场地/肖像边界；素材受限仍原创；报价可比、目标非销售、冲突日期与未知金额 | `APPROVED_12_BATCH(chain-proof only, not scale training)`不改成规模训练批准；旧Evidence数字引用无当前事实资格。第4条推广导出限制仅对应当例外发条件，不变所有草稿导出硬禁；不把合成预算/价格/转化搬到客户数据 |
+| 9–18，audio：au-01–05及对应REV | 保中英韩原文与时间、匿名说话人；可听事实/解释/创作意图/受众体验分离；未运行不等无语音；技术测量与听感分开；播客合作需内容/受众/矩阵/商业证据 | 没有音频、转写/词时码/说话人金标、真实报价与播放数据，不训练成ASR或听感正确答案。四层分析不是强制四个用户页面，响度与语义不必拆成两个独立文件；合作框架按真实任务使用 |
+| 19–28，audio_video_judgement：sv-01–03、rv-02/04 | 保替换范围、未触碰内容、同步/重开、转场因果、文件与内容版本区分、能力有据 | 19–20及85–86以“字节或时长一致”代专业内容保全不足；23–24的8–12帧和±0.3秒非通用阈值；25–26同大小不证明编码相同，hash不同不证明感知不同；27–28旧机器工具缺失不是当前事实。改为对象引用/实际解码/时序及合同允许误差＋专业复核 |
+| 29–38，brand_campaign：bm-05、c4-04/07、bc-01/04 | 热度/估值/销售不同；创意假设非活动成效；访谈保“不知道/没有”；创作者Brief留表达空间与披露；快闪动线/互动/可传播内容联动 | 内部Nike纸面稿、旧W3待审和未拍摄条件只是历史实例，不限制当前完整创作；不得因“原生”伪装普通用户，不能把三个方向、三停点或四件套写成所有活动固定上限；引用研究许可不随课程权利声明覆盖 |
+| 39–48，business_outcome：bo-32–35、bo-05 | 研究与实际验证分开；工程证据不撑商业承诺；ROI缺字段非零；宏观/项目/反馈分层；人工修改、真实采用、结果与学习候选保链 | 历史六阶段、DDC等开发组织不变用户工作流；宏观数字无本轮原文核实不作当前金标事实，帖文可证明其表达存在但不自动证明投诉事实；课程无真实Outcome，不据文本自写评价晋升策略 |
+| 49–58，creative_strategy：cs-09–11、cs-01/03 | 既有学术术语不冒自创；哲学映射具体场景；真实细节而非伪证言；投诉核实与真实改进支撑内容 | 53–54的英文TBD已过时，不撤回OEVIRA；“先高规格拍再降质”只是方法选项，非创意规则；57–58固定90分钟放大不作投放门槛。研究状态标VERIFIED不代外链核证，课程输出只给结构不算完整原创成果 |
+| 59–68，douyin_shortform：pl-11–13、pl-03/04 | 用户会话/秘密隔离；读操作与外部互动分开；403/验证码/失效/假死分类及有界恢复；海外样本不证明中国需求；原生词条、时间与热度保来源 | 59–60禁止第三身份、固定双Context；61–62发布/私信一概硬禁等旧规则不能训练进新产品。改当前多用户自行官方登录、同一采集/浏览责任及明确授权；研究不授读取个人profile/导出凭据。15分钟、1小时5次等不作通用恢复参数。真实帖数值/文字本轮未核原出处和训练权利，不能由课程原创声明洗白。不得自造原生话题不等禁止用户拟主题或构思原创活动 |
+| 69–78，korean_global：kr-01与b3-kr-01–04 | 抽象方法借鉴、具体细节/动作、留白、人物关系、条件句、原创过程与语义保全 | 全部是中文文字，不证明韩语水平或文化泛化；71–72将“风险很高”写成“拿命去赌”无事实支持且违不夸大约束，不作正答案。虚构创意意象须与真实证言区别，固定构图比例/“所有读者一次读懂”须实际验证。原文注明研究参考不入训练，不能把引用作品或受限派生文案批量纳入 |
+| 79–88，video：c4-03/08、vd-01–03 | 意见落镜头/图层/时间，保旧版；文字相同不代表图像相同；素材权利与算子可回退，失败分类及不暗降标准 | 1280×720/30fps为当例合同，不是产品规格上限；文件hash不能替图像/图层实际检查。缺素材可提出待制作的原创镜头，合成不得擅用受限素材；不把“算子序列/诊断表”当用户必须操作的工程步骤；操作说明不代真实视频/播客编辑 |
+
+### 语义题、评价入口与包的适配
+
+`E`的CTH/BMP S01–S07逐对保：来源支持与活动因果、出租率脚注/预测期限、旧稿与来源矛盾、财政/自然期间更新、广州/上海及全球/大中华区错配、年度/季度/币值/百分比与百分点口径、具体可制作方案而非空泛建议。它们要求的不只是拒绝错问，还包括正确可用的替代表述、完整修订、可执行备选与限制。5源材料仍为作者释义及URL定位，不能将其中数值签原报告已核；原始PDF、脚注、外链发布稿与当前许可本节没有重新打开，不冒已读。其输出与审查断言分离的设计继续采用。
+
+| 原代码/资产与本节读回边界 | 具体采用与新合同要求 |
+|---|---|
+| `S/lumenis/system/ai_gateway/owned_evaluation.py` 1–75、756–997完整；其余段不新增全文声称 | rubric七维保留；`_read_heldout`仍调训练校验；`evaluate_owned_candidate`固定H100 recipe、LoRA adapter/config与文本结束符，最终只给结构观察、HUMAN_REVIEW_REQUIRED和NOT_PROMOTED。按I§4.10保同一评价责任并支持真实typed结果，不能造adapter让线性分类器过关，也不能用final文本完成标记代Office/媒体产物或专业审阅。本次定位未证明全消费者已接通 |
+| `S/experience_runtime.py` 1760–1858完整方法；1562–1759复用§15读证 | 精确身份/权限/输入校验可复用；当前旧scope仍映射cth/bmp，GPU执行入口返回撤回。新准备按真实工作区/客户/对象与CPU任务适配，不能把Shared独立作品强归BMP、用旧410永久禁止当前CPU路线或自动恢复旧GPU |
+| `T/kaggle-run1/output/out/adapter/adapter_config.json`全文全部字段 | 原配置为CAUSAL_LM、LoRA r=8/alpha=16、peft_version=0.20.0，基座字符串指gpt-oss量化变体，但revision=null。只是配置事实；没有核完整权重/基座/许可/兼容/重载，不称现可用模型，不下载补齐。CPU独立模型无需伪造基座/adapter；保未来真实包的身份与依赖恢复义务 |
+| 新根`server/requirements.txt`及`server/constraints.txt`全文 | 当前产品声明Flask3.1.3、waitress3.0.2、python-docx1.2.0、pdfplumber0.11.10及锁定传递项，未声明科学计算/深度学习框架。与§14历史模块发现分开，不把系统numpy当产品依赖。I§4.9既定稀疏配方可由有界自研核心准备，实际数值/速度/内存待实施验证 |
+
+准备设计现已具体到：每条输入/目标的权利和状态、只读版本视图、样本血缘与接触记录、按客户/事件/来源家族分组、分离开发校准与独立最终用途、不可把未知当负例、独立适任审阅及争议仲裁、全业务/Office/创意/媒体/多语组合工作、模型包/消费者兼容和当前撤权重核。参照的[官方数据泄漏说明](https://scikit-learn.org/stable/common_pitfalls.html#data-leakage)、[分组验证](https://scikit-learn.org/stable/modules/cross_validation.html#cross-validation-iterators-for-grouped-data)、[阈值调优](https://scikit-learn.org/stable/modules/classification_threshold.html#tuning-the-decision-threshold-for-class-prediction)仅支持这些方法，不授依赖安装或背书本地成绩。
+
+仍未形成的实物/实证须准确区分：原训练授权的可核用途链、修正后的合格样本版本、独立评价原件及适任审定、真实冻结分组、实际可运行基线/候选、质量与资源测量、模型重载/回退及全部消费者真实结果。前几项按上述明确规则由研发整理和核验；必须实施后产生的性能/运行证明不伪装已完成，也不反过来成为编码前永远不能满足的条件。某参数候选未晋升不取消对应专业能力或整个行业AI范围，GPU条件不代这些准备，也不阻有条件的基础工作。

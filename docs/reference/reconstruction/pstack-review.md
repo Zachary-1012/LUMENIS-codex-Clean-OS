@@ -5,13 +5,16 @@
 ## 身份与版本
 
 - 原项目：[cursor/plugins/pstack](https://github.com/cursor/plugins/tree/main/pstack)，不是搜索结果里的社区镜像。官方[插件页](https://cursor.com/marketplace/cursor/pstack)列58项技能、2个子代理；本轮目录也计58项。
-- [固定版本manifest](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/plugin.json)：0.15.36，作者Lauren Tan。GitHub主线本轮读回为`1ba91fc25c0977741dd0e267849e6234b037ed0a`，提交时间2026-10-29。11份已审技能与此commit内容逐一相同。
-- [作者GitHub](https://github.com/poteto)指向[X @poteto](https://x.com/poteto)。[AMA主持人的记录](https://www.rasaljay.com/blog/grokbot-ama)确认她是pstack作者并参与GrokBot。X直读403、定向搜索未获得可可靠审读的原帖，不能称X原帖已核。第三方转载的PR数量、收入或团队结构未作为效果证据。
+- [固定版本manifest](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/plugin.json)：0.15.36，作者Lauren Tan，提交时间2026-10-29。以下阅读和采用均固定此版本，不把随后可能变化的主线内容视作已审。
+- [作者GitHub](https://github.com/poteto)指向[X @poteto](https://x.com/poteto)。[作者自己的说明](https://www.linkedin.com/posts/laurenelizabethtan_how-cursor-turned-ai-agents-into-better-engineers-activity-7493165544628703233-ZfM-)确认pstack和GrokBot的联系。第三方转载的PR数量、收入或团队结构未作为效果证据。
+- 用户给的[Stephan原帖](https://x.com/stephan_talk/status/2115888996022993036)已通过官方公开嵌入接口核到作者、2026-10-29日期及正文短链；短链转向X文章`2115883446975524864`的官方登录页。文章正文未匿名取得，不能称原文章已读；未调用私人账号或绕过登录。具体工程方法依据上面的作者与固定官方源码，不凭该转发推断。
 - [LICENSE](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/LICENSE)为MIT，版权Lauren Tan；若以后复制或改编实质内容，保留适用版权和许可。许可允许使用，不证明流程适合本产品。
 
 ## 已读范围
 
-完整审读11份：poteto-mode、correct、architect、blast-radius、benchmark-checklist，以及principle-experience-first、principle-subtract-before-you-add、principle-prove-it-works、principle-outcome-oriented-execution、principle-model-the-domain、principle-encode-lessons-in-structure。README已查看说明/目录/部分末段；未逐一审读其余47份技能、全部playbook、脚本、适配器或自动化包。58是包目录数量，不是58项已采用。
+固定版本58份`SKILL.md`正文已完成分工审读：先前19份沿用同版完整阅读，余39份共1518行已从头读到末尾，并补读影响采用的11份附录共777行。上下文技能的准确目录名为`principle-guard-the-context-window`。主负责人另核决定适配边界的原文与最终技能，不能把代理结论或文件数代替原文依据。
+
+范围是方法正文及本次必要附录，不是整个上游软件已审计。`statechart`另有405份实现、测试与语料文件未读未执行；README只查看过说明/目录/部分末段，其他外链、关联仓库、代理实现及工具也未作全面审计。本次没有安装或执行这些上游工具，不能称它们的运行效果或产品能力已经验证。58份正文已读不代表58种独立工作流程要强加给每次开发。
 
 ## 值得落到寰意开发中的方法
 
@@ -25,16 +28,29 @@
 | [benchmark-checklist](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/benchmark-checklist/SKILL.md) | 90ms常量、微基准、测试数量冒用户体验 | 明确所测操作、输入规模、设备/版本、错误和分布；测端到端，解释瓶颈。90ms首次反馈与任务完成、播放连续性分开；不为美化数字关闭正常安全/恢复机制。 |
 | [encode-lessons-in-structure](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-encode-lessons-in-structure/SKILL.md) | 已纠正的事实在下一轮又被丢失 | 可机械验证的约束纳入既有结构；不能自动化的专业判断明确评审对象/证据与责任，避免假装一条lint能懂产品。 |
 
+完整阅读后将有用增量合入这些方法，避免再造流程：
+
+- 根因与规则：同一假设反复修失败时先获得区分根因的观察；已有规则明确覆盖时修执行位置，不重复堆规则。
+- [边界](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-boundary-discipline/SKILL.md)与[幂等](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-make-operations-idempotent/SKILL.md)：外部输入解析成领域值，消除重复形状校验；异步提交时仍核会变化的权限、工作区、租约与父版本，重试前核实际完成和半完成状态。
+- [迁完调用者再删除](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-migrate-callers-then-delete-legacy-apis/SKILL.md)：只对可协调内部调用允许同批破坏性改动，用户旧文件、持久版本、外部客户端继续按兼容合同承接。
+- 验证：将create/maintain-verification的入口、前提、动作、可观察结果及持久副作用写入现有验收合同；检查真实实例/版本/数据根，保留证据并只清理自身资源。验证应拒绝错误行为，并允许行为不变的内部重构；预期值来自独立需求。TDD只用于有合适且成本相称验证路径的工作。
+- 有界证明：create/maintain-formal-verification用于高损害并发、恢复、权限等难以仅靠普通例覆盖的承诺。关联实际源码、同步提交、原子边界、假设和错误变体；图表保反例、界限与未检查项，截断不报通过。静态合同矛盾可直接修，不强迫本阶段启动产品。无需据上游建议另装验证器或另建框架。
+- [解释测量](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-explain-the-number/SKILL.md)：先定义值得采取行动的差异与噪声，再用运行证据解释瓶颈，排除漏做、缓存和失败带来的假提速。
+
 ## 不能照搬的部分
 
 [Experience First](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-experience-first/SKILL.md)倡导较少但打磨好的功能。采用体验优先，**不采用缩减已批准范围**。[Subtract Before You Add](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-subtract-before-you-add/SKILL.md)可用于删重复路径和错误实现；替代行为未证明、用户数据与原始研究未保全时不据此删除。[Outcome-Oriented Execution](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/principle-outcome-oriented-execution/SKILL.md)允许有界中间状态，不允许把空壳或破坏现有工作当交付。
 
 [poteto-mode](https://github.com/cursor/plugins/blob/1ba91fc25c0977741dd0e267849e6234b037ed0a/pstack/skills/poteto-mode/SKILL.md)包含默认模型/推理/速度调整、较宽外部执行权限、自动化和多方案代理流程。它们不取得本会话授权，不覆盖用户选择，不触发消息、部署、付费或安装。当前仍先完成全产品审计与规划审阅；前端视觉由根亲自处理。上游偏好少做前期规划，也不能覆盖本次明确的先审阅要求。
 
+arena、swarm、reflect、automate-me和figure-it-out中的固定/降级模型、云任务、候选工作树或私人会话检查，同样不取得本项目授权；make-bot-ui的GrokBot托管、Tailscale与公开监听不是产品新增集成。no-comments的“拿不准便删除”不适用许可、真实约束和有效设计理由。通用“忽略未知字段”不能覆盖权限、版本和关键行为协议。
+
+两项技术表述作明确纠正：boundary-discipline“内部无条件信任”只能用于已验证的结构，不能撤掉动态授权或并发提交核验；TypeScript附录的`{start: Date; durationMs: number}`仍可表达负数、NaN和Infinity，不能证明合法时长，媒体须按时基、有限值和素材边界验证。类型亦不能证明实体存在或使用权仍有效。
+
 ## 实际采用
 
-仓内技能固定采用0.15.36的correct、architect、blast-radius、benchmark-checklist、model-the-domain、prove-it-works和encode-lessons-in-structure七项方法，保原来源与MIT许可。AGENTS与CONTRIBUTING链接同一入口，按具体任务使用，不维护第二套产品方案。
+仓内技能以0.15.36的七项核心方法组织，纳入上述完整阅读后的适用增量及有界验证，保原来源与MIT许可。AGENTS、CONTRIBUTING和原生续接上下文指向同一入口，按具体任务使用，不维护第二套产品方案。钩子提示入口与当前任务，不把58篇全文每次注入上下文，也不在钩子内执行其安装、模型选择或外部行动。
 
-适配保留原方法的关键动作：从真实调用者推导领域结构；对反复错误优先修结构并用实际旧反例验证；跨格式、持久化及异步消费者追踪；直接读回结果；测性能时核实际执行、正确性、失败、瓶颈和波动。架构方法不执行上游默认模型/arena调度，证明质量不退化为哈希或关键词计数。未审的其余技能不自动启用，也不因安装数量声称全部采用。
+适配保留原方法的关键动作：从真实调用者推导领域结构；对反复错误优先修结构并用实际旧反例验证；跨格式、持久化及异步消费者追踪；直接读回结果；测性能时核实际执行、正确性、失败、瓶颈和波动。架构方法不执行上游默认模型/arena调度，证明质量不退化为哈希或关键词计数。未审工具实现不自动启用，也不因阅读或安装数量声称方法已在所有产品能力中兑现。
 
 这是开发工具的采用，不是产品接入，也不把技能操作展示给产品用户。可机械验证的缺陷修进现有检查；无法自动判定的专业质量继续按适用真实任务和评审验证。
