@@ -699,7 +699,7 @@ E/T/Q中历史Benchmark、产品成绩、外部库服务和ADOPT/ADAPT字样只�
 | 内部任务与真实消费者 | 原要求承接及正式合同 |
 |---|---|
 | 行业证据排序 → 研究、经营分析、品牌提案、客户修订 | 保逐Claim定位、支持与反证、权限先行和真实查证成本；[任务与基线](../../domains/intelligence.md#cpu-training)、[质量与留出](../../domains/intelligence.md#training-splits)。 |
-| 主体关联候选排序 → 两类主体目录、场内关系与跨城比较 | 保brand/company两类；商户、门店、集团归属、账号是字段或关系，不由模型扩枚举或自动合并；[任务边界](../../domains/intelligence.md#cpu-training)。 |
+| 主体关联候选排序 → 两类主体目录、场内关系与跨城比较 | 正式主体仍为brand/company；商户、门店、账号保各自业务身份、档案与生命周期，集团归属等为有据关系。不扩正式主体类型，不由模型自动合并或授权；[任务边界](../../domains/intelligence.md#cpu-training)。 |
 | 监测事件关系与处理价值 → 舆情、活动、话题和服务工作 | 保原生关系、传播与新事实区别，严重性/可信度/需处理分别评价；低分不能隐藏重要变化；[任务与失败评价](../../domains/intelligence.md#training-splits)。 |
 | 专业工作动作建议 → 业务、Office、媒体及协作的实际对象 | 保明确意图、选区、父版本与原有效操作；建议不能扩大修改范围或成为执行批准；[统一输入输出及回退](../../domains/intelligence.md#training-runtime-contract)。 |
 
